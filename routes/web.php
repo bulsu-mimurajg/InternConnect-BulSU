@@ -16,9 +16,12 @@ Route::get('/contact', function () {
 })->name('contact');
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('dashboard', function () {
-        return Inertia::render('dashboard');
-    })->name('dashboard');
+//    Route::get('dashboard', function () {
+//        return Inertia::render('dashboard');
+//    })->name('dashboard');
+    Route::get('assessment', function () {
+        return Inertia::render('assessment');
+    })->name('assessment');
 });
 
 require __DIR__.'/settings.php';
