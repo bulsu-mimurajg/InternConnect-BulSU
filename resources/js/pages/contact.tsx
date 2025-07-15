@@ -43,7 +43,7 @@ export default function Welcome() {
                             </Link>
                             <Link
                                 prefetch
-                                href={route('contact')}
+                                href={route('home')}
                                 className="inline-block rounded-sm border border-transparent px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#19140035] dark:text-[#EDEDEC] dark:hover:border-[#3E3E3A]"
                             >
                                 Contact
@@ -55,15 +55,15 @@ export default function Welcome() {
                 <div className="flex w-full items-center justify-center opacity-100 transition-opacity duration-750 lg:grow starting:opacity-0">
                     <main className="flex w-full max-w-[335px] flex-col-reverse lg:max-w-5xl lg:flex-row">
                         <div className="flex-1 rounded-br-lg rounded-bl-lg bg-white p-6 pb-12 text-[13px] leading-[20px] shadow-[inset_0px_0px_0px_1px_rgba(26,26,0,0.16)] lg:rounded-tl-lg lg:rounded-br-none lg:p-20 dark:bg-[#161615] dark:text-[#EDEDEC] dark:shadow-[inset_0px_0px_0px_1px_#fffaed2d]">
-                            <div className="mt-20">
-                                <h1 className="mb-1 font-bold text-xl">InternConnect BulSU</h1>
+                            <div className="mt-11">
+                                <h1 className="mb-1 font-bold text-xl">Contact Us</h1>
                                 <p className="mb-2 text-[#706f6c] dark:text-[#A1A09A]">
                                     Capstone Project
                                     <br />
                                     Validex
                                 </p>
                                 <p className="my-3">
-                                    A web app made to assess student competencies and match them with our partner Host Training Establishments (HTEs)
+                                    Buh
                                 </p>
                                 <ul className="mb-4 flex flex-col lg:mb-6">
                                     <li className="relative flex items-center gap-4 py-2 before:absolute before:top-1/2 before:bottom-0 before:left-[0.4rem] before:border-l before:border-[#e3e3e0] dark:before:border-[#3E3E3A]">
@@ -132,7 +132,8 @@ export default function Welcome() {
                             </div>
                         </div>
                         <div className="relative -mb-px aspect-[335/376] w-full shrink-0 overflow-hidden rounded-t-lg bg-[#fff2f2] lg:mb-0 lg:-ml-px lg:aspect-auto lg:w-[438px] lg:rounded-t-none lg:rounded-r-lg dark:bg-[#1D0002]">
-                            <img src="/images/about/pimentel.png"
+                            <img src="/images/contact/buh.gif"
+                                 className="w-full h-full"
                                  alt="Pimentel - CICT Building" />
                         </div>
                     </main>
