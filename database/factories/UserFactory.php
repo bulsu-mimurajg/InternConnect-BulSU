@@ -47,6 +47,13 @@ class UserFactory extends Factory
         });
     }
 
+    public function student(): static
+    {
+        return $this->afterCreating(function (User $user) {
+            $user->assignRole('student');
+        });
+    }
+
     /**
      * Indicate that the model's email address should be unverified.
      */

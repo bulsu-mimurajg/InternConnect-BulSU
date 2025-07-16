@@ -22,7 +22,7 @@ class DatabaseSeeder extends Seeder
             'password' => bcrypt('password'),
         ]);
 
-        User::factory()->create([
+        User::factory()->student()->create([
             'username' => 'jane',
             'email' => 'jane@example.com',
             'password' => bcrypt('password'),
