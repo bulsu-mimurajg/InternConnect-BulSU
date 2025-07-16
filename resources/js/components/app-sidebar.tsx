@@ -2,33 +2,51 @@ import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
-import { type NavItem } from '@/types';
-import { Link } from '@inertiajs/react';
-import { BookCheckIcon, HeadsetIcon, InfoIcon } from 'lucide-react';
+import { type NavItem, type SharedData } from '@/types';
+import { Link, usePage } from '@inertiajs/react';
+import {
+    BookCheckIcon,
+    BriefcaseBusinessIcon,
+    ClipboardIcon,
+    ClipboardListIcon,
+    HeadsetIcon,
+    InfoIcon,
+    PrinterIcon,
+    UserIcon
+} from 'lucide-react';
 import AppLogo from './app-logo';
 
-const mainNavItems: NavItem[] = [
-    {
-        title: 'Assessment',
-        href: '/assessment',
-        icon: BookCheckIcon,
+export const roleBasedNav: Record<string, { main: NavItem[]; footer: NavItem[] }> = {
+    admin: {
+        main: [
+            { title: 'Student', href: '/', icon: ClipboardIcon },
+            { title: 'Users', href: '/', icon: UserIcon },
+            { title: 'Placement', href: '/', icon: BriefcaseBusinessIcon },
+            { title: 'Reports', href: '/', icon: PrinterIcon },
+        ],
+        footer: [],
     },
-];
-
-const footerNavItems: NavItem[] = [
-    {
-        title: 'About',
-        href: '/about',
-        icon: InfoIcon,
+    hte: {
+        main: [{ title: 'Form', href: '/', icon: ClipboardListIcon }],
+        footer: [],
     },
-    {
-        title: 'Contact',
-        href: '/contact',
-        icon: HeadsetIcon,
-    },
-];
+    student: {
+        main: [
+            { title: 'Assessment', href: '/assessment', icon: BookCheckIcon },
+        ],
+        footer: [
+            { title: 'About', href: '/about', icon: InfoIcon },
+            { title: 'Contact', href: '/contact', icon: HeadsetIcon },
+        ],
+    }
+};
 
 export function AppSidebar() {
+    const { auth } = usePage<SharedData>().props;
+
+    const role = auth.role ?? 'guest'; // always one role
+    const nav = roleBasedNav[role] ?? roleBasedNav['guest'];
+
     return (
         <Sidebar collapsible="icon" variant="inset">
             <SidebarHeader>
@@ -44,11 +62,11 @@ export function AppSidebar() {
             </SidebarHeader>
 
             <SidebarContent>
-                <NavMain items={mainNavItems} />
+                <NavMain items={nav.main} />
             </SidebarContent>
 
             <SidebarFooter>
-                <NavFooter items={footerNavItems} className="mt-auto" />
+                <NavFooter items={nav.footer} className="mt-auto" />
                 <NavUser />
             </SidebarFooter>
         </Sidebar>
