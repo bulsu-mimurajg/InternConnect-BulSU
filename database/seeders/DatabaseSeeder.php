@@ -22,9 +22,15 @@ class DatabaseSeeder extends Seeder
             'password' => bcrypt('password'),
         ]);
 
+        User::factory()->hte()->create([
+            'username' => 'maria',
+            'email' => 'maria@example.com',
+            'password' => bcrypt('password'),
+        ]);
+
         User::factory()->student()->create([
-            'username' => 'jane',
-            'email' => 'jane@example.com',
+            'username' => 'clairo',
+            'email' => 'clairo@example.com',
             'password' => bcrypt('password'),
         ]);
     }
