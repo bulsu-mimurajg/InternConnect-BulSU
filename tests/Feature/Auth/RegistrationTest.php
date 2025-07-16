@@ -1,5 +1,9 @@
 <?php
 
+use Database\Seeders\RolePermissionSeeder;
+
+beforeEach(fn () => $this->seed(RolePermissionSeeder::class));
+
 test('registration screen can be rendered', function () {
     $response = $this->get('/register');
 
@@ -7,6 +11,8 @@ test('registration screen can be rendered', function () {
 });
 
 test('new users can register', function () {
+//    $this->withoutExceptionHandling();
+
     $response = $this->post('/register', [
         'username' => 'Test User',
         'email' => 'test@example.com',
