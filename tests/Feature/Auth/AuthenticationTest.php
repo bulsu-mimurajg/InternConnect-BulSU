@@ -1,6 +1,9 @@
 <?php
 
 use App\Models\User;
+use Database\Seeders\RolePermissionSeeder;
+
+beforeEach(fn () => $this->seed(RolePermissionSeeder::class));
 
 test('login screen can be rendered', function () {
     $response = $this->get('/login');
@@ -9,7 +12,11 @@ test('login screen can be rendered', function () {
 });
 
 test('users can authenticate using the login screen', function () {
+//    $this->withoutExceptionHandling();
+
     $user = User::factory()->create();
+
+    $user->assignRole('student');
 
     $response = $this->post('/login', [
         'email' => $user->email,

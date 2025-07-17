@@ -17,6 +17,7 @@ class RolePermissionSeeder extends Seeder
         Role::create(['name' => 'student']);
         Role::create(['name' => 'hte']);
         Role::create(['name' => 'admin']);
+        Role::create(['name' => 'guest']);
 
         $permissions = [
             'manage users',           // C1: SIP Coordinator manages accounts

@@ -20,7 +20,7 @@ export default function Welcome() {
                                     {auth.role === 'admin' && (
                                         <Link
                                             prefetch
-                                            href={route('home')}
+                                            href={route('student')}
                                             className="inline-block rounded-sm border border-[#19140035] px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#1915014a] dark:border-[#3E3E3A] dark:text-[#EDEDEC] dark:hover:border-[#62605b]"
                                         >
                                             Student
@@ -30,7 +30,7 @@ export default function Welcome() {
                                     {auth.role === 'hte' && (
                                         <Link
                                             prefetch
-                                            href={route('home')}
+                                            href={route('form')}
                                             className="inline-block rounded-sm border border-[#19140035] px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#1915014a] dark:border-[#3E3E3A] dark:text-[#EDEDEC] dark:hover:border-[#62605b]"
                                         >
                                             Forms

@@ -15,14 +15,24 @@ Route::get('/contact', function () {
     return Inertia::render('contact');
 })->name('contact');
 
-Route::middleware(['auth', 'verified'])->group(function () {
-//    Route::get('dashboard', function () {
-//        return Inertia::render('dashboard');
-//    })->name('dashboard');
+Route::middleware(['auth', 'verified', 'role:admin'])->group(function () {
+    Route::get('student', function () {
+        return Inertia::render('admin/student');
+    })->name('student');
+});
+
+Route::middleware(['auth', 'verified', 'role:hte'])->group(function () {
+    Route::get('form', function () {
+        return Inertia::render('hte/form');
+    })->name('form');
+});
+
+Route::group(['middleware' => ['auth', 'verified', 'role:student']], function () {
     Route::get('assessment', function () {
-        return Inertia::render('assessment');
+        return Inertia::render('student/assessment');
     })->name('assessment');
 });
+
 
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';
