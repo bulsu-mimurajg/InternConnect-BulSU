@@ -19,15 +19,15 @@ import AppLogo from './app-logo';
 export const roleBasedNav: Record<string, { main: NavItem[]; footer: NavItem[] }> = {
     admin: {
         main: [
-            { title: 'Student', href: '/', icon: ClipboardIcon },
-            { title: 'Users', href: '/', icon: UserIcon },
-            { title: 'Placement', href: '/', icon: BriefcaseBusinessIcon },
-            { title: 'Reports', href: '/', icon: PrinterIcon },
+            { title: 'Student', href: '/student', icon: ClipboardIcon },
+            { title: 'Users', href: '/users', icon: UserIcon },
+            { title: 'Placement', href: '/placement', icon: BriefcaseBusinessIcon },
+            { title: 'Reports', href: '/report', icon: PrinterIcon },
         ],
         footer: [],
     },
     hte: {
-        main: [{ title: 'Form', href: '/', icon: ClipboardListIcon }],
+        main: [{ title: 'Form', href: '/form', icon: ClipboardListIcon }],
         footer: [],
     },
     student: {

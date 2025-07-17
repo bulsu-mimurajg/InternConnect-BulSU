@@ -19,6 +19,18 @@ Route::middleware(['auth', 'verified', 'role:admin'])->group(function () {
     Route::get('student', function () {
         return Inertia::render('admin/student');
     })->name('student');
+
+    Route::get('users', function () {
+        return Inertia::render('admin/users');
+    })->name('users');
+
+    Route::get('placement', function () {
+        return Inertia::render('admin/placement');
+    })->name('placement');
+
+    Route::get('report', function () {
+        return Inertia::render('admin/report');
+    })->name('report');
 });
 
 Route::middleware(['auth', 'verified', 'role:hte'])->group(function () {
