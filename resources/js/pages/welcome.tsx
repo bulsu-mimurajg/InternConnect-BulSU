@@ -16,24 +16,47 @@ export default function Welcome() {
                         <div>icon</div>
                         <nav className="flex items-center justify-end gap-4">
                             {auth.user ? (
+                                <>
+                                    {auth.role === 'admin' && (
+                                        <Link
+                                            prefetch
+                                            href={route('home')}
+                                            className="inline-block rounded-sm border border-[#19140035] px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#1915014a] dark:border-[#3E3E3A] dark:text-[#EDEDEC] dark:hover:border-[#62605b]"
+                                        >
+                                            Student
+                                        </Link>
+                                    )}
+
+                                    {auth.role === 'hte' && (
+                                        <Link
+                                            prefetch
+                                            href={route('home')}
+                                            className="inline-block rounded-sm border border-[#19140035] px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#1915014a] dark:border-[#3E3E3A] dark:text-[#EDEDEC] dark:hover:border-[#62605b]"
+                                        >
+                                            Forms
+                                        </Link>
+                                    )}
+
+                                    {auth.role === 'student' && (
+                                        <Link
+                                            prefetch
+                                            href={route('assessment')}
+                                            className="inline-block rounded-sm border border-[#19140035] px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#1915014a] dark:border-[#3E3E3A] dark:text-[#EDEDEC] dark:hover:border-[#62605b]"
+                                        >
+                                            Assessment
+                                        </Link>
+                                    )}
+                                </>
+                            ) : (
                                 <Link
                                     prefetch
-                                    href={route('assessment')}
+                                    href={route('login')}
                                     className="inline-block rounded-sm border border-[#19140035] px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#1915014a] dark:border-[#3E3E3A] dark:text-[#EDEDEC] dark:hover:border-[#62605b]"
                                 >
-                                    Assessment
+                                    Login
                                 </Link>
-                            ) : (
-                                <>
-                                    <Link
-                                        prefetch
-                                        href={route('login')}
-                                        className="inline-block rounded-sm border border-[#19140035] px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#1915014a] dark:border-[#3E3E3A] dark:text-[#EDEDEC] dark:hover:border-[#62605b]"
-                                    >
-                                        Login
-                                    </Link>
-                                </>
                             )}
+
                             <Link
                                 prefetch
                                 href={route('about')}
