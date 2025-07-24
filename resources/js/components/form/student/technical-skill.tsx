@@ -1,20 +1,20 @@
-const technicalSkillSections = [
-    {
-        title: 'Programming and Coding Skills',
-        skills: [
-            { name: 'cplusplus', label: 'c++' },
-            { name: 'csharp', label: 'c#' },
-            { name: 'java', label: 'java' },
-            { name: 'python', label: 'python' },
-        ],
-    },
-    {
-        title: 'Database',
-        skills: [
-            { name: 'mysql', label: 'mysql' },
-        ],
-    },
-];
+// const technicalSkillSections = [
+//     {
+//         title: 'Programming and Coding Skills',
+//         skills: [
+//             { name: 'cplusplus', label: 'c++' },
+//             { name: 'csharp', label: 'c#' },
+//             { name: 'java', label: 'java' },
+//             { name: 'python', label: 'python' },
+//         ],
+//     },
+//     {
+//         title: 'Database',
+//         skills: [
+//             { name: 'mysql', label: 'mysql' },
+//         ],
+//     },
+// ];
 
 
 export default function TechnicalSkill() {

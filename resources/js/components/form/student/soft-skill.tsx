@@ -1,19 +1,18 @@
-const softSkillSections = [
-    {
-        title: 'Communication',
-        skills: [
-            {
-                name: 'explain_complex_ideas',
-                label: 'How well can you explain a complex idea or concept clearly to someone who is not familiar with it?',
-            },
-            {
-                name: 'collaboration',
-                label: 'How well do you collaborate with others to achieve a common goal?',
-            },
-        ],
-    },
-    // Add more sections as needed
-];
+// const softSkillSections = [
+//     {
+//         title: 'Communication',
+//         skills: [
+//             {
+//                 name: 'explain_complex_ideas',
+//                 label: 'How well can you explain a complex idea or concept clearly to someone who is not familiar with it?',
+//             },
+//             {
+//                 name: 'collaboration',
+//                 label: 'How well do you collaborate with others to achieve a common goal?',
+//             },
+//         ],
+//     },
+// ];
 
 export default function SoftSkill() {
 
