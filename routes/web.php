@@ -16,9 +16,17 @@ Route::get('/contact', function () {
 })->name('contact');
 
 Route::middleware(['auth', 'verified', 'role:admin'])->group(function () {
-    Route::get('student', function () {
-        return Inertia::render('admin/student');
-    })->name('student');
+    Route::get('student/list', function () {
+        return Inertia::render('admin/student/list');
+    })->name('student-list');
+
+    Route::get('student/matched', function () {
+        return Inertia::render('admin/student/matched');
+    })->name('student-matched');
+
+    Route::get('student/placed', function () {
+        return Inertia::render('admin/student/placed');
+    })->name('student-placed');
 
     Route::get('users', function () {
         return Inertia::render('admin/users');

@@ -16,10 +16,19 @@ import {
 } from 'lucide-react';
 import AppLogo from './app-logo';
 
-export const roleBasedNav: Record<string, { main: NavItem[]; footer: NavItem[] }> = {
+const roleBasedNav: Record<string, { main: NavItem[]; footer: NavItem[] }> = {
     admin: {
         main: [
-            { title: 'Student', href: '/student', icon: ClipboardIcon },
+            {
+                title: 'Student',
+                href: '/student',
+                icon: ClipboardIcon,
+                subNav: [
+                    { title: 'List', href: '/student/list' },
+                    { title: 'Matched', href: '/student/matched' },
+                    { title: 'Placed', href: '/student/placed' },
+                ],
+            },
             { title: 'Users', href: '/users', icon: UserIcon },
             { title: 'Placement', href: '/placement', icon: BriefcaseBusinessIcon },
             { title: 'Reports', href: '/report', icon: PrinterIcon },
@@ -32,19 +41,24 @@ export const roleBasedNav: Record<string, { main: NavItem[]; footer: NavItem[] }
     },
     student: {
         main: [
+            {
+                title: 'Student',
+                href: '/student/list',
+                icon: ClipboardIcon,
+            },
             { title: 'Assessment', href: '/assessment', icon: BookCheckIcon },
         ],
         footer: [
             { title: 'About', href: '/about', icon: InfoIcon },
             { title: 'Contact', href: '/contact', icon: HeadsetIcon },
         ],
-    }
+    },
 };
 
 export function AppSidebar() {
     const { auth } = usePage<SharedData>().props;
 
-    const role = auth.role ?? 'guest'; // always one role
+    const role = auth.role ?? 'guest';
     const nav = roleBasedNav[role] ?? roleBasedNav['guest'];
 
     return (
