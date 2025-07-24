@@ -16,7 +16,7 @@ test('authenticated admin can visit the assessment', function () {
 
     $this->actingAs($user);
 
-    $this->get('/student')->assertOk();
+    $this->get('/student/list')->assertOk();
 });
 
 test('authenticated hte can visit the assessment', function () {
