@@ -17,10 +17,11 @@ return new class extends Migration
             $table->foreignIdFor(User::class);
             $table->string('student_number', 20);
             $table->string('first_name', 50);
+            $table->string('middle_name', 50);
             $table->string('last_name', 50);
-            $table->string('email', 100);
             $table->string('phone', 20);
             $table->string('section', 10);
+            $table->string('specialization', 10);
             $table->string('address', 255);
             $table->date('birth_date');
             $table->boolean('is_active')->default(true);
