@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\StudentController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -16,9 +17,7 @@ Route::get('/contact', function () {
 })->name('contact');
 
 Route::middleware(['auth', 'verified', 'role:admin'])->group(function () {
-    Route::get('student/list', function () {
-        return Inertia::render('admin/student/list');
-    })->name('student-list');
+    Route::get('student/list', [StudentController::class, 'index'])->name('student-list');
 
     Route::get('student/matched', function () {
         return Inertia::render('admin/student/matched');
@@ -28,9 +27,9 @@ Route::middleware(['auth', 'verified', 'role:admin'])->group(function () {
         return Inertia::render('admin/student/placed');
     })->name('student-placed');
 
-    Route::get('users', function () {
-        return Inertia::render('admin/users');
-    })->name('users');
+    Route::get('hte', function () {
+        return Inertia::render('admin/hte');
+    })->name('hte');
 
     Route::get('placement', function () {
         return Inertia::render('admin/placement');
