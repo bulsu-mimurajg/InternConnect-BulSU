@@ -36,5 +36,8 @@ class DatabaseSeeder extends Seeder
         ]);
 
         Student::factory()->count(20)->create();
+
+        $this->call(CategorySeeder::class);
+
     }
 }
