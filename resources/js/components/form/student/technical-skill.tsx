@@ -54,7 +54,7 @@ export default function TechnicalSkill() {
                                         <FormControl>
                                             <RadioGroup
                                                 onValueChange={field.onChange}
-                                                value={field.value}
+                                                value={field.value ?? ''}
                                                 className="mb-6 flex"
                                             >
                                                 {["1", "2", "3", "4", "5"].map((val) => (

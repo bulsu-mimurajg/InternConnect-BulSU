@@ -34,12 +34,12 @@ const personalInfoSections = [
             {
                 name: 'province',
                 label: 'province',
-                placeholder: 'george',
+                placeholder: 'bulacan',
             },
             {
                 name: 'city',
                 label: 'city',
-                placeholder: 'bulacan',
+                placeholder: 'san jose del monte',
             },
             {
                 name: 'zip',
