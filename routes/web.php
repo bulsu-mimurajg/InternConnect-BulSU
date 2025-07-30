@@ -54,8 +54,6 @@ Route::group(['middleware' => ['auth', 'verified', 'role:student']], function ()
             $query->where('access', 'student');
         }])->get();
 
-        dd($subcategories);
-
 //        $questions = Question::all()->where('access', 'student');
         return Inertia::render('student/assessment', ['subcategories' => $subcategories]);
     })->name('assessment');

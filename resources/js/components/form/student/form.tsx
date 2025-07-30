@@ -9,7 +9,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useState } from 'react';
 import { Path, useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { subcategory } from '@/types';
+// import { subcategory } from '@/types';
 
 const stepOneFields = ['firstName', 'lastName', 'middleName', 'suffix'];
 const stepTwoFields = ['cplusplus', 'csharp', 'java', 'python', 'mysql'];
@@ -34,11 +34,11 @@ const steps = [
     { id: 'Step 4', name: 'Submission' },
 ];
 
-type Props = {
-    subcategories: subcategory[];
-};
+// type Props = {
+//     subcategories: subcategory[];
+// };
 
-export default function StudentForm({ subcategories }: Props) {
+export default function StudentForm() {
     const FormSchema = z.object({});
 
     const form = useForm<z.infer<typeof FormSchema>>({
