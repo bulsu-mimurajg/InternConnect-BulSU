@@ -12,7 +12,7 @@ class Question extends Model
 
     protected $table = 'questions';
 
-    public function subCategory(): BelongsTo
+    public function subcategory(): BelongsTo
     {
         return $this->belongsTo(SubCategory::class);
     }

@@ -9,7 +9,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useState } from 'react';
 import { Path, useForm } from 'react-hook-form';
 import { z } from 'zod';
-
+import { subcategory } from '@/types';
 
 const stepOneFields = ['firstName', 'lastName', 'middleName', 'suffix'];
 const stepTwoFields = ['cplusplus', 'csharp', 'java', 'python', 'mysql'];
@@ -34,32 +34,17 @@ const steps = [
     { id: 'Step 4', name: 'Submission' },
 ];
 
-const FormSchema = z.object({
-    firstName: z.string().min(1, { message: 'Required.' }),
-    lastName: z.string().min(1, { message: 'Required.' }),
-    middleName: z.string(),
-    suffix: z.string(),
-    ...Object.fromEntries(
-        stepTwoFields.map((field) => [
-            field,
-            z.enum(['1', '2', '3', '4', '5'], {
-                error: 'Please select a skill level',
-            }),
-        ]),
-    ),
-});
+type Props = {
+    subcategories: subcategory[];
+};
 
-export default function StudentForm() {
+export default function StudentForm({ subcategories }: Props) {
+    const FormSchema = z.object({});
+
     const form = useForm<z.infer<typeof FormSchema>>({
         resolver: zodResolver(FormSchema),
         mode: 'onChange',
-        defaultValues: {
-            firstName: 'a',
-            lastName: 'a',
-            middleName: 'a',
-            suffix: 'a',
-            ...Object.fromEntries(stepTwoFields.map((field) => [field, undefined])),
-        },
+        defaultValues: {},
     });
 
     function onSubmit(values: z.infer<typeof FormSchema>) {

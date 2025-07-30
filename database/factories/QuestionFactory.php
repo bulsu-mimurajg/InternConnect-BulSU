@@ -17,7 +17,9 @@ class QuestionFactory extends Factory
     public function definition(): array
     {
         return [
-            'question' => $this->faker->realTextBetween(10, 20),
+            'label' => $this->faker->text(10),
+            'question' => $this->faker->realTextBetween(15, 30),
+            'placeholder' => $this->faker->realTextBetween(10, 20),
         ];
     }
 }

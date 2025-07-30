@@ -13,7 +13,7 @@ class SubCategory extends Model
 
     protected $table = 'sub_categories';
 
-    public function question(): HasMany
+    public function questions(): HasMany
     {
         return $this->hasMany(Question::class);
     }

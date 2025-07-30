@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Admin\StudentController;
+use App\Models\Question;
+use App\Models\SubCategory;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -48,7 +50,14 @@ Route::middleware(['auth', 'verified', 'role:hte'])->group(function () {
 
 Route::group(['middleware' => ['auth', 'verified', 'role:student']], function () {
     Route::get('assessment', function () {
-        return Inertia::render('student/assessment');
+        $subcategories = SubCategory::with(['questions' => function ($query) {
+            $query->where('access', 'student');
+        }])->get();
+
+        dd($subcategories);
+
+//        $questions = Question::all()->where('access', 'student');
+        return Inertia::render('student/assessment', ['subcategories' => $subcategories]);
     })->name('assessment');
 });
 

@@ -43,3 +43,20 @@ export interface User {
     updated_at: string;
     [key: string]: unknown; // This allows for additional properties...
 }
+
+export interface question {
+    label?: string;
+    question: string;
+    type: 'text' | 'radio' | 'select';
+    placeholder?: string;
+    options?: string[];
+    required?: boolean;
+    access: 'student' | 'hte';
+}
+
+export interface subcategory {
+    id: number;
+    title: string;
+    category_name: string;
+    questions: Question[];
+}

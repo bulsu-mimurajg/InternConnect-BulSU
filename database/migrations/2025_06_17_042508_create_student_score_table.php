@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\Internship;
+use App\Models\Student;
 use App\Models\SubCategory;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
@@ -12,15 +14,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('questions', function (Blueprint $table) {
+        Schema::create('student_score', function (Blueprint $table) {
             $table->id();
-            $table->string('label')->nullable();
-            $table->text('question');
-            $table->string('placeholder')->nullable();
-            $table->string('question type')->nullable();
-            $table->boolean('is_active')->default(true);
-            $table->string('access');
+            $table->foreignIdFor(Internship::class);
+            $table->foreignIdFor(Student::class);
             $table->foreignIdFor(SubCategory::class);
+            $table->integer('score');
             $table->timestamps();
         });
     }
@@ -30,6 +29,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('questions');
+        Schema::dropIfExists('student_score');
     }
 };

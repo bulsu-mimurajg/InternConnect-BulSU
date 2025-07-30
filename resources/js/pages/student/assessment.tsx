@@ -1,6 +1,6 @@
 import AppLayout from '@/layouts/app-layout';
-import { type BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/react';
+import { type BreadcrumbItem, subcategory } from '@/types';
+import { Head, usePage } from '@inertiajs/react';
 import StudentForm from '@/components/form/student/form';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -11,11 +11,14 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 export default function Assessment() {
+
+    const { subcategories } = usePage<{ subcategories: subcategory[] }>().props;
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Assessment" />
             <div className="flex h-full flex-1 flex-col gap-4 overflow-y-hidden rounded-xl p-4">
-                <StudentForm />
+                <StudentForm subcategories={subcategories} />
             </div>
         </AppLayout>
     );

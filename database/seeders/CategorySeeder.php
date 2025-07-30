@@ -17,7 +17,24 @@ class CategorySeeder extends Seeder
      */
     public function run(): void
     {
+//        $personalCategory = [
+//            'Personal Information' => [
+//                'Basic Student Information' => 3,
+//                'Address' => 3,
+//            ]
+//        ];
+//
+//        Category::factory()->create(['category_name' => 'Personal Information'])->each(function ($category) {
+//            $subCategory = SubCategory::firstOrCreate(['subcategory_name' => 'Basic Student Information', 'category_id' => $category->id]);
+//            $category->subCategory()->save($subCategory);
+//            $subCategory->question()->saveMany(Question::factory()->times(3)->create(['sub_category_id' => $subCategory->id]));
+//        });
+
         $categories = [
+            'Personal Information' => [
+                'Basic Student Information' => 4,
+                'Address' => 3,
+            ],
             'Technical Skill' => [
                 'Programming and Coding Skill' => 3
             ],
@@ -25,7 +42,6 @@ class CategorySeeder extends Seeder
                 'Communication Skill' => 3
             ]
         ];
-
 
         foreach ($categories as $categoryName => $subCategories) {
             $category = Category::firstOrCreate(['category_name' => $categoryName]);
@@ -35,7 +51,7 @@ class CategorySeeder extends Seeder
                     ['subcategory_name' => $subCategoryName, 'category_id' => $category->id],
                 );
 
-                $subCategory->question()->saveMany(Question::factory()->times($questionsCount)->create(['sub_category_id' => $subCategory->id]));
+                $subCategory->questions()->saveMany(Question::factory()->times($questionsCount)->create(['sub_category_id' => $subCategory->id, 'access' => 'student']));
             }
         }
 
