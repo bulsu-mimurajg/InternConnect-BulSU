@@ -2,6 +2,7 @@ import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/comp
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useFormContext } from 'react-hook-form';
 import { useEffect, useState } from 'react';
+import { router } from '@inertiajs/react';
 import { useFormFields } from '@/contexts/FormFieldsContext';
 
 interface Skill {
@@ -16,40 +17,40 @@ interface Section {
     skills: Skill[];
 }
 
-export default function SoftSkill() {
+export default function LanguageProficiency() {
     const { control } = useFormContext();
-    const { setSoftSkillFields } = useFormFields();
-    const [softSkillSections, setSoftSkillSections] = useState<Section[]>([]);
+    const { setLanguageProficiencyFields } = useFormFields();
+    const [languageProficiencySections, setLanguageProficiencySections] = useState<Section[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        const fetchSoftSkills = async () => {
+        const fetchLanguageProficiency = async () => {
             try {
                 setLoading(true);
-                const response = await fetch('/assessment/soft-skills');
+                const response = await fetch('/assessment/language-proficiency');
                 if (!response.ok) {
                     throw new Error('Failed to fetch data');
                 }
                 const data = await response.json();
-                setSoftSkillSections(data);
+                setLanguageProficiencySections(data);
                 
                 // Register fields for validation
                 const fields = data.flatMap((section: Section) => 
                     section.skills.map((skill: Skill) => skill.name)
                 );
-                setSoftSkillFields(fields);
+                setLanguageProficiencyFields(fields);
                 
                 setError(null);
             } catch (err) {
-                console.error('Failed to fetch soft skills data:', err);
-                setError('Failed to load soft skills data');
+                console.error('Failed to fetch language proficiency data:', err);
+                setError('Failed to load language proficiency data');
             } finally {
                 setLoading(false);
             }
         };
 
-        fetchSoftSkills();
+        fetchLanguageProficiency();
     }, []);
 
     if (loading) {
@@ -80,23 +81,21 @@ export default function SoftSkill() {
 
     return (
         <div className="flex flex-col gap-4">
-            {/* Instruction */}
             <div>
-                <h1 className="text-lg font-semibold mb-2">
-                    Below are questions designed to assess your soft skills and help you evaluate your current abilities,
-                    giving you a clearer understanding of your strengths.
+                <h1 className="text-lg font-semibold">
+                    For each programming language and technology below, evaluate your proficiency level using the following scale:
                 </h1>
-                <ul className="text-sm mb-4">
-                    <li>5 - Advanced</li>
-                    <li>4 - Expert</li>
-                    <li>3 - Intermediate</li>
-                    <li>2 - Beginner</li>
-                    <li>1 - Novice</li>
+                <ul className="text-sm">
+                    <li>5 - Expert (Can teach others, lead projects)</li>
+                    <li>4 - Advanced (Can work independently on complex projects)</li>
+                    <li>3 - Intermediate (Can work on standard projects with some guidance)</li>
+                    <li>2 - Beginner (Basic understanding, needs guidance)</li>
+                    <li>1 - Novice (Limited exposure, learning phase)</li>
                 </ul>
             </div>
 
             <div className="max-h-[300px] overflow-y-auto pr-2">
-                {softSkillSections.map((section: Section) => (
+                {languageProficiencySections.map((section: Section) => (
                     <div key={section.title} className="mb-6">
                         <h2 className="text-md font-semibold mb-2">{section.title}</h2>
                         {section.skills.map((skill: Skill) => (
@@ -106,7 +105,7 @@ export default function SoftSkill() {
                                 name={skill.name}
                                 render={({ field }) => (
                                     <FormItem className="my-4 space-y-3">
-                                        <FormLabel>
+                                        <FormLabel className="capitalize">
                                             {skill.label} <span className="text-red-500">*</span>
                                         </FormLabel>
                                         <FormControl>
@@ -135,4 +134,4 @@ export default function SoftSkill() {
             </div>
         </div>
     );
-}
+} 

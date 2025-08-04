@@ -15,13 +15,14 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('student_score', function (Blueprint $table) {
-            $table->id();
-            $table->foreignIdFor(Internship::class);
             $table->foreignIdFor(Student::class);
             $table->foreignIdFor(SubCategory::class);
-            $table->integer('score');
+            $table->decimal('score', 5, 2); // 5 total digits, 2 decimal places
             $table->timestamps();
+            
+            $table->primary(['student_id', 'sub_category_id']);
         });
+        
     }
 
     /**

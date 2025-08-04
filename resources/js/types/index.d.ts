@@ -56,7 +56,7 @@ export interface question {
 
 export interface subcategory {
     id: number;
-    title: string;
+    subcategory_name: string;
     category_name: string;
     questions: Question[];
 }

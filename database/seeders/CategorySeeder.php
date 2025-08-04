@@ -3,88 +3,126 @@
 namespace Database\Seeders;
 
 use App\Models\Category;
-use App\Models\Question;
 use App\Models\SubCategory;
-use Database\Factories\CategoryFactory;
-use Database\Factories\QuestionFactory;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use App\Models\Question;
 use Illuminate\Database\Seeder;
 
 class CategorySeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
-//        $personalCategory = [
-//            'Personal Information' => [
-//                'Basic Student Information' => 3,
-//                'Address' => 3,
-//            ]
-//        ];
-//
-//        Category::factory()->create(['category_name' => 'Personal Information'])->each(function ($category) {
-//            $subCategory = SubCategory::firstOrCreate(['subcategory_name' => 'Basic Student Information', 'category_id' => $category->id]);
-//            $category->subCategory()->save($subCategory);
-//            $subCategory->question()->saveMany(Question::factory()->times(3)->create(['sub_category_id' => $subCategory->id]));
-//        });
-
         $categories = [
-            'Personal Information' => [
-                'Basic Student Information' => 4,
-                'Address' => 3,
+            'Language Proficiency' => [
+                'Java' => [
+                    'What is your proficiency level in Java?',
+                    'Have you worked with Java frameworks such as Spring?',
+                    'Can you write Java programs following OOP principles?'
+                ],
+                'C++' => [
+                    'Are you comfortable with C++ memory management?',
+                    'Have you used STL in C++ programming?',
+                    'Can you develop applications using C++ classes and objects?'
+                ],
+                'Python' => [
+                    'Do you have experience with Python scripting?',
+                    'Have you worked with Python frameworks like Django or Flask?',
+                    'Can you automate tasks using Python?'
+                ],
+                'HTML/CSS' => [
+                    'Are you proficient in writing semantic HTML?',
+                    'Can you style websites effectively using CSS?',
+                    'Have you worked with CSS preprocessors like SASS or LESS?'
+                ],
+                'JavaScript' => [
+                    'Do you have experience with vanilla JavaScript?',
+                    'Have you used any JS frameworks like React or Angular?',
+                    'Can you manipulate the DOM with JavaScript?'
+                ],
+                'PHP' => [
+                    'Are you familiar with PHP syntax and features?',
+                    'Have you developed web applications using PHP?',
+                    'Can you work with PHP frameworks such as Laravel or CodeIgniter?'
+                ],
+                'SQL' => [
+                    'Can you write complex SQL queries?',
+                    'Have you worked with database normalization?',
+                    'Do you know how to optimize SQL queries for performance?'
+                ],
             ],
             'Technical Skill' => [
-                'Programming and Coding Skill' => 3
+                'Database Management' => [
+                    'Designing Databases',
+                    'Writing SQL Queries',
+                    'Database Administration',
+                    'Using tools like MySQL, Oracle etc.'
+                ],
+                'Web Development' => [
+                    'Designing user interfaces (UI)',
+                    'Developing responsive websites',
+                    'Using front-end frameworks (e.g., Bootstrap, React)',
+                    'Back-end development (e.g., Node.js, Django)'
+                ],
+                'System and Software Development' => [
+                    'Gathering and analyzing requirements',
+                    'Software design and architecture',
+                    'Development using Agile/Scrum',
+                    'Testing and debugging applications',
+                    'System maintenance and troubleshooting'
+                ],
             ],
             'Soft Skill' => [
-                'Communication Skill' => 3
-            ]
+                'Communication Skills' => [
+                    'Explaining technical concepts to non-technical people',
+                    'Collaborating with team members',
+                    'Writing clear documentation and reports'
+                ],
+                'Problem-Solving and Analytical Skills' => [
+                    'Independently solve complex problems or debug issues?',
+                    'Research solutions before seeking help from others?',
+                    'Think critically when troubleshooting technical problems?'
+                ],
+                'Time Management' => [
+                    'Prioritizing tasks effectively',
+                    'Meeting project deadlines'
+                ],
+                'Adaptability and Learning' => [
+                    'Adapt to new tools and technologies quickly?',
+                    'Show a willingness to learn independently?',
+                    'Stay updated on emerging IT trends?'
+                ],
+                'Ethical Decision-Making' => [
+                    'Data privacy and security protocols?',
+                    'Ethical issues like intellectual property rights?'
+                ],
+                'Professionalism' => [
+                    'Punctuality and reliability',
+                    'Following company policies and procedures',
+                    'Being receptive to constructive feedback and improving performance accordingly'
+                ],
+            ],
         ];
 
         foreach ($categories as $categoryName => $subCategories) {
+            // Create or retrieve the category
             $category = Category::firstOrCreate(['category_name' => $categoryName]);
 
-            foreach ($subCategories as $subCategoryName => $questionsCount) {
-                $subCategory = SubCategory::firstOrCreate(
-                    ['subcategory_name' => $subCategoryName, 'category_id' => $category->id],
-                );
+            foreach ($subCategories as $subCategoryName => $questions) {
+                // Create or retrieve the subcategory
+                $subCategory = SubCategory::firstOrCreate([
+                    'subcategory_name' => $subCategoryName,
+                    'category_id' => $category->id,
+                ]);
 
-                $subCategory->questions()->saveMany(Question::factory()->times($questionsCount)->create(['sub_category_id' => $subCategory->id, 'access' => 'student']));
+                foreach ($questions as $questionText) {
+                    // Create question aligned with new table
+                    Question::firstOrCreate([
+                        'question' => $questionText,
+                        'subcategory_id' => $subCategory->id,
+                        'access' => 'Student', // Default access
+                        'is_active' => true
+                    ]);
+                }
             }
         }
-
-//        Category::factory()->create(['category_name' => 'Technical Skill'])->each(function ($category) {
-//            $subCategory = SubCategory::firstOrCreate(['subcategory_name' => 'Programming and Coding Skill', 'category_id' => $category->id]);
-//            $category->subCategory()->save($subCategory);
-//            $subCategory->question()->saveMany(Question::factory()->times(3)->create(['sub_category_id' => $subCategory->id]));
-//        });
-//
-//        Category::factory()->create(['category_name' => 'Soft Skill'])->each(function ($category) {
-//            $subCategory = SubCategory::firstOrCreate(['subcategory_name' => 'Communication Skill', 'category_id' => $category->id]);
-//            $category->subCategory()->save($subCategory);
-//            $subCategory->question()->saveMany(Question::factory()->times(3)->create(['sub_category_id' => $subCategory->id]));
-//        });
-
-//        CategoryFactory::create(['Technical Skill'])->each(function ($category) {
-//            $category->subCategory()->save(SubCategory::factory()->create(
-//                'Programming and Coding Skill'
-//            ))->each(function ($subCategory) {
-//                $subCategory->questions()->saveMany(QuestionFactory::times(3)->create());
-//            });
-//        });
-//        CategoryFactory::create(['Soft Skill'])->each(function ($category) {
-//            $category->subCategory()->save(SubCategory::factory()->create(
-//                'Communication Skill'
-//            ))->each(function ($subCategory) {
-//                $subCategory->questions()->saveMany(QuestionFactory::times(3)->create());
-//            });
-//        });
-
-//        $technicalCategory = Category::factory()->create(['category_name' => 'Technical Skill']);
-//        $technicalSubCategory = SubCategory::factory()->create(['subcategory_name' => 'Programming and Coding Skill', 'category_id' => $technicalCategory->id]);
-//
-//        $technicalSubCategory->questions()->saveMany(Question::factory()->count(3)->make());
     }
 }

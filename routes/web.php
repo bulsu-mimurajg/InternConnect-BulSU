@@ -1,8 +1,10 @@
 <?php
 
 use App\Http\Controllers\Admin\StudentController;
+use App\Http\Controllers\AssessmentController;
 use App\Models\Question;
 use App\Models\SubCategory;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -50,13 +52,24 @@ Route::middleware(['auth', 'verified', 'role:hte'])->group(function () {
 
 Route::group(['middleware' => ['auth', 'verified', 'role:student']], function () {
     Route::get('assessment', function () {
-        $subcategories = SubCategory::with(['questions' => function ($query) {
-            $query->where('access', 'student');
-        }])->get();
+//        $subcategories = SubCategory::with(['questions' => function ($query) {
+//            $query->where('access', 'student');
+//        }])->get();
+
+        // Check if the authenticated user's student record has already submitted the assessment
+        $student = Auth::user()->student;
+        $hasSubmitted = $student ? $student->is_submit : false;
 
 //        $questions = Question::all()->where('access', 'student');
-        return Inertia::render('student/assessment', ['subcategories' => $subcategories]);
+        return Inertia::render('student/assessment', [
+            'hasSubmitted' => $hasSubmitted
+        ]);
     })->name('assessment');
+
+    Route::post('assessment', [AssessmentController::class, 'store'])->name('assessment.store');
+    Route::get('assessment/language-proficiency', [AssessmentController::class, 'getLanguageProficiency'])->name('assessment.language-proficiency');
+    Route::get('assessment/technical-skills', [AssessmentController::class, 'getTechnicalSkills'])->name('assessment.technical-skills');
+    Route::get('assessment/soft-skills', [AssessmentController::class, 'getSoftSkills'])->name('assessment.soft-skills');
 });
 
 

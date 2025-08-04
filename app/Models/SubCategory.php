@@ -13,12 +13,22 @@ class SubCategory extends Model
 
     protected $table = 'sub_categories';
 
+    protected $fillable = [
+        'category_id',
+        'subcategory_name',
+    ];
+
     public function questions(): HasMany
     {
-        return $this->hasMany(Question::class);
+        return $this->hasMany(Question::class, 'subcategory_id');
     }
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
+    }
+
+    public function studentScores(): HasMany
+    {
+        return $this->hasMany(StudentScore::class);
     }
 }

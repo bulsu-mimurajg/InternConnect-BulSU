@@ -25,6 +25,7 @@ return new class extends Migration
             $table->string('address', 255);
             $table->date('birth_date');
             $table->boolean('is_active')->default(true);
+            $table->boolean('is_submit')->default(false);
             $table->timestamps();
         });
     }

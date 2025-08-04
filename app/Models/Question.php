@@ -12,8 +12,15 @@ class Question extends Model
 
     protected $table = 'questions';
 
+    protected $fillable = [
+        'subcategory_id',
+        'question',
+        'access',
+        'is_active',
+    ];
+
     public function subcategory(): BelongsTo
     {
-        return $this->belongsTo(SubCategory::class);
+        return $this->belongsTo(SubCategory::class, 'subcategory_id');
     }
 }
