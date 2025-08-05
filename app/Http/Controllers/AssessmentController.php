@@ -277,4 +277,67 @@ class AssessmentController extends Controller
             return response()->json(['error' => 'Failed to retrieve soft skills data'], 500);
         }
     }
+
+    /**
+     * Get student profile data with scores
+     */
+    public function getStudentProfile()
+    {
+        try {
+            $user = Auth::user();
+            $student = Student::where('user_id', $user->id)->first();
+            
+            if (!$student) {
+                return response()->json(['error' => 'Student not found'], 404);
+            }
+
+            // Get all categories with their subcategories and scores
+            $categories = Category::with(['subCategory' => function ($query) use ($student) {
+                $query->with(['studentScores' => function ($scoreQuery) use ($student) {
+                    $scoreQuery->where('student_id', $student->id);
+                }]);
+            }])->get();
+
+            $profileData = [
+                'student' => [
+                    'id' => $student->id,
+                    'student_number' => $student->student_number,
+                    'first_name' => $student->first_name,
+                    'last_name' => $student->last_name,
+                    'middle_name' => $student->middle_name,
+                    'phone' => $student->phone,
+                    'section' => $student->section,
+                    'specialization' => $student->specialization,
+                    'address' => $student->address,
+                    'birth_date' => $student->birth_date,
+                    'is_submit' => $student->is_submit,
+                ],
+                'categories' => []
+            ];
+
+            foreach ($categories as $category) {
+                $categoryData = [
+                    'id' => $category->id,
+                    'name' => $category->category_name,
+                    'subcategories' => []
+                ];
+
+                foreach ($category->subCategory as $subcategory) {
+                    $score = $subcategory->studentScores->first();
+                    $categoryData['subcategories'][] = [
+                        'id' => $subcategory->id,
+                        'name' => $subcategory->subcategory_name,
+                        'score' => $score ? round($score->score, 2) : 0,
+                    ];
+                }
+
+                $profileData['categories'][] = $categoryData;
+            }
+
+            return response()->json($profileData);
+            
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Failed to retrieve student profile data'], 500);
+        }
+    }
 }
