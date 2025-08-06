@@ -17,6 +17,8 @@ class RolePermissionSeeder extends Seeder
         Role::create(['name' => 'student']);
         Role::create(['name' => 'hte']);
         Role::create(['name' => 'admin']);
+        Role::create(['name' => 'adviser']);
+        Role::create(['name' => 'private']);
         Role::create(['name' => 'guest']);
 
         $permissions = [
@@ -35,6 +37,7 @@ class RolePermissionSeeder extends Seeder
             'edit student profile',   // S3: Student edits profile
             'apply internships',      // S4: Student browses/applies internships
             'complete assessments',   // S5: Student completes assessments
+            'view student applications', // A1: Adviser views student applications
         ];
 
         foreach ($permissions as $permission) {
@@ -56,6 +59,12 @@ class RolePermissionSeeder extends Seeder
             'edit company profile',
             'post internships',
             'set assessment criteria',
+            'reset password',
+        ]);
+
+        Role::findByName('adviser')->givePermissionTo([
+            'login',
+            'view student applications',
             'reset password',
         ]);
 

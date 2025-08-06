@@ -47,6 +47,13 @@ class UserFactory extends Factory
         });
     }
 
+    public function adviser(): static
+    {
+        return $this->afterCreating(function (User $user) {
+            $user->assignRole('adviser');
+        });
+    }
+
     public function student(): static
     {
         return $this->afterCreating(function (User $user) {

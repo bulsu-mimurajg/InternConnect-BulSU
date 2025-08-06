@@ -3,7 +3,7 @@ import type { Config } from 'ziggy-js';
 
 export interface Auth {
     user: User;
-    role: 'admin' | 'hte' | 'student' | 'guest';
+    role: 'admin' | 'hte' | 'student' | 'adviser' | 'guest';
 }
 
 export interface BreadcrumbItem {

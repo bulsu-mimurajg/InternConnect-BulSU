@@ -13,7 +13,6 @@ const breadcrumbs: BreadcrumbItem[] = [
 export default function Assessment() {
 
     const { hasSubmitted } = usePage<{
-        subcategories: subcategory[];
         hasSubmitted: boolean;
     }>().props;
 

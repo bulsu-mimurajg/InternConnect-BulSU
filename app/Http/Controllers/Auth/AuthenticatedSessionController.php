@@ -47,6 +47,10 @@ class AuthenticatedSessionController extends Controller
             return redirect()->intended(route('assessment', absolute: false));
         }
 
+        if ($user->hasRole('adviser')) {
+            return redirect()->intended(route('application', absolute: false));
+        }
+
         return redirect()->intended(route('home', absolute: false));
     }
 

@@ -11,6 +11,7 @@ import {
     ClipboardListIcon,
     HeadsetIcon,
     InfoIcon,
+    PersonStandingIcon,
     PrinterIcon,
     UserIcon
 } from 'lucide-react';
@@ -37,6 +38,10 @@ const roleBasedNav: Record<string, { main: NavItem[]; footer: NavItem[] }> = {
     },
     hte: {
         main: [{ title: 'Form', href: '/form', icon: ClipboardListIcon }],
+        footer: [],
+    },
+    adviser: {
+        main: [{ title: 'Application', href: '/application', icon: PersonStandingIcon }],
         footer: [],
     },
     student: {

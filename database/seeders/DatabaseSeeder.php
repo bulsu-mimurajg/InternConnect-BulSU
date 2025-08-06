@@ -29,15 +29,22 @@ class DatabaseSeeder extends Seeder
             'password' => bcrypt('password'),
         ]);
 
+        User::factory()->adviser()->create([
+            'username' => 'emman',
+            'email' => 'emman@example.com',
+            'password' => bcrypt('password'),
+        ]);
+
         User::factory()->student()->create([
             'username' => 'clairo',
             'email' => 'clairo@example.com',
             'password' => bcrypt('password'),
         ]);
 
-        Student::factory()->count(20)->create();
+        // Student::factory()->count(20)->create();
 
         $this->call(CategorySeeder::class);
+        $this->call(SectionSeeder::class);
 
     }
 }
