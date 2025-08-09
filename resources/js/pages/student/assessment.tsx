@@ -12,7 +12,8 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 export default function Assessment() {
 
-    const { hasSubmitted } = usePage<{
+    const { subcategories, hasSubmitted } = usePage<{ 
+        subcategories: subcategory[]; 
         hasSubmitted: boolean;
     }>().props;
 
@@ -20,7 +21,7 @@ export default function Assessment() {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Assessment" />
             <div className="flex h-full flex-1 flex-col gap-4 overflow-y-hidden rounded-xl p-4">
-                <StudentForm hasSubmitted={hasSubmitted} />
+                <StudentForm subcategories={subcategories} hasSubmitted={hasSubmitted} />
             </div>
         </AppLayout>
     );

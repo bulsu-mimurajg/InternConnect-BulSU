@@ -49,6 +49,17 @@ class LoginRequest extends FormRequest
             ]);
         }
 
+        // Check if the authenticated user's status is verified
+        $user = Auth::user();
+        if ($user && $user->status !== 'verified') {
+            Auth::logout();
+            RateLimiter::hit($this->throttleKey());
+
+            throw ValidationException::withMessages([
+                'email' => 'Your account is not yet verified. Please contact an administrator.',
+            ]);
+        }
+
         RateLimiter::clear($this->throttleKey());
     }
 

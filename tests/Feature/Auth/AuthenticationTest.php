@@ -14,7 +14,9 @@ test('login screen can be rendered', function () {
 test('users can authenticate using the login screen', function () {
 //    $this->withoutExceptionHandling();
 
-    $user = User::factory()->create();
+    $user = User::factory()->create([
+        'status' => 'verified'
+    ]);
 
     $user->assignRole('student');
 
@@ -28,7 +30,9 @@ test('users can authenticate using the login screen', function () {
 });
 
 test('users can not authenticate with invalid password', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->create([
+        'status' => 'verified'
+    ]);
 
     $this->post('/login', [
         'email' => $user->email,
@@ -39,10 +43,46 @@ test('users can not authenticate with invalid password', function () {
 });
 
 test('users can logout', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->create([
+        'status' => 'verified'
+    ]);
 
     $response = $this->actingAs($user)->post('/logout');
 
     $this->assertGuest();
     $response->assertRedirect('/');
+});
+
+test('unverified users can not authenticate', function () {
+    $user = User::factory()->create([
+        'status' => 'unverified'
+    ]);
+
+    $user->assignRole('student');
+
+    $response = $this->post('/login', [
+        'email' => $user->email,
+        'password' => 'password',
+    ]);
+
+    $this->assertGuest();
+    $response->assertSessionHasErrors(['email']);
+    $response->assertSessionHasErrors(['email' => 'Your account is not yet verified. Please contact an administrator.']);
+});
+
+test('archived users can not authenticate', function () {
+    $user = User::factory()->create([
+        'status' => 'archived'
+    ]);
+
+    $user->assignRole('student');
+
+    $response = $this->post('/login', [
+        'email' => $user->email,
+        'password' => 'password',
+    ]);
+
+    $this->assertGuest();
+    $response->assertSessionHasErrors(['email']);
+    $response->assertSessionHasErrors(['email' => 'Your account is not yet verified. Please contact an administrator.']);
 });

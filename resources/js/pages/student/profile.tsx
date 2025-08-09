@@ -54,6 +54,7 @@ interface Student {
 interface ProfileProps {
     student: Student | null;
     categories: Category[];
+    hasSubmitted?: boolean;
 }
 
 const navigationItems = [
@@ -63,8 +64,11 @@ const navigationItems = [
     { id: 'soft', label: 'Soft Skills', icon: CheckCircle },
 ];
 
-export default function Profile({ student, categories }: ProfileProps) {
+export default function Profile({ student, categories, hasSubmitted = true }: ProfileProps) {
     const [activeTab, setActiveTab] = useState('basic');
+
+    // Debug: Log the received data
+    console.log('Profile data received:', { student, categories });
 
     if (!student) {
         return (
@@ -151,17 +155,32 @@ export default function Profile({ student, categories }: ProfileProps) {
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="flex items-center gap-2">
-                        {student.is_submit ? (
-                            <>
-                                <CheckCircle className="h-5 w-5 text-green-600" />
-                                <span className="text-green-600 font-medium">Assessment Completed</span>
-                            </>
-                        ) : (
-                            <>
-                                <Clock className="h-5 w-5 text-yellow-600" />
-                                <span className="text-yellow-600 font-medium">Assessment Pending</span>
-                            </>
+                    <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                            {student.is_submit ? (
+                                <>
+                                    <CheckCircle className="h-5 w-5 text-green-600" />
+                                    <span className="text-green-600 font-medium">Assessment Completed</span>
+                                </>
+                            ) : (
+                                <>
+                                    <Clock className="h-5 w-5 text-yellow-600" />
+                                    <span className="text-yellow-600 font-medium">Assessment Pending</span>
+                                </>
+                            )}
+                        </div>
+                        {!student.is_submit && (
+                            <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                                <p className="text-sm text-yellow-800">
+                                    Complete the assessment to view your detailed scores and performance analysis.
+                                </p>
+                                <a
+                                    href="/assessment"
+                                    className="inline-flex items-center mt-2 text-sm text-yellow-700 hover:text-yellow-800 font-medium"
+                                >
+                                    Take Assessment Now →
+                                </a>
+                            </div>
                         )}
                     </div>
                 </CardContent>
@@ -170,6 +189,37 @@ export default function Profile({ student, categories }: ProfileProps) {
     );
 
     const renderCategorySection = (category: Category | undefined, title: string) => {
+        // If student hasn't submitted assessment, show message
+        if (!hasSubmitted) {
+            return (
+                <Card>
+                    <CardContent className="p-6">
+                        <div className="text-center space-y-4">
+                            <div className="mx-auto w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center">
+                                <BookOpen className="h-8 w-8 text-yellow-600" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                                    Assessment Not Completed
+                                </h3>
+                                <p className="text-muted-foreground mt-2">
+                                    You haven't completed the assessment yet. Please take the assessment first to view your scores.
+                                </p>
+                                <div className="mt-4">
+                                    <a
+                                        href="/assessment"
+                                        className="inline-flex items-center px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                                    >
+                                        Take Assessment
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            );
+        }
+
         if (!category || category.subcategories.length === 0) {
             return (
                 <Card>

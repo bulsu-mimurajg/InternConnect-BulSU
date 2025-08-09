@@ -23,6 +23,7 @@ return new class extends Migration
             $table->string('cperson_position', 50);
             $table->string('cperson_contactnum', 50);
             $table->boolean('is_active')->default(true);
+            $table->timestamps();
         });
     }
 

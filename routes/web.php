@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\StudentController;
 use App\Http\Controllers\AssessmentController;
+use App\Http\Controllers\AdviserController;
 use App\Models\Question;
 use App\Models\SubCategory;
 use Illuminate\Support\Facades\Auth;
@@ -51,9 +52,11 @@ Route::middleware(['auth', 'verified', 'role:hte'])->group(function () {
 });
 
 Route::middleware(['auth', 'verified', 'role:adviser'])->group(function () {
-    Route::get('application', function () {
-        return Inertia::render('adviser/application');
-    })->name('application');
+    Route::get('application', [AdviserController::class, 'index'])->name('application');
+    Route::post('application/approve', [AdviserController::class, 'approveStudents'])->name('application.approve');
+    Route::post('application/reject', [AdviserController::class, 'rejectStudents'])->name('application.reject');
+    Route::post('application/remove-access', [AdviserController::class, 'removeStudentAccess'])->name('application.remove-access');
+    Route::post('application/undo', [AdviserController::class, 'undoAction'])->name('application.undo');
 });
 
 Route::group(['middleware' => ['auth', 'verified', 'role:student']], function () {
@@ -76,11 +79,20 @@ Route::group(['middleware' => ['auth', 'verified', 'role:student']], function ()
     Route::get('profile', function () {
         $user = Auth::user();
         $student = $user->student;
-
+        
         if (!$student) {
             return Inertia::render('student/profile', [
                 'student' => null,
                 'categories' => []
+            ]);
+        }
+
+        // Check if student has submitted the assessment
+        if (!$student->is_submit) {
+            return Inertia::render('student/profile', [
+                'student' => $student,
+                'categories' => [],
+                'hasSubmitted' => false
             ]);
         }
 
@@ -91,43 +103,27 @@ Route::group(['middleware' => ['auth', 'verified', 'role:student']], function ()
             }]);
         }])->get();
 
-        $profileData = [
-            'student' => [
-                'id' => $student->id,
-                'student_number' => $student->student_number,
-                'first_name' => $student->first_name,
-                'last_name' => $student->last_name,
-                'middle_name' => $student->middle_name,
-                'phone' => $student->phone,
-                'section' => $student->section,
-                'specialization' => $student->specialization,
-                'address' => $student->address,
-                'birth_date' => $student->birth_date,
-                'is_submit' => $student->is_submit,
-            ],
-            'categories' => []
-        ];
-
-        foreach ($categories as $category) {
-            $categoryData = [
+        // Transform the data to match frontend expectations
+        $transformedCategories = $categories->map(function ($category) {
+            return [
                 'id' => $category->id,
                 'name' => $category->category_name,
-                'subcategories' => []
+                'subcategories' => $category->subCategory->map(function ($subcategory) {
+                    $score = $subcategory->studentScores->first();
+                    return [
+                        'id' => $subcategory->id,
+                        'name' => $subcategory->subcategory_name,
+                        'score' => $score ? round($score->score, 2) : 0,
+                    ];
+                })->toArray()
             ];
+        })->toArray();
 
-            foreach ($category->subCategory as $subcategory) {
-                $score = $subcategory->studentScores->first();
-                $categoryData['subcategories'][] = [
-                    'id' => $subcategory->id,
-                    'name' => $subcategory->subcategory_name,
-                    'score' => $score ? round($score->score, 2) : 0,
-                ];
-            }
-
-            $profileData['categories'][] = $categoryData;
-        }
-
-        return Inertia::render('student/profile', $profileData);
+        return Inertia::render('student/profile', [
+            'student' => $student,
+            'categories' => $transformedCategories,
+            'hasSubmitted' => true
+        ]);
     })->name('profile');
 
     Route::post('assessment', [AssessmentController::class, 'store'])->name('assessment.store');

@@ -36,6 +36,7 @@ class UserFactory extends Factory
     public function admin(): static
     {
         return $this->afterCreating(function (User $user) {
+            $user->status = 'verified';
             $user->assignRole('admin');
         });
     }
@@ -43,6 +44,7 @@ class UserFactory extends Factory
     public function hte(): static
     {
         return $this->afterCreating(function (User $user) {
+            $user->status = 'verified';
             $user->assignRole('hte');
         });
     }
@@ -50,6 +52,7 @@ class UserFactory extends Factory
     public function adviser(): static
     {
         return $this->afterCreating(function (User $user) {
+            $user->status = 'verified';
             $user->assignRole('adviser');
         });
     }

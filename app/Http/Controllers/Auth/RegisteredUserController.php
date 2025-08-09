@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\AcademeAccount;
 use App\Models\Request as RequestModel;
 use App\Models\Section;
 use App\Models\User;
@@ -59,6 +60,11 @@ class RegisteredUserController extends Controller
 
         $user->assignRole('student');
 
+        // Create an academe account record for the student with their selected section
+        $user->academeAccounts()->create([
+            'section_id' => $request->section_id,
+        ]);
+
         // Create a request record for the student
         RequestModel::create([
             'stud_num' => $request->username, // Using username as student number
@@ -67,8 +73,6 @@ class RegisteredUserController extends Controller
 
         event(new Registered($user));
 
-        Auth::login($user);
-
-        return redirect()->intended(route('assessment', absolute: false));
+        return redirect()->route('login')->with('status', 'Registration successful! Please log in to continue.');
     }
 }

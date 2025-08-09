@@ -18,7 +18,6 @@ class RolePermissionSeeder extends Seeder
         Role::create(['name' => 'hte']);
         Role::create(['name' => 'admin']);
         Role::create(['name' => 'adviser']);
-        Role::create(['name' => 'private']);
         Role::create(['name' => 'guest']);
 
         $permissions = [

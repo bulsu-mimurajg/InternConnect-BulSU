@@ -29,6 +29,6 @@ class SubCategory extends Model
 
     public function studentScores(): HasMany
     {
-        return $this->hasMany(StudentScore::class);
+        return $this->hasMany(StudentScore::class, 'sub_category_id');
     }
 }

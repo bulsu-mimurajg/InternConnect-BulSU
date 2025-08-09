@@ -20,6 +20,7 @@ return new class extends Migration
             $table->text('placement_description');
             $table->integer('slot_count');
             $table->boolean('is_active')->default(true);
+            $table->timestamps();
         });
     }
 
