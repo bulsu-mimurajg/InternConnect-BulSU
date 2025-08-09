@@ -71,7 +71,7 @@ Route::group(['middleware' => ['auth', 'verified', 'role:student']], function ()
         ]);
     })->name('assessment');
 
-    Route::get('profile', function () {
+    Route::get('student-profile', function () {
         $user = Auth::user();
         $student = $user->student;
 
@@ -119,7 +119,7 @@ Route::group(['middleware' => ['auth', 'verified', 'role:student']], function ()
             'categories' => $transformedCategories,
             'hasSubmitted' => true
         ]);
-    })->name('profile');
+    })->name('student-profile');
 
     Route::post('assessment', [AssessmentController::class, 'store'])->name('assessment.store');
     Route::get('assessment/language-proficiency', [AssessmentController::class, 'getLanguageProficiency'])->name('assessment.language-proficiency');
