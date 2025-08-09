@@ -61,17 +61,12 @@ Route::middleware(['auth', 'verified', 'role:adviser'])->group(function () {
 
 Route::group(['middleware' => ['auth', 'verified', 'role:student']], function () {
     Route::get('assessment', function () {
-        $subcategories = SubCategory::with(['questions' => function ($query) {
-            $query->where('access', 'student');
-        }])->get();
 
         // Check if the authenticated user's student record has already submitted the assessment
         $student = Auth::user()->student;
         $hasSubmitted = $student ? $student->is_submit : false;
 
-//        $questions = Question::all()->where('access', 'student');
         return Inertia::render('student/assessment', [
-            'subcategories' => $subcategories,
             'hasSubmitted' => $hasSubmitted
         ]);
     })->name('assessment');
@@ -79,7 +74,7 @@ Route::group(['middleware' => ['auth', 'verified', 'role:student']], function ()
     Route::get('profile', function () {
         $user = Auth::user();
         $student = $user->student;
-        
+
         if (!$student) {
             return Inertia::render('student/profile', [
                 'student' => null,

@@ -10,26 +10,23 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useState, useEffect } from 'react';
 import { Path, useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { router, usePage } from '@inertiajs/react';
+import { router } from '@inertiajs/react';
 import { FormFieldsProvider } from '@/contexts/FormFieldsContext';
-import { subcategory } from '@/types';
 
 type Props = {
-    subcategories: subcategory[];
     hasSubmitted: boolean;
 };
 
-export default function StudentForm({ subcategories, hasSubmitted }: Props) {
-    const { flash } = usePage<{ flash: { success?: string; error?: string } }>().props;
+export default function StudentForm({ hasSubmitted }: Props) {
     const [isSubmitted, setIsSubmitted] = useState(hasSubmitted);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // Check for success message on mount or if hasSubmitted is true
+    // Check if hasSubmitted is true
     useEffect(() => {
-        if (flash?.success || hasSubmitted) {
+        if (hasSubmitted) {
             setIsSubmitted(true);
         }
-    }, [flash?.success, hasSubmitted]);
+    }, [hasSubmitted]);
 
     // Dynamic field tracking
     const [dynamicFields, setDynamicFields] = useState<{
@@ -135,10 +132,10 @@ export default function StudentForm({ subcategories, hasSubmitted }: Props) {
 
     const next = async () => {
         const currentStepData = steps[currentStep];
-        const fields = typeof currentStepData.fields === 'function' 
-            ? currentStepData.fields() 
+        const fields = typeof currentStepData.fields === 'function'
+            ? currentStepData.fields()
             : currentStepData.fields;
-        
+
         const isValid = await form.trigger(fields as Path<z.infer<typeof FormSchema>>[], { shouldFocus: true });
 
         if (isValid) {
