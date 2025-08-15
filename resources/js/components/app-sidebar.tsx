@@ -37,7 +37,10 @@ const roleBasedNav: Record<string, { main: NavItem[]; footer: NavItem[] }> = {
         footer: [],
     },
     hte: {
-        main: [{ title: 'Form', href: '/form', icon: ClipboardListIcon }],
+        main: [
+            { title: 'Form', href: '/form', icon: ClipboardListIcon },
+            { title: 'Profile', href: '/hte/profile', icon: UserIcon }
+        ],
         footer: [],
     },
     adviser: {
@@ -60,7 +63,10 @@ export function AppSidebar() {
     const { auth } = usePage<SharedData>().props;
 
     const role = auth.role ?? 'guest';
-    const nav = roleBasedNav[role] ?? roleBasedNav['guest'];
+    let nav = roleBasedNav[role] ?? roleBasedNav['guest'];
+
+    // For HTE users, always show both Form and Profile links
+    // The behavior will be handled in the individual pages based on submission status
 
     return (
         <Sidebar collapsible="icon" variant="inset">

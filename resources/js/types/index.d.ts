@@ -41,7 +41,22 @@ export interface User {
     email_verified_at: string | null;
     created_at: string;
     updated_at: string;
+    hte?: HTE;
     [key: string]: unknown; // This allows for additional properties...
+}
+
+export interface HTE {
+    id: number;
+    company_name: string;
+    company_address: string;
+    company_email: string;
+    cperson_fname: string;
+    cperson_lname: string;
+    cperson_position: string;
+    cperson_contactnum: string;
+    is_active: boolean;
+    created_at: string;
+    updated_at: string;
 }
 
 export interface question {

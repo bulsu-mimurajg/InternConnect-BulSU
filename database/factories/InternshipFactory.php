@@ -52,7 +52,7 @@ class InternshipFactory extends Factory
         ];
 
         return [
-            'h_t_e_id' => HTE::factory(),
+            'hte_id' => HTE::factory(),
             'position_title' => fake()->randomElement($positions),
             'department' => fake()->randomElement($departments),
             'placement_description' => fake()->paragraphs(3, true),

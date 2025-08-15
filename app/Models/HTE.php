@@ -12,7 +12,7 @@ class HTE extends Model
     /** @use HasFactory<\Database\Factories\HTEFactory> */
     use HasFactory;
 
-    protected $table = 'HTE';
+    protected $table = 'htes';
 
     protected $fillable = [
         'user_id',
@@ -24,10 +24,12 @@ class HTE extends Model
         'cperson_position',
         'cperson_contactnum',
         'is_active',
+        'is_submit',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
+        'is_submit' => 'boolean',
     ];
 
     /**
@@ -35,7 +37,7 @@ class HTE extends Model
      */
     public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class, 'user_id');
     }
 
     /**
@@ -43,8 +45,10 @@ class HTE extends Model
      */
     public function internships(): HasMany
     {
-        return $this->hasMany(Internship::class);
+        return $this->hasMany(Internship::class, 'hte_id');
     }
+
+
 
     /**
      * Get the full name of the contact person.

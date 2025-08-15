@@ -31,4 +31,9 @@ class SubCategory extends Model
     {
         return $this->hasMany(StudentScore::class, 'sub_category_id');
     }
+
+    public function subcategoryWeights(): HasMany
+    {
+        return $this->hasMany(SubcategoryWeight::class, 'subcategory_id');
+    }
 }

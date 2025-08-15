@@ -14,7 +14,7 @@ return new class extends Migration
     {
         Schema::create('internships', function (Blueprint $table) {
             $table->id();
-            $table->foreignIdFor(HTE::class)->constrained()->cascadeOnDelete();
+            $table->foreignId('hte_id')->constrained('htes')->cascadeOnDelete();
             $table->string('position_title', 100);
             $table->string('department', 100);
             $table->text('placement_description');

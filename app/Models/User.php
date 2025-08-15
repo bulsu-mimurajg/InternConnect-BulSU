@@ -59,4 +59,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(AcademeAccount::class);
     }
+
+    public function hte(): HasOne
+    {
+        return $this->hasOne(HTE::class, 'user_id');
+    }
 }
