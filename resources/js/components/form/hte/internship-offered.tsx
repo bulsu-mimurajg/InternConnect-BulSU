@@ -84,6 +84,8 @@ export default function InternshipOffered() {
                         </div>
                     </div>
                 ))}
+                
+
             </div>
         </>
     );

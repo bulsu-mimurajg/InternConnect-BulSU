@@ -50,7 +50,15 @@ class DatabaseSeeder extends Seeder
         $this->call(SectionSeeder::class);
         $this->call(AcademeAccountSeeder::class);
         $this->call(HTESeeder::class);
+        $this->call(AdviserSeeder::class);
         $this->call(InternshipSeeder::class);
+        $this->call(ExtendedInternshipSeeder::class);
+        $this->call(StudentSeeder::class);
+        $this->call(ExtendedStudentSeeder::class);
+        $this->call(InternshipCriteriaSeeder::class);
+        $this->call(StudentScoreSeeder::class);
+        $this->call(StudentMatchSeeder::class);
+        $this->call(PlacementSeeder::class);
 
     }
 }

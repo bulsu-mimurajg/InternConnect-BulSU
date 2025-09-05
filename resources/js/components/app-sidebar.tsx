@@ -13,17 +13,22 @@ import {
     InfoIcon,
     PersonStandingIcon,
     PrinterIcon,
-    UserIcon
+    UserIcon,
+    PlusIcon,
+    CalendarIcon,
+    FileTextIcon
 } from 'lucide-react';
 import AppLogo from './app-logo';
 
 const roleBasedNav: Record<string, { main: NavItem[]; footer: NavItem[] }> = {
     admin: {
         main: [
+
+            { title: 'Dashboard', href: '/admin-dashboard', icon: ClipboardIcon },
             {
                 title: 'Student',
-                href: '',
-                icon: ClipboardIcon,
+                href: '/student',
+                icon: ClipboardListIcon,
                 subNav: [
                     { title: 'List', href: '/student/list' },
                     { title: 'Match', href: '/student/matched' },
@@ -31,24 +36,32 @@ const roleBasedNav: Record<string, { main: NavItem[]; footer: NavItem[] }> = {
                 ],
             },
             { title: 'HTE', href: '/hte', icon: UserIcon },
-            { title: 'Placement', href: '/placement', icon: BriefcaseBusinessIcon },
+            { title: 'Adviser', href: '/adviser', icon: PersonStandingIcon },
+            { title: 'Forms', href: '/admin/forms', icon: FileTextIcon },
+            { title: 'Events', href: '/admin/events', icon: CalendarIcon },
             { title: 'Reports', href: '/report', icon: PrinterIcon },
         ],
         footer: [],
     },
     hte: {
         main: [
+            { title: 'Dashboard', href: '/hte/dashboard', icon: ClipboardIcon },
             { title: 'Form', href: '/form', icon: ClipboardListIcon },
             { title: 'Profile', href: '/hte/profile', icon: UserIcon }
         ],
         footer: [],
     },
     adviser: {
-        main: [{ title: 'Application', href: '/application', icon: PersonStandingIcon }],
+        main: [
+            { title: 'Dashboard', href: '/adviser/dashboard', icon: ClipboardIcon },
+            { title: 'Students', href: '/students', icon: UserIcon },
+            { title: 'Application', href: '/application', icon: PersonStandingIcon }
+        ],
         footer: [],
     },
     student: {
         main: [
+            { title: 'Dashboard', href: '/dashboard', icon: ClipboardIcon },
             { title: 'Assessment', href: '/assessment', icon: BookCheckIcon },
             { title: 'Profile', href: '/student-profile', icon: UserIcon },
         ],
@@ -56,6 +69,10 @@ const roleBasedNav: Record<string, { main: NavItem[]; footer: NavItem[] }> = {
             { title: 'About', href: '/about', icon: InfoIcon },
             { title: 'Contact', href: '/contact', icon: HeadsetIcon },
         ],
+    },
+    guest: {
+        main: [],
+        footer: [],
     },
 };
 
@@ -65,8 +82,17 @@ export function AppSidebar() {
     const role = auth.role ?? 'guest';
     let nav = roleBasedNav[role] ?? roleBasedNav['guest'];
 
-    // For HTE users, always show both Form and Profile links
-    // The behavior will be handled in the individual pages based on submission status
+    // For HTE users, show Dashboard and Profile if they already have an HTE
+    if (role === 'hte' && auth.user.hte) {
+        nav = {
+            ...nav,
+            main: [
+                { title: 'Dashboard', href: '/hte/dashboard', icon: ClipboardIcon },
+                { title: 'Add Internship', href: '/hte/add-internship', icon: PlusIcon },
+                { title: 'Profile', href: '/hte/profile', icon: UserIcon }
+            ]
+        };
+    }
 
     return (
         <Sidebar collapsible="icon" variant="inset">
@@ -87,7 +113,7 @@ export function AppSidebar() {
             </SidebarContent>
 
             <SidebarFooter>
-                <NavFooter items={nav.footer} className="mt-auto" />
+                <NavFooter items={nav.footer || []} className="mt-auto" />
                 <NavUser />
             </SidebarFooter>
         </Sidebar>

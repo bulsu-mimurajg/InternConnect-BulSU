@@ -157,7 +157,7 @@ export default function Profile({ student, categories, hasSubmitted = true }: Pr
                 <CardContent>
                     <div className="space-y-3">
                         <div className="flex items-center gap-2">
-                            {student.is_submit ? (
+                            {hasSubmitted ? (
                                 <>
                                     <CheckCircle className="h-5 w-5 text-green-600" />
                                     <span className="text-green-600 font-medium">Assessment Completed</span>
@@ -169,7 +169,7 @@ export default function Profile({ student, categories, hasSubmitted = true }: Pr
                                 </>
                             )}
                         </div>
-                        {!student.is_submit && (
+                        {!hasSubmitted && (
                             <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                                 <p className="text-sm text-yellow-800">
                                     Complete the assessment to view your detailed scores and performance analysis.
@@ -245,7 +245,7 @@ export default function Profile({ student, categories, hasSubmitted = true }: Pr
                         <CardTitle>{title} Overview</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <RadarChart data={chartData} title={`${title} Radar Chart`} />
+                        <RadarChart data={chartData} title={`${title} Radar Chart`} maxValue={5} />
                     </CardContent>
                 </Card>
 

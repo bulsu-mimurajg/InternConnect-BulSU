@@ -21,4 +21,12 @@ class Section extends Model
     {
         return $this->hasMany(Request::class, 'section_id');
     }
+
+    /**
+     * Get the students in this section.
+     */
+    public function students(): HasMany
+    {
+        return $this->hasMany(Student::class, 'section_id');
+    }
 }

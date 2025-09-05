@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
+use App\Notifications\CustomResetPasswordNotification;
 
 class User extends Authenticatable
 {
@@ -60,8 +61,31 @@ class User extends Authenticatable
         return $this->hasMany(AcademeAccount::class);
     }
 
+    public function studentAcademeAccounts(): HasMany
+    {
+        return $this->hasMany(AcademeAccount::class)->whereHas('user.roles', function($q) {
+            $q->where('name', 'student');
+        });
+    }
+
     public function hte(): HasOne
     {
         return $this->hasOne(HTE::class, 'user_id');
+    }
+
+    public function adviser(): HasOne
+    {
+        return $this->hasOne(Adviser::class);
+    }
+
+    /**
+     * Send the password reset notification.
+     *
+     * @param  string  $token
+     * @return void
+     */
+    public function sendPasswordResetNotification($token)
+    {
+        $this->notify(new CustomResetPasswordNotification($token));
     }
 }

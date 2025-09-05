@@ -24,6 +24,12 @@ class AssessmentValidationTest extends TestCase
         // Create a user and student
         $user = User::factory()->create();
         $user->assignRole('student');
+        // Create a section first
+        $section = \App\Models\Section::create([
+            'section_name' => 'TEST-SECTION-VAL',
+            'status' => 'active'
+        ]);
+
         $student = Student::create([
             'user_id' => $user->id,
             'student_number' => 'STU' . $user->id,
@@ -31,7 +37,7 @@ class AssessmentValidationTest extends TestCase
             'last_name' => 'Doe',
             'middle_name' => 'M',
             'phone' => '',
-            'section' => '',
+            'section_id' => $section->section_id,
             'specialization' => '',
             'address' => '',
             'birth_date' => now(),
@@ -135,6 +141,12 @@ class AssessmentValidationTest extends TestCase
         // Create a user and student
         $user = User::factory()->create();
         $user->assignRole('student');
+        // Create a section first
+        $section = \App\Models\Section::create([
+            'section_name' => 'TEST-SECTION-VAL-2',
+            'status' => 'active'
+        ]);
+
         $student = Student::create([
             'user_id' => $user->id,
             'student_number' => 'STU' . $user->id,
@@ -142,7 +154,7 @@ class AssessmentValidationTest extends TestCase
             'last_name' => 'Smith',
             'middle_name' => 'A',
             'phone' => '',
-            'section' => '',
+            'section_id' => $section->section_id,
             'specialization' => '',
             'address' => '',
             'birth_date' => now(),

@@ -26,7 +26,7 @@ test('users can authenticate using the login screen', function () {
     ]);
 
     $this->assertAuthenticated();
-    $response->assertRedirect(route('assessment', absolute: false));
+    $response->assertRedirect(route('student.dashboard', absolute: false));
 });
 
 test('users can not authenticate with invalid password', function () {

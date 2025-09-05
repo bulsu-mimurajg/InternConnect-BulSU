@@ -44,6 +44,30 @@ class Internship extends Model
     }
 
     /**
+     * Get all compatibility scores for this internship
+     */
+    public function compatibilityScores(): HasMany
+    {
+        return $this->hasMany(StudentMatch::class);
+    }
+
+    /**
+     * Get actual student placements (approved/rejected) for this internship
+     */
+    public function studentPlacements(): HasMany
+    {
+        return $this->hasMany(StudentPlacement::class);
+    }
+
+    /**
+     * Get the placements for this internship.
+     */
+    public function placements(): HasMany
+    {
+        return $this->hasMany(Placement::class);
+    }
+
+    /**
      * Scope a query to only include active internships.
      */
     public function scopeActive($query)

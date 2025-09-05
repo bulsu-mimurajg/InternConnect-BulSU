@@ -9,6 +9,80 @@ use Database\Seeders\AcademeAccountSeeder;
 
 beforeEach(fn () => $this->seed(RolePermissionSeeder::class));
 
+test('adviser can view dashboard', function () {
+    // Create section
+    $section = Section::create([
+        'section_name' => 'BSIT-1A',
+        'status' => 'active'
+    ]);
+
+    // Create adviser
+    $adviser = User::factory()->create();
+    $adviser->assignRole('adviser');
+    
+    // Assign adviser to section
+    AcademeAccount::create([
+        'user_id' => $adviser->id,
+        'section_id' => $section->section_id,
+    ]);
+
+    // Create students in same section
+    $students = User::factory()->student()->count(3)->create();
+    foreach ($students as $student) {
+        AcademeAccount::create([
+            'user_id' => $student->id,
+            'section_id' => $section->section_id,
+        ]);
+    }
+
+    $response = $this->actingAs($adviser)->get('/adviser/dashboard');
+
+    $response->assertStatus(200);
+    $response->assertInertia(fn ($page) => 
+        $page->component('adviser/dashboard')
+            ->has('stats')
+            ->has('recentAssessments')
+            ->has('placementOverview')
+            ->has('adviserSection')
+    );
+});
+
+test('adviser can view students page', function () {
+    // Create section
+    $section = Section::create([
+        'section_name' => 'BSIT-1A',
+        'status' => 'active'
+    ]);
+
+    // Create adviser
+    $adviser = User::factory()->create();
+    $adviser->assignRole('adviser');
+    
+    // Assign adviser to section
+    AcademeAccount::create([
+        'user_id' => $adviser->id,
+        'section_id' => $section->section_id,
+    ]);
+
+    // Create students in same section
+    $students = User::factory()->student()->count(2)->create();
+    foreach ($students as $student) {
+        AcademeAccount::create([
+            'user_id' => $student->id,
+            'section_id' => $section->section_id,
+        ]);
+    }
+
+    $response = $this->actingAs($adviser)->get('/students');
+
+    $response->assertStatus(200);
+    $response->assertInertia(fn ($page) => 
+        $page->component('adviser/students')
+            ->has('students', 2)
+            ->has('adviserSection')
+    );
+});
+
 test('adviser can view application page', function () {
     // Create section
     $section = Section::create([

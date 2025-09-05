@@ -13,14 +13,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('student_choices', function (Blueprint $table) {
+        Schema::create('student_matches', function (Blueprint $table) {
             $table->id();
             $table->foreignIdFor(Student::class)->constrained()->cascadeOnDelete();
             $table->foreignIdFor(Internship::class)->constrained()->cascadeOnDelete();
-            $table->unsignedInteger('choice_rank');
-            $table->enum('admin_status', ['pending', 'approved', 'rejected'])->default('pending');
-            $table->timestamp('choice_date');
-            $table->boolean('auto_assigned')->default(false);
+            $table->unsignedInteger('rank');
+            $table->decimal('compatibility_score', 5, 2);
+            $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
+            $table->timestamps();
         });
     }
 
@@ -29,6 +29,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('student_choices');
+        Schema::dropIfExists('student_matches');
     }
 };

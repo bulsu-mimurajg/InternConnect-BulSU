@@ -27,6 +27,7 @@ const FormSchema = z.object({
     duration: z.string().min(1, 'Duration is required'),
     startDate: z.string().min(1, 'Start date is required'),
     endDate: z.string().min(1, 'End date is required'),
+
     
     // Weights
     subcategoryWeights: z.record(z.string(), z.number().min(0).max(100)),
@@ -55,7 +56,7 @@ interface Question {
 }
 
 export default function HTEForm() {
-    const { flash } = usePage<{ flash: { success?: string; error?: string } }>().props;
+    const { flash } = usePage<{ flash: { success?: string; error?: string; warning?: string } }>().props;
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     
@@ -158,23 +159,55 @@ export default function HTEForm() {
     function onSubmit(values: FormData) {
         setIsSubmitting(true);
         
+        // Debug: Log the form data being sent
+        console.log('HTE Form Submission - Form Data:', values);
+        console.log('Subcategory Weights:', values.subcategoryWeights);
+        console.log('Subcategory Weights Count:', Object.keys(values.subcategoryWeights || {}).length);
+        
+        // Validate that all subcategory weights are properly set
+        const weights = values.subcategoryWeights || {};
+        const weightKeys = Object.keys(weights);
+        
+        if (weightKeys.length === 0) {
+            alert('Please set subcategory weights before submitting the form.');
+            setIsSubmitting(false);
+            return;
+        }
+        
+        // Check if any weights are missing or invalid
+        const missingWeights = weightKeys.filter(key => 
+            weights[key] === undefined || weights[key] === null || weights[key] < 0
+        );
+        
+        if (missingWeights.length > 0) {
+            alert('Some subcategory weights are missing or invalid. Please check all weight fields.');
+            setIsSubmitting(false);
+            return;
+        }
+        
         // Keep weights as numbers for form submission
         const formData = {
             ...values,
         };
         
-        // Debug: Log the form data being sent
-        console.log('HTE Form Submission - Form Data:', formData);
-        console.log('Subcategory Weights:', formData.subcategoryWeights);
-        console.log('Subcategory Weights Count:', Object.keys(formData.subcategoryWeights).length);
+        console.log('Proceeding with form submission...');
         
         router.post('/hte/submit', formData, {
-            onSuccess: () => {
+            onSuccess: (page) => {
+                console.log('Form submission successful:', page);
                 setIsSubmitted(true);
                 setIsSubmitting(false);
             },
-            onError: () => {
+            onError: (errors) => {
+                console.error('Form submission failed:', errors);
                 setIsSubmitting(false);
+                // Show error message to user
+                if (errors && typeof errors === 'object') {
+                    const errorMessages = Object.values(errors).flat();
+                    alert('Form submission failed: ' + errorMessages.join(', '));
+                } else {
+                    alert('Form submission failed. Please try again.');
+                }
             }
         });
     }
@@ -199,6 +232,25 @@ export default function HTEForm() {
                 break;
             case 2: // Criteria
                 fieldsToValidate = ['subcategoryWeights'];
+                
+                // Additional validation for criteria step
+                const weights = form.watch('subcategoryWeights') || {};
+                const weightKeys = Object.keys(weights);
+                
+                if (weightKeys.length === 0) {
+                    alert('Please set subcategory weights before proceeding. Click "Redistribute Weights Evenly" if needed.');
+                    return;
+                }
+                
+                // Check if any weights are missing
+                const missingWeights = weightKeys.filter(key => 
+                    weights[key] === undefined || weights[key] === null || weights[key] < 0
+                );
+                
+                if (missingWeights.length > 0) {
+                    alert('Some subcategory weights are missing. Please ensure all subcategories have weights assigned.');
+                    return;
+                }
                 break;
         }
 
@@ -232,6 +284,14 @@ export default function HTEForm() {
                                 <p className="text-gray-600 dark:text-gray-400">
                                     Thank you for submitting your HTE form. Your internship opportunity has been recorded and will be available for student matching.
                                 </p>
+                                <div className="pt-4">
+                                    <Button 
+                                        onClick={() => router.visit('/hte/dashboard')}
+                                        className="bg-blue-600 hover:bg-blue-700"
+                                    >
+                                        Go to Dashboard
+                                    </Button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -245,6 +305,25 @@ export default function HTEForm() {
             <div className="flex justify-center">
                 <FormStepCounter steps={steps} currentStep={currentStep} />
             </div>
+            
+            {/* Warning Message */}
+            {flash?.warning && (
+                <div className="mb-4 rounded-md bg-yellow-50 border border-yellow-200 p-4">
+                    <div className="flex">
+                        <div className="flex-shrink-0">
+                            <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                            </svg>
+                        </div>
+                        <div className="ml-3">
+                            <p className="text-sm text-yellow-800">
+                                {flash.warning}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
+            
             <div className="relative min-h-[100vh] flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 md:min-h-min dark:border-sidebar-border">
                 <div className="p-4">
                     <div className="">

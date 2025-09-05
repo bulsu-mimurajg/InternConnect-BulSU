@@ -16,6 +16,7 @@ return new class extends Migration
             $table->dateTime('start_date');
             $table->dateTime('end_date');
             $table->enum('status', ['active', 'expired'])->default('active');
+            $table->timestamps();
         });
     }
 

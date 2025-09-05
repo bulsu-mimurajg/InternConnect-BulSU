@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Inertia\Middleware;
 use Tighten\Ziggy\Ziggy;
 
@@ -39,6 +40,18 @@ class HandleInertiaRequests extends Middleware
     {
         [$message, $author] = str(Inspiring::quotes()->random())->explode('-');
 
+        // Ensure CSRF token is always fresh
+        $csrfToken = csrf_token();
+        
+        // Log CSRF token for debugging (remove in production)
+        if (config('app.debug')) {
+            Log::info('CSRF Token generated for request', [
+                'url' => $request->url(),
+                'token' => substr($csrfToken, 0, 10) . '...',
+                'session_id' => $request->session()->getId(),
+            ]);
+        }
+
         return [
             ...parent::share($request),
             'name' => config('app.name'),
@@ -56,6 +69,7 @@ class HandleInertiaRequests extends Middleware
                 'success' => $request->session()->get('success'),
                 'error' => $request->session()->get('error'),
             ],
+            'csrf_token' => $csrfToken, // Add CSRF token to shared data
         ];
     }
 }

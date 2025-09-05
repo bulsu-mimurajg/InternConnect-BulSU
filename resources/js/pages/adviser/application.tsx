@@ -38,10 +38,7 @@ interface Student {
 interface Props {
     pendingStudents: Student[];
     verifiedStudents: Student[];
-    adviserSection: {
-        section_id: number;
-        section_name: string;
-    } | null;
+    adviserSection: string | null;
 }
 
 export default function Application({ pendingStudents, verifiedStudents, adviserSection }: Props) {
@@ -183,7 +180,7 @@ export default function Application({ pendingStudents, verifiedStudents, adviser
     if (!adviserSection) {
         return (
             <AppLayout breadcrumbs={breadcrumbs}>
-                <Head title="Application" />
+                <Head title="Applications" />
                 <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
                     <Card>
                         <CardHeader>
@@ -217,7 +214,7 @@ export default function Application({ pendingStudents, verifiedStudents, adviser
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                             <UsersIcon className="h-5 w-5" />
-                            Section: {adviserSection.section_name}
+                            Section: {adviserSection}
                         </CardTitle>
                         <CardDescription>
                             Manage student applications for your section

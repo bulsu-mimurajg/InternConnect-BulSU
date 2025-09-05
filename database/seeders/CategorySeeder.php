@@ -116,7 +116,7 @@ class CategorySeeder extends Seeder
                 foreach ($questions as $questionText) {
                     // Create question aligned with new table
                     Question::firstOrCreate([
-                        'text' => $questionText,
+                        'question' => $questionText,
                         'subcategory_id' => $subCategory->id,
                         'access' => 'Student', // Default access
                         'is_active' => true

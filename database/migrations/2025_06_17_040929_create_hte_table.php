@@ -15,14 +15,15 @@ return new class extends Migration
         Schema::create('htes', function (Blueprint $table) {
             $table->id();
             $table->foreignIdFor(User::class);
-            $table->string('company_name', 100);
-            $table->string('company_address', 255);
-            $table->string('company_email', 100);
-            $table->string('cperson_fname', 50);
-            $table->string('cperson_lname', 50);
-            $table->string('cperson_position', 50);
-            $table->string('cperson_contactnum', 50);
+            $table->string('company_name', 100)->nullable();
+            $table->string('company_address', 255)->nullable();
+            $table->string('company_email', 100)->nullable();
+            $table->string('cperson_fname', 50)->nullable();
+            $table->string('cperson_lname', 50)->nullable();
+            $table->string('cperson_position', 50)->nullable();
+            $table->string('cperson_contactnum', 50)->nullable();
             $table->boolean('is_active')->default(true);
+            $table->boolean('is_submit')->default(false);
             $table->timestamps();
         });
     }

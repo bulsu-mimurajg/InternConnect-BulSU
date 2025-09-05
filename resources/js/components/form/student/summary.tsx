@@ -25,10 +25,20 @@ export default function Summary() {
                 setLoading(true);
                 
                 // Fetch all sections data
+                const fetchOptions = {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    credentials: 'same-origin',
+                };
+                
                 const [languageResponse, technicalResponse, softResponse] = await Promise.all([
-                    fetch('/assessment/language-proficiency'),
-                    fetch('/assessment/technical-skills'),
-                    fetch('/assessment/soft-skills')
+                    fetch('/assessment/language-proficiency', fetchOptions),
+                    fetch('/assessment/technical-skills', fetchOptions),
+                    fetch('/assessment/soft-skills', fetchOptions)
                 ]);
 
                 const languageData = await languageResponse.json();

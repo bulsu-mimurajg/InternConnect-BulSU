@@ -34,6 +34,9 @@ class StudentFactory extends Factory
             'specialization' => $this->faker->randomElement($specialization),
             'address' => $this->faker->address,
             'birth_date' => $this->faker->date(),
+            'is_active' => true,
+            'is_submit' => false,
+            'is_placed' => false,
         ];
     }
 

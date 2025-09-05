@@ -20,6 +20,12 @@ class AssessmentTest extends TestCase
     {
         // Seed roles and permissions
         $this->seed(RolePermissionSeeder::class);
+        // Create a section first
+        $section = \App\Models\Section::create([
+            'section_name' => 'TEST-SECTION',
+            'status' => 'active'
+        ]);
+
         // Create a user and student
         $user = User::factory()->create();
         $user->assignRole('student');
@@ -30,7 +36,7 @@ class AssessmentTest extends TestCase
             'last_name' => 'Doe',
             'middle_name' => 'M',
             'phone' => '',
-            'section' => '',
+            'section_id' => $section->section_id,
             'specialization' => '',
             'address' => '',
             'birth_date' => now(),
@@ -94,6 +100,12 @@ class AssessmentTest extends TestCase
         // Seed roles and permissions
         $this->seed(RolePermissionSeeder::class);
         
+        // Create a section first
+        $section = \App\Models\Section::create([
+            'section_name' => 'TEST-SECTION-2',
+            'status' => 'active'
+        ]);
+
         // Create a user and student
         $user = User::factory()->create();
         $user->assignRole('student');
@@ -104,7 +116,7 @@ class AssessmentTest extends TestCase
             'last_name' => 'Doe',
             'middle_name' => 'M',
             'phone' => '',
-            'section' => '',
+            'section_id' => $section->section_id,
             'specialization' => '',
             'address' => '',
             'birth_date' => now(),
@@ -161,6 +173,12 @@ class AssessmentTest extends TestCase
         // Seed roles and permissions
         $this->seed(RolePermissionSeeder::class);
         
+        // Create a section first
+        $section = \App\Models\Section::create([
+            'section_name' => 'TEST-SECTION-3',
+            'status' => 'active'
+        ]);
+        
         // Create a user and student
         $user = User::factory()->create();
         $user->assignRole('student');
@@ -171,7 +189,7 @@ class AssessmentTest extends TestCase
             'last_name' => 'Doe',
             'middle_name' => 'M',
             'phone' => '',
-            'section' => '',
+            'section_id' => $section->section_id,
             'specialization' => '',
             'address' => '',
             'birth_date' => now(),
@@ -233,6 +251,12 @@ class AssessmentTest extends TestCase
         // Seed roles and permissions
         $this->seed(RolePermissionSeeder::class);
         
+        // Create a section first
+        $section = \App\Models\Section::create([
+            'section_name' => 'TEST-SECTION-4',
+            'status' => 'active'
+        ]);
+
         // Create a user and student who has already submitted
         $user = User::factory()->create();
         $user->assignRole('student');
@@ -243,7 +267,7 @@ class AssessmentTest extends TestCase
             'last_name' => 'Doe',
             'middle_name' => 'M',
             'phone' => '',
-            'section' => '',
+            'section_id' => $section->section_id,
             'specialization' => '',
             'address' => '',
             'birth_date' => now(),

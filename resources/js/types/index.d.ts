@@ -41,31 +41,68 @@ export interface User {
     email_verified_at: string | null;
     created_at: string;
     updated_at: string;
+    hte?: HTE;
     [key: string]: unknown; // This allows for additional properties...
+}
+
+export interface HTE {
+    id: number;
+    company_name: string;
+    company_address: string;
+    company_email: string;
+    cperson_fname: string;
+    cperson_lname: string;
+    cperson_position: string;
+    cperson_contactnum: string;
+    is_active: boolean;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface question {
+    label?: string;
+    question: string;
+    type: 'text' | 'radio' | 'select';
+    placeholder?: string;
+    options?: string[];
+    required?: boolean;
+    access: 'Student' | 'HTE';
+}
+
+export interface Question {
+    id: number;
+    question: string;
+    access: 'Student' | 'HTE';
+    is_active: boolean;
+    subcategory_id: number;
+    subcategory: {
+        id: number;
+        subcategory_name: string;
+        category: {
+            id: number;
+            category_name: string;
+        };
+    };
+    created_at: string;
+    updated_at: string;
 }
 
 export interface Category {
     id: number;
     category_name: string;
+    subCategories: SubCategory[];
 }
 
 export interface SubCategory {
     id: number;
     subcategory_name: string;
     category_id: number;
+    category_name?: string;
 }
 
-export interface Question {
+export interface subcategory {
     id: number;
-    text: string;
-    subcategory_id: number;
-}
-
-export interface AssessmentProps {
-    data: {
-        categories: Category[];
-        subcategories: SubCategory[];
-        questions: Question[];
-    };
-    hasSubmitted?: boolean;
+    subcategory_name: string;
+    category_name: string;
+    questions: Question[];
 }

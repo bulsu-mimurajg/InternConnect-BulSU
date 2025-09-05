@@ -72,18 +72,29 @@ export default function Criteria({
     React.useEffect(() => {
         if (categories.length > 0 && Object.keys(subcategoryWeights).length === 0) {
             console.log('Initializing default weights for categories');
+            
+            // Create a complete weights object for all subcategories
+            const newWeights: Record<string, number> = {};
+            
             categories.forEach(category => {
                 if (category.subCategories && category.subCategories.length > 0) {
-                    const equalWeight = Math.round(100 / category.subCategories.length);
+                    const equalWeight = Math.floor(100 / category.subCategories.length);
                     const remainder = 100 % category.subCategories.length;
                     
                     category.subCategories.forEach((subcat: any, index: number) => {
                         const weight = index < remainder ? equalWeight + 1 : equalWeight;
+                        newWeights[subcat.id] = weight;
                         console.log('Setting default weight for subcategory:', subcat.id, 'to:', weight);
-                        setValue(`subcategoryWeights.${subcat.id}`, weight);
                     });
                 }
             });
+            
+            // Set all weights at once to avoid race conditions
+            Object.entries(newWeights).forEach(([subcatId, weight]) => {
+                setValue(`subcategoryWeights.${subcatId}`, weight);
+            });
+            
+            console.log('All default weights set:', newWeights);
         }
     }, [categories, setValue, subcategoryWeights]);
 
@@ -170,14 +181,32 @@ export default function Criteria({
         const category = categories.find(cat => cat.id === categoryId);
         if (!category || !category.subCategories) return;
 
-        const subcategories = category.subCategories;
-        const equalWeight = Math.round(100 / subcategories.length);
-        const remainder = 100 % subcategories.length;
-        
-        subcategories.forEach((subcat: SubCategory, index: number) => {
+        const equalWeight = Math.floor(100 / category.subCategories.length);
+        const remainder = 100 % category.subCategories.length;
+
+        category.subCategories.forEach((subcat: any, index: number) => {
             const weight = index < remainder ? equalWeight + 1 : equalWeight;
             setValue(`subcategoryWeights.${subcat.id}`, weight);
         });
+    }, [categories, setValue]);
+
+    // Ensure all subcategories have weights by redistributing evenly
+    const ensureAllWeightsSet = useCallback(() => {
+        console.log('Ensuring all subcategories have weights...');
+        
+        categories.forEach(category => {
+            if (category.subCategories && category.subCategories.length > 0) {
+                const equalWeight = Math.floor(100 / category.subCategories.length);
+                const remainder = 100 % category.subCategories.length;
+                
+                category.subCategories.forEach((subcat: any, index: number) => {
+                    const weight = index < remainder ? equalWeight + 1 : equalWeight;
+                    setValue(`subcategoryWeights.${subcat.id}`, weight);
+                });
+            }
+        });
+        
+        console.log('All weights redistributed evenly');
     }, [categories, setValue]);
 
     // Memoize computed values to prevent unnecessary recalculations
@@ -217,16 +246,86 @@ export default function Criteria({
         });
     }, [categories]);
 
+    // Validate that all subcategories have weights and they add up to 100% for each category
+    const validateWeights = useCallback(() => {
+        const weights = watch('subcategoryWeights') || {};
+        const validationErrors: string[] = [];
+        
+        categories.forEach(category => {
+            if (category.subCategories && category.subCategories.length > 0) {
+                const categoryWeights = category.subCategories.map(subcat => weights[subcat.id] || 0);
+                const totalWeight = categoryWeights.reduce((sum, weight) => sum + weight, 0);
+                
+                if (totalWeight !== 100) {
+                    validationErrors.push(`Category "${category.category_name}" weights must total 100% (currently ${totalWeight}%)`);
+                }
+                
+                // Check if any subcategory is missing a weight
+                category.subCategories.forEach(subcat => {
+                    if (weights[subcat.id] === undefined || weights[subcat.id] === null) {
+                        validationErrors.push(`Subcategory "${subcat.subcategory_name}" is missing a weight`);
+                    }
+                });
+            }
+        });
+        
+        return validationErrors;
+    }, [categories, watch]);
+
+    // Add validation to the component props
+    React.useEffect(() => {
+        const errors = validateWeights();
+        if (errors.length > 0) {
+            console.warn('Weight validation errors:', errors);
+        }
+    }, [validateWeights]);
+
     if (loading) {
         return (
-            <div className="flex items-center justify-center p-8">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-                    <p className="mt-2 text-gray-600">Loading criteria...</p>
+            <div className="space-y-4">
+                <div className="animate-pulse">
+                    <div className="h-4 bg-gray-200 rounded w-1/4 mb-4"></div>
+                    <div className="space-y-3">
+                        <div className="h-4 bg-gray-200 rounded"></div>
+                        <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+                    </div>
                 </div>
             </div>
         );
     }
+
+    // Calculate overall weight status
+    const overallStatus = useMemo(() => {
+        const weights = watch('subcategoryWeights') || {};
+        let totalSubcategories = 0;
+        let subcategoriesWithWeights = 0;
+        let categoriesWithValidWeights = 0;
+        let totalCategories = 0;
+
+        categories.forEach(category => {
+            if (category.subCategories && category.subCategories.length > 0) {
+                totalCategories++;
+                totalSubcategories += category.subCategories.length;
+                
+                const categoryWeights = category.subCategories.map(subcat => weights[subcat.id] || 0);
+                const totalWeight = categoryWeights.reduce((sum, weight) => sum + weight, 0);
+                
+                if (totalWeight === 100) {
+                    categoriesWithValidWeights++;
+                }
+                
+                subcategoriesWithWeights += categoryWeights.filter(weight => weight > 0).length;
+            }
+        });
+
+        return {
+            totalSubcategories,
+            subcategoriesWithWeights,
+            categoriesWithValidWeights,
+            totalCategories,
+            isComplete: subcategoriesWithWeights === totalSubcategories && categoriesWithValidWeights === totalCategories
+        };
+    }, [categories, watch]);
 
     // Check if user is authenticated and has HTE role
     if (!auth.user || auth.role !== 'hte') {
@@ -259,6 +358,48 @@ export default function Criteria({
 
     return (
         <div className="space-y-6">
+            {/* Overall Weight Status */}
+            <Card className="border-2 border-blue-100 bg-blue-50">
+                <CardHeader>
+                    <CardTitle className="text-blue-800">Weight Assignment Status</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                        <div>
+                            <div className="text-2xl font-bold text-blue-600">{overallStatus.subcategoriesWithWeights}</div>
+                            <div className="text-sm text-blue-700">Subcategories with Weights</div>
+                            <div className="text-xs text-blue-600">of {overallStatus.totalSubcategories}</div>
+                        </div>
+                        <div>
+                            <div className="text-2xl font-bold text-blue-600">{overallStatus.categoriesWithValidWeights}</div>
+                            <div className="text-sm text-blue-700">Categories with 100%</div>
+                            <div className="text-xs text-blue-600">of {overallStatus.totalCategories}</div>
+                        </div>
+                        <div>
+                            <div className="text-2xl font-bold text-blue-600">{Math.round((overallStatus.subcategoriesWithWeights / overallStatus.totalSubcategories) * 100)}%</div>
+                            <div className="text-sm text-blue-700">Completion</div>
+                        </div>
+                        <div>
+                            <div className={`text-2xl font-bold ${overallStatus.isComplete ? 'text-green-600' : 'text-yellow-600'}`}>
+                                {overallStatus.isComplete ? '✓' : '⚠'}
+                            </div>
+                            <div className="text-sm text-blue-700">Status</div>
+                            <div className="text-xs text-blue-600">{overallStatus.isComplete ? 'Ready' : 'Incomplete'}</div>
+                        </div>
+                    </div>
+                    
+                    {/* Debug Information (only show in development) */}
+                    {process.env.NODE_ENV === 'development' && (
+                        <div className="mt-4 p-3 bg-gray-100 rounded text-xs">
+                            <div className="font-semibold mb-2">Debug Info:</div>
+                            <div>Total Weights Set: {Object.keys(subcategoryWeights).length}</div>
+                            <div>Weights Object: {JSON.stringify(subcategoryWeights, null, 2)}</div>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+
+            {/* Categories */}
             <h2 className="text-xl font-semibold">Assessment Criteria</h2>
             <p className="text-gray-600 dark:text-gray-400">
                 Assign weights to each subcategory. Weights within each category must total 100%.
@@ -392,7 +533,18 @@ export default function Criteria({
 
                                 {/* Subcategories with Weight Inputs */}
                                 <div className="space-y-4">
-                                    <h4 className="font-medium text-gray-700">Subcategory Weights</h4>
+                                    <div className="flex items-center justify-between">
+                                        <h4 className="font-medium text-gray-700">Subcategory Weights</h4>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={ensureAllWeightsSet}
+                                            className="text-xs"
+                                        >
+                                            Redistribute Weights Evenly
+                                        </Button>
+                                    </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                         {category.subCategories.map((subcategory) => {
                                             const isSubExpanded = expandedSubcategories.has(subcategory.id);

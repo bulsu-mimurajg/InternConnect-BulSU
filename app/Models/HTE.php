@@ -55,6 +55,9 @@ class HTE extends Model
      */
     public function getContactPersonFullNameAttribute(): string
     {
-        return $this->cperson_fname . ' ' . $this->cperson_lname;
+        if (!$this->cperson_fname && !$this->cperson_lname) {
+            return 'Not provided';
+        }
+        return trim(($this->cperson_fname ?? '') . ' ' . ($this->cperson_lname ?? ''));
     }
 }
