@@ -3,7 +3,6 @@
 use App\Http\Controllers\Admin\StudentController;
 use App\Http\Controllers\AssessmentController;
 use App\Http\Controllers\AdviserController;
-use App\Http\Controllers\HTEController;
 use App\Models\Question;
 use App\Models\SubCategory;
 use Illuminate\Support\Facades\Auth;
@@ -47,14 +46,10 @@ Route::middleware(['auth', 'verified', 'role:admin'])->group(function () {
 });
 
 Route::middleware(['auth', 'verified', 'role:hte'])->group(function () {
-    Route::get('form', [App\Http\Controllers\HTEController::class, 'showForm'])->name('form');
-    Route::post('hte/submit', [App\Http\Controllers\HTEController::class, 'submit'])->name('hte.submit');
-    Route::get('hte/categories', [App\Http\Controllers\HTEController::class, 'getCategoriesForCriteria'])->name('hte.categories');
-    Route::get('hte/profile', [App\Http\Controllers\HTEController::class, 'profile'])->name('hte.profile');
-    Route::get('hte/check-existing', [App\Http\Controllers\HTEController::class, 'checkExistingHTE'])->name('hte.check-existing');
+    Route::get('form', function () {
+        return Inertia::render('hte/form');
+    })->name('form');
 });
-
-
 
 Route::middleware(['auth', 'verified', 'role:adviser'])->group(function () {
     Route::get('application', [AdviserController::class, 'index'])->name('application');
@@ -65,26 +60,12 @@ Route::middleware(['auth', 'verified', 'role:adviser'])->group(function () {
 });
 
 Route::group(['middleware' => ['auth', 'verified', 'role:student']], function () {
-    Route::get('assessment', function () {
-        $subcategories = SubCategory::with(['questions' => function ($query) {
-            $query->where('access', 'student');
-        }])->get();
-
-        // Check if the authenticated user's student record has already submitted the assessment
-        $student = Auth::user()->student;
-        $hasSubmitted = $student ? $student->is_submit : false;
-
-//        $questions = Question::all()->where('access', 'student');
-        return Inertia::render('student/assessment', [
-            'subcategories' => $subcategories,
-            'hasSubmitted' => $hasSubmitted
-        ]);
-    })->name('assessment');
+    Route::get('assessment', [AssessmentController::class, 'index'])->name('assessment');
 
     Route::get('student-profile', function () {
         $user = Auth::user();
         $student = $user->student;
-        
+
         if (!$student) {
             return Inertia::render('student/profile', [
                 'student' => null,
@@ -102,7 +83,7 @@ Route::group(['middleware' => ['auth', 'verified', 'role:student']], function ()
         }
 
         // Get all categories with their subcategories and scores
-        $categories = \App\Models\Category::with(['subCategory' => function ($query) use ($student) {
+        $categories = \App\Models\Category::with(['subCategories' => function ($query) use ($student) {
             $query->with(['studentScores' => function ($scoreQuery) use ($student) {
                 $scoreQuery->where('student_id', $student->id);
             }]);
@@ -113,7 +94,7 @@ Route::group(['middleware' => ['auth', 'verified', 'role:student']], function ()
             return [
                 'id' => $category->id,
                 'name' => $category->category_name,
-                'subcategories' => $category->subCategory->map(function ($subcategory) {
+                'subcategories' => $category->subCategories->map(function ($subcategory) {
                     $score = $subcategory->studentScores->first();
                     return [
                         'id' => $subcategory->id,
@@ -129,7 +110,7 @@ Route::group(['middleware' => ['auth', 'verified', 'role:student']], function ()
             'categories' => $transformedCategories,
             'hasSubmitted' => true
         ]);
-    })->name('profile');
+    })->name('student-profile');
 
     Route::post('assessment', [AssessmentController::class, 'store'])->name('assessment.store');
     Route::get('assessment/language-proficiency', [AssessmentController::class, 'getLanguageProficiency'])->name('assessment.language-proficiency');
@@ -137,13 +118,6 @@ Route::group(['middleware' => ['auth', 'verified', 'role:student']], function ()
     Route::get('assessment/soft-skills', [AssessmentController::class, 'getSoftSkills'])->name('assessment.soft-skills');
 });
 
-Route::get('/api/categories-with-subcategories', function () {
-    $categories = \App\Models\Category::with(['subCategory.questions' => function($query) {
-        $query->where('is_active', true);
-    }])->get();
-    
-    return response()->json($categories);
-});
 
 
 require __DIR__.'/settings.php';
