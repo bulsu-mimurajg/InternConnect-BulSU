@@ -1,7 +1,8 @@
 import AppLayout from '@/layouts/app-layout';
-import { type BreadcrumbItem, subcategory } from '@/types';
-import { Head, usePage } from '@inertiajs/react';
+import { type BreadcrumbItem } from '@/types';
+import { Head } from '@inertiajs/react';
 import StudentForm from '@/components/form/student/form';
+import FormSubmitted from '@/components/form/student/form-submitted';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -10,18 +11,17 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-export default function Assessment() {
+type props = {
+    hasSubmitted: boolean;
+}
 
-    const { subcategories, hasSubmitted } = usePage<{ 
-        subcategories: subcategory[]; 
-        hasSubmitted: boolean;
-    }>().props;
+export default function Assessment({ hasSubmitted }: props) {
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Assessment" />
             <div className="flex h-full flex-1 flex-col gap-4 overflow-y-hidden rounded-xl p-4">
-                <StudentForm subcategories={subcategories} hasSubmitted={hasSubmitted} />
+                {hasSubmitted ? <FormSubmitted/> : <StudentForm />}
             </div>
         </AppLayout>
     );

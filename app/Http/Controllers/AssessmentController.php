@@ -12,17 +12,29 @@ use App\Models\Question; // Added this import
 use App\Models\StudentScore;
 use App\Models\Internship; // Added this import
 use App\Services\MatchingService;
+use Inertia\Inertia;
 
 class AssessmentController extends Controller
 {
     /**
      * Handle assessment form submission
      */
+    public function index()
+    {
+        // Check if the authenticated user's student record has already submitted the assessment
+        $student = Auth::user()->student;
+        $hasSubmitted = $student ? $student->is_submit : false;
+
+        return Inertia::render('student/assessment', [
+            'hasSubmitted' => $hasSubmitted
+        ]);
+    }
+
     public function store(Request $request): RedirectResponse
     {
         // Get all questions from database to build dynamic validation rules
         $questions = Question::where('access', 'Student')->where('is_active', true)->get();
-        
+
         // Build validation rules dynamically
         $validationRules = [
             'firstName' => 'required|string|max:50',
@@ -47,10 +59,10 @@ class AssessmentController extends Controller
         try {
             // Get the authenticated user
             $user = Auth::user();
-            
+
             // Find or create student record
             $student = Student::where('user_id', $user->id)->first();
-            
+
             if (!$student) {
                 // Create a new student record if it doesn't exist
                 $student = Student::create([
@@ -92,14 +104,14 @@ class AssessmentController extends Controller
 
             // Store question responses and compute scores
             $subcategoryScores = [];
-            
+
             foreach ($questions as $question) {
                 $subcategory = $question->subcategory;
                 $fieldName = strtolower(str_replace(['+', '/', ' ', '-'], ['plus', '_', '_', '_'], $subcategory->subcategory_name)) . '_' . $question->id;
-                
+
                 if ($request->has($fieldName)) {
                     $response = $request->input($fieldName);
-                    
+
                     // Store in assessment data
                     $assessmentData['questions'][] = [
                         'question_id' => $question->id,
@@ -110,7 +122,7 @@ class AssessmentController extends Controller
                         'subcategory_name' => $subcategory->subcategory_name,
                         'category_name' => $subcategory->category->category_name,
                     ];
-                    
+
                     // Collect scores for mean calculation
                     if (!isset($subcategoryScores[$subcategory->id])) {
                         $subcategoryScores[$subcategory->id] = [];
@@ -122,7 +134,7 @@ class AssessmentController extends Controller
             // Compute mean scores for each subcategory and store in student_score table
             foreach ($subcategoryScores as $subcategoryId => $scores) {
                 $meanScore = (array_sum($scores) / count($scores));
-                
+
                 // Update or create student score record
                 StudentScore::updateOrCreate(
                     [
@@ -155,7 +167,7 @@ class AssessmentController extends Controller
     {
         try {
             $languageCategory = Category::where('category_name', 'Language Proficiency')->first();
-            
+
             if (!$languageCategory) {
                 return response()->json(['error' => 'Language Proficiency category not found'], 404);
             }
@@ -163,7 +175,7 @@ class AssessmentController extends Controller
             $subCategories = SubCategory::with(['questions' => function ($query) {
                 $query->where('access', 'Student')->where('is_active', true);
             }])->where('category_id', $languageCategory->id)->get();
-            
+
             $languageProficiencySections = [];
 
             foreach ($subCategories as $subCategory) {
@@ -177,7 +189,7 @@ class AssessmentController extends Controller
                             'question_id' => $question->id
                         ];
                     }
-                    
+
                     $languageProficiencySections[] = [
                         'title' => $subCategory->subcategory_name,
                         'skills' => $sectionSkills
@@ -186,7 +198,7 @@ class AssessmentController extends Controller
             }
 
             return response()->json($languageProficiencySections);
-            
+
         } catch (\Exception $e) {
             return response()->json(['error' => 'Failed to retrieve language proficiency data'], 500);
         }
@@ -199,7 +211,7 @@ class AssessmentController extends Controller
     {
         try {
             $technicalCategory = Category::where('category_name', 'Technical Skill')->first();
-            
+
             if (!$technicalCategory) {
                 return response()->json(['error' => 'Technical Skill category not found'], 404);
             }
@@ -207,7 +219,7 @@ class AssessmentController extends Controller
             $subCategories = SubCategory::with(['questions' => function ($query) {
                 $query->where('access', 'Student')->where('is_active', true);
             }])->where('category_id', $technicalCategory->id)->get();
-            
+
             $technicalSkillSections = [];
 
             foreach ($subCategories as $subCategory) {
@@ -221,7 +233,7 @@ class AssessmentController extends Controller
                             'question_id' => $question->id
                         ];
                     }
-                    
+
                     $technicalSkillSections[] = [
                         'title' => $subCategory->subcategory_name,
                         'skills' => $sectionSkills
@@ -230,7 +242,7 @@ class AssessmentController extends Controller
             }
 
             return response()->json($technicalSkillSections);
-            
+
         } catch (\Exception $e) {
             return response()->json(['error' => 'Failed to retrieve technical skills data'], 500);
         }
@@ -243,7 +255,7 @@ class AssessmentController extends Controller
     {
         try {
             $softCategory = Category::where('category_name', 'Soft Skill')->first();
-            
+
             if (!$softCategory) {
                 return response()->json(['error' => 'Soft Skill category not found'], 404);
             }
@@ -251,7 +263,7 @@ class AssessmentController extends Controller
             $subCategories = SubCategory::with(['questions' => function ($query) {
                 $query->where('access', 'Student')->where('is_active', true);
             }])->where('category_id', $softCategory->id)->get();
-            
+
             $softSkillSections = [];
 
             foreach ($subCategories as $subCategory) {
@@ -265,7 +277,7 @@ class AssessmentController extends Controller
                             'question_id' => $question->id
                         ];
                     }
-                    
+
                     $softSkillSections[] = [
                         'title' => $subCategory->subcategory_name,
                         'skills' => $sectionSkills
@@ -274,7 +286,7 @@ class AssessmentController extends Controller
             }
 
             return response()->json($softSkillSections);
-            
+
         } catch (\Exception $e) {
             return response()->json(['error' => 'Failed to retrieve soft skills data'], 500);
         }
@@ -288,7 +300,7 @@ class AssessmentController extends Controller
         try {
             $user = Auth::user();
             $student = Student::with('section')->where('user_id', $user->id)->first();
-            
+
             if (!$student) {
                 return response()->json(['error' => 'Student not found'], 404);
             }
@@ -337,7 +349,7 @@ class AssessmentController extends Controller
             }
 
             return response()->json($profileData);
-            
+
         } catch (\Exception $e) {
             return response()->json(['error' => 'Failed to retrieve student profile data'], 500);
         }
@@ -351,7 +363,7 @@ class AssessmentController extends Controller
         try {
             $user = Auth::user();
             $student = Student::with('section')->where('user_id', $user->id)->first();
-            
+
             if (!$student) {
                 return response()->json(['error' => 'Student not found'], 404);
             }
@@ -374,7 +386,7 @@ class AssessmentController extends Controller
             foreach ($categories as $category) {
                 $categoryScore = 0;
                 $categoryQuestions = 0;
-                
+
                 foreach ($category->subCategories as $subcategory) {
                     $score = $subcategory->studentScores->first();
                     if ($score) {
@@ -384,7 +396,7 @@ class AssessmentController extends Controller
                         $totalQuestions++;
                     }
                 }
-                
+
                 if ($categoryQuestions > 0) {
                     $categoryScores[] = [
                         'name' => $category->category_name,
@@ -455,7 +467,7 @@ class AssessmentController extends Controller
             ];
 
             return response()->json($dashboardData);
-            
+
         } catch (\Exception $e) {
             return response()->json(['error' => 'Failed to retrieve dashboard data'], 500);
         }
