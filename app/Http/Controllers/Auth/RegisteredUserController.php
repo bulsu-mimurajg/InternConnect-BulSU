@@ -36,7 +36,7 @@ class RegisteredUserController extends Controller
     public function create(): Response
     {
         $sections = Section::where('status', 'active')->get(['section_id', 'section_name']);
-        
+
         return Inertia::render('auth/register', [
             'sections' => $sections
         ]);
@@ -65,16 +65,49 @@ class RegisteredUserController extends Controller
             ])->withInput();
         }
 
+        // Custom password validation - show all requirements at once
+        $passwordErrors = [];
+
+        if (empty($request->password)) {
+            $passwordErrors[] = 'Password is required.';
+        } else {
+            // Check all requirements and collect all missing ones
+            if (strlen($request->password) < 8) {
+                $passwordErrors[] = 'Password must be at least 8 characters long.';
+            }
+            if (!preg_match('/[A-Z]/', $request->password)) {
+                $passwordErrors[] = 'Password must contain at least one uppercase letter.';
+            }
+            if (!preg_match('/[a-z]/', $request->password)) {
+                $passwordErrors[] = 'Password must contain at least one lowercase letter.';
+            }
+            if (!preg_match('/[0-9]/', $request->password)) {
+                $passwordErrors[] = 'Password must contain at least one number.';
+            }
+            if (!preg_match('/[@$!%*?&]/', $request->password)) {
+                $passwordErrors[] = 'Password must contain at least one special character (@$!%*?&).';
+            }
+        }
+
+        if ($request->password !== $request->password_confirmation) {
+            $passwordErrors[] = 'Password confirmation does not match.';
+        }
+
+        // Validate other fields
         $request->validate([
-            'username' => 'required|string|max:255',
+            'username' => 'required|digits:10|unique:'.User::class, //TODO: DUPLICATE
             'email' => 'required|string|lowercase|email|max:255|unique:'.User::class,
-            'password' => ['required', 'confirmed', Rules\Password::defaults()],
             'section_id' => 'required|exists:sections,section_id',
         ]);
 
+        // Add password errors if any
+        if (!empty($passwordErrors)) {
+            return back()->withErrors(['password' => $passwordErrors])->withInput();
+        }
+
         // Generate a unique verification token
         $verificationToken = Str::random(64);
-        
+
         // Store registration data temporarily in cache (expires in 24 hours)
         $registrationData = [
             'username' => $request->username,
@@ -113,7 +146,7 @@ class RegisteredUserController extends Controller
         } catch (\Exception $e) {
             // If email fails, remove the cached data
             Cache::forget("registration_verification_{$verificationToken}");
-            
+
             return back()->withErrors([
                 'email' => 'Failed to send verification email. Please try again or contact support.'
             ])->withInput();
