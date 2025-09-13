@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Head } from '@inertiajs/react';
-import AdminLayout from '@/layouts/AdminLayout';
+import AdminLayout from '@/layouts/admin/layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,6 +22,7 @@ interface EmailTestProps {
 export default function EmailTest({ auth }: EmailTestProps) {
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+    const [activeTab, setActiveTab] = useState('test');
 
     // Test email form state
     const [testEmail, setTestEmail] = useState({
@@ -169,7 +170,7 @@ export default function EmailTest({ auth }: EmailTestProps) {
                     </Alert>
                 )}
 
-                <Tabs defaultValue="test" className="space-y-4">
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
                     <TabsList>
                         <TabsTrigger value="test">Test Email</TabsTrigger>
                         <TabsTrigger value="internship">Internship Notification</TabsTrigger>
