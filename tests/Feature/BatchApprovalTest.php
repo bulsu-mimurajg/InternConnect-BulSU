@@ -135,6 +135,7 @@ class BatchApprovalTest extends TestCase
         StudentMatch::create([
             'student_id' => $student1->id,
             'internship_id' => $internship1->id,
+            'rank' => 1,
             'compatibility_score' => 97.8,
             'status' => 'pending'
         ]);
@@ -142,6 +143,7 @@ class BatchApprovalTest extends TestCase
         StudentMatch::create([
             'student_id' => $student1->id,
             'internship_id' => $internship2->id,
+            'rank' => 2,
             'compatibility_score' => 85.2,
             'status' => 'pending'
         ]);
@@ -150,6 +152,7 @@ class BatchApprovalTest extends TestCase
         StudentMatch::create([
             'student_id' => $student2->id,
             'internship_id' => $internship1->id,
+            'rank' => 1,
             'compatibility_score' => 95.5,
             'status' => 'pending'
         ]);
@@ -157,6 +160,7 @@ class BatchApprovalTest extends TestCase
         StudentMatch::create([
             'student_id' => $student2->id,
             'internship_id' => $internship2->id,
+            'rank' => 2,
             'compatibility_score' => 82.1,
             'status' => 'pending'
         ]);
@@ -165,6 +169,7 @@ class BatchApprovalTest extends TestCase
         StudentMatch::create([
             'student_id' => $student3->id,
             'internship_id' => $internship1->id,
+            'rank' => 1,
             'compatibility_score' => 93.2,
             'status' => 'pending'
         ]);
@@ -172,6 +177,7 @@ class BatchApprovalTest extends TestCase
         StudentMatch::create([
             'student_id' => $student3->id,
             'internship_id' => $internship2->id,
+            'rank' => 2,
             'compatibility_score' => 78.9,
             'status' => 'pending'
         ]);
@@ -189,11 +195,13 @@ class BatchApprovalTest extends TestCase
         $this->assertCount(1, $responseData['conflicts']); // 1 student should need fallback
 
         // Check that the fallback internship is correct
+        // Note: Jane Smith should need fallback since she has the lowest compatibility score (93.2%)
+        // Ana (97.8%) and John (95.5%) should get the 2 available slots
         $conflict = $responseData['conflicts'][0];
-        $this->assertEquals('Ana Martinez', $conflict['student_name']);
+        $this->assertEquals('Jane Smith', $conflict['student_name']);
         $this->assertEquals('Software Development Intern', $conflict['best_match']['position_title']);
         $this->assertEquals('Marketing Intern', $conflict['fallback_match']['position_title']);
-        $this->assertEquals(85.2, $conflict['fallback_match']['compatibility_score']);
+        $this->assertEquals(78.9, $conflict['fallback_match']['compatibility_score']);
     }
 
     public function test_batch_approval_with_internship_filter()
@@ -275,6 +283,7 @@ class BatchApprovalTest extends TestCase
         StudentMatch::create([
             'student_id' => $student1->id,
             'internship_id' => $internship1->id,
+            'rank' => 1,
             'compatibility_score' => 97.8,
             'status' => 'pending'
         ]);
@@ -282,6 +291,7 @@ class BatchApprovalTest extends TestCase
         StudentMatch::create([
             'student_id' => $student1->id,
             'internship_id' => $internship2->id,
+            'rank' => 2,
             'compatibility_score' => 85.2,
             'status' => 'pending'
         ]);
@@ -290,6 +300,7 @@ class BatchApprovalTest extends TestCase
         StudentMatch::create([
             'student_id' => $student2->id,
             'internship_id' => $internship1->id,
+            'rank' => 1,
             'compatibility_score' => 95.5,
             'status' => 'pending'
         ]);
@@ -297,6 +308,7 @@ class BatchApprovalTest extends TestCase
         StudentMatch::create([
             'student_id' => $student2->id,
             'internship_id' => $internship2->id,
+            'rank' => 2,
             'compatibility_score' => 82.1,
             'status' => 'pending'
         ]);

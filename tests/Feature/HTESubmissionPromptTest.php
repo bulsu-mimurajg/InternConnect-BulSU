@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\HTE;
 use App\Models\User;
+use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -11,11 +12,19 @@ class HTESubmissionPromptTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        
+        // Seed roles and permissions
+        $this->seed(RolePermissionSeeder::class);
+    }
+
     public function test_hte_dashboard_shows_submission_prompt_when_not_submitted()
     {
         // Create a user with HTE that has not submitted
         /** @var User $user */
-        $user = User::factory()->create(['role' => 'hte']);
+        $user = User::factory()->hte()->create();
         $hte = HTE::factory()->create([
             'user_id' => $user->id,
             'is_submit' => false
@@ -41,7 +50,7 @@ class HTESubmissionPromptTest extends TestCase
     {
         // Create a user with HTE that has submitted
         /** @var User $user */
-        $user = User::factory()->create(['role' => 'hte']);
+        $user = User::factory()->hte()->create();
         $hte = HTE::factory()->create([
             'user_id' => $user->id,
             'is_submit' => true
@@ -67,7 +76,7 @@ class HTESubmissionPromptTest extends TestCase
     {
         // Create a user with HTE that has not submitted
         /** @var User $user */
-        $user = User::factory()->create(['role' => 'hte']);
+        $user = User::factory()->hte()->create();
         $hte = HTE::factory()->create([
             'user_id' => $user->id,
             'is_submit' => false
@@ -93,7 +102,7 @@ class HTESubmissionPromptTest extends TestCase
     {
         // Create a user with HTE that has submitted
         /** @var User $user */
-        $user = User::factory()->create(['role' => 'hte']);
+        $user = User::factory()->hte()->create();
         $hte = HTE::factory()->create([
             'user_id' => $user->id,
             'is_submit' => true
