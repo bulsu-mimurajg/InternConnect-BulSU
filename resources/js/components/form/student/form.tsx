@@ -49,19 +49,19 @@ export default function StudentForm() {
     const createFormSchema = () => {
 
         // Add dynamic fields for language proficiency
-        const languageSchema: Record<string, any> = {};
+        const languageSchema: Record<string, z.ZodString> = {};
         dynamicFields.languageProficiency.forEach(field => {
             languageSchema[field] = z.string().min(1, 'This field is required');
         });
 
         // Add dynamic fields for technical skills
-        const technicalSchema: Record<string, any> = {};
+        const technicalSchema: Record<string, z.ZodString> = {};
         dynamicFields.technicalSkills.forEach(field => {
             technicalSchema[field] = z.string().min(1, 'This field is required');
         });
 
         // Add dynamic fields for soft skills
-        const softSchema: Record<string, any> = {};
+        const softSchema: Record<string, z.ZodString> = {};
         dynamicFields.softSkills.forEach(field => {
             softSchema[field] = z.string().min(1, 'This field is required');
         });
@@ -83,7 +83,14 @@ export default function StudentForm() {
 
     function onSubmit(values: z.infer<typeof FormSchema>) {
         setIsSubmitting(true);
-        router.post('/assessment', values, {
+        
+        // Convert plain object to FormData
+        const formData = new FormData();
+        Object.entries(values).forEach(([key, value]) => {
+            formData.append(key, value as string);
+        });
+        
+        router.post('/assessment', formData, {
             onSuccess: () => {
                 setIsSubmitting(false);
             },

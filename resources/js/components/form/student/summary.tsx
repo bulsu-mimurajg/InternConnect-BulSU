@@ -13,10 +13,29 @@ interface Section {
     skills: Skill[];
 }
 
+interface Field {
+    name: string;
+    label: string;
+}
+
+interface PersonalInfoSection {
+    title: string;
+    type: 'personal';
+    fields: Field[];
+}
+
+interface SkillSection {
+    title: string;
+    type: 'language' | 'technical' | 'soft';
+    sections: Section[];
+}
+
+type SummarySection = PersonalInfoSection | SkillSection;
+
 export default function Summary() {
     const { watch } = useFormContext();
     const formData = watch();
-    const [sections, setSections] = useState<any[]>([]);
+    const [sections, setSections] = useState<SummarySection[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -25,7 +44,7 @@ export default function Summary() {
                 setLoading(true);
 
                 // Fetch all sections data
-                const fetchOptions = {
+                const fetchOptions: RequestInit = {
                     method: 'GET',
                     headers: {
                         'Accept': 'application/json',
@@ -45,20 +64,20 @@ export default function Summary() {
                 const technicalData = await technicalResponse.json();
                 const softData = await softResponse.json();
 
-                const allSections = [
+                const allSections: SummarySection[] = [
                     {
                         title: 'Language Proficiency',
-                        type: 'language',
+                        type: 'language' as const,
                         sections: languageData
                     },
                     {
                         title: 'Technical Skills',
-                        type: 'technical',
+                        type: 'technical' as const,
                         sections: technicalData
                     },
                     {
                         title: 'Soft Skills',
-                        type: 'soft',
+                        type: 'soft' as const,
                         sections: softData
                     }
                 ];
@@ -74,9 +93,9 @@ export default function Summary() {
         fetchSections();
     }, []);
 
-    const renderPersonalInfo = (section: any) => (
+    const renderPersonalInfo = (section: PersonalInfoSection) => (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {section.fields.map((field: any) => (
+            {section.fields.map((field: Field) => (
                 <div key={field.name} className="flex justify-between items-center">
                     <span className="font-medium text-gray-700">{field.label}:</span>
                     <span className="text-gray-900">
@@ -87,7 +106,7 @@ export default function Summary() {
         </div>
     );
 
-    const renderSkillSections = (section: any) => (
+    const renderSkillSections = (section: SkillSection) => (
         <div className="space-y-4">
             {section.sections.map((subSection: Section) => (
                 <div key={subSection.title} className="border-t pt-3">
