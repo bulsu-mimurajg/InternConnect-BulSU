@@ -6,17 +6,59 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { 
     UserIcon, 
-    Building2Icon, 
-    BriefcaseIcon, 
     TargetIcon,
     BarChart3Icon,
     ScaleIcon
 } from 'lucide-react';
 
+interface Student {
+    student_number?: string;
+    first_name?: string;
+    last_name?: string;
+    section?: string;
+    specialization?: string;
+    middle_name?: string;
+}
+
+interface ScoreBreakdown {
+    category: string;
+    subcategory: string;
+    score: number;
+    score_percentage: number;
+}
+
+interface SubcategoryWeight {
+    weight: number;
+    subcategory?: {
+        subcategory_name: string;
+        category?: {
+            name: string;
+        };
+    };
+}
+
+interface BestMatch {
+    compatibility_score: number;
+    internship: {
+        position_title: string;
+        department: string;
+        hte: {
+            company_name: string;
+        };
+        subcategory_weights?: SubcategoryWeight[];
+    };
+}
+
+interface StudentData {
+    student?: Student;
+    scores_breakdown?: ScoreBreakdown[];
+    best_match?: BestMatch;
+}
+
 interface StudentDetailsModalProps {
     isOpen: boolean;
     onClose: () => void;
-    student: any;
+    student: StudentData | null;
 }
 
 export default function StudentDetailsModal({
@@ -53,7 +95,7 @@ export default function StudentDetailsModal({
     console.log('Subcategory weights:', student.best_match?.internship?.subcategory_weights);
 
     // Group student scores by category for better organization
-    const scoresByCategory = student.scores_breakdown?.reduce((acc: any, score: any) => {
+    const scoresByCategory = student.scores_breakdown?.reduce((acc: Record<string, ScoreBreakdown[]>, score: ScoreBreakdown) => {
         if (!acc[score.category]) {
             acc[score.category] = [];
         }
@@ -62,7 +104,7 @@ export default function StudentDetailsModal({
     }, {}) || {};
 
     // Get internship criteria (weights) grouped by category
-    const criteriaByCategory = student.best_match?.internship?.subcategory_weights?.reduce((acc: any, weight: any) => {
+    const criteriaByCategory = student.best_match?.internship?.subcategory_weights?.reduce((acc: Record<string, SubcategoryWeight[]>, weight: SubcategoryWeight) => {
         const categoryName = weight.subcategory?.category?.name || 'Uncategorized';
         if (!acc[categoryName]) {
             acc[categoryName] = [];
@@ -147,13 +189,13 @@ export default function StudentDetailsModal({
                                 </CardHeader>
                                 <CardContent className="space-y-4">
                                     {Object.keys(scoresByCategory).length > 0 ? (
-                                        Object.entries(scoresByCategory).map(([category, scores]: [string, any]) => (
+                                        Object.entries(scoresByCategory).map(([category, scores]: [string, ScoreBreakdown[]]) => (
                                             <div key={category} className="border rounded-lg p-4">
                                                 <h4 className="font-semibold text-gray-900 mb-3 text-blue-700">
                                                     {category || 'Uncategorized'}
                                                 </h4>
                                                 <div className="space-y-3">
-                                                    {scores.map((score: any, index: number) => (
+                                                    {scores.map((score: ScoreBreakdown, index: number) => (
                                                         <div key={index} className="space-y-2">
                                                             <div className="flex justify-between items-center">
                                                                 <span className="text-sm font-medium text-gray-700">
@@ -199,13 +241,13 @@ export default function StudentDetailsModal({
                                 </CardHeader>
                                 <CardContent className="space-y-4">
                                     {Object.keys(criteriaByCategory).length > 0 ? (
-                                        Object.entries(criteriaByCategory).map(([category, weights]: [string, any]) => (
+                                        Object.entries(criteriaByCategory).map(([category, weights]: [string, SubcategoryWeight[]]) => (
                                             <div key={category} className="border rounded-lg p-4">
                                                 <h4 className="font-semibold text-gray-900 mb-3 text-green-700">
                                                     {category || 'Uncategorized'}
                                                 </h4>
                                                 <div className="space-y-3">
-                                                    {weights.map((weight: any, index: number) => (
+                                                    {weights.map((weight: SubcategoryWeight, index: number) => (
                                                         <div key={index} className="space-y-2">
                                                             <div className="flex justify-between items-center">
                                                                 <span className="text-sm font-medium text-gray-700">
@@ -348,7 +390,7 @@ export default function StudentDetailsModal({
                                 </CardHeader>
                                 <CardContent>
                                     <div className="space-y-4">
-                                        {student.scores_breakdown.map((score: any, index: number) => (
+                                        {student.scores_breakdown.map((score: ScoreBreakdown, index: number) => (
                                             <div key={index} className="border rounded-lg p-4">
                                                 <div className="flex justify-between items-center mb-2">
                                                     <div>

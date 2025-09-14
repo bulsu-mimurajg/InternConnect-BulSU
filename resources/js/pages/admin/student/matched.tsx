@@ -1,4 +1,3 @@
-import type { BreadcrumbItem } from '@/types';
 import { Head, router, usePage } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
 import AdminLayout from '@/layouts/admin/layout';
@@ -13,8 +12,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import StudentDetailsModal from '@/components/student-details-modal';
 import { 
     UserIcon, 
-    Building2Icon, 
-    BriefcaseIcon, 
     TargetIcon,
     TrendingUpIcon,
     EyeIcon,
@@ -24,12 +21,7 @@ import {
     FilterIcon
 } from 'lucide-react';
 
-const breadcrumbs: BreadcrumbItem[] = [
-    {
-        title: 'Student Matches',
-        href: '/student/matched',
-    },
-];
+// breadcrumbs is unused, so we'll remove it
 
 interface MatchedStudent {
     id: number;
@@ -92,8 +84,8 @@ interface Props {
 }
 
 export default function StudentMatched({ matchedStudents, filters }: Props) {
-    const { csrf_token } = usePage().props as any;
-    const [selectedStudent, setSelectedStudent] = useState<any>(null);
+    const { csrf_token } = usePage().props as { csrf_token?: string };
+    const [selectedStudent, setSelectedStudent] = useState<MatchedStudent | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -146,7 +138,33 @@ export default function StudentMatched({ matchedStudents, filters }: Props) {
 
     const [selectedStudents, setSelectedStudents] = useState<Set<number>>(new Set());
     const [showConflictDialog, setShowConflictDialog] = useState(false);
-    const [conflictData, setConflictData] = useState<any>(null);
+    const [conflictData, setConflictData] = useState<{
+        has_conflicts: boolean;
+        total_approved: number;
+        total_conflicts: number;
+        approved_students?: Array<{
+            student_name: string;
+            internship_title: string;
+            company_name: string;
+            match_rank: number;
+            compatibility_score: number;
+        }>;
+        conflicts?: Array<{
+            student_name: string;
+            best_match: {
+                position_title: string;
+                company_name: string;
+                compatibility_score: number;
+            };
+            fallback_match: {
+                position_title: string;
+                company_name: string;
+                compatibility_score: number;
+                available_slots: number;
+                match_rank: number;
+            };
+        }>;
+    } | null>(null);
 
     // Debug logging to see what data is received
     useEffect(() => {
@@ -241,7 +259,7 @@ export default function StudentMatched({ matchedStudents, filters }: Props) {
         });
     };
 
-    const handleViewDetails = async (student: any) => {
+    const handleViewDetails = async (student: MatchedStudent) => {
         try {
             setIsLoading(true);
             const response = await fetch(`/student/${student.id}/details`);
@@ -257,100 +275,11 @@ export default function StudentMatched({ matchedStudents, filters }: Props) {
         }
     };
 
-    const handleApprovePlacement = async (data: { internship_id: number; compatibility_score: number; admin_notes?: string }) => {
-        if (!selectedStudent) return;
-        
-        // Ensure all required data is present
-        if (!data.internship_id || !data.compatibility_score) {
-            alert('Missing required placement data');
-            return;
-        }
-        
-        // Ensure admin_notes is always sent (even if empty)
-        const requestData = {
-            ...data,
-            admin_notes: data.admin_notes || ''
-        };
-        
-        console.log('Approving placement with data:', requestData);
-        console.log('Selected student:', selectedStudent);
-        
-        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-        console.log('CSRF Token:', csrfToken);
-        
-        try {
-            setIsLoading(true);
-            const response = await fetch(`/student/${selectedStudent.student.id}/approve-placement`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': csrfToken,
-                },
-                body: JSON.stringify(requestData),
-            });
+    // handleApprovePlacement function removed as it's unused
 
-            if (response.ok) {
-                // Close modal and refresh page or update state
-                setIsModalOpen(false);
-                setSelectedStudent(null);
-                alert('Placement approved successfully!');
-                window.location.reload(); // Simple refresh for now
-            } else {
-                const errorData = await response.json();
-                console.error('Error response:', errorData);
-                
-                // Provide more specific error messages
-                let errorMessage = errorData.message || 'Unknown error occurred';
-                if (response.status === 400) {
-                    errorMessage = `Validation error: ${errorMessage}`;
-                } else if (response.status === 404) {
-                    errorMessage = `Not found: ${errorMessage}`;
-                } else if (response.status === 500) {
-                    errorMessage = `Server error: ${errorMessage}`;
-                }
-                
-                alert(`Error approving placement: ${errorMessage}`);
-            }
-        } catch (error) {
-            console.error('Error approving placement:', error);
-            alert(`Network error: ${error instanceof Error ? error.message : 'Unknown error occurred'}`);
-        } finally {
-            setIsLoading(false);
-        }
-    };
+    // handleRejectPlacement function removed as it's unused
 
-    const handleRejectPlacement = async (data: { internship_id: number; compatibility_score: number; admin_notes: string }) => {
-        if (!selectedStudent) return;
-        
-        try {
-            setIsLoading(true);
-            const response = await fetch(`/student/${selectedStudent.student.id}/reject-placement`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
-                },
-                body: JSON.stringify(data),
-            });
-
-            if (response.ok) {
-                // Close modal and refresh page or update state
-                setIsModalOpen(false);
-                setSelectedStudent(null);
-                window.location.reload(); // Simple refresh for now
-            } else {
-                const errorData = await response.json();
-                alert(errorData.message || 'Error rejecting placement');
-            }
-        } catch (error) {
-            console.error('Error rejecting placement:', error);
-            alert('Error rejecting placement');
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    const handleSingleApprove = async (student: any) => {
+    const handleSingleApprove = async (student: MatchedStudent) => {
         if (!student || !student.best_match?.internship) {
             setErrorMessage('Invalid student data or missing internship information');
             setErrorType('error');
@@ -401,7 +330,7 @@ export default function StudentMatched({ matchedStudents, filters }: Props) {
                 });
                 
                 if (retryResponse.ok) {
-                    const result = await retryResponse.json();
+                    await retryResponse.json();
                     setErrorMessage('Student placement approved successfully!');
                     setErrorType('success');
                     setTimeout(() => {
@@ -458,7 +387,7 @@ export default function StudentMatched({ matchedStudents, filters }: Props) {
         }
     };
 
-    const handleSingleReject = async (student: any) => {
+    const handleSingleReject = async (student: MatchedStudent) => {
         if (!student || !student.best_match?.internship) {
             setErrorMessage('Invalid student data or missing internship information');
             setErrorType('error');
@@ -509,7 +438,7 @@ export default function StudentMatched({ matchedStudents, filters }: Props) {
                 });
                 
                 if (retryResponse.ok) {
-                    const result = await retryResponse.json();
+                    await retryResponse.json();
                     setErrorMessage('Student placement rejected successfully!');
                     setErrorType('success');
                     setTimeout(() => {
@@ -1352,7 +1281,7 @@ export default function StudentMatched({ matchedStudents, filters }: Props) {
                                         Students Getting Their Best Match
                                     </h4>
                                     <div className="space-y-2 max-h-40 overflow-y-auto">
-                                        {conflictData.approved_students.map((student: any, index: number) => (
+                                        {conflictData.approved_students.map((student, index: number) => (
                                             <div key={index} className="border border-green-200 rounded-lg p-3 bg-green-50">
                                                 <div className="flex items-center justify-between">
                                                     <div>
@@ -1385,7 +1314,7 @@ export default function StudentMatched({ matchedStudents, filters }: Props) {
                                         Students with Fallback Placements
                                     </h4>
                                     <div className="space-y-3 max-h-60 overflow-y-auto">
-                                        {conflictData.conflicts.map((conflict: any, index: number) => (
+                                        {conflictData.conflicts.map((conflict, index: number) => (
                                             <div key={index} className="border border-yellow-200 rounded-lg p-4 bg-yellow-50">
                                                 <div className="font-medium text-gray-900 mb-2">{conflict.student_name}</div>
                                                 <div className="space-y-2 text-sm">

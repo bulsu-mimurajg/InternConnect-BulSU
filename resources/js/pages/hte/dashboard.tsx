@@ -73,7 +73,7 @@ interface HTEDashboardProps {
         address: string;
     };
     showSubmissionPrompt: boolean;
-    [key: string]: any;
+    [key: string]: unknown;
 }
 
 export default function HTEDashboardPage() {

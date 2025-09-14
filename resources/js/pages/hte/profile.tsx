@@ -8,10 +8,6 @@ import { PieChart } from '@/components/ui/pie-chart';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
     Building2, 
-    MapPin, 
-    Mail, 
-    Phone, 
-    User, 
     Calendar, 
     Users, 
     Target, 
@@ -72,7 +68,7 @@ interface HTEProfileProps {
         }>;
     };
     showSubmissionPrompt: boolean;
-    [key: string]: any;
+    [key: string]: unknown;
 }
 
 export default function HTEProfilePage() {
@@ -100,6 +96,27 @@ export default function HTEProfilePage() {
         }
     }, [showSuccessMessage]);
 
+    // Filter internships based on selected status
+    const filteredInternships = useMemo(() => {
+        if (!hte?.internships) return [];
+        if (selectedStatus === 'all') {
+            return hte.internships;
+        }
+        return hte.internships.filter(internship => {
+            if (selectedStatus === 'active') return internship.is_active;
+            if (selectedStatus === 'inactive') return !internship.is_active;
+            return true;
+        });
+    }, [hte?.internships, selectedStatus]);
+
+    // Get the selected internship
+    const selectedInternship = useMemo(() => {
+        if (!selectedInternshipId) {
+            return filteredInternships.length > 0 ? filteredInternships[0] : null;
+        }
+        return filteredInternships.find(internship => internship.id.toString() === selectedInternshipId) || null;
+    }, [filteredInternships, selectedInternshipId]);
+
     // Add defensive programming to handle missing data
     if (!hte) {
         return (
@@ -113,26 +130,6 @@ export default function HTEProfilePage() {
             </AppLayout>
         );
     }
-
-    // Filter internships based on selected status
-    const filteredInternships = useMemo(() => {
-        if (selectedStatus === 'all') {
-            return hte.internships || [];
-        }
-        return (hte.internships || []).filter(internship => {
-            if (selectedStatus === 'active') return internship.is_active;
-            if (selectedStatus === 'inactive') return !internship.is_active;
-            return true;
-        });
-    }, [hte.internships, selectedStatus]);
-
-    // Get the selected internship
-    const selectedInternship = useMemo(() => {
-        if (!selectedInternshipId) {
-            return filteredInternships.length > 0 ? filteredInternships[0] : null;
-        }
-        return filteredInternships.find(internship => internship.id.toString() === selectedInternshipId) || null;
-    }, [filteredInternships, selectedInternshipId]);
 
     // Update selected internship when status changes
     const handleStatusChange = (value: string) => {
@@ -187,8 +184,21 @@ export default function HTEProfilePage() {
     };
 
     // Group subcategory weights by category for each internship
-    const getWeightsByCategory = (internship: any) => {
-        return internship.subcategory_weights.reduce((acc: any, weight: any) => {
+    const getWeightsByCategory = (internship: {
+        subcategory_weights: Array<{
+            id: number;
+            weight: number;
+            subcategory: {
+                id: number;
+                subcategory_name: string;
+                category: {
+                    id: number;
+                    category_name: string;
+                };
+            };
+        }>;
+    }) => {
+        return internship.subcategory_weights.reduce((acc: Record<string, typeof internship.subcategory_weights>, weight) => {
             const categoryName = weight.subcategory.category.category_name;
             if (!acc[categoryName]) {
                 acc[categoryName] = [];
@@ -450,12 +460,23 @@ export default function HTEProfilePage() {
                                                         const weightsByCategory = getWeightsByCategory(selectedInternship);
                                                         return Object.entries(weightsByCategory).length > 0 ? (
                                                             <div className="space-y-6">
-                                                                {Object.entries(weightsByCategory).map(([categoryName, weights]: [string, any]) => {
+                                                                {Object.entries(weightsByCategory).map(([categoryName, weights]: [string, Array<{
+                                                                    id: number;
+                                                                    weight: number;
+                                                                    subcategory: {
+                                                                        id: number;
+                                                                        subcategory_name: string;
+                                                                        category: {
+                                                                            id: number;
+                                                                            category_name: string;
+                                                                        };
+                                                                    };
+                                                                }>]) => {
                                                                     // Calculate category total weight
-                                                                    const categoryTotal = weights.reduce((sum: number, w: any) => sum + w.weight, 0);
+                                                                    const categoryTotal = weights.reduce((sum: number, w) => sum + w.weight, 0);
                                                                     
                                                                     // Prepare data for pie chart
-                                                                    const pieData = weights.map((weight: any) => ({
+                                                                    const pieData = weights.map((weight) => ({
                                                                         name: weight.subcategory.subcategory_name,
                                                                         value: weight.weight,
                                                                         color: `hsl(${Math.random() * 360}, 70%, 50%)`
@@ -472,7 +493,7 @@ export default function HTEProfilePage() {
                                                                                     <div>
                                                                                         <h5 className="font-medium text-gray-700 mb-3">Weight Distribution</h5>
                                                                                         <div className="space-y-2">
-                                                                                            {weights.map((weight: any) => (
+                                                                                            {weights.map((weight) => (
                                                                                                 <div key={weight.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
                                                                                                     <span className="font-medium text-sm">{weight.subcategory.subcategory_name}</span>
                                                                                                     <Badge variant="outline" className="font-mono text-xs">

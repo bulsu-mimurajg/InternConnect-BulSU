@@ -9,11 +9,8 @@ import {
     CheckCircleIcon, 
     BriefcaseIcon, 
     BuildingIcon, 
-    TrendingUpIcon,
     BarChart3Icon,
     UserCheckIcon,
-    ClockIcon,
-    FileTextIcon,
     TargetIcon,
     ActivityIcon
 } from 'lucide-react';
@@ -388,7 +385,7 @@ export default function AdminDashboard({
                                     <div className="pt-4 border-t">
                                         <p className="text-sm font-medium mb-2">Top Companies</p>
                                         <div className="space-y-2">
-                                            {placementOverview.byCompany.slice(0, 3).map((company, index) => (
+                                            {placementOverview.byCompany.slice(0, 3).map((company) => (
                                                 <div key={company.company} className="flex justify-between text-xs">
                                                     <span>{company.company}</span>
                                                     <span>{company.count} placements</span>

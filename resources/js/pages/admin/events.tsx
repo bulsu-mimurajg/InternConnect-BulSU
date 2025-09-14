@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Head, useForm, usePage } from '@inertiajs/react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { CalendarIcon, PlusIcon, EditIcon, TrashIcon, XIcon } from 'lucide-react';
+import { CalendarIcon, PlusIcon, EditIcon, TrashIcon } from 'lucide-react';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 
@@ -39,7 +39,7 @@ export default function EventsPage({ deadlines }: EventsPageProps) {
     const [showForm, setShowForm] = useState(false);
     const [editingDeadline, setEditingDeadline] = useState<Deadline | null>(null);
     const [showArchived, setShowArchived] = useState(false);
-    const { flash } = usePage().props as any;
+    const { flash } = usePage().props as { flash?: { success?: string; error?: string } };
 
     const { data, setData, post, put, delete: destroy, processing, errors, reset } = useForm({
         start_date: '',

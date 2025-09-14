@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Head, useForm, usePage, router } from '@inertiajs/react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { FileTextIcon, PlusIcon, EditIcon, ArchiveIcon, RotateCcwIcon, EyeIcon, SearchIcon, FilterIcon, ArrowUpDownIcon } from 'lucide-react';
+import { FileTextIcon, PlusIcon, EditIcon, ArchiveIcon, RotateCcwIcon, SearchIcon, FilterIcon, ArrowUpDownIcon } from 'lucide-react';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type Question, type Category, type SubCategory } from '@/types';
 
@@ -42,7 +42,7 @@ export default function FormsPage({ questions, categories, subcategories, filter
     const [searchTerm, setSearchTerm] = useState(filters.search);
     const [filterCategory, setFilterCategory] = useState(filters.category_id);
     const [filterSubcategory, setFilterSubcategory] = useState(filters.subcategory_id);
-    const { flash } = usePage().props as any;
+    const { flash } = usePage().props as { flash?: { success?: string; error?: string } };
 
 
 
@@ -57,7 +57,7 @@ export default function FormsPage({ questions, categories, subcategories, filter
     );
 
     // Apply filters and search
-    const applyFilters = () => {
+    const applyFilters = useCallback(() => {
         const params = new URLSearchParams();
         
         if (searchTerm) params.set('search', searchTerm);
@@ -68,7 +68,7 @@ export default function FormsPage({ questions, categories, subcategories, filter
             preserveState: true,
             replace: true,
         });
-    };
+    }, [searchTerm, filterCategory, filterSubcategory]);
 
     // Handle search with debounce
     useEffect(() => {
@@ -76,12 +76,12 @@ export default function FormsPage({ questions, categories, subcategories, filter
             applyFilters();
         }, 500);
         return () => clearTimeout(timeoutId);
-    }, [searchTerm]);
+    }, [searchTerm, applyFilters]);
 
     // Handle filter changes
     useEffect(() => {
         applyFilters();
-    }, [filterCategory, filterSubcategory]);
+    }, [filterCategory, filterSubcategory, applyFilters]);
 
     // Reset subcategory when category changes
     useEffect(() => {

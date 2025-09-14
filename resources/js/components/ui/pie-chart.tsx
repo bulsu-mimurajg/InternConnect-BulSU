@@ -35,13 +35,13 @@ export function PieChart({
     showTooltip = true, 
     showLegend = true 
 }: PieChartProps) {
-    const handleSliceClick = (entry: any, index: number) => {
+    const handleSliceClick = (entry: PieChartData, index: number) => {
         if (onSliceClick) {
             onSliceClick(entry, index);
         }
     };
 
-    const CustomTooltip = ({ active, payload }: any) => {
+    const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ payload: PieChartData }> }) => {
         if (active && payload && payload.length) {
             const data = payload[0].payload;
             return (

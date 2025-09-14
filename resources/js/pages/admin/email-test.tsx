@@ -9,17 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-interface EmailTestProps {
-    auth: {
-        user: {
-            id: number;
-            name: string;
-            email: string;
-        };
-    };
-}
-
-export default function EmailTest({ auth }: EmailTestProps) {
+export default function EmailTest() {
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
     const [activeTab, setActiveTab] = useState('test');
@@ -76,7 +66,7 @@ export default function EmailTest({ auth }: EmailTestProps) {
             } else {
                 showMessage('error', data.message);
             }
-        } catch (error) {
+        } catch {
             showMessage('error', 'Failed to send test email');
         } finally {
             setLoading(false);
@@ -114,7 +104,7 @@ export default function EmailTest({ auth }: EmailTestProps) {
             } else {
                 showMessage('error', data.message);
             }
-        } catch (error) {
+        } catch {
             showMessage('error', 'Failed to send internship notification');
         } finally {
             setLoading(false);
@@ -143,7 +133,7 @@ export default function EmailTest({ auth }: EmailTestProps) {
             } else {
                 showMessage('error', data.message);
             }
-        } catch (error) {
+        } catch {
             showMessage('error', 'Failed to send assessment reminder');
         } finally {
             setLoading(false);

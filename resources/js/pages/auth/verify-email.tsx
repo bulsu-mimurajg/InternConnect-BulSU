@@ -35,7 +35,7 @@ export default function VerifyEmail({ token, email }: VerifyEmailProps) {
                     setIsVerifying(false);
                 }
             });
-        } catch (err) {
+        } catch {
             setError('An unexpected error occurred. Please try again.');
             setIsVerifying(false);
         }

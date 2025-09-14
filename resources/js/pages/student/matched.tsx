@@ -4,17 +4,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Separator } from '@/components/ui/separator';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { 
     User, 
-    GraduationCap, 
     Briefcase,
     Target,
     AlertCircle,
-    ExternalLink,
-    Calendar,
     Building,
     TrendingUp,
     Award,
