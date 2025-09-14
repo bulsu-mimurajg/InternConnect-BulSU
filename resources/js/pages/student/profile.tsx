@@ -1,18 +1,13 @@
 import { useState } from 'react';
-import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
 import { RadarChart } from '@/components/ui/radar-chart';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/react';
-import { 
-    User, 
-    Phone, 
-    MapPin, 
-    Calendar, 
-    GraduationCap, 
+import {
+    User,
+    GraduationCap,
     BookOpen,
     CheckCircle,
     Clock
@@ -67,9 +62,6 @@ const navigationItems = [
 export default function Profile({ student, categories, hasSubmitted = true }: ProfileProps) {
     const [activeTab, setActiveTab] = useState('basic');
 
-    // Debug: Log the received data
-    console.log('Profile data received:', { student, categories });
-
     if (!student) {
         return (
             <AppLayout breadcrumbs={breadcrumbs}>
@@ -104,6 +96,44 @@ export default function Profile({ student, categories, hasSubmitted = true }: Pr
 
     const renderBasicInformation = () => (
         <div className="space-y-6">
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        Assessment Status
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                            {hasSubmitted ? (
+                                <>
+                                    <CheckCircle className="h-5 w-5 text-green-600" />
+                                    <span className="text-green-600 font-medium">Assessment Completed</span>
+                                </>
+                            ) : (
+                                <>
+                                    <Clock className="h-5 w-5 text-yellow-600" />
+                                    <span className="text-yellow-600 font-medium">Assessment Pending</span>
+                                </>
+                            )}
+                        </div>
+                        {!hasSubmitted && (
+                            <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                                <p className="text-sm text-yellow-800">
+                                    Complete the assessment to view your detailed scores and performance analysis.
+                                </p>
+                                <a
+                                    href="/assessment"
+                                    className="inline-flex items-center mt-2 text-sm text-yellow-700 hover:text-yellow-800 font-medium"
+                                >
+                                    Take Assessment Now →
+                                </a>
+                            </div>
+                        )}
+                    </div>
+                </CardContent>
+            </Card>
+
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
@@ -143,45 +173,6 @@ export default function Profile({ student, categories, hasSubmitted = true }: Pr
                     <div>
                         <label className="text-sm font-medium text-muted-foreground">Address</label>
                         <p className="text-lg">{student.address || 'Not provided'}</p>
-                    </div>
-                </CardContent>
-            </Card>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <CheckCircle className="h-5 w-5" />
-                        Assessment Status
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="space-y-3">
-                        <div className="flex items-center gap-2">
-                            {hasSubmitted ? (
-                                <>
-                                    <CheckCircle className="h-5 w-5 text-green-600" />
-                                    <span className="text-green-600 font-medium">Assessment Completed</span>
-                                </>
-                            ) : (
-                                <>
-                                    <Clock className="h-5 w-5 text-yellow-600" />
-                                    <span className="text-yellow-600 font-medium">Assessment Pending</span>
-                                </>
-                            )}
-                        </div>
-                        {!hasSubmitted && (
-                            <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                                <p className="text-sm text-yellow-800">
-                                    Complete the assessment to view your detailed scores and performance analysis.
-                                </p>
-                                <a
-                                    href="/assessment"
-                                    className="inline-flex items-center mt-2 text-sm text-yellow-700 hover:text-yellow-800 font-medium"
-                                >
-                                    Take Assessment Now →
-                                </a>
-                            </div>
-                        )}
                     </div>
                 </CardContent>
             </Card>
@@ -270,7 +261,7 @@ export default function Profile({ student, categories, hasSubmitted = true }: Pr
                                             <td className="p-2 text-right">{subcategory.score}/5</td>
                                             <td className="p-2 text-center">
                                                 <Badge className={getScoreColor(subcategory.score)}>
-                                                    {subcategory.score >= 4 ? 'Excellent' : 
+                                                    {subcategory.score >= 4 ? 'Excellent' :
                                                      subcategory.score >= 3 ? 'Good' : 'Needs Improvement'}
                                                 </Badge>
                                             </td>

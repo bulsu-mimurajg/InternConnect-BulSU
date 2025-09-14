@@ -23,7 +23,7 @@ export default function Summary() {
         const fetchSections = async () => {
             try {
                 setLoading(true);
-                
+
                 // Fetch all sections data
                 const fetchOptions = {
                     method: 'GET',
@@ -34,7 +34,7 @@ export default function Summary() {
                     },
                     credentials: 'same-origin',
                 };
-                
+
                 const [languageResponse, technicalResponse, softResponse] = await Promise.all([
                     fetch('/assessment/language-proficiency', fetchOptions),
                     fetch('/assessment/technical-skills', fetchOptions),
@@ -46,19 +46,6 @@ export default function Summary() {
                 const softData = await softResponse.json();
 
                 const allSections = [
-                    {
-                        title: 'Personal Information',
-                        type: 'personal',
-                        fields: [
-                            { name: 'firstName', label: 'First Name' },
-                            { name: 'lastName', label: 'Last Name' },
-                            { name: 'middleName', label: 'Middle Name' },
-                            { name: 'suffix', label: 'Suffix' },
-                            { name: 'province', label: 'Province' },
-                            { name: 'city', label: 'City' },
-                            { name: 'zip', label: 'Zip Code' },
-                        ]
-                    },
                     {
                         title: 'Language Proficiency',
                         type: 'language',
