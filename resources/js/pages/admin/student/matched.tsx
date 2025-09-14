@@ -589,7 +589,7 @@ export default function StudentMatched({ matchedStudents, filters }: Props) {
     const handleBatchApprove = async () => {
         if (selectedStudents.size === 0) return;
 
-        let csrfToken = getFreshCsrfToken();
+        const csrfToken = getFreshCsrfToken();
         
         // Check if CSRF token exists (basic auth check)
         if (!csrfToken) {
