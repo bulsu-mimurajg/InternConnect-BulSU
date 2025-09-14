@@ -11,8 +11,8 @@ import { CheckIcon, XIcon, UsersIcon, UserCheckIcon, RotateCcwIcon, UserXIcon } 
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
-        title: 'Application',
-        href: '/application',
+        title: 'Student Verification',
+        href: '/student-verification',
     },
 ];
 
@@ -97,7 +97,7 @@ export default function Application({ pendingStudents, verifiedStudents, adviser
 
     const handleApprove = () => {
         if (selectedStudents.length === 0) return;
-        
+
         setIsProcessing(true);
         router.post(route('application.approve'), {
             studentIds: selectedStudents
@@ -117,7 +117,7 @@ export default function Application({ pendingStudents, verifiedStudents, adviser
 
     const handleReject = () => {
         if (selectedStudents.length === 0) return;
-        
+
         setIsProcessing(true);
         router.post(route('application.reject'), {
             studentIds: selectedStudents
@@ -137,7 +137,7 @@ export default function Application({ pendingStudents, verifiedStudents, adviser
 
     const handleRemoveAccess = () => {
         if (selectedVerifiedStudents.length === 0) return;
-        
+
         setIsProcessing(true);
         router.post(route('application.remove-access'), {
             studentIds: selectedVerifiedStudents
@@ -157,7 +157,7 @@ export default function Application({ pendingStudents, verifiedStudents, adviser
 
     const handleUndo = () => {
         if (!lastAction) return;
-        
+
         setIsProcessing(true);
         router.post(route('application.undo'), {
             action: lastAction.type,
@@ -261,7 +261,7 @@ export default function Application({ pendingStudents, verifiedStudents, adviser
                                         >
                                             <Checkbox
                                                 checked={selectedStudents.includes(student.id)}
-                                                onCheckedChange={(checked) => 
+                                                onCheckedChange={(checked) =>
                                                     handleSelectStudent(student.id, checked as boolean)
                                                 }
                                             />
@@ -276,7 +276,7 @@ export default function Application({ pendingStudents, verifiedStudents, adviser
                                         </div>
                                     ))}
                                 </div>
-                                
+
                                 {selectedStudents.length > 0 && (
                                     <div className="flex items-center gap-2 pt-4 border-t">
                                         <Button
@@ -342,7 +342,7 @@ export default function Application({ pendingStudents, verifiedStudents, adviser
                                         >
                                             <Checkbox
                                                 checked={selectedVerifiedStudents.includes(student.id)}
-                                                onCheckedChange={(checked) => 
+                                                onCheckedChange={(checked) =>
                                                     handleSelectVerifiedStudent(student.id, checked as boolean)
                                                 }
                                             />
@@ -372,7 +372,7 @@ export default function Application({ pendingStudents, verifiedStudents, adviser
                                         </div>
                                     ))}
                                 </div>
-                                
+
                                 {selectedVerifiedStudents.length > 0 && (
                                     <div className="flex items-center gap-2 pt-4 border-t">
                                         <Button
@@ -403,8 +403,8 @@ export default function Application({ pendingStudents, verifiedStudents, adviser
                         <DialogDescription>
                             {lastAction && (
                                 <>
-                                    You just {lastAction.type === 'approve' ? 'approved' : 
-                                               lastAction.type === 'reject' ? 'rejected' : 
+                                    You just {lastAction.type === 'approve' ? 'approved' :
+                                               lastAction.type === 'reject' ? 'rejected' :
                                                'removed access for'} {lastAction.count} student{lastAction.count > 1 ? 's' : ''}.
                                     Would you like to undo this action?
                                 </>

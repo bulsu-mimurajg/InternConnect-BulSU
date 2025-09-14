@@ -6,7 +6,6 @@ import { type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
 import {
     BookCheckIcon,
-    BriefcaseBusinessIcon,
     ClipboardIcon,
     ClipboardListIcon,
     HeadsetIcon,
@@ -16,7 +15,7 @@ import {
     UserIcon,
     PlusIcon,
     CalendarIcon,
-    FileTextIcon
+    FileTextIcon, Check
 } from 'lucide-react';
 import AppLogo from './app-logo';
 
@@ -54,14 +53,14 @@ const roleBasedNav: Record<string, { main: NavItem[]; footer: NavItem[] }> = {
     adviser: {
         main: [
             { title: 'Dashboard', href: '/adviser/dashboard', icon: ClipboardIcon },
-            { title: 'Students', href: '/students', icon: UserIcon },
-            { title: 'Application', href: '/application', icon: PersonStandingIcon }
+            { title: 'Student Verification', href: '/student-verification', icon: Check },
+            { title: 'Student List', href: '/adviser/student-list', icon: UserIcon },
         ],
         footer: [],
     },
     student: {
         main: [
-            { title: 'Dashboard', href: '/dashboard', icon: ClipboardIcon },
+            { title: 'Dashboard', href: '/student/dashboard', icon: ClipboardIcon },
             { title: 'Assessment', href: '/assessment', icon: BookCheckIcon },
             { title: 'Profile', href: '/student-profile', icon: UserIcon },
         ],

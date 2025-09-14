@@ -135,8 +135,8 @@ Route::middleware(['auth', 'verified', 'role:hte'])->group(function () {
 
 Route::middleware(['auth', 'verified', 'role:adviser'])->group(function () {
     Route::get('adviser/dashboard', [AdviserController::class, 'dashboard'])->name('adviser.dashboard');
-    Route::get('students', [AdviserController::class, 'getStudents'])->name('students');
-    Route::get('application', [AdviserController::class, 'index'])->name('application');
+    Route::get('adviser/student-list', [AdviserController::class, 'getStudents'])->name('adviser.student-list');
+    Route::get('student-verification', [AdviserController::class, 'index'])->name('student-verification');
     Route::post('application/approve', [AdviserController::class, 'approveStudents'])->name('application.approve');
     Route::post('application/reject', [AdviserController::class, 'rejectStudents'])->name('application.reject');
     Route::post('application/remove-access', [AdviserController::class, 'removeStudentAccess'])->name('application.remove-access');
@@ -144,7 +144,7 @@ Route::middleware(['auth', 'verified', 'role:adviser'])->group(function () {
 });
 
 Route::group(['middleware' => ['auth', 'verified', 'role:student']], function () {
-    Route::get('dashboard', function () {
+    Route::get('student/dashboard', function () {
         $user = Auth::user();
         $student = $user->student;
 

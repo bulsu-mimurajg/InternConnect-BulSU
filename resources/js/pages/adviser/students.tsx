@@ -7,21 +7,18 @@ import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/react';
 import { useState, useMemo } from 'react';
-import { 
-    UsersIcon, 
-    SearchIcon, 
+import {
+    UsersIcon,
+    SearchIcon,
     FilterIcon,
-    CheckCircleIcon,
     ClockIcon,
-    XCircleIcon,
-    BriefcaseIcon,
     BarChart3Icon
 } from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
-        title: 'Students',
-        href: '/students',
+        title: 'Student List',
+        href: '/student-list',
     },
 ];
 
@@ -60,6 +57,25 @@ export default function AdviserStudents({ students, adviserSection }: Props) {
     const [assessmentFilter, setAssessmentFilter] = useState<string>('all');
     const [placementFilter, setPlacementFilter] = useState<string>('all');
 
+    // Filter students based on search and filters
+    const filteredStudents = useMemo(() => {
+        return students.filter(student => {
+            const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                student.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                student.email.toLowerCase().includes(searchTerm.toLowerCase());
+
+            const matchesStatus = statusFilter === 'all' || student.status === statusFilter;
+            const matchesAssessment = assessmentFilter === 'all' ||
+                                    (assessmentFilter === 'completed' && student.hasAssessment) ||
+                                    (assessmentFilter === 'pending' && !student.hasAssessment);
+            const matchesPlacement = placementFilter === 'all' ||
+                                   (placementFilter === 'placed' && student.isPlaced) ||
+                                   (placementFilter === 'unplaced' && !student.isPlaced);
+
+            return matchesSearch && matchesStatus && matchesAssessment && matchesPlacement;
+        });
+    }, [students, searchTerm, statusFilter, assessmentFilter, placementFilter]);
+
     if (!adviserSection) {
         return (
             <AppLayout breadcrumbs={breadcrumbs}>
@@ -80,25 +96,6 @@ export default function AdviserStudents({ students, adviserSection }: Props) {
             </AppLayout>
         );
     }
-
-    // Filter students based on search and filters
-    const filteredStudents = useMemo(() => {
-        return students.filter(student => {
-            const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                student.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                student.email.toLowerCase().includes(searchTerm.toLowerCase());
-            
-            const matchesStatus = statusFilter === 'all' || student.status === statusFilter;
-            const matchesAssessment = assessmentFilter === 'all' || 
-                                    (assessmentFilter === 'completed' && student.hasAssessment) ||
-                                    (assessmentFilter === 'pending' && !student.hasAssessment);
-            const matchesPlacement = placementFilter === 'all' ||
-                                   (placementFilter === 'placed' && student.isPlaced) ||
-                                   (placementFilter === 'unplaced' && !student.isPlaced);
-
-            return matchesSearch && matchesStatus && matchesAssessment && matchesPlacement;
-        });
-    }, [students, searchTerm, statusFilter, assessmentFilter, placementFilter]);
 
     const getStatusBadge = (status: string) => {
         switch (status) {
@@ -140,8 +137,8 @@ export default function AdviserStudents({ students, adviserSection }: Props) {
                         </p>
                     </div>
                     <Button asChild>
-                        <Link href={route('application')}>
-                            Manage Applications
+                        <Link href={route('student-verification')}>
+                            Verify Students
                         </Link>
                     </Button>
                 </div>
@@ -165,7 +162,7 @@ export default function AdviserStudents({ students, adviserSection }: Props) {
                                     className="pl-10"
                                 />
                             </div>
-                            
+
                             <Select value={statusFilter} onValueChange={setStatusFilter}>
                                 <SelectTrigger>
                                     <SelectValue placeholder="Status" />
@@ -228,7 +225,7 @@ export default function AdviserStudents({ students, adviserSection }: Props) {
                                                     {getAssessmentBadge(student.hasAssessment)}
                                                     {getPlacementBadge(student.isPlaced)}
                                                 </div>
-                                                
+
                                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
                                                     <div>
                                                         <p className="text-sm text-muted-foreground">Username</p>
@@ -259,7 +256,7 @@ export default function AdviserStudents({ students, adviserSection }: Props) {
                                                                 </span>
                                                             </div>
                                                         </div>
-                                                        
+
                                                         <div className="flex flex-wrap gap-2">
                                                             {student.categories.map((category, index) => (
                                                                 <Badge key={index} variant="outline" className="text-xs">

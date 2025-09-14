@@ -5,11 +5,11 @@ import { Progress } from '@/components/ui/progress';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/react';
-import { 
-    UsersIcon, 
-    CheckCircleIcon, 
-    BriefcaseIcon, 
-    ClockIcon, 
+import {
+    UsersIcon,
+    CheckCircleIcon,
+    BriefcaseIcon,
+    ClockIcon,
     TrendingUpIcon,
     BarChart3Icon,
     UserCheckIcon,
@@ -75,7 +75,7 @@ interface Props {
     adviserSection: string | null;
 }
 
-export default function AdviserDashboard({ stats, recentAssessments, placementOverview, adviserSection }: Props) {
+export default function AdviserDashboard({ stats, recentAssessments, adviserSection }: Props) {
     if (!adviserSection) {
         return (
             <AppLayout breadcrumbs={breadcrumbs}>
@@ -110,8 +110,8 @@ export default function AdviserDashboard({ stats, recentAssessments, placementOv
                         </p>
                     </div>
                     <Button asChild>
-                        <Link href={route('application')}>
-                            Manage Applications
+                        <Link href={route('student-verification')}>
+                            Verify Students
                         </Link>
                     </Button>
                 </div>
@@ -127,11 +127,11 @@ export default function AdviserDashboard({ stats, recentAssessments, placementOv
                                         You have {stats.pendingStudents} student{stats.pendingStudents > 1 ? 's' : ''} waiting for verification
                                     </p>
                                     <p className="text-sm text-amber-700">
-                                        Review and approve student applications to grant them access to the system
+                                        Review and approve student requests to grant them access to the system
                                     </p>
                                 </div>
                                 <Button asChild size="sm" className="bg-amber-600 hover:bg-amber-700">
-                                    <Link href={route('application')}>
+                                    <Link href={route('student-verification')}>
                                         Review Applications
                                     </Link>
                                 </Button>
@@ -301,7 +301,7 @@ export default function AdviserDashboard({ stats, recentAssessments, placementOv
                     <CardContent>
                         <div className="grid gap-4 md:grid-cols-3">
                             <Button asChild variant="outline" className="h-auto p-4 flex-col gap-2">
-                                <Link href={route('students')}>
+                                <Link href={route('adviser.student-list')}>
                                     <UserCheckIcon className="h-6 w-6" />
                                     <span>View Students</span>
                                     <span className="text-xs text-muted-foreground">
@@ -309,19 +309,19 @@ export default function AdviserDashboard({ stats, recentAssessments, placementOv
                                     </span>
                                 </Link>
                             </Button>
-                            
+
                             <Button asChild variant="outline" className="h-auto p-4 flex-col gap-2">
-                                <Link href={route('application')}>
+                                <Link href={route('student-verification')}>
                                     <BarChart3Icon className="h-6 w-6" />
-                                    <span>Manage Applications</span>
+                                    <span>Verify Students</span>
                                     <span className="text-xs text-muted-foreground">
-                                        Approve or reject student applications
+                                        Approve or reject student requests
                                     </span>
                                 </Link>
                             </Button>
-                            
+
                             <Button asChild variant="outline" className="h-auto p-4 flex-col gap-2">
-                                <Link href={route('students')}>
+                                <Link href={route('adviser.student-list')}>
                                     <BriefcaseIcon className="h-6 w-6" />
                                     <span>Track Placements</span>
                                     <span className="text-xs text-muted-foreground">
