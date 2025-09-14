@@ -40,7 +40,7 @@ class AuthenticatedSessionController extends Controller
         }
 
         if ($user->hasRole('hte')) {
-            return redirect()->intended(route('form', absolute: false));
+            return redirect()->intended(route('hte.dashboard', absolute: false));
         }
 
         if ($user->hasRole('student')) {
