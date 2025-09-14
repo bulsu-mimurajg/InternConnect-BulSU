@@ -2,13 +2,11 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { 
-    BookOpen, 
-    User, 
-    Target, 
-    TrendingUp, 
-    Calendar,
-    FileText,
+import {
+    BookOpen,
+    User,
+    Target,
+    TrendingUp,
     Settings,
     HelpCircle,
     Bell,
@@ -16,19 +14,28 @@ import {
 } from 'lucide-react';
 import { Link } from '@inertiajs/react';
 
+interface CurrentMatch {
+    internship: {
+        position_title: string;
+        company_name: string;
+    };
+    status: string;
+    match_score: number;
+}
+
 interface StudentQuickActionsProps {
     hasSubmitted: boolean;
     performance?: {
         overall_average: number;
         total_questions: number;
     };
-    currentMatch?: any;
+    currentMatch?: CurrentMatch | null;
 }
 
-export function StudentQuickActions({ 
-    hasSubmitted, 
-    performance, 
-    currentMatch 
+export function StudentQuickActions({
+    hasSubmitted,
+    performance,
+    currentMatch
 }: StudentQuickActionsProps) {
     const getPerformanceLevel = (score: number) => {
         if (score >= 4.5) return 'Excellent';
@@ -203,8 +210,8 @@ export function StudentQuickActions({
                                         {currentMatch.internship.position_title} at {currentMatch.internship.company_name}
                                     </p>
                                     <div className="flex items-center gap-4 mt-2">
-                                        <Badge 
-                                            variant="outline" 
+                                        <Badge
+                                            variant="outline"
                                             className="border-blue-200 text-blue-700 dark:border-blue-800 dark:text-blue-300"
                                         >
                                             {currentMatch.status}

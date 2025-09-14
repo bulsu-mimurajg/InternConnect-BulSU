@@ -2,7 +2,7 @@ import { AreaChart as RechartsAreaChart, Area, XAxis, YAxis, CartesianGrid, Tool
 
 interface AreaChartProps {
     data: Array<{
-        [key: string]: any;
+        [key: string]: string | number;
     }>;
     dataKey: string;
     xAxisKey: string;

@@ -2,14 +2,11 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { 
-    Briefcase, 
-    Building, 
-    GraduationCap, 
-    User, 
-    MapPin, 
-    Calendar,
-    ExternalLink,
+import {
+    Briefcase,
+    Building,
+    GraduationCap,
+    User,
     Target
 } from 'lucide-react';
 import { Link } from '@inertiajs/react';
@@ -24,14 +21,23 @@ interface PossibleInternship {
     compatibility_score: number;
 }
 
-interface StudentInternshipOpportunitiesProps {
-    internships: PossibleInternship[];
-    currentMatch: any;
+interface CurrentMatch {
+    internship: {
+        position_title: string;
+        company_name: string;
+    };
+    status: string;
+    match_score: number;
 }
 
-export function StudentInternshipOpportunities({ 
-    internships, 
-    currentMatch 
+interface StudentInternshipOpportunitiesProps {
+    internships: PossibleInternship[];
+    currentMatch: CurrentMatch | null;
+}
+
+export function StudentInternshipOpportunities({
+    internships,
+    currentMatch
 }: StudentInternshipOpportunitiesProps) {
     if (internships.length === 0) {
         return (
@@ -69,8 +75,8 @@ export function StudentInternshipOpportunities({
             <CardContent>
                 <div className="space-y-4">
                     {internships.map((internship) => (
-                        <div 
-                            key={internship.id} 
+                        <div
+                            key={internship.id}
                             className="p-4 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group"
                         >
                             <div className="flex items-start justify-between">
@@ -84,7 +90,7 @@ export function StudentInternshipOpportunities({
                                             <span className="font-medium">{internship.company_name}</span>
                                         </div>
                                     </div>
-                                    
+
                                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
                                         <div className="flex items-center gap-2">
                                             <GraduationCap className="h-4 w-4 text-muted-foreground" />
@@ -99,10 +105,10 @@ export function StudentInternshipOpportunities({
                                         <div className="flex items-center gap-2">
                                             <Target className="h-4 w-4 text-muted-foreground" />
                                             <span className="text-muted-foreground">Compatibility:</span>
-                                            <Badge 
+                                            <Badge
                                                 variant={
-                                                    internship.compatibility_score >= 80 ? "default" : 
-                                                    internship.compatibility_score >= 70 ? "secondary" : 
+                                                    internship.compatibility_score >= 80 ? "default" :
+                                                    internship.compatibility_score >= 70 ? "secondary" :
                                                     internship.compatibility_score >= 60 ? "outline" : "destructive"
                                                 }
                                                 className="text-xs"
@@ -112,12 +118,12 @@ export function StudentInternshipOpportunities({
                                         </div>
                                     </div>
                                 </div>
-                                
+
                                 <div className="flex flex-col items-end gap-2 ml-4">
-                                    <Badge 
+                                    <Badge
                                         variant={
-                                            internship.compatibility_score >= 80 ? "default" : 
-                                            internship.compatibility_score >= 70 ? "secondary" : 
+                                            internship.compatibility_score >= 80 ? "default" :
+                                            internship.compatibility_score >= 70 ? "secondary" :
                                             internship.compatibility_score >= 60 ? "outline" : "destructive"
                                         }
                                         className="text-xs"
@@ -129,7 +135,7 @@ export function StudentInternshipOpportunities({
                         </div>
                     ))}
                 </div>
-                
+
                 {/* Current Match Status */}
                 {currentMatch && (
                     <div className="mt-6 pt-6 border-t">
@@ -145,8 +151,8 @@ export function StudentInternshipOpportunities({
                                     <span className="text-blue-700 dark:text-blue-300 font-medium">
                                         {currentMatch.internship.position_title}
                                     </span>
-                                    <Badge 
-                                        variant="outline" 
+                                    <Badge
+                                        variant="outline"
                                         className="border-blue-200 text-blue-700 dark:border-blue-800 dark:text-blue-300"
                                     >
                                         {currentMatch.status}
@@ -162,7 +168,7 @@ export function StudentInternshipOpportunities({
                         </div>
                     </div>
                 )}
-                
+
                 {/* Action Buttons */}
                 <div className="mt-6 pt-6 border-t">
                     <div className="flex justify-center">
