@@ -54,6 +54,7 @@ Route::middleware(['auth', 'verified', 'role:admin'])->group(function () {
     Route::get('admin/events', [AdminController::class, 'eventsManagement'])->name('admin.events');
     Route::post('admin/deadlines', [AdminController::class, 'storeDeadline'])->name('admin.deadlines.store');
     Route::put('admin/deadlines/{deadline}', [AdminController::class, 'updateDeadline'])->name('admin.deadlines.update');
+    Route::patch('admin/deadlines/{deadline}/extend', [AdminController::class, 'extendDeadline'])->name('admin.deadlines.extend');
     Route::delete('admin/deadlines/{deadline}', [AdminController::class, 'deleteDeadline'])->name('admin.deadlines.delete');
 
     // Forms Management routes

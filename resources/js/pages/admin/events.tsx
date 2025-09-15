@@ -5,7 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { CalendarIcon, PlusIcon, EditIcon, TrashIcon } from 'lucide-react';
+import { ClockIcon } from 'lucide-react';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 
@@ -22,6 +25,9 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 interface Deadline {
     id: number;
+    title: string;
+    category: string;
+    category_display: string;
     start_date: string;
     end_date: string;
     status: 'active' | 'expired';
@@ -31,26 +37,38 @@ interface Deadline {
     updated_at: string;
 }
 
-interface EventsPageProps {
-    deadlines: Deadline[];
+interface CategoryOption {
+    value: string;
+    label: string;
 }
 
-export default function EventsPage({ deadlines }: EventsPageProps) {
+interface EventsPageProps {
+    activeDeadlines: Deadline[];
+    expiredDeadlines: Deadline[];
+    categoryOptions: CategoryOption[];
+}
+
+export default function EventsPage({ activeDeadlines, expiredDeadlines, categoryOptions }: EventsPageProps) {
     const [showForm, setShowForm] = useState(false);
     const [editingDeadline, setEditingDeadline] = useState<Deadline | null>(null);
     const [showArchived, setShowArchived] = useState(false);
-    const { flash } = usePage().props as { flash?: { success?: string; error?: string } };
+    const [showExtendDialog, setShowExtendDialog] = useState(false);
+    const [extendingDeadline, setExtendingDeadline] = useState<Deadline | null>(null);
+    const { flash } = usePage().props as any;
 
     const { data, setData, post, put, delete: destroy, processing, errors, reset } = useForm({
+        title: '',
+        category: '',
         start_date: '',
         end_date: '',
     });
 
-    // Filter deadlines based on selected filters
-    const filteredDeadlines = deadlines.filter(deadline => {
-        const matchesArchive = showArchived ? deadline.is_expired : deadline.is_active;
-        return matchesArchive;
+    const { data: extendData, setData: setExtendData, patch, processing: extending, errors: extendErrors, reset: resetExtend } = useForm({
+        extension_hours: '',
     });
+
+    // Get current deadlines based on filter
+    const currentDeadlines = showArchived ? expiredDeadlines : activeDeadlines;
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -82,10 +100,35 @@ export default function EventsPage({ deadlines }: EventsPageProps) {
     const handleEdit = (deadline: Deadline) => {
         setEditingDeadline(deadline);
         setData({
+            title: deadline.title,
+            category: deadline.category,
             start_date: deadline.start_date,
             end_date: deadline.end_date,
         });
         setShowForm(true);
+    };
+
+    const handleExtend = (deadline: Deadline) => {
+        setExtendingDeadline(deadline);
+        setExtendData({ extension_hours: '' });
+        setShowExtendDialog(true);
+    };
+
+    const handleExtendSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        
+        if (extendingDeadline) {
+            patch(`/admin/deadlines/${extendingDeadline.id}/extend`, {
+                onSuccess: () => {
+                    resetExtend();
+                    setShowExtendDialog(false);
+                    setExtendingDeadline(null);
+                },
+                onError: (errors) => {
+                    console.error('Extension errors:', errors);
+                },
+            });
+        }
     };
 
     const handleDelete = (id: number) => {
@@ -98,6 +141,12 @@ export default function EventsPage({ deadlines }: EventsPageProps) {
         reset();
         setShowForm(false);
         setEditingDeadline(null);
+    };
+
+    const handleExtendCancel = () => {
+        resetExtend();
+        setShowExtendDialog(false);
+        setExtendingDeadline(null);
     };
 
     const getStatusBadge = (deadline: Deadline) => {
@@ -193,6 +242,40 @@ export default function EventsPage({ deadlines }: EventsPageProps) {
                         </CardHeader>
                         <CardContent>
                             <form onSubmit={handleSubmit} className="space-y-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="title">Title</Label>
+                                    <Input
+                                        id="title"
+                                        type="text"
+                                        value={data.title}
+                                        onChange={(e) => setData('title', e.target.value)}
+                                        placeholder="Enter deadline title"
+                                        className={errors.title ? 'border-red-500' : ''}
+                                    />
+                                    {errors.title && (
+                                        <p className="text-sm text-red-500">{errors.title}</p>
+                                    )}
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="category">Category</Label>
+                                    <Select value={data.category} onValueChange={(value) => setData('category', value)}>
+                                        <SelectTrigger className={errors.category ? 'border-red-500' : ''}>
+                                            <SelectValue placeholder="Select a category" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {categoryOptions.map((option) => (
+                                                <SelectItem key={option.value} value={option.value}>
+                                                    {option.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    {errors.category && (
+                                        <p className="text-sm text-red-500">{errors.category}</p>
+                                    )}
+                                </div>
+
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <Label htmlFor="start_date">Start Date & Time</Label>
@@ -254,11 +337,9 @@ export default function EventsPage({ deadlines }: EventsPageProps) {
                         <CardTitle className="flex items-center gap-2">
                             <CalendarIcon className="h-5 w-5" />
                             {showArchived ? 'Expired Deadlines' : 'Active Deadlines'}
-                            {filteredDeadlines.length !== deadlines.length && (
-                                <Badge variant="outline" className="ml-2">
-                                    {filteredDeadlines.length} of {deadlines.length}
-                                </Badge>
-                            )}
+                            <Badge variant="outline" className="ml-2">
+                                {currentDeadlines.length}
+                            </Badge>
                         </CardTitle>
                         <CardDescription>
                             {showArchived 
@@ -268,7 +349,7 @@ export default function EventsPage({ deadlines }: EventsPageProps) {
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        {filteredDeadlines.length === 0 ? (
+                        {currentDeadlines.length === 0 ? (
                             <div className="text-center py-8">
                                 <CalendarIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                                 <h3 className="text-lg font-medium mb-2">
@@ -289,15 +370,20 @@ export default function EventsPage({ deadlines }: EventsPageProps) {
                             </div>
                         ) : (
                             <div className="space-y-4">
-                                {filteredDeadlines.map((deadline) => (
+                                {currentDeadlines.map((deadline) => (
                                     <div
                                         key={deadline.id}
                                         className="flex items-start justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
                                     >
                                         <div className="flex-1">
                                             <div className="flex items-center gap-3 mb-2">
-                                                <h3 className="font-medium">Deadline #{deadline.id}</h3>
+                                                <h3 className="font-medium">{deadline.title}</h3>
                                                 {getStatusBadge(deadline)}
+                                            </div>
+                                            <div className="mb-2">
+                                                <Badge variant="outline" className="text-xs">
+                                                    {deadline.category_display}
+                                                </Badge>
                                             </div>
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-muted-foreground">
                                                 <div>
@@ -312,6 +398,16 @@ export default function EventsPage({ deadlines }: EventsPageProps) {
                                             </div>
                                         </div>
                                         <div className="flex gap-2">
+                                            {!deadline.is_expired && (
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => handleExtend(deadline)}
+                                                    className="text-blue-600 hover:text-blue-700"
+                                                >
+                                                    <ClockIcon className="h-4 w-4" />
+                                                </Button>
+                                            )}
                                             <Button
                                                 variant="outline"
                                                 size="sm"
@@ -334,6 +430,63 @@ export default function EventsPage({ deadlines }: EventsPageProps) {
                         )}
                     </CardContent>
                 </Card>
+
+                {/* Extension Dialog */}
+                <Dialog open={showExtendDialog} onOpenChange={setShowExtendDialog}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2">
+                                <ClockIcon className="h-5 w-5" />
+                                Extend Deadline
+                            </DialogTitle>
+                            <DialogDescription>
+                                Extend the deadline "{extendingDeadline?.title}" by adding more hours.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <form onSubmit={handleExtendSubmit} className="space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="extension_hours">Extension Hours</Label>
+                                <Input
+                                    id="extension_hours"
+                                    type="number"
+                                    min="1"
+                                    max="8760"
+                                    value={extendData.extension_hours}
+                                    onChange={(e) => setExtendData('extension_hours', e.target.value)}
+                                    placeholder="Enter hours to extend"
+                                    className={extendErrors.extension_hours ? 'border-red-500' : ''}
+                                />
+                                {extendErrors.extension_hours && (
+                                    <p className="text-sm text-red-500">{extendErrors.extension_hours}</p>
+                                )}
+                                <p className="text-xs text-muted-foreground">
+                                    Maximum 8760 hours (1 year)
+                                </p>
+                            </div>
+
+                            {/* Display general errors */}
+                            {Object.keys(extendErrors).length > 0 && (
+                                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                                    <p className="font-medium">Please fix the following errors:</p>
+                                    <ul className="list-disc list-inside mt-2">
+                                        {Object.entries(extendErrors).map(([field, error]) => (
+                                            <li key={field}>{field}: {error}</li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+                            
+                            <div className="flex gap-2">
+                                <Button type="submit" disabled={extending}>
+                                    {extending ? 'Extending...' : 'Extend Deadline'}
+                                </Button>
+                                <Button type="button" variant="outline" onClick={handleExtendCancel}>
+                                    Cancel
+                                </Button>
+                            </div>
+                        </form>
+                    </DialogContent>
+                </Dialog>
             </div>
         </AppLayout>
     );

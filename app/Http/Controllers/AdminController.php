@@ -1234,12 +1234,14 @@ class AdminController extends Controller
      */
     public function eventsManagement(): Response
     {
-        // Get deadlines
-        $deadlines = Deadline::orderBy('created_at', 'desc')
-            ->get()
+        // Get active deadlines
+        $activeDeadlines = Deadline::getActive()
             ->map(function ($deadline) {
                 return [
                     'id' => $deadline->id,
+                    'title' => $deadline->title,
+                    'category' => $deadline->category,
+                    'category_display' => $deadline->getCategoryDisplayName(),
                     'start_date' => $deadline->start_date->format('Y-m-d\TH:i'),
                     'end_date' => $deadline->end_date->format('Y-m-d\TH:i'),
                     'status' => $deadline->status,
@@ -1250,8 +1252,35 @@ class AdminController extends Controller
                 ];
             });
 
+        // Get expired deadlines
+        $expiredDeadlines = Deadline::getExpired()
+            ->map(function ($deadline) {
+                return [
+                    'id' => $deadline->id,
+                    'title' => $deadline->title,
+                    'category' => $deadline->category,
+                    'category_display' => $deadline->getCategoryDisplayName(),
+                    'start_date' => $deadline->start_date->format('Y-m-d\TH:i'),
+                    'end_date' => $deadline->end_date->format('Y-m-d\TH:i'),
+                    'status' => $deadline->status,
+                    'is_active' => $deadline->isActive(),
+                    'is_expired' => $deadline->isExpired(),
+                    'created_at' => $deadline->created_at->format('M d, Y'),
+                    'updated_at' => $deadline->updated_at->format('M d, Y'),
+                ];
+            });
+
+        // Get category options
+        $categoryOptions = [
+            ['value' => 'student_verification', 'label' => 'Student Verification (Adviser Side)'],
+            ['value' => 'assessment_form', 'label' => 'Assessment Form (Student & HTE Side)'],
+            ['value' => 'skill_assessment_form', 'label' => 'Skill Assessment Form (Student Side)'],
+        ];
+
         return Inertia::render('admin/events', [
-            'deadlines' => $deadlines,
+            'activeDeadlines' => $activeDeadlines,
+            'expiredDeadlines' => $expiredDeadlines,
+            'categoryOptions' => $categoryOptions,
         ]);
     }
 
@@ -1262,6 +1291,8 @@ class AdminController extends Controller
     {
         // Debug: Log incoming request data
         Log::info('Deadline Creation Request', [
+            'title' => $request->title,
+            'category' => $request->category,
             'start_date' => $request->start_date,
             'end_date' => $request->end_date,
             'all_request_data' => $request->all(),
@@ -1269,6 +1300,8 @@ class AdminController extends Controller
 
         try {
             $request->validate([
+                'title' => 'required|string|max:255',
+                'category' => 'required|in:student_verification,assessment_form,skill_assessment_form',
                 'start_date' => 'required|date',
                 'end_date' => 'required|date|after:start_date',
             ]);
@@ -1282,13 +1315,27 @@ class AdminController extends Controller
         }
 
         try {
+            // Check if there's already an active deadline for this category
+            $existingDeadline = Deadline::where('category', $request->category)
+                ->where('status', 'active')
+                ->where('end_date', '>', now())
+                ->first();
+
+            if ($existingDeadline) {
+                return redirect()->back()->withErrors(['error' => 'There is already an active deadline for this category. Please extend or update the existing deadline instead.']);
+            }
+
             $deadline = Deadline::create([
+                'title' => $request->title,
+                'category' => $request->category,
                 'start_date' => $request->start_date,
                 'end_date' => $request->end_date,
             ]);
 
             Log::info('Deadline created successfully', [
                 'deadline_id' => $deadline->id,
+                'title' => $deadline->title,
+                'category' => $deadline->category,
                 'start_date' => $deadline->start_date,
                 'end_date' => $deadline->end_date,
                 'status' => $deadline->status,
@@ -1312,12 +1359,29 @@ class AdminController extends Controller
     public function updateDeadline(Request $request, Deadline $deadline)
     {
         $request->validate([
+            'title' => 'required|string|max:255',
+            'category' => 'required|in:student_verification,assessment_form,skill_assessment_form',
             'start_date' => 'required|date',
             'end_date' => 'required|date|after:start_date',
         ]);
 
         try {
+            // Check if there's already an active deadline for this category (excluding current deadline)
+            if ($request->category !== $deadline->category) {
+                $existingDeadline = Deadline::where('category', $request->category)
+                    ->where('status', 'active')
+                    ->where('end_date', '>', now())
+                    ->where('id', '!=', $deadline->id)
+                    ->first();
+
+                if ($existingDeadline) {
+                    return redirect()->back()->withErrors(['error' => 'There is already an active deadline for this category. Please extend or update the existing deadline instead.']);
+                }
+            }
+
             $deadline->update([
+                'title' => $request->title,
+                'category' => $request->category,
                 'start_date' => $request->start_date,
                 'end_date' => $request->end_date,
             ]);
@@ -1331,6 +1395,35 @@ class AdminController extends Controller
             ]);
             
             return redirect()->back()->withErrors(['error' => 'Failed to update deadline: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Extend a deadline
+     */
+    public function extendDeadline(Request $request, Deadline $deadline)
+    {
+        $request->validate([
+            'extension_hours' => 'required|integer|min:1|max:8760', // Max 1 year
+        ]);
+
+        try {
+            $extensionHours = $request->extension_hours;
+            $newEndDate = $deadline->end_date->addHours($extensionHours);
+
+            $deadline->update([
+                'end_date' => $newEndDate,
+            ]);
+
+            return redirect()->route('admin.events')->with('success', "Deadline extended by {$extensionHours} hours successfully.");
+        } catch (\Exception $e) {
+            Log::error('Deadline extension failed', [
+                'error' => $e->getMessage(),
+                'deadline_id' => $deadline->id,
+                'request_data' => $request->all(),
+            ]);
+            
+            return redirect()->back()->withErrors(['error' => 'Failed to extend deadline: ' . $e->getMessage()]);
         }
     }
 

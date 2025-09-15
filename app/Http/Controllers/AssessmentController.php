@@ -25,13 +25,27 @@ class AssessmentController extends Controller
         $student = Auth::user()->student;
         $hasSubmitted = $student ? $student->is_submit : false;
 
+        // Check deadline status for assessment form
+        $deadlineActive = \App\Models\Deadline::isActiveForCategory('assessment_form');
+        $deadlineInfo = null;
+        if (!$deadlineActive) {
+            $deadlineInfo = \App\Models\Deadline::getActiveForCategory('assessment_form');
+        }
+
         return Inertia::render('student/assessment', [
-            'hasSubmitted' => $hasSubmitted
+            'hasSubmitted' => $hasSubmitted,
+            'deadlineActive' => $deadlineActive,
+            'deadlineInfo' => $deadlineInfo,
         ]);
     }
 
     public function store(Request $request): RedirectResponse
     {
+        // Check if assessment form deadline is active
+        if (!\App\Models\Deadline::isActiveForCategory('assessment_form')) {
+            return redirect()->back()->withErrors(['error' => 'Assessment form deadline has expired. You cannot submit assessments at this time.']);
+        }
+
         // Get all questions from database to build dynamic validation rules
         $questions = Question::where('access', 'Student')->where('is_active', true)->get();
 
