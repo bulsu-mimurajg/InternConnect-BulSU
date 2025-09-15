@@ -7,8 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { CalendarIcon, PlusIcon, EditIcon, TrashIcon, ClockIcon, AlertCircleIcon } from 'lucide-react';
 import { CalendarIcon, PlusIcon, EditIcon, TrashIcon } from 'lucide-react';
+import { ClockIcon } from 'lucide-react';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 
@@ -55,7 +55,6 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
     const [showExtendDialog, setShowExtendDialog] = useState(false);
     const [extendingDeadline, setExtendingDeadline] = useState<Deadline | null>(null);
     const { flash } = usePage().props as any;
-    const { flash } = usePage().props as { flash?: { success?: string; error?: string } };
 
     const { data, setData, post, put, delete: destroy, processing, errors, reset } = useForm({
         title: '',
