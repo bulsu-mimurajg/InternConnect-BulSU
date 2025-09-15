@@ -58,7 +58,7 @@ export default function SoftSkill() {
         };
 
         fetchSoftSkills();
-    }, []);
+    }, [setSoftSkillFields]);
 
     if (loading) {
         return (

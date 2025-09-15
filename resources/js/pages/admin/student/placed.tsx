@@ -1,4 +1,3 @@
-import type { BreadcrumbItem } from '@/types';
 import { Head, router } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
 import AdminLayout from '@/layouts/admin/layout';
@@ -11,7 +10,6 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
     UserIcon, 
-    Building2Icon, 
     CheckCircleIcon,
     XCircleIcon,
     ClockIcon,
@@ -19,12 +17,7 @@ import {
     FilterIcon
 } from 'lucide-react';
 
-const breadcrumbs: BreadcrumbItem[] = [
-    {
-        title: 'Placed Students',
-        href: '/student/placed',
-    },
-];
+// breadcrumbs is unused, so we'll remove it
 
 interface PlacedStudent {
     id: number;

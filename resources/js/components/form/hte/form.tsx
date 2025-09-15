@@ -117,7 +117,7 @@ export default function HTEForm() {
             console.log('Categories data received:', data);
             
             // Filter out categories without subcategories
-            const processedData = data.filter((category: any) => {
+            const processedData = data.filter((category: { subCategories: Array<unknown> }) => {
                 const hasSubCategories = category.subCategories && category.subCategories.length > 0;
                 return hasSubCategories;
             });
@@ -230,7 +230,7 @@ export default function HTEForm() {
             case 1: // Internship Offered
                 fieldsToValidate = ['position', 'department', 'numberOfInterns', 'duration', 'startDate', 'endDate'];
                 break;
-            case 2: // Criteria
+            case 2: { // Criteria
                 fieldsToValidate = ['subcategoryWeights'];
                 
                 // Additional validation for criteria step
@@ -243,15 +243,17 @@ export default function HTEForm() {
                 }
                 
                 // Check if any weights are missing
-                const missingWeights = weightKeys.filter(key => 
-                    weights[key] === undefined || weights[key] === null || weights[key] < 0
-                );
+                const missingWeights = weightKeys.filter(key => {
+                    const weight = weights[key];
+                    return weight === undefined || weight === null || weight < 0;
+                });
                 
                 if (missingWeights.length > 0) {
                     alert('Some subcategory weights are missing. Please ensure all subcategories have weights assigned.');
                     return;
                 }
                 break;
+            }
         }
 
         if (fieldsToValidate.length > 0) {

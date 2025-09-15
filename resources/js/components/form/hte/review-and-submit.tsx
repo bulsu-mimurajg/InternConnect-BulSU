@@ -3,9 +3,19 @@ import { useFormContext } from 'react-hook-form';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
+interface Category {
+    id: number;
+    category_name: string;
+    subCategories?: Array<{
+        id: number;
+        subcategory_name: string;
+        questions?: Array<unknown>;
+    }>;
+}
+
 type Props = {
     isSubmitting: boolean;
-    categories?: any[];
+    categories?: Category[];
 };
 
 export default function ReviewAndSubmit({ isSubmitting, categories = [] }: Props) {
@@ -17,7 +27,7 @@ export default function ReviewAndSubmit({ isSubmitting, categories = [] }: Props
         const category = categories.find(cat => cat.id === categoryId);
         if (!category || !category.subCategories) return 0;
         
-        return category.subCategories.reduce((sum: number, subcat: any) => {
+        return category.subCategories.reduce((sum: number, subcat: { id: number }) => {
             const weight = formData.subcategoryWeights?.[subcat.id] || 0;
             return sum + (Number(weight) || 0);
         }, 0);
@@ -73,7 +83,7 @@ export default function ReviewAndSubmit({ isSubmitting, categories = [] }: Props
                     <div className="mb-6 p-4 bg-white rounded-lg border">
                         <h4 className="font-medium text-gray-900 mb-3">Overall Weight Distribution</h4>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            {categories.map((category: any) => {
+                            {categories.map((category: Category) => {
                                 const categoryTotal = calculateCategoryTotal(category.id);
                                 const weightStatus = getWeightStatus(categoryTotal);
                                 
@@ -100,7 +110,7 @@ export default function ReviewAndSubmit({ isSubmitting, categories = [] }: Props
 
                     {/* Detailed Category Breakdown */}
                     <div className="space-y-4">
-                        {categories.map((category: any) => {
+                        {categories.map((category: Category) => {
                             const categoryTotal = calculateCategoryTotal(category.id);
                             const weightStatus = getWeightStatus(categoryTotal);
                             
@@ -143,7 +153,7 @@ export default function ReviewAndSubmit({ isSubmitting, categories = [] }: Props
 
                                         {/* Subcategory Details */}
                                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                                            {category.subCategories?.map((subcat: any) => {
+                                            {category.subCategories?.map((subcat: { id: number; subcategory_name: string; questions?: Array<unknown> }) => {
                                                 const weight = getSubcategoryWeight(subcat.id);
                                                 const questionCount = subcat.questions ? subcat.questions.length : 0;
                                                 
@@ -203,7 +213,7 @@ export default function ReviewAndSubmit({ isSubmitting, categories = [] }: Props
                                         <span>Some categories need weight adjustment before submission</span>
                                     </div>
                                     <ul className="ml-6 list-disc space-y-1">
-                                        {categories.map((cat: any) => {
+                                        {categories.map((cat: Category) => {
                                             const total = calculateCategoryTotal(cat.id);
                                             if (total !== 100) {
                                                 return (

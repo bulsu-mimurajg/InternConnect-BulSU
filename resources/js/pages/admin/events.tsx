@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Head, useForm, usePage } from '@inertiajs/react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { CalendarIcon, PlusIcon, EditIcon, TrashIcon, ClockIcon, AlertCircleIcon } from 'lucide-react';
+import { CalendarIcon, PlusIcon, EditIcon, TrashIcon } from 'lucide-react';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 
@@ -54,6 +55,7 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
     const [showExtendDialog, setShowExtendDialog] = useState(false);
     const [extendingDeadline, setExtendingDeadline] = useState<Deadline | null>(null);
     const { flash } = usePage().props as any;
+    const { flash } = usePage().props as { flash?: { success?: string; error?: string } };
 
     const { data, setData, post, put, delete: destroy, processing, errors, reset } = useForm({
         title: '',

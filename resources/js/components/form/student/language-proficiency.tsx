@@ -2,7 +2,6 @@ import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/comp
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useFormContext } from 'react-hook-form';
 import { useEffect, useState } from 'react';
-import { router } from '@inertiajs/react';
 import { useFormFields } from '@/contexts/FormFieldsContext';
 
 interface Skill {
@@ -42,13 +41,13 @@ export default function LanguageProficiency() {
                 }
                 const data = await response.json();
                 setLanguageProficiencySections(data);
-                
+
                 // Register fields for validation
-                const fields = data.flatMap((section: Section) => 
+                const fields = data.flatMap((section: Section) =>
                     section.skills.map((skill: Skill) => skill.name)
                 );
                 setLanguageProficiencyFields(fields);
-                
+
                 setError(null);
             } catch (err) {
                 console.error('Failed to fetch language proficiency data:', err);
@@ -59,7 +58,7 @@ export default function LanguageProficiency() {
         };
 
         fetchLanguageProficiency();
-    }, []);
+    }, [setLanguageProficiencyFields]);
 
     if (loading) {
         return (
@@ -142,4 +141,4 @@ export default function LanguageProficiency() {
             </div>
         </div>
     );
-} 
+}

@@ -21,7 +21,7 @@ test('users can authenticate using the login screen', function () {
     $user->assignRole('student');
 
     $response = $this->post('/login', [
-        'email' => $user->email,
+        'username' => $user->username,
         'password' => 'password',
     ]);
 
@@ -61,13 +61,13 @@ test('unverified users can not authenticate', function () {
     $user->assignRole('student');
 
     $response = $this->post('/login', [
-        'email' => $user->email,
+        'username' => $user->username,
         'password' => 'password',
     ]);
 
     $this->assertGuest();
-    $response->assertSessionHasErrors(['email']);
-    $response->assertSessionHasErrors(['email' => 'Your account is not yet verified. Please contact an administrator.']);
+    $response->assertSessionHasErrors(['username']);
+    $response->assertSessionHasErrors(['username' => 'Your account is not yet verified. Please contact an administrator.']);
 });
 
 test('archived users can not authenticate', function () {
@@ -78,11 +78,11 @@ test('archived users can not authenticate', function () {
     $user->assignRole('student');
 
     $response = $this->post('/login', [
-        'email' => $user->email,
+        'username' => $user->username,
         'password' => 'password',
     ]);
 
     $this->assertGuest();
-    $response->assertSessionHasErrors(['email']);
-    $response->assertSessionHasErrors(['email' => 'Your account is not yet verified. Please contact an administrator.']);
+    $response->assertSessionHasErrors(['username']);
+    $response->assertSessionHasErrors(['username' => 'Your account is not yet verified. Please contact an administrator.']);
 });

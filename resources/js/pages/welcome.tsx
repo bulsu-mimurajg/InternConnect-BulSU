@@ -20,40 +20,40 @@ export default function Welcome() {
                                     {auth.role === 'admin' && (
                                         <Link
                                             prefetch
-                                            href={route('student-list')}
+                                            href={route('admin.dashboard')}
                                             className="inline-block rounded-sm border border-[#19140035] px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#1915014a] dark:border-[#3E3E3A] dark:text-[#EDEDEC] dark:hover:border-[#62605b]"
                                         >
-                                            Student
+                                            Dashboard
                                         </Link>
                                     )}
 
                                     {auth.role === 'hte' && (
                                         <Link
                                             prefetch
-                                            href={route('form')}
+                                            href={route('hte.dashboard')}
                                             className="inline-block rounded-sm border border-[#19140035] px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#1915014a] dark:border-[#3E3E3A] dark:text-[#EDEDEC] dark:hover:border-[#62605b]"
                                         >
-                                            Forms
+                                            Dashboard
                                         </Link>
                                     )}
 
                                     {auth.role === 'adviser' && (
                                         <Link
                                             prefetch
-                                            href={route('application')}
+                                            href={route('adviser.dashboard')}
                                             className="inline-block rounded-sm border border-[#19140035] px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#1915014a] dark:border-[#3E3E3A] dark:text-[#EDEDEC] dark:hover:border-[#62605b]"
                                         >
-                                            Applications
+                                            Dashboard
                                         </Link>
                                     )}
 
                                     {auth.role === 'student' && (
                                         <Link
                                             prefetch
-                                            href={route('assessment')}
+                                            href={route('student.dashboard')}
                                             className="inline-block rounded-sm border border-[#19140035] px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#1915014a] dark:border-[#3E3E3A] dark:text-[#EDEDEC] dark:hover:border-[#62605b]"
                                         >
-                                            Assessment
+                                            Dashboard
                                         </Link>
                                     )}
                                 </>

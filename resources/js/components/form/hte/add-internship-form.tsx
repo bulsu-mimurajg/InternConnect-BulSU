@@ -4,7 +4,7 @@ import Criteria from '@/components/form/hte/criteria';
 import { Button } from '@/components/ui/button';
 import { Form } from '@/components/ui/form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Path, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { router, usePage } from '@inertiajs/react';
@@ -21,7 +21,7 @@ const FormSchema = z.object({
     startDate: z.string().min(1, 'Start date is required'),
     endDate: z.string().min(1, 'End date is required'),
 
-    
+
     // Weights
     subcategoryWeights: z.record(z.string(), z.number().min(0).max(100)),
 });
@@ -66,14 +66,14 @@ interface AddInternshipFormProps {
 
 interface PageProps {
     props: AddInternshipFormProps;
-    [key: string]: any;
+    [key: string]: unknown;
 }
 
 export default function AddInternshipForm() {
-    const { hte, categories } = usePage<PageProps>().props;
+    const { categories } = usePage<PageProps>().props;
     const typedCategories = categories as Category[];
     const [isSubmitting, setIsSubmitting] = useState(false);
-    
+
     // State for managing form steps and categories
     const [expandedCategories, setExpandedCategories] = useState<Set<number>>(new Set());
     const [expandedSubcategories, setExpandedSubcategories] = useState<Set<number>>(new Set());
@@ -107,7 +107,7 @@ export default function AddInternshipForm() {
                 if (category.subCategories && category.subCategories.length > 0) {
                     const equalWeight = Math.round(100 / category.subCategories.length);
                     const remainder = 100 % category.subCategories.length;
-                    
+
                     category.subCategories.forEach((subcat: SubCategory, index: number) => {
                         const weight = index < remainder ? equalWeight + 1 : equalWeight;
                         form.setValue(`subcategoryWeights.${subcat.id}`, weight);
@@ -119,11 +119,11 @@ export default function AddInternshipForm() {
 
     function onSubmit(values: FormData) {
         setIsSubmitting(true);
-        
+
         // Debug: Log the form data being sent
         console.log('Add Internship Form Submission - Form Data:', values);
         console.log('Subcategory Weights:', values.subcategoryWeights);
-        
+
         router.post('/hte/add-internship', values, {
             onSuccess: () => {
                 setIsSubmitting(false);
@@ -144,7 +144,7 @@ export default function AddInternshipForm() {
 
     const next = async () => {
         let fieldsToValidate: Path<FormData>[] = [];
-        
+
         switch (currentStep) {
             case 0: // Internship Information
                 fieldsToValidate = ['position', 'department', 'numberOfInterns', 'duration', 'startDate', 'endDate'];
@@ -200,7 +200,7 @@ export default function AddInternshipForm() {
                             <form onSubmit={form.handleSubmit(onSubmit)}>
                                 {currentStep === 0 && <InternshipOffered />}
                                 {currentStep === 1 && (
-                                    <Criteria 
+                                    <Criteria
                                         categories={typedCategories}
                                         loading={false}
                                         expandedCategories={expandedCategories}
@@ -219,7 +219,7 @@ export default function AddInternshipForm() {
                                                 Please review your internship details and criteria weights before submitting.
                                             </p>
                                         </div>
-                                        
+
                                         {/* Internship Details Summary */}
                                         <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
                                             <h3 className="font-medium mb-4">Internship Details</h3>
@@ -255,7 +255,7 @@ export default function AddInternshipForm() {
                                         {typedCategories.length > 0 && (
                                             <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
                                                 <h3 className="font-medium mb-4">Assessment Criteria & Weight Allocation</h3>
-                                                
+
                                                 {/* Overall Weight Summary */}
                                                 <div className="mb-6 p-4 bg-white rounded-lg border">
                                                     <h4 className="font-medium text-gray-900 mb-3">Overall Weight Distribution</h4>
@@ -263,7 +263,7 @@ export default function AddInternshipForm() {
                                                         {typedCategories.map((category: Category) => {
                                                             const categoryTotal = calculateCategoryTotal(category.id);
                                                             const weightStatus = getWeightStatus(categoryTotal);
-                                                            
+
                                                             return (
                                                                 <div key={category.id} className={`p-3 rounded-lg border ${weightStatus.bgColor} ${weightStatus.borderColor}`}>
                                                                     <div className="text-center">
@@ -271,11 +271,11 @@ export default function AddInternshipForm() {
                                                                             {categoryTotal}%
                                                                         </div>
                                                                         <div className="text-sm text-gray-600">{category.category_name}</div>
-                                                                        <Badge 
+                                                                        <Badge
                                                                             variant={weightStatus.status === 'valid' ? 'default' : weightStatus.status === 'exceeded' ? 'destructive' : 'secondary'}
                                                                             className="mt-2"
                                                                         >
-                                                                            {weightStatus.status === 'valid' ? 'Complete' : 
+                                                                            {weightStatus.status === 'valid' ? 'Complete' :
                                                                              weightStatus.status === 'exceeded' ? 'Exceeded' : 'Incomplete'}
                                                                         </Badge>
                                                                     </div>
@@ -290,7 +290,7 @@ export default function AddInternshipForm() {
                                                     {typedCategories.map((category: Category) => {
                                                         const categoryTotal = calculateCategoryTotal(category.id);
                                                         const weightStatus = getWeightStatus(categoryTotal);
-                                                        
+
                                                         return (
                                                             <Card key={category.id} className={`border-2 ${weightStatus.borderColor}`}>
                                                                 <CardHeader className={`${weightStatus.bgColor}`}>
@@ -300,16 +300,16 @@ export default function AddInternshipForm() {
                                                                             <span className={`text-sm font-medium ${weightStatus.color}`}>
                                                                                 Total: {categoryTotal}%
                                                                             </span>
-                                                                            <Badge 
+                                                                            <Badge
                                                                                 variant={weightStatus.status === 'valid' ? 'default' : weightStatus.status === 'exceeded' ? 'destructive' : 'secondary'}
                                                                             >
-                                                                                {weightStatus.status === 'valid' ? '✓' : 
+                                                                                {weightStatus.status === 'valid' ? '✓' :
                                                                                  weightStatus.status === 'exceeded' ? '✗' : '!'}
                                                                             </Badge>
                                                                         </div>
                                                                     </CardTitle>
                                                                 </CardHeader>
-                                                                
+
                                                                 <CardContent className="p-4">
                                                                     {/* Weight Progress Bar */}
                                                                     <div className="mb-4">
@@ -318,9 +318,9 @@ export default function AddInternshipForm() {
                                                                             <span>{categoryTotal}/100%</span>
                                                                         </div>
                                                                         <div className="w-full bg-gray-200 rounded-full h-3">
-                                                                            <div 
+                                                                            <div
                                                                                 className={`h-3 rounded-full transition-all duration-300 ${
-                                                                                    weightStatus.status === 'valid' ? 'bg-green-500' : 
+                                                                                    weightStatus.status === 'valid' ? 'bg-green-500' :
                                                                                     weightStatus.status === 'exceeded' ? 'bg-red-500' : 'bg-yellow-500'
                                                                                 }`}
                                                                                 style={{ width: `${Math.min(categoryTotal, 100)}%` }}
@@ -333,7 +333,7 @@ export default function AddInternshipForm() {
                                                                         {category.subCategories?.map((subcat: SubCategory) => {
                                                                             const weight = getSubcategoryWeight(subcat.id);
                                                                             const questionCount = subcat.questions ? subcat.questions.length : 0;
-                                                                            
+
                                                                             return (
                                                                                 <div key={subcat.id} className="bg-gray-50 p-3 rounded-lg border">
                                                                                     <div className="text-center space-y-2">
@@ -348,7 +348,7 @@ export default function AddInternshipForm() {
                                                                                         </div>
                                                                                         {/* Weight Bar */}
                                                                                         <div className="w-full bg-gray-200 rounded-full h-2">
-                                                                                            <div 
+                                                                                            <div
                                                                                                 className="bg-blue-500 h-2 rounded-full transition-all duration-300"
                                                                                                 style={{ width: `${weight}%` }}
                                                                                             ></div>
@@ -408,9 +408,9 @@ export default function AddInternshipForm() {
                                                 </div>
                                             </div>
                                         )}
-                                        
-                                        <Button 
-                                            type="submit" 
+
+                                        <Button
+                                            type="submit"
                                             disabled={isSubmitting}
                                             className="w-full"
                                         >

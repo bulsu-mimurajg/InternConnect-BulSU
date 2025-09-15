@@ -2,6 +2,7 @@
 
 use App\Models\User;
 use App\Models\AcademeAccount;
+use App\Models\Adviser;
 use App\Models\Section;
 use App\Models\Student;
 use Database\Seeders\RolePermissionSeeder;
@@ -21,9 +22,12 @@ test('adviser can view dashboard', function () {
     $adviser->assignRole('adviser');
     
     // Assign adviser to section
-    AcademeAccount::create([
+    Adviser::create([
         'user_id' => $adviser->id,
         'section_id' => $section->section_id,
+        'adviser_fname' => 'Test',
+        'adviser_lname' => 'Adviser',
+        'is_active' => true,
     ]);
 
     // Create students in same section
@@ -59,9 +63,12 @@ test('adviser can view students page', function () {
     $adviser->assignRole('adviser');
     
     // Assign adviser to section
-    AcademeAccount::create([
+    Adviser::create([
         'user_id' => $adviser->id,
         'section_id' => $section->section_id,
+        'adviser_fname' => 'Test',
+        'adviser_lname' => 'Adviser',
+        'is_active' => true,
     ]);
 
     // Create students in same section
@@ -73,7 +80,7 @@ test('adviser can view students page', function () {
         ]);
     }
 
-    $response = $this->actingAs($adviser)->get('/students');
+    $response = $this->actingAs($adviser)->get('/adviser/student-list');
 
     $response->assertStatus(200);
     $response->assertInertia(fn ($page) => 
@@ -95,9 +102,12 @@ test('adviser can view application page', function () {
     $adviser->assignRole('adviser');
     
     // Assign adviser to section
-    AcademeAccount::create([
+    Adviser::create([
         'user_id' => $adviser->id,
         'section_id' => $section->section_id,
+        'adviser_fname' => 'Test',
+        'adviser_lname' => 'Adviser',
+        'is_active' => true,
     ]);
 
     // Create students in same section
@@ -109,7 +119,7 @@ test('adviser can view application page', function () {
         ]);
     }
 
-    $response = $this->actingAs($adviser)->get('/application');
+    $response = $this->actingAs($adviser)->get('/student-verification');
 
     $response->assertStatus(200);
     $response->assertInertia(fn ($page) => 
@@ -132,9 +142,12 @@ test('adviser can approve students', function () {
     $adviser->assignRole('adviser');
     
     // Assign adviser to section
-    AcademeAccount::create([
+    Adviser::create([
         'user_id' => $adviser->id,
         'section_id' => $section->section_id,
+        'adviser_fname' => 'Test',
+        'adviser_lname' => 'Adviser',
+        'is_active' => true,
     ]);
 
     // Create students in same section
@@ -179,9 +192,12 @@ test('adviser can reject students', function () {
     $adviser->assignRole('adviser');
     
     // Assign adviser to section
-    AcademeAccount::create([
+    Adviser::create([
         'user_id' => $adviser->id,
         'section_id' => $section->section_id,
+        'adviser_fname' => 'Test',
+        'adviser_lname' => 'Adviser',
+        'is_active' => true,
     ]);
 
     // Create students in same section
@@ -221,9 +237,12 @@ test('adviser can remove student access', function () {
     $adviser->assignRole('adviser');
     
     // Assign adviser to section
-    AcademeAccount::create([
+    Adviser::create([
         'user_id' => $adviser->id,
         'section_id' => $section->section_id,
+        'adviser_fname' => 'Test',
+        'adviser_lname' => 'Adviser',
+        'is_active' => true,
     ]);
 
     // Create verified students with student records
@@ -243,7 +262,7 @@ test('adviser can remove student access', function () {
             'last_name' => 'Student',
             'middle_name' => '',
             'phone' => '',
-            'section' => $section->section_name,
+            'section_id' => $section->section_id,
             'specialization' => '',
             'address' => '',
             'birth_date' => now()->format('Y-m-d'),
@@ -281,9 +300,12 @@ test('adviser can undo approve action', function () {
     $adviser->assignRole('adviser');
     
     // Assign adviser to section
-    AcademeAccount::create([
+    Adviser::create([
         'user_id' => $adviser->id,
         'section_id' => $section->section_id,
+        'adviser_fname' => 'Test',
+        'adviser_lname' => 'Adviser',
+        'is_active' => true,
     ]);
 
     // Create verified students with student records
@@ -303,7 +325,7 @@ test('adviser can undo approve action', function () {
             'last_name' => 'Student',
             'middle_name' => '',
             'phone' => '',
-            'section' => $section->section_name,
+            'section_id' => $section->section_id,
             'specialization' => '',
             'address' => '',
             'birth_date' => now()->format('Y-m-d'),
@@ -341,9 +363,12 @@ test('adviser can undo reject action', function () {
     $adviser->assignRole('adviser');
     
     // Assign adviser to section
-    AcademeAccount::create([
+    Adviser::create([
         'user_id' => $adviser->id,
         'section_id' => $section->section_id,
+        'adviser_fname' => 'Test',
+        'adviser_lname' => 'Adviser',
+        'is_active' => true,
     ]);
 
     // Create archived students
@@ -384,9 +409,12 @@ test('adviser can undo remove access action', function () {
     $adviser->assignRole('adviser');
     
     // Assign adviser to section
-    AcademeAccount::create([
+    Adviser::create([
         'user_id' => $adviser->id,
         'section_id' => $section->section_id,
+        'adviser_fname' => 'Test',
+        'adviser_lname' => 'Adviser',
+        'is_active' => true,
     ]);
 
     // Create students without student role and unverified status

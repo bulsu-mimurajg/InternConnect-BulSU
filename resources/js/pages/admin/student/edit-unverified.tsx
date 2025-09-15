@@ -1,17 +1,7 @@
-import type { BreadcrumbItem } from '@/types';
 import { Head, useForm } from '@inertiajs/react';
 import AdminLayout from '@/layouts/admin/layout';
 
-const breadcrumbs: BreadcrumbItem[] = [
-    {
-        title: 'Student List',
-        href: '/student/list',
-    },
-    {
-        title: 'Edit Unverified User',
-        href: '#',
-    },
-];
+// breadcrumbs is unused, so we'll remove it
 
 interface User {
     id: number | string;

@@ -2,7 +2,7 @@ import { LineChart as RechartsLineChart, Line, XAxis, YAxis, CartesianGrid, Tool
 
 interface LineChartProps {
     data: Array<{
-        [key: string]: any;
+        [key: string]: string | number;
     }>;
     dataKeys: Array<{
         key: string;
@@ -14,12 +14,12 @@ interface LineChartProps {
     title?: string;
 }
 
-export default function LineChart({ 
-    data, 
-    dataKeys, 
-    xAxisKey, 
-    height = 300, 
-    title 
+export default function LineChart({
+    data,
+    dataKeys,
+    xAxisKey,
+    height = 300,
+    title
 }: LineChartProps) {
     return (
         <div className="w-full">
@@ -29,12 +29,12 @@ export default function LineChart({
             <ResponsiveContainer width="100%" height={height}>
                 <RechartsLineChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis 
-                        dataKey={xAxisKey} 
+                    <XAxis
+                        dataKey={xAxisKey}
                         tick={{ fontSize: 12 }}
                     />
                     <YAxis tick={{ fontSize: 12 }} />
-                    <Tooltip 
+                    <Tooltip
                         contentStyle={{
                             backgroundColor: 'white',
                             border: '1px solid #e5e7eb',

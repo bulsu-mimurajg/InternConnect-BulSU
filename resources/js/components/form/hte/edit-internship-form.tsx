@@ -42,7 +42,6 @@ interface Question {
 }
 
 interface EditInternshipFormProps {
-    hte: any;
     categories: Category[];
     internship: {
         id: number;
@@ -57,7 +56,7 @@ interface EditInternshipFormProps {
     existingWeights: Record<string, number>;
 }
 
-export default function EditInternshipForm({ hte, categories, internship, existingWeights }: EditInternshipFormProps) {
+export default function EditInternshipForm({ categories, internship, existingWeights }: EditInternshipFormProps) {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [currentStep, setCurrentStep] = useState(0);
     

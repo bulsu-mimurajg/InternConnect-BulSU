@@ -1,4 +1,3 @@
-import type { BreadcrumbItem } from '@/types';
 import { Head, useForm } from '@inertiajs/react';
 import AdminLayout from '@/layouts/admin/layout';
 import { Button } from '@/components/ui/button';
@@ -7,16 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
-const breadcrumbs: BreadcrumbItem[] = [
-    {
-        title: 'Student List',
-        href: '/student/list',
-    },
-    {
-        title: 'Edit Student',
-        href: '#',
-    },
-];
+// breadcrumbs is unused, so we'll remove it
 
 interface Student {
     id: number | string;

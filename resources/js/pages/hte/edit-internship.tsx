@@ -15,7 +15,14 @@ interface EditInternshipProps {
         is_active: boolean;
         created_at: string;
     };
-    categories: any[];
+    categories: Array<{
+        id: number;
+        category_name: string;
+        subCategories: Array<{
+            id: number;
+            subcategory_name: string;
+        }>;
+    }>;
     internship: {
         id: number;
         position: string;
@@ -31,7 +38,7 @@ interface EditInternshipProps {
 
 interface PageProps {
     props: EditInternshipProps;
-    [key: string]: any;
+    [key: string]: unknown;
 }
 
 const breadcrumbs = [

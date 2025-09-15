@@ -1,5 +1,4 @@
 import FormStepCounter from '@/components/form/form-step-counter';
-import PersonalInfo from '@/components/form/student/personal-info';
 import SoftSkill from '@/components/form/student/soft-skill';
 import Summary from '@/components/form/student/summary';
 import TechnicalSkill from '@/components/form/student/technical-skill';
@@ -28,63 +27,46 @@ export default function StudentForm() {
         softSkills: [],
     });
 
-    const stepOneFields = ['firstName', 'lastName', 'middleName', 'suffix', 'province', 'city', 'zip'];
-
     const steps = [
         {
             id: 'Step 1',
-            name: 'Personal Information',
-            fields: stepOneFields,
-        },
-        {
-            id: 'Step 2',
             name: 'Language Proficiency',
             fields: () => dynamicFields.languageProficiency,
         },
         {
-            id: 'Step 3',
+            id: 'Step 2',
             name: 'Technical Skills',
             fields: () => dynamicFields.technicalSkills,
         },
         {
-            id: 'Step 4',
+            id: 'Step 3',
             name: 'Soft Skills',
             fields: () => dynamicFields.softSkills,
         },
-        { id: 'Step 5', name: 'Submission' },
+        { id: 'Step 4', name: 'Submission' },
     ];
     // Create dynamic validation schema
     const createFormSchema = () => {
-        const baseSchema = {
-            firstName: z.string().min(1, 'First name is required'),
-            lastName: z.string().min(1, 'Last name is required'),
-            middleName: z.string().optional(),
-            suffix: z.string().optional(),
-            province: z.string().optional(),
-            city: z.string().optional(),
-            zip: z.string().optional(),
-        };
 
         // Add dynamic fields for language proficiency
-        const languageSchema: Record<string, any> = {};
+        const languageSchema: Record<string, z.ZodString> = {};
         dynamicFields.languageProficiency.forEach(field => {
             languageSchema[field] = z.string().min(1, 'This field is required');
         });
 
         // Add dynamic fields for technical skills
-        const technicalSchema: Record<string, any> = {};
+        const technicalSchema: Record<string, z.ZodString> = {};
         dynamicFields.technicalSkills.forEach(field => {
             technicalSchema[field] = z.string().min(1, 'This field is required');
         });
 
         // Add dynamic fields for soft skills
-        const softSchema: Record<string, any> = {};
+        const softSchema: Record<string, z.ZodString> = {};
         dynamicFields.softSkills.forEach(field => {
             softSchema[field] = z.string().min(1, 'This field is required');
         });
 
         return z.object({
-            ...baseSchema,
             ...languageSchema,
             ...technicalSchema,
             ...softSchema,
@@ -101,7 +83,14 @@ export default function StudentForm() {
 
     function onSubmit(values: z.infer<typeof FormSchema>) {
         setIsSubmitting(true);
-        router.post('/assessment', values, {
+        
+        // Convert plain object to FormData
+        const formData = new FormData();
+        Object.entries(values).forEach(([key, value]) => {
+            formData.append(key, value as string);
+        });
+        
+        router.post('/assessment', formData, {
             onSuccess: () => {
                 setIsSubmitting(false);
             },
@@ -145,11 +134,10 @@ export default function StudentForm() {
                     <div className="">
                         <Form {...form}>
                             <form onSubmit={form.handleSubmit(onSubmit)}>
-                                {currentStep === 0 && <PersonalInfo />}
-                                {currentStep === 1 && <LanguageProficiency />}
-                                {currentStep === 2 && <TechnicalSkill />}
-                                {currentStep === 3 && <SoftSkill />}
-                                {currentStep === 4 && (
+                                {currentStep === 0 && <LanguageProficiency />}
+                                {currentStep === 1 && <TechnicalSkill />}
+                                {currentStep === 2 && <SoftSkill />}
+                                {currentStep === 3 && (
                                     <div className="space-y-6">
                                         <h2 className="text-xl font-semibold">Review Your Answers</h2>
                                         <Summary />

@@ -49,17 +49,6 @@ class AssessmentController extends Controller
         // Get all questions from database to build dynamic validation rules
         $questions = Question::where('access', 'Student')->where('is_active', true)->get();
 
-        // Build validation rules dynamically
-        $validationRules = [
-            'firstName' => 'required|string|max:50',
-            'lastName' => 'required|string|max:50',
-            'middleName' => 'nullable|string|max:50',
-            'suffix' => 'nullable|string|max:10',
-            'province' => 'nullable|string|max:100',
-            'city' => 'nullable|string|max:100',
-            'zip' => 'nullable|string|max:10',
-        ];
-
         // Add validation rules for each question
         foreach ($questions as $question) {
             $subcategory = $question->subcategory;
@@ -81,22 +70,6 @@ class AssessmentController extends Controller
                 // Create a new student record if it doesn't exist
                 $student = Student::create([
                     'user_id' => $user->id,
-                    'student_number' => 'STU' . $user->id, // Generate a student number
-                    'first_name' => $request->firstName,
-                    'last_name' => $request->lastName,
-                    'middle_name' => $request->middleName,
-                    'phone' => '', // Will be filled later
-                    'section' => null, // Will be filled later
-                    'specialization' => '', // Will be filled later
-                    'address' => '', // Will be filled later
-                    'birth_date' => now(), // Will be filled later
-                ]);
-            } else {
-                // Update existing student record with personal info
-                $student->update([
-                    'first_name' => $request->firstName,
-                    'last_name' => $request->lastName,
-                    'middle_name' => $request->middleName,
                 ]);
             }
 

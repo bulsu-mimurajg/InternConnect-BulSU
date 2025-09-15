@@ -4,7 +4,7 @@ interface BarChartProps {
     data: Array<{
         name: string;
         value: number;
-        [key: string]: any;
+        [key: string]: string | number;
     }>;
     dataKey: string;
     xAxisKey?: string;
@@ -13,13 +13,13 @@ interface BarChartProps {
     title?: string;
 }
 
-export default function BarChart({ 
-    data, 
-    dataKey, 
-    xAxisKey = 'name', 
-    color = '#2563eb', 
+export default function BarChart({
+    data,
+    dataKey,
+    xAxisKey = 'name',
+    color = '#2563eb',
     height = 300,
-    title 
+    title
 }: BarChartProps) {
     return (
         <div className="w-full">
@@ -29,15 +29,15 @@ export default function BarChart({
             <ResponsiveContainer width="100%" height={height}>
                 <RechartsBarChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis 
-                        dataKey={xAxisKey} 
+                    <XAxis
+                        dataKey={xAxisKey}
                         tick={{ fontSize: 12 }}
                         angle={-45}
                         textAnchor="end"
                         height={80}
                     />
                     <YAxis tick={{ fontSize: 12 }} />
-                    <Tooltip 
+                    <Tooltip
                         contentStyle={{
                             backgroundColor: 'white',
                             border: '1px solid #e5e7eb',
