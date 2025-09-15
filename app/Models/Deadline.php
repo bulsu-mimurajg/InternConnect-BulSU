@@ -8,6 +8,8 @@ use Carbon\Carbon;
 class Deadline extends Model
 {
     protected $fillable = [
+        'title',
+        'category',
         'start_date',
         'end_date',
         'status',
@@ -43,5 +45,64 @@ class Deadline extends Model
     public function isExpired(): bool
     {
         return $this->status === 'expired' || $this->end_date < Carbon::now();
+    }
+
+    /**
+     * Get category display name
+     */
+    public function getCategoryDisplayName(): string
+    {
+        return match($this->category) {
+            'student_verification' => 'Student Verification',
+            'assessment_form' => 'Assessment Form',
+            'skill_assessment_form' => 'Skill Assessment Form',
+            default => $this->category,
+        };
+    }
+
+    /**
+     * Check if deadline is currently active for a specific category
+     */
+    public static function isActiveForCategory(string $category): bool
+    {
+        return self::where('category', $category)
+            ->where('status', 'active')
+            ->where('start_date', '<=', Carbon::now())
+            ->where('end_date', '>', Carbon::now())
+            ->exists();
+    }
+
+    /**
+     * Get active deadline for a specific category
+     */
+    public static function getActiveForCategory(string $category): ?self
+    {
+        return self::where('category', $category)
+            ->where('status', 'active')
+            ->where('start_date', '<=', Carbon::now())
+            ->where('end_date', '>', Carbon::now())
+            ->first();
+    }
+
+    /**
+     * Get all expired deadlines
+     */
+    public static function getExpired(): \Illuminate\Database\Eloquent\Collection
+    {
+        return self::where('status', 'expired')
+            ->orWhere('end_date', '<', Carbon::now())
+            ->orderBy('end_date', 'desc')
+            ->get();
+    }
+
+    /**
+     * Get all active deadlines
+     */
+    public static function getActive(): \Illuminate\Database\Eloquent\Collection
+    {
+        return self::where('status', 'active')
+            ->where('end_date', '>', Carbon::now())
+            ->orderBy('end_date', 'asc')
+            ->get();
     }
 }

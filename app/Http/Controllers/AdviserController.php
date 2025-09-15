@@ -237,10 +237,19 @@ class AdviserController extends Controller
                 ];
             });
 
+        // Check deadline status for student verification
+        $deadlineActive = \App\Models\Deadline::isActiveForCategory('student_verification');
+        $deadlineInfo = null;
+        if (!$deadlineActive) {
+            $deadlineInfo = \App\Models\Deadline::getActiveForCategory('student_verification');
+        }
+
         return Inertia::render('adviser/application', [
             'pendingStudents' => $pendingStudents,
             'verifiedStudents' => $verifiedStudents,
             'adviserSection' => $adviserRecord->section->section_name ?? null,
+            'deadlineActive' => $deadlineActive,
+            'deadlineInfo' => $deadlineInfo,
         ]);
     }
 
@@ -249,6 +258,11 @@ class AdviserController extends Controller
      */
     public function approveStudents(Request $request)
     {
+        // Check if student verification deadline is active
+        if (!\App\Models\Deadline::isActiveForCategory('student_verification')) {
+            return back()->withErrors(['error' => 'Student verification deadline has expired. You cannot approve students at this time.']);
+        }
+
         $request->validate([
             'studentIds' => 'required|array',
             'studentIds.*' => 'exists:users,id'

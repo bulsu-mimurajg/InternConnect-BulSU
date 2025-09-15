@@ -35,13 +35,22 @@ interface Student {
     };
 }
 
+interface DeadlineInfo {
+    id: number;
+    title: string;
+    category: string;
+    end_date: string;
+}
+
 interface Props {
     pendingStudents: Student[];
     verifiedStudents: Student[];
     adviserSection: string | null;
+    deadlineActive: boolean;
+    deadlineInfo: DeadlineInfo | null;
 }
 
-export default function Application({ pendingStudents, verifiedStudents, adviserSection }: Props) {
+export default function Application({ pendingStudents, verifiedStudents, adviserSection, deadlineActive, deadlineInfo }: Props) {
     const [selectedStudents, setSelectedStudents] = useState<number[]>([]);
     const [selectedVerifiedStudents, setSelectedVerifiedStudents] = useState<number[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
@@ -278,24 +287,34 @@ export default function Application({ pendingStudents, verifiedStudents, adviser
                                 </div>
                                 
                                 {selectedStudents.length > 0 && (
-                                    <div className="flex items-center gap-2 pt-4 border-t">
-                                        <Button
-                                            onClick={handleApprove}
-                                            disabled={isProcessing}
-                                            className="flex items-center gap-2"
-                                        >
-                                            <CheckIcon className="h-4 w-4" />
-                                            Approve Selected ({selectedStudents.length})
-                                        </Button>
-                                        <Button
-                                            onClick={handleReject}
-                                            disabled={isProcessing}
-                                            variant="destructive"
-                                            className="flex items-center gap-2"
-                                        >
-                                            <XIcon className="h-4 w-4" />
-                                            Reject Selected ({selectedStudents.length})
-                                        </Button>
+                                    <div className="pt-4 border-t space-y-4">
+                                        {!deadlineActive && (
+                                            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                                                <p className="font-medium">Student verification deadline has expired</p>
+                                                <p className="text-sm">
+                                                    You cannot approve students at this time. Please contact the administrator to extend the deadline.
+                                                </p>
+                                            </div>
+                                        )}
+                                        <div className="flex items-center gap-2">
+                                            <Button
+                                                onClick={handleApprove}
+                                                disabled={isProcessing || !deadlineActive}
+                                                className="flex items-center gap-2"
+                                            >
+                                                <CheckIcon className="h-4 w-4" />
+                                                Approve Selected ({selectedStudents.length})
+                                            </Button>
+                                            <Button
+                                                onClick={handleReject}
+                                                disabled={isProcessing}
+                                                variant="destructive"
+                                                className="flex items-center gap-2"
+                                            >
+                                                <XIcon className="h-4 w-4" />
+                                                Reject Selected ({selectedStudents.length})
+                                            </Button>
+                                        </div>
                                     </div>
                                 )}
                             </div>
