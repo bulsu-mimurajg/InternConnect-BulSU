@@ -95,8 +95,12 @@ class RegisteredUserController extends Controller
 
         // Validate other fields
         $request->validate([
+            'first_name' => 'required|string|max:255',
+            'last_name' => 'required|string|max:255',
+            'middle_name' => 'nullable|string|max:255',
             'username' => 'required|digits:10|unique:'.User::class, //TODO: DUPLICATE
             'email' => 'required|string|lowercase|email|max:255|unique:'.User::class,
+            'contact_number' => 'required|string|max:11',
             'section_id' => 'required|exists:sections,section_id',
         ]);
 
@@ -110,14 +114,20 @@ class RegisteredUserController extends Controller
 
         // Store registration data temporarily in cache (expires in 24 hours)
         $registrationData = [
+            'first_name' => $request->first_name,
+            'last_name' => $request->last_name,
+            'middle_name' => $request->middle_name,
             'username' => $request->username,
             'email' => $request->email,
+            'contact_number' => $request->contact_number,
             'password' => Hash::make($request->password),
             'section_id' => $request->section_id,
             'created_at' => now(),
         ];
 
         Cache::put("registration_verification_{$verificationToken}", $registrationData, now()->addHours(24));
+        // Also store with email key for later access during adviser approval
+        Cache::put("registration_data_{$request->email}", $registrationData, now()->addHours(24));
 
         // Debug: Log the registration data being cached
         Log::info('Registration Data Cached', [

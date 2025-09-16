@@ -9,6 +9,7 @@ use App\Models\StudentScore;
 use App\Models\Section;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -290,20 +291,26 @@ class AdviserController extends Controller
                 // Update status to verified
                 $user->update(['status' => 'verified']);
                 
-                // Create student record with proper default values
+                // Get registration data from cache using user's email
+                $registrationData = Cache::get("registration_data_{$user->email}");
+                
+                // Create student record with registration data
                 Student::create([
                     'user_id' => $user->id,
                     'student_number' => $user->username,
-                    'first_name' => 'Pending', // Will be filled by student
-                    'last_name' => 'Student', // Will be filled by student
-                    'middle_name' => '',
-                    'phone' => '',
+                    'first_name' => $registrationData ? $registrationData['first_name'] : 'Pending',
+                    'last_name' => $registrationData ? $registrationData['last_name'] : 'Student',
+                    'middle_name' => $registrationData ? $registrationData['middle_name'] : '',
+                    'phone' => $registrationData ? $registrationData['contact_number'] : '',
                     'section_id' => $userSection->section_id,
                     'specialization' => '',
                     'address' => '',
                     'birth_date' => now()->format('Y-m-d'), // Default to today
                     'is_submit' => false,
                 ]);
+
+                // Clean up the cached registration data after creating student record
+                Cache::forget("registration_data_{$user->email}");
 
                 $approvedCount++;
             } catch (\Exception $e) {

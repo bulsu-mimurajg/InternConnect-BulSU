@@ -109,8 +109,9 @@ class EmailVerificationController extends Controller
 
             DB::commit();
 
-            // Remove the cached registration data
+            // Remove the token-based cache but keep email-based cache for adviser approval
             Cache::forget("registration_verification_{$token}");
+            // Keep "registration_data_{email}" cache for adviser approval
 
             // Reset verification attempts since email was successfully verified
             EmailVerificationAttempt::resetAttempts($registrationData['email']);
