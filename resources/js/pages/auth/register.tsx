@@ -18,9 +18,10 @@ type Section = {
 type RegisterForm = {
     first_name: string;
     last_name: string;
-    middle_initial: string;
+    middle_name: string;
     username: string;
     email: string;
+    contact_number: string;
     password: string;
     password_confirmation: string;
     section_id: string;
@@ -34,9 +35,10 @@ export default function Register({ sections }: RegisterProps) {
     const { data, setData, post, processing, errors, reset } = useForm<Required<RegisterForm>>({
         first_name: '',
         last_name: '',
-        middle_initial: '',
+        middle_name: '',
         username: '',
         email: '',
+        contact_number: '',
         password: '',
         password_confirmation: '',
         section_id: '',
@@ -96,21 +98,20 @@ export default function Register({ sections }: RegisterProps) {
                         </div>
 
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="middle_initial">Middle Initial</Label>
+                            <Label htmlFor="middle_name">Middle Name</Label>
                             <Input
-                                id="middle_initial"
+                                id="middle_name"
                                 type="text"
                                 tabIndex={3}
                                 autoComplete="additional-name"
-                                value={data.middle_initial}
-                                onChange={(e) => setData('middle_initial', e.target.value)}
+                                value={data.middle_name}
+                                onChange={(e) => setData('middle_name', e.target.value)}
                                 disabled={processing}
-                                placeholder="M.I."
-                                maxLength={1}
+                                placeholder="Middle Name"
                             />
                             <div className="space-y-1">
                                 <div></div>
-                                <InputError message={errors.middle_initial} />
+                                <InputError message={errors.middle_name} />
                             </div>
                         </div>
                     </div>
@@ -125,9 +126,15 @@ export default function Register({ sections }: RegisterProps) {
                                 tabIndex={4}
                                 autoComplete="username"
                                 value={data.username}
-                                onChange={(e) => setData('username', e.target.value)}
+                                onChange={(e) => {
+                                    const value = e.target.value.replace(/\D/g, '');
+                                    if (value.length <= 10) {
+                                        setData('username', value);
+                                    }
+                                }}
                                 disabled={processing}
                                 placeholder="Ex. 2022100488"
+                                maxLength={10}
                             />
                             <div className="space-y-1">
                                 <p className="text-xs text-muted-foreground">Use your student number</p>
@@ -155,38 +162,65 @@ export default function Register({ sections }: RegisterProps) {
                         </div>
                     </div>
 
-                    <div className="grid gap-2">
-                        <Label htmlFor="section">Section</Label>
-                        <Select value={data.section_id} onValueChange={(value) => setData('section_id', value)} disabled={processing}>
-                            <SelectTrigger tabIndex={6}>
-                                <SelectValue placeholder="Select your section" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {sections.length === 0 ? (
-                                    <SelectItem value="" disabled>
-                                        No sections available
-                                    </SelectItem>
-                                ) : (
-                                    sections.map((section) => (
-                                        <SelectItem key={section.section_id} value={section.section_id.toString()}>
-                                            {section.section_name}
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:items-start">
+                        <div className="flex flex-col gap-2">
+                            <Label htmlFor="section">Section</Label>
+                            <Select value={data.section_id} onValueChange={(value) => setData('section_id', value)} disabled={processing}>
+                                <SelectTrigger tabIndex={6}>
+                                    <SelectValue placeholder="Select your section" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {sections.length === 0 ? (
+                                        <SelectItem value="" disabled>
+                                            No sections available
                                         </SelectItem>
-                                    ))
-                                )}
-                            </SelectContent>
-                        </Select>
-                        <p className="text-xs text-muted-foreground">Use your current section</p>
-                        <InputError message={errors.section_id} />
+                                    ) : (
+                                        sections.map((section) => (
+                                            <SelectItem key={section.section_id} value={section.section_id.toString()}>
+                                                {section.section_name}
+                                            </SelectItem>
+                                        ))
+                                    )}
+                                </SelectContent>
+                            </Select>
+                            <p className="text-xs text-muted-foreground">Use your current section</p>
+                            <InputError message={errors.section_id} />
+                        </div>
+                        <div className="flex flex-col gap-2">
+                            <Label htmlFor="contact_number">Contact Number</Label>
+                            <Input
+                                id="contact_number"
+                                type="tel"
+                                required
+                                tabIndex={7}
+                                autoComplete="tel"
+                                value={data.contact_number}
+                                onChange={(e) => {
+                                    const value = e.target.value.replace(/\D/g, '');
+                                    if (value.length <= 11) {
+                                        setData('contact_number', value);
+                                    }
+                                }}
+                                disabled={processing}
+                                placeholder="09XXXXXXXXX"
+                                pattern="[0-9]{11}"
+                                maxLength={11}
+                            />
+                            <div className="space-y-1">
+                                <p className="text-xs text-muted-foreground">Enter your 11-digit mobile number</p>
+                                <InputError message={errors.contact_number} />
+                            </div>
+                        </div>
                     </div>
 
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:items-start">
                         <div className="flex flex-col gap-2">
-                        <Label htmlFor="password">Password</Label>
+                            <Label htmlFor="password">Password</Label>
                             <Input
                                 id="password"
                                 type="password"
                                 required
-                                tabIndex={7}
+                                tabIndex={8}
                                 autoComplete="new-password"
                                 value={data.password}
                                 onChange={(e) => setData('password', e.target.value)}
@@ -204,17 +238,17 @@ export default function Register({ sections }: RegisterProps) {
 
                         <div className="flex flex-col gap-2">
                             <Label htmlFor="password_confirmation">Confirm password</Label>
-                                <Input
-                                    id="password_confirmation"
-                                    type="password"
-                                    required
-                                    tabIndex={8}
-                                    autoComplete="new-password"
-                                    value={data.password_confirmation}
-                                    onChange={(e) => setData('password_confirmation', e.target.value)}
-                                    disabled={processing}
-                                    placeholder="Confirm password"
-                                />
+                            <Input
+                                id="password_confirmation"
+                                type="password"
+                                required
+                                tabIndex={9}
+                                autoComplete="new-password"
+                                value={data.password_confirmation}
+                                onChange={(e) => setData('password_confirmation', e.target.value)}
+                                disabled={processing}
+                                placeholder="Confirm password"
+                            />
                             <div className="space-y-1">
                                 <div></div>
                                 <InputError message={errors.password_confirmation} />
@@ -222,7 +256,7 @@ export default function Register({ sections }: RegisterProps) {
                         </div>
                     </div>
 
-                    <Button type="submit" className="mt-2 w-full" tabIndex={9} disabled={processing}>
+                    <Button type="submit" className="mt-2 w-full" tabIndex={10} disabled={processing}>
                         {processing && <LoaderCircle className="h-4 w-4 animate-spin" />}
                         Create account
                     </Button>
@@ -230,7 +264,7 @@ export default function Register({ sections }: RegisterProps) {
 
                 <div className="text-center text-sm text-muted-foreground">
                     Already have an account?{' '}
-                    <TextLink href={route('login')} tabIndex={10}>
+                    <TextLink href={route('login')} tabIndex={11}>
                         Log in
                     </TextLink>
                 </div>

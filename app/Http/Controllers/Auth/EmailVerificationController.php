@@ -23,7 +23,7 @@ class EmailVerificationController extends Controller
     public function show(Request $request): Response|RedirectResponse
     {
         $token = $request->query('token');
-        
+
         if (!$token) {
             return redirect()->route('login')->withErrors([
                 'verification' => 'Invalid verification link.'
@@ -32,7 +32,7 @@ class EmailVerificationController extends Controller
 
         // Check if token exists in cache
         $registrationData = Cache::get("registration_verification_{$token}");
-        
+
         if (!$registrationData) {
             return redirect()->route('login')->withErrors([
                 'verification' => 'Verification link has expired or is invalid. Please register again.'
@@ -55,17 +55,17 @@ class EmailVerificationController extends Controller
         ]);
 
         $token = $request->token;
-        
+
         // Get registration data from cache
         $registrationData = Cache::get("registration_verification_{$token}");
-        
+
         // Debug: Log the token and cache data
         Log::info('Email Verification Debug', [
             'token' => $token,
             'has_registration_data' => !is_null($registrationData),
             'registration_data' => $registrationData ? array_keys($registrationData) : null
         ]);
-        
+
         if (!$registrationData) {
             return redirect()->route('login')->withErrors([
                 'verification' => 'Verification link has expired or is invalid. Please register again.'
@@ -90,6 +90,7 @@ class EmailVerificationController extends Controller
                 'username' => $registrationData['username'],
                 'email' => $registrationData['email'],
                 'password' => $registrationData['password'],
+                'email_verified_at' => now(),
                 'status' => 'unverified', // User is created but needs adviser verification
             ]);
 
@@ -118,7 +119,7 @@ class EmailVerificationController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            
+
             return redirect()->route('login')->withErrors([
                 'verification' => 'Failed to complete registration. Please try again or contact support.'
             ]);
