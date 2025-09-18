@@ -1,4 +1,5 @@
 import FormStepCounter from '@/components/form/form-step-counter';
+import PersonalInfo from '@/components/form/student/personal-info';
 import SoftSkill from '@/components/form/student/soft-skill';
 import Summary from '@/components/form/student/summary';
 import TechnicalSkill from '@/components/form/student/technical-skill';
@@ -27,26 +28,37 @@ export default function StudentForm() {
         softSkills: [],
     });
 
+    const stepOneFields = ['linkedin', 'facebook'];
+
     const steps = [
         {
             id: 'Step 1',
+            name: 'Personal Information',
+            fields: stepOneFields,
+        },
+        {
+            id: 'Step 2',
             name: 'Language Proficiency',
             fields: () => dynamicFields.languageProficiency,
         },
         {
-            id: 'Step 2',
+            id: 'Step 3',
             name: 'Technical Skills',
             fields: () => dynamicFields.technicalSkills,
         },
         {
-            id: 'Step 3',
+            id: 'Step 4',
             name: 'Soft Skills',
             fields: () => dynamicFields.softSkills,
         },
-        { id: 'Step 4', name: 'Submission' },
+        { id: 'Step 5', name: 'Submission' },
     ];
     // Create dynamic validation schema
     const createFormSchema = () => {
+        const baseSchema = {
+            linkedin: z.string().min(1, 'LinkedIn Profile is required'),
+            facebook: z.string().min(1, 'Facebook link is required')
+        };
 
         // Add dynamic fields for language proficiency
         const languageSchema: Record<string, z.ZodString> = {};
@@ -67,6 +79,7 @@ export default function StudentForm() {
         });
 
         return z.object({
+            ...baseSchema,
             ...languageSchema,
             ...technicalSchema,
             ...softSchema,
@@ -83,14 +96,7 @@ export default function StudentForm() {
 
     function onSubmit(values: z.infer<typeof FormSchema>) {
         setIsSubmitting(true);
-        
-        // Convert plain object to FormData
-        const formData = new FormData();
-        Object.entries(values).forEach(([key, value]) => {
-            formData.append(key, value as string);
-        });
-        
-        router.post('/assessment', formData, {
+        router.post('/assessment', values, {
             onSuccess: () => {
                 setIsSubmitting(false);
             },
@@ -134,10 +140,11 @@ export default function StudentForm() {
                     <div className="">
                         <Form {...form}>
                             <form onSubmit={form.handleSubmit(onSubmit)}>
-                                {currentStep === 0 && <LanguageProficiency />}
-                                {currentStep === 1 && <TechnicalSkill />}
-                                {currentStep === 2 && <SoftSkill />}
-                                {currentStep === 3 && (
+                                {currentStep === 0 && <PersonalInfo />}
+                                {currentStep === 1 && <LanguageProficiency />}
+                                {currentStep === 2 && <TechnicalSkill />}
+                                {currentStep === 3 && <SoftSkill />}
+                                {currentStep === 4 && (
                                     <div className="space-y-6">
                                         <h2 className="text-xl font-semibold">Review Your Answers</h2>
                                         <Summary />

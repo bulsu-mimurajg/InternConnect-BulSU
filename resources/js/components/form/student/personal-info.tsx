@@ -7,47 +7,17 @@ const personalInfoSections = [
         title: 'Basic Student Information',
         fields: [
             {
-                name: 'firstName',
-                label: 'first name',
-                placeholder: 'george',
+                name: 'linkedin',
+                label: 'Linkedin Profile Link',
+                placeholder: 'linkedin.com/jemswoi',
             },
             {
-                name: 'lastName',
-                label: 'last name',
-                placeholder: 'miller',
-            },
-            {
-                name: 'middleName',
-                label: 'middle name',
-                placeholder: 'kusunoki',
-            },
-            {
-                name: 'suffix',
-                label: 'suffix',
-                placeholder: 'pink',
-            },
-        ],
-    },
-    {
-        title: 'Address',
-        fields: [
-            {
-                name: 'province',
-                label: 'province',
-                placeholder: 'bulacan',
-            },
-            {
-                name: 'city',
-                label: 'city',
-                placeholder: 'san jose del monte',
-            },
-            {
-                name: 'zip',
-                label: 'zip code',
-                placeholder: '3023',
+                name: 'facebook',
+                label: 'Facebook Profile Link',
+                placeholder: 'facebook.com/jemswoi',
             }
         ],
-    },
+    }
 ];
 
 export default function PersonalInfo() {

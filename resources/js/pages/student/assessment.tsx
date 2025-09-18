@@ -24,7 +24,7 @@ type props = {
     deadlineInfo: DeadlineInfo | null;
 }
 
-export default function Assessment({ hasSubmitted, deadlineActive, deadlineInfo }: props) {
+export default function Assessment({ hasSubmitted, deadlineActive }: props) {
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>

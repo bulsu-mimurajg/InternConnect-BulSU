@@ -58,7 +58,7 @@ export default function TechnicalSkill() {
         };
 
         fetchTechnicalSkills();
-    }, [setTechnicalSkillFields]);
+    }, []);
 
     if (loading) {
         return (

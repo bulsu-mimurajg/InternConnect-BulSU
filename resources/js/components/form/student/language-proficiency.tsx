@@ -58,7 +58,7 @@ export default function LanguageProficiency() {
         };
 
         fetchLanguageProficiency();
-    }, [setLanguageProficiencyFields]);
+    }, []);
 
     if (loading) {
         return (

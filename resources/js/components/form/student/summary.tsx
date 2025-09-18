@@ -13,15 +13,15 @@ interface Section {
     skills: Skill[];
 }
 
-interface Field {
+interface PersonalField {
     name: string;
     label: string;
 }
 
-interface PersonalInfoSection {
+interface PersonalSection {
     title: string;
     type: 'personal';
-    fields: Field[];
+    fields: PersonalField[];
 }
 
 interface SkillSection {
@@ -30,7 +30,7 @@ interface SkillSection {
     sections: Section[];
 }
 
-type SummarySection = PersonalInfoSection | SkillSection;
+type SummarySection = PersonalSection | SkillSection;
 
 export default function Summary() {
     const { watch } = useFormContext();
@@ -66,19 +66,27 @@ export default function Summary() {
 
                 const allSections: SummarySection[] = [
                     {
+                        title: 'Personal Information',
+                        type: 'personal' as const,
+                        fields: [
+                            { name: 'linkedin', label: 'LinkedIn Profile Link' },
+                            { name: 'facebook', label: 'Facebook Profile Link' }
+                        ]
+                    },
+                    {
                         title: 'Language Proficiency',
                         type: 'language' as const,
-                        sections: languageData
+                        sections: languageData as Section[]
                     },
                     {
                         title: 'Technical Skills',
                         type: 'technical' as const,
-                        sections: technicalData
+                        sections: technicalData as Section[]
                     },
                     {
                         title: 'Soft Skills',
                         type: 'soft' as const,
-                        sections: softData
+                        sections: softData as Section[]
                     }
                 ];
 
@@ -93,9 +101,9 @@ export default function Summary() {
         fetchSections();
     }, []);
 
-    const renderPersonalInfo = (section: PersonalInfoSection) => (
+    const renderPersonalInfo = (section: PersonalSection) => (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {section.fields.map((field: Field) => (
+            {section.fields.map((field: PersonalField) => (
                 <div key={field.name} className="flex justify-between items-center">
                     <span className="font-medium text-gray-700">{field.label}:</span>
                     <span className="text-gray-900">
