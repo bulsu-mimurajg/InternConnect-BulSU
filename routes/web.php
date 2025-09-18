@@ -654,5 +654,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/email/account-verification', [App\Http\Controllers\EmailController::class, 'sendAccountVerification'])->name('email.account-verification');
 });
 
+// Notification routes
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/notifications', [App\Http\Controllers\NotificationController::class, 'index'])->name('notifications.index');
+    Route::get('/notifications/get', [App\Http\Controllers\NotificationController::class, 'getNotifications'])->name('notifications.get');
+    Route::get('/notifications/unread-count', [App\Http\Controllers\NotificationController::class, 'getUnreadCount'])->name('notifications.unread-count');
+    Route::post('/notifications/{notification}/mark-read', [App\Http\Controllers\NotificationController::class, 'markAsRead'])->name('notifications.mark-read');
+    Route::post('/notifications/mark-all-read', [App\Http\Controllers\NotificationController::class, 'markAllAsRead'])->name('notifications.mark-all-read');
+});
+
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';

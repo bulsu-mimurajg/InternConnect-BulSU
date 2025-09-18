@@ -42,11 +42,11 @@ class HTEController extends Controller
             return redirect()->route('hte.profile');
         }
 
-        // Check deadline status for assessment form
-        $deadlineActive = \App\Models\Deadline::isActiveForCategory('assessment_form');
+        // Check deadline status for HTE assessment form
+        $deadlineActive = \App\Models\Deadline::isActiveForCategory('hte_assessment_form');
         $deadlineInfo = null;
         if (!$deadlineActive) {
-            $deadlineInfo = \App\Models\Deadline::getActiveForCategory('assessment_form');
+            $deadlineInfo = \App\Models\Deadline::getActiveForCategory('hte_assessment_form');
         }
 
         // Allow access to form if user has HTE record but hasn't submitted yet
@@ -61,9 +61,9 @@ class HTEController extends Controller
      */
     public function submit(Request $request): RedirectResponse
     {
-        // Check if assessment form deadline is active
-        if (!\App\Models\Deadline::isActiveForCategory('assessment_form')) {
-            return redirect()->back()->withErrors(['error' => 'Assessment form deadline has expired. You cannot submit HTE forms at this time.']);
+        // Check if HTE assessment form deadline is active
+        if (!\App\Models\Deadline::isActiveForCategory('hte_assessment_form')) {
+            return redirect()->back()->withErrors(['error' => 'No current Deadline or Deadline is expired. You cannot submit HTE forms at this time.']);
         }
 
         // Debug: Log the incoming request data FIRST

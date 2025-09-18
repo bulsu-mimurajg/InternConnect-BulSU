@@ -63,9 +63,7 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
         end_date: '',
     });
 
-    const { data: extendData, setData: setExtendData, patch, processing: extending, errors: extendErrors, reset: resetExtend } = useForm({
-        extension_hours: '',
-    });
+    const { patch, processing: extending, errors: extendErrors, reset: resetExtend } = useForm({});
 
     // Get current deadlines based on filter
     const currentDeadlines = showArchived ? expiredDeadlines : activeDeadlines;
@@ -110,13 +108,10 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
 
     const handleExtend = (deadline: Deadline) => {
         setExtendingDeadline(deadline);
-        setExtendData({ extension_hours: '' });
         setShowExtendDialog(true);
     };
 
-    const handleExtendSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        
+    const handleExtendSubmit = () => {
         if (extendingDeadline) {
             patch(`/admin/deadlines/${extendingDeadline.id}/extend`, {
                 onSuccess: () => {
@@ -440,27 +435,16 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
                                 Extend Deadline
                             </DialogTitle>
                             <DialogDescription>
-                                Extend the deadline "{extendingDeadline?.title}" by adding more hours.
+                                Extend the deadline "{extendingDeadline?.title}" by 1 month.
                             </DialogDescription>
                         </DialogHeader>
-                        <form onSubmit={handleExtendSubmit} className="space-y-4">
+                        <div className="space-y-4">
                             <div className="space-y-2">
-                                <Label htmlFor="extension_hours">Extension Hours</Label>
-                                <Input
-                                    id="extension_hours"
-                                    type="number"
-                                    min="1"
-                                    max="8760"
-                                    value={extendData.extension_hours}
-                                    onChange={(e) => setExtendData('extension_hours', e.target.value)}
-                                    placeholder="Enter hours to extend"
-                                    className={extendErrors.extension_hours ? 'border-red-500' : ''}
-                                />
-                                {extendErrors.extension_hours && (
-                                    <p className="text-sm text-red-500">{extendErrors.extension_hours}</p>
-                                )}
-                                <p className="text-xs text-muted-foreground">
-                                    Maximum 8760 hours (1 year)
+                                <p className="text-sm text-muted-foreground">
+                                    This will extend the deadline by 1 month from the current end date.
+                                </p>
+                                <p className="text-sm font-medium">
+                                    Current end date: {extendingDeadline?.end_date ? new Date(extendingDeadline.end_date).toLocaleString() : 'N/A'}
                                 </p>
                             </div>
 
@@ -477,14 +461,14 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
                             )}
                             
                             <div className="flex gap-2">
-                                <Button type="submit" disabled={extending}>
-                                    {extending ? 'Extending...' : 'Extend Deadline'}
+                                <Button onClick={handleExtendSubmit} disabled={extending}>
+                                    {extending ? 'Extending...' : 'Confirm Extension'}
                                 </Button>
                                 <Button type="button" variant="outline" onClick={handleExtendCancel}>
                                     Cancel
                                 </Button>
                             </div>
-                        </form>
+                        </div>
                     </DialogContent>
                 </Dialog>
             </div>

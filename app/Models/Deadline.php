@@ -54,7 +54,8 @@ class Deadline extends Model
     {
         return match($this->category) {
             'student_verification' => 'Student Verification',
-            'assessment_form' => 'Assessment Form',
+            'student_assessment_form' => 'Student Assessment Form',
+            'hte_assessment_form' => 'HTE Assessment Form',
             'skill_assessment_form' => 'Skill Assessment Form',
             default => $this->category,
         };

@@ -15,6 +15,7 @@ use App\Models\Deadline;
 use App\Models\Question;
 use App\Models\Category;
 use App\Services\ChartGeneratorService;
+use App\Services\NotificationService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -1273,7 +1274,8 @@ class AdminController extends Controller
         // Get category options
         $categoryOptions = [
             ['value' => 'student_verification', 'label' => 'Student Verification (Adviser Side)'],
-            ['value' => 'assessment_form', 'label' => 'Assessment Form (Student & HTE Side)'],
+            ['value' => 'student_assessment_form', 'label' => 'Student Assessment Form (Student Side)'],
+            ['value' => 'hte_assessment_form', 'label' => 'HTE Assessment Form (HTE Side)'],
             ['value' => 'skill_assessment_form', 'label' => 'Skill Assessment Form (Student Side)'],
         ];
 
@@ -1301,7 +1303,7 @@ class AdminController extends Controller
         try {
             $request->validate([
                 'title' => 'required|string|max:255',
-                'category' => 'required|in:student_verification,assessment_form,skill_assessment_form',
+                'category' => 'required|in:student_verification,student_assessment_form,hte_assessment_form,skill_assessment_form',
                 'start_date' => 'required|date',
                 'end_date' => 'required|date|after:start_date',
             ]);
@@ -1341,6 +1343,10 @@ class AdminController extends Controller
                 'status' => $deadline->status,
             ]);
 
+            // Send notifications for new deadline
+            $notificationService = new NotificationService();
+            $notificationService->notifyNewDeadline($deadline);
+
             return redirect()->route('admin.events')->with('success', 'Deadline created successfully.');
         } catch (\Exception $e) {
             Log::error('Deadline creation failed', [
@@ -1360,7 +1366,7 @@ class AdminController extends Controller
     {
         $request->validate([
             'title' => 'required|string|max:255',
-            'category' => 'required|in:student_verification,assessment_form,skill_assessment_form',
+            'category' => 'required|in:student_verification,student_assessment_form,hte_assessment_form,skill_assessment_form',
             'start_date' => 'required|date',
             'end_date' => 'required|date|after:start_date',
         ]);
@@ -1399,23 +1405,18 @@ class AdminController extends Controller
     }
 
     /**
-     * Extend a deadline
+     * Extend a deadline by 1 month
      */
     public function extendDeadline(Request $request, Deadline $deadline)
     {
-        $request->validate([
-            'extension_hours' => 'required|integer|min:1|max:8760', // Max 1 year
-        ]);
-
         try {
-            $extensionHours = $request->extension_hours;
-            $newEndDate = $deadline->end_date->addHours($extensionHours);
+            $newEndDate = $deadline->end_date->addMonth();
 
             $deadline->update([
                 'end_date' => $newEndDate,
             ]);
 
-            return redirect()->route('admin.events')->with('success', "Deadline extended by {$extensionHours} hours successfully.");
+            return redirect()->route('admin.events')->with('success', "Deadline extended by 1 month successfully.");
         } catch (\Exception $e) {
             Log::error('Deadline extension failed', [
                 'error' => $e->getMessage(),

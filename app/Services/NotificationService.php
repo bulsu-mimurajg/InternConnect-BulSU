@@ -1,0 +1,202 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\Notification;
+use App\Models\User;
+use App\Models\Student;
+use App\Models\HTE;
+use App\Models\Adviser;
+use App\Models\Deadline;
+
+class NotificationService
+{
+    /**
+     * Notify students when assessment is not yet taken
+     */
+    public function notifyStudentsForPendingAssessment(): void
+    {
+        $students = Student::where('is_submit', false)
+            ->where('is_active', true)
+            ->with('user')
+            ->get();
+
+        foreach ($students as $student) {
+            Notification::createNotification(
+                $student->user_id,
+                'student_assessment_pending',
+                'Assessment Required',
+                'You have not yet completed your assessment. Please complete it before the deadline.',
+                ['student_id' => $student->id]
+            );
+        }
+    }
+
+    /**
+     * Notify students when they have a match
+     */
+    public function notifyStudentForMatch(Student $student): void
+    {
+        Notification::createNotification(
+            $student->user_id,
+            'student_match_found',
+            'New Match Found',
+            'A new internship match has been found for you. Check your dashboard for details.',
+            ['student_id' => $student->id]
+        );
+    }
+
+    /**
+     * Notify only relevant users when a new deadline is released
+     */
+    public function notifyNewDeadline(Deadline $deadline): void
+    {
+        $users = collect();
+
+        // Get only relevant users based on deadline category
+        switch ($deadline->category) {
+            case 'student_verification':
+                $users = User::whereHas('roles', function ($query) {
+                    $query->where('name', 'adviser');
+                })->get();
+                break;
+            case 'student_assessment_form':
+                $users = User::whereHas('roles', function ($query) {
+                    $query->where('name', 'student');
+                })->get();
+                break;
+            case 'hte_assessment_form':
+                $users = User::whereHas('roles', function ($query) {
+                    $query->where('name', 'hte');
+                })->get();
+                break;
+            case 'skill_assessment_form':
+                $users = User::whereHas('roles', function ($query) {
+                    $query->where('name', 'student');
+                })->get();
+                break;
+        }
+
+        foreach ($users as $user) {
+            $message = match($deadline->category) {
+                'student_verification' => "A new student verification deadline has been set: {$deadline->title}. Deadline: " . $deadline->end_date->format('M d, Y H:i'),
+                'student_assessment_form' => "A new student assessment deadline has been set: {$deadline->title}. Deadline: " . $deadline->end_date->format('M d, Y H:i'),
+                'hte_assessment_form' => "A new HTE assessment deadline has been set: {$deadline->title}. Deadline: " . $deadline->end_date->format('M d, Y H:i'),
+                'skill_assessment_form' => "A new skill assessment deadline has been set: {$deadline->title}. Deadline: " . $deadline->end_date->format('M d, Y H:i'),
+                default => 'A new deadline has been set.',
+            };
+
+            Notification::createNotification(
+                $user->id,
+                'deadline_released',
+                'New Deadline Released',
+                $message,
+                ['deadline_id' => $deadline->id, 'category' => $deadline->category]
+            );
+        }
+    }
+
+    /**
+     * Notify advisers when there are students to verify
+     */
+    public function notifyAdvisersForStudentVerification(): void
+    {
+        $advisers = Adviser::where('is_active', true)
+            ->with('user')
+            ->get();
+
+        foreach ($advisers as $adviser) {
+            // Count pending students in their section
+            $pendingCount = User::whereHas('roles', function ($query) {
+                    $query->where('name', 'student');
+                })
+                ->whereHas('academeAccounts', function ($query) use ($adviser) {
+                    $query->where('section_id', $adviser->section_id);
+                })
+                ->whereDoesntHave('student')
+                ->where('status', '!=', 'archived')
+                ->count();
+
+            if ($pendingCount > 0) {
+                Notification::createNotification(
+                    $adviser->user_id,
+                    'student_verification_pending',
+                    'Students Need Verification',
+                    "You have {$pendingCount} student(s) waiting for verification in your section.",
+                    ['adviser_id' => $adviser->id, 'pending_count' => $pendingCount]
+                );
+            }
+        }
+    }
+
+    /**
+     * Notify HTEs when assessment is not yet taken
+     */
+    public function notifyHTEsForPendingAssessment(): void
+    {
+        $htes = HTE::where('is_submit', false)
+            ->where('is_active', true)
+            ->with('user')
+            ->get();
+
+        foreach ($htes as $hte) {
+            Notification::createNotification(
+                $hte->user_id,
+                'hte_assessment_pending',
+                'HTE Assessment Required',
+                'You have not yet completed your HTE assessment form. Please complete it before the deadline.',
+                ['hte_id' => $hte->id]
+            );
+        }
+    }
+
+    /**
+     * Notify admin when deadline expires
+     */
+    public function notifyAdminDeadlineExpired(Deadline $deadline): void
+    {
+        $admins = User::whereHas('roles', function ($query) {
+            $query->where('name', 'admin');
+        })->get();
+
+        foreach ($admins as $admin) {
+            Notification::createNotification(
+                $admin->id,
+                'deadline_expired',
+                'Deadline Expired',
+                "The deadline '{$deadline->title}' has expired.",
+                ['deadline_id' => $deadline->id, 'category' => $deadline->category]
+            );
+        }
+    }
+
+    /**
+     * Notify admin when students need approval
+     */
+    public function notifyAdminStudentApprovalNeeded(): void
+    {
+        $admins = User::whereHas('roles', function ($query) {
+            $query->where('name', 'admin');
+        })->get();
+
+        // Count students who have submitted assessments but not placed
+        $studentsNeedingApproval = Student::where('is_submit', true)
+            ->where('is_active', true)
+            ->whereDoesntHave('placements', function ($query) {
+                $query->where('status', 'approved');
+            })
+            ->count();
+
+        if ($studentsNeedingApproval > 0) {
+            foreach ($admins as $admin) {
+                Notification::createNotification(
+                    $admin->id,
+                    'student_approval_needed',
+                    'Students Need Approval',
+                    "You have {$studentsNeedingApproval} student(s) who have completed assessments and need placement approval.",
+                    ['admin_id' => $admin->id, 'students_count' => $studentsNeedingApproval]
+                );
+            }
+        }
+    }
+}
