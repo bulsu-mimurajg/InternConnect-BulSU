@@ -70,11 +70,6 @@ class NotificationService
                     $query->where('name', 'hte');
                 })->get();
                 break;
-            case 'skill_assessment_form':
-                $users = User::whereHas('roles', function ($query) {
-                    $query->where('name', 'student');
-                })->get();
-                break;
         }
 
         foreach ($users as $user) {
@@ -82,7 +77,6 @@ class NotificationService
                 'student_verification' => "A new student verification deadline has been set: {$deadline->title}. Deadline: " . $deadline->end_date->format('M d, Y H:i'),
                 'student_assessment_form' => "A new student assessment deadline has been set: {$deadline->title}. Deadline: " . $deadline->end_date->format('M d, Y H:i'),
                 'hte_assessment_form' => "A new HTE assessment deadline has been set: {$deadline->title}. Deadline: " . $deadline->end_date->format('M d, Y H:i'),
-                'skill_assessment_form' => "A new skill assessment deadline has been set: {$deadline->title}. Deadline: " . $deadline->end_date->format('M d, Y H:i'),
                 default => 'A new deadline has been set.',
             };
 

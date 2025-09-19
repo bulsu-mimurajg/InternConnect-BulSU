@@ -1276,7 +1276,6 @@ class AdminController extends Controller
             ['value' => 'student_verification', 'label' => 'Student Verification (Adviser Side)'],
             ['value' => 'student_assessment_form', 'label' => 'Student Assessment Form (Student Side)'],
             ['value' => 'hte_assessment_form', 'label' => 'HTE Assessment Form (HTE Side)'],
-            ['value' => 'skill_assessment_form', 'label' => 'Skill Assessment Form (Student Side)'],
         ];
 
         return Inertia::render('admin/events', [
@@ -1303,7 +1302,7 @@ class AdminController extends Controller
         try {
             $request->validate([
                 'title' => 'required|string|max:255',
-                'category' => 'required|in:student_verification,student_assessment_form,hte_assessment_form,skill_assessment_form',
+                'category' => 'required|in:student_verification,student_assessment_form,hte_assessment_form',
                 'start_date' => 'required|date',
                 'end_date' => 'required|date|after:start_date',
             ]);
@@ -1366,7 +1365,7 @@ class AdminController extends Controller
     {
         $request->validate([
             'title' => 'required|string|max:255',
-            'category' => 'required|in:student_verification,student_assessment_form,hte_assessment_form,skill_assessment_form',
+            'category' => 'required|in:student_verification,student_assessment_form,hte_assessment_form',
             'start_date' => 'required|date',
             'end_date' => 'required|date|after:start_date',
         ]);

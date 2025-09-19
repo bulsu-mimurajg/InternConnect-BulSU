@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('deadlines', function (Blueprint $table) {
             $table->id();
             $table->string('title');
-            $table->enum('category', ['student_verification', 'student_assessment_form', 'hte_assessment_form', 'skill_assessment_form']);
+            $table->enum('category', ['student_verification', 'student_assessment_form', 'hte_assessment_form']);
             $table->dateTime('start_date');
             $table->dateTime('end_date');
             $table->enum('status', ['active', 'expired'])->default('active');

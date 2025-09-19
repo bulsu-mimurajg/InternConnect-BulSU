@@ -56,7 +56,6 @@ class Deadline extends Model
             'student_verification' => 'Student Verification',
             'student_assessment_form' => 'Student Assessment Form',
             'hte_assessment_form' => 'HTE Assessment Form',
-            'skill_assessment_form' => 'Skill Assessment Form',
             default => $this->category,
         };
     }
