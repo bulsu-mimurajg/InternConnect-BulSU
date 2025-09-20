@@ -1004,7 +1004,7 @@ class AdminController extends Controller
      */
     public function adviserManagement(): Response
     {
-        $advisers = Adviser::with(['user', 'section'])
+        $advisers = Adviser::with(['user', 'sections'])
             ->whereHas('user', function ($query) {
                 $query->where('status', '!=', 'archived');
             })
@@ -1020,8 +1020,13 @@ class AdminController extends Controller
                     'adviser_fname' => $adviser->adviser_fname,
                     'adviser_lname' => $adviser->adviser_lname,
                     'full_name' => $adviser->adviser_fname . ' ' . $adviser->adviser_lname,
-                    'section_id' => $adviser->section_id,
-                    'section_name' => $adviser->section ? $adviser->section->section_name : 'No Section',
+                    'sections' => $adviser->sections->map(function ($section) {
+                        return [
+                            'section_id' => $section->section_id,
+                            'section_name' => $section->section_name,
+                        ];
+                    }),
+                    'section_names' => $adviser->sections->pluck('section_name')->join(', ') ?: 'No Sections',
                     'is_active' => $adviser->is_active,
                     'created_at' => $adviser->created_at->format('M d, Y'),
                     'updated_at' => $adviser->updated_at->format('M d, Y'),
@@ -1049,7 +1054,8 @@ class AdminController extends Controller
             'password' => 'required|string|min:8|confirmed',
             'adviser_fname' => 'required|string|max:100',
             'adviser_lname' => 'required|string|max:100',
-            'section_id' => 'required|exists:sections,section_id',
+            'section_ids' => 'required|array|min:1',
+            'section_ids.*' => 'exists:sections,section_id',
         ]);
 
         try {
@@ -1067,13 +1073,15 @@ class AdminController extends Controller
             $user->assignRole('adviser');
 
             // Create adviser record
-            Adviser::create([
+            $adviser = Adviser::create([
                 'user_id' => $user->id,
                 'adviser_fname' => $request->adviser_fname,
                 'adviser_lname' => $request->adviser_lname,
-                'section_id' => $request->section_id,
                 'is_active' => true,
             ]);
+
+            // Attach sections to adviser
+            $adviser->sections()->attach($request->section_ids);
 
             DB::commit();
 
@@ -1111,7 +1119,8 @@ class AdminController extends Controller
             'password' => 'nullable|string|min:8|confirmed',
             'adviser_fname' => 'required|string|max:100',
             'adviser_lname' => 'required|string|max:100',
-            'section_id' => 'required|exists:sections,section_id',
+            'section_ids' => 'required|array|min:1',
+            'section_ids.*' => 'exists:sections,section_id',
         ]);
 
         try {
@@ -1133,8 +1142,10 @@ class AdminController extends Controller
             $adviser->update([
                 'adviser_fname' => $request->adviser_fname,
                 'adviser_lname' => $request->adviser_lname,
-                'section_id' => $request->section_id,
             ]);
+
+            // Sync sections
+            $adviser->sections()->sync($request->section_ids);
 
             DB::commit();
 
@@ -1173,7 +1184,7 @@ class AdminController extends Controller
      */
     public function archivedAdviserManagement(): Response
     {
-        $advisers = Adviser::with(['user', 'section'])
+        $advisers = Adviser::with(['user', 'sections'])
             ->whereHas('user', function ($query) {
                 $query->where('status', 'archived');
             })
@@ -1189,8 +1200,13 @@ class AdminController extends Controller
                     'adviser_fname' => $adviser->adviser_fname,
                     'adviser_lname' => $adviser->adviser_lname,
                     'full_name' => $adviser->adviser_fname . ' ' . $adviser->adviser_lname,
-                    'section_id' => $adviser->section_id,
-                    'section_name' => $adviser->section ? $adviser->section->section_name : 'No Section',
+                    'sections' => $adviser->sections->map(function ($section) {
+                        return [
+                            'section_id' => $section->section_id,
+                            'section_name' => $section->section_name,
+                        ];
+                    }),
+                    'section_names' => $adviser->sections->pluck('section_name')->join(', ') ?: 'No Sections',
                     'is_active' => $adviser->is_active,
                     'created_at' => $adviser->created_at->format('M d, Y'),
                     'updated_at' => $adviser->updated_at->format('M d, Y'),

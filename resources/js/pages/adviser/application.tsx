@@ -4,6 +4,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import AppLayout from '@/layouts/app-layout';
+import SectionSwitcher from '@/components/SectionSwitcher';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
@@ -42,15 +43,22 @@ interface DeadlineInfo {
     end_date: string;
 }
 
+interface Section {
+    section_id: number;
+    section_name: string;
+}
+
 interface Props {
     pendingStudents: Student[];
     verifiedStudents: Student[];
     adviserSection: string | null;
+    adviserSections: Section[];
+    currentSectionId: number | null;
     deadlineActive: boolean;
     deadlineInfo: DeadlineInfo | null;
 }
 
-export default function Application({ pendingStudents, verifiedStudents, adviserSection, deadlineActive, deadlineInfo }: Props) {
+export default function Application({ pendingStudents, verifiedStudents, adviserSection, adviserSections, currentSectionId, deadlineActive, deadlineInfo }: Props) {
     const [selectedStudents, setSelectedStudents] = useState<number[]>([]);
     const [selectedVerifiedStudents, setSelectedVerifiedStudents] = useState<number[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
@@ -221,13 +229,23 @@ export default function Application({ pendingStudents, verifiedStudents, adviser
                 {/* Section Info */}
                 <Card>
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <UsersIcon className="h-5 w-5" />
-                            Section: {adviserSection}
-                        </CardTitle>
-                        <CardDescription>
-                            Manage student applications for your section
-                        </CardDescription>
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <CardTitle className="flex items-center gap-2">
+                                    <UsersIcon className="h-5 w-5" />
+                                    Section: {adviserSection}
+                                </CardTitle>
+                                <CardDescription>
+                                    Manage student applications for your section
+                                </CardDescription>
+                            </div>
+                            {currentSectionId && (
+                                <SectionSwitcher 
+                                    sections={adviserSections}
+                                    currentSectionId={currentSectionId}
+                                />
+                            )}
+                        </div>
                     </CardHeader>
                 </Card>
 

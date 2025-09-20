@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import AppLayout from '@/layouts/app-layout';
+import SectionSwitcher from '@/components/SectionSwitcher';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/react';
 import { useState, useMemo } from 'react';
@@ -46,12 +47,19 @@ interface Student {
     }>;
 }
 
+interface Section {
+    section_id: number;
+    section_name: string;
+}
+
 interface Props {
     students: Student[];
     adviserSection: string | null;
+    adviserSections: Section[];
+    currentSectionId: number | null;
 }
 
-export default function AdviserStudents({ students, adviserSection }: Props) {
+export default function AdviserStudents({ students, adviserSection, adviserSections, currentSectionId }: Props) {
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<string>('all');
     const [assessmentFilter, setAssessmentFilter] = useState<string>('all');
@@ -130,11 +138,20 @@ export default function AdviserStudents({ students, adviserSection }: Props) {
             <div className="flex h-full flex-1 flex-col gap-6 rounded-xl p-4">
                 {/* Header */}
                 <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-3xl font-bold tracking-tight">Students</h1>
-                        <p className="text-muted-foreground">
-                            Section: {adviserSection} • {students.length} students
-                        </p>
+                    <div className="flex items-center gap-4">
+                        <div>
+                            <h1 className="text-3xl font-bold tracking-tight">Students</h1>
+                            <p className="text-muted-foreground">
+                                Section: {adviserSection} • {students.length} students
+                            </p>
+                        </div>
+                        {currentSectionId && (
+                            <SectionSwitcher 
+                                sections={adviserSections}
+                                currentSectionId={currentSectionId}
+                                className="ml-4"
+                            />
+                        )}
                     </div>
                     <Button asChild>
                         <Link href={route('student-verification')}>

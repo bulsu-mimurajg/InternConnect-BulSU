@@ -19,11 +19,11 @@ class AdviserController extends Controller
     /**
      * Display the adviser dashboard with comprehensive statistics.
      */
-    public function dashboard(): Response
+    public function dashboard(Request $request): Response
     {
         $adviser = Auth::user();
         
-        // Get the adviser's section from advisers table
+        // Get the adviser's sections from advisers table
         $adviserRecord = $adviser->adviser;
         
         if (!$adviserRecord) {
@@ -32,25 +32,50 @@ class AdviserController extends Controller
                 'recentAssessments' => [],
                 'placementOverview' => [],
                 'adviserSection' => null,
+                'adviserSections' => [],
+                'currentSectionId' => null,
             ]);
         }
 
-        $sectionId = $adviserRecord->section_id;
+        // Get all sections assigned to this adviser
+        $adviserSections = $adviserRecord->sections;
+        
+        if ($adviserSections->isEmpty()) {
+            return Inertia::render('adviser/dashboard', [
+                'stats' => [],
+                'recentAssessments' => [],
+                'placementOverview' => [],
+                'adviserSection' => null,
+                'adviserSections' => [],
+                'currentSectionId' => null,
+            ]);
+        }
+
+        // Get current section from session or default to first section
+        $currentSectionId = $this->getCurrentSectionId($request, $adviserSections);
+        $currentSection = $adviserSections->where('section_id', $currentSectionId)->first();
 
         // Get comprehensive statistics
-        $stats = $this->getDashboardStats($sectionId);
+        $stats = $this->getDashboardStats($currentSectionId);
         
         // Get recent assessment submissions
-        $recentAssessments = $this->getRecentAssessments($sectionId);
+        $recentAssessments = $this->getRecentAssessments($currentSectionId);
         
         // Get placement overview
-        $placementOverview = $this->getPlacementOverview($sectionId);
+        $placementOverview = $this->getPlacementOverview($currentSectionId);
 
         return Inertia::render('adviser/dashboard', [
             'stats' => $stats,
             'recentAssessments' => $recentAssessments,
             'placementOverview' => $placementOverview,
-            'adviserSection' => $adviserRecord->section->section_name ?? null,
+            'adviserSection' => $currentSection->section_name ?? null,
+            'adviserSections' => $adviserSections->map(function ($section) {
+                return [
+                    'section_id' => $section->section_id,
+                    'section_name' => $section->section_name,
+                ];
+            }),
+            'currentSectionId' => $currentSectionId,
         ]);
     }
 
@@ -175,11 +200,11 @@ class AdviserController extends Controller
     /**
      * Display the adviser application page with pending students.
      */
-    public function index(): Response
+    public function index(Request $request): Response
     {
         $adviser = Auth::user();
         
-        // Get the adviser's section from advisers table
+        // Get the adviser's sections from advisers table
         $adviserRecord = $adviser->adviser;
         
         if (!$adviserRecord) {
@@ -187,17 +212,34 @@ class AdviserController extends Controller
                 'pendingStudents' => [],
                 'verifiedStudents' => [],
                 'adviserSection' => null,
+                'adviserSections' => [],
+                'currentSectionId' => null,
             ]);
         }
 
-        $sectionId = $adviserRecord->section_id;
+        // Get all sections assigned to this adviser
+        $adviserSections = $adviserRecord->sections;
+        
+        if ($adviserSections->isEmpty()) {
+            return Inertia::render('adviser/application', [
+                'pendingStudents' => [],
+                'verifiedStudents' => [],
+                'adviserSection' => null,
+                'adviserSections' => [],
+                'currentSectionId' => null,
+            ]);
+        }
+
+        // Get current section from session or default to first section
+        $currentSectionId = $this->getCurrentSectionId($request, $adviserSections);
+        $currentSection = $adviserSections->where('section_id', $currentSectionId)->first();
 
         // Get pending students (users with student role in the same section who don't have a student record)
         $pendingStudents = User::whereHas('roles', function ($query) {
                 $query->where('name', 'student');
             })
-            ->whereHas('academeAccounts', function ($query) use ($sectionId) {
-                $query->where('section_id', $sectionId);
+            ->whereHas('academeAccounts', function ($query) use ($currentSectionId) {
+                $query->where('section_id', $currentSectionId);
             })
             ->whereDoesntHave('student')
             ->where('status', '!=', 'archived')
@@ -219,8 +261,8 @@ class AdviserController extends Controller
         $verifiedStudents = User::whereHas('roles', function ($query) {
                 $query->where('name', 'student');
             })
-            ->whereHas('academeAccounts', function ($query) use ($sectionId) {
-                $query->where('section_id', $sectionId);
+            ->whereHas('academeAccounts', function ($query) use ($currentSectionId) {
+                $query->where('section_id', $currentSectionId);
             })
             ->whereHas('student')
             ->where('status', '!=', 'archived')
@@ -248,7 +290,14 @@ class AdviserController extends Controller
         return Inertia::render('adviser/application', [
             'pendingStudents' => $pendingStudents,
             'verifiedStudents' => $verifiedStudents,
-            'adviserSection' => $adviserRecord->section->section_name ?? null,
+            'adviserSection' => $currentSection->section_name ?? null,
+            'adviserSections' => $adviserSections->map(function ($section) {
+                return [
+                    'section_id' => $section->section_id,
+                    'section_name' => $section->section_name,
+                ];
+            }),
+            'currentSectionId' => $currentSectionId,
             'deadlineActive' => $deadlineActive,
             'deadlineInfo' => $deadlineInfo,
         ]);
@@ -473,28 +522,44 @@ class AdviserController extends Controller
     /**
      * Get detailed student information for the adviser's section.
      */
-    public function getStudents(): Response
+    public function getStudents(Request $request): Response
     {
         $adviser = Auth::user();
         
-        // Get the adviser's section from advisers table
+        // Get the adviser's sections from advisers table
         $adviserRecord = $adviser->adviser;
         
         if (!$adviserRecord) {
             return Inertia::render('adviser/students', [
                 'students' => [],
                 'adviserSection' => null,
+                'adviserSections' => [],
+                'currentSectionId' => null,
             ]);
         }
 
-        $sectionId = $adviserRecord->section_id;
+        // Get all sections assigned to this adviser
+        $adviserSections = $adviserRecord->sections;
+        
+        if ($adviserSections->isEmpty()) {
+            return Inertia::render('adviser/students', [
+                'students' => [],
+                'adviserSection' => null,
+                'adviserSections' => [],
+                'currentSectionId' => null,
+            ]);
+        }
+
+        // Get current section from session or default to first section
+        $currentSectionId = $this->getCurrentSectionId($request, $adviserSections);
+        $currentSection = $adviserSections->where('section_id', $currentSectionId)->first();
 
         // Get all students in the section with their details
         $students = User::whereHas('roles', function ($query) {
                 $query->where('name', 'student');
             })
-            ->whereHas('academeAccounts', function ($query) use ($sectionId) {
-                $query->where('section_id', $sectionId);
+            ->whereHas('academeAccounts', function ($query) use ($currentSectionId) {
+                $query->where('section_id', $currentSectionId);
             })
             ->where('status', '!=', 'archived')
             ->with([
@@ -556,8 +621,59 @@ class AdviserController extends Controller
 
         return Inertia::render('adviser/students', [
             'students' => $students,
-            'adviserSection' => $adviserRecord->section->section_name ?? null,
+            'adviserSection' => $currentSection->section_name ?? null,
+            'adviserSections' => $adviserSections->map(function ($section) {
+                return [
+                    'section_id' => $section->section_id,
+                    'section_name' => $section->section_name,
+                ];
+            }),
+            'currentSectionId' => $currentSectionId,
         ]);
+    }
+
+    /**
+     * Get the current section ID from session or default to first available section.
+     */
+    private function getCurrentSectionId(Request $request, $adviserSections): int
+    {
+        // Try to get from session first
+        $sessionSectionId = $request->session()->get('adviser_current_section_id');
+        
+        if ($sessionSectionId && $adviserSections->contains('section_id', $sessionSectionId)) {
+            return $sessionSectionId;
+        }
+        
+        // Default to first section and store in session
+        $firstSectionId = $adviserSections->first()->section_id;
+        $request->session()->put('adviser_current_section_id', $firstSectionId);
+        
+        return $firstSectionId;
+    }
+
+    /**
+     * Switch to a different section.
+     */
+    public function switchSection(Request $request, $sectionId)
+    {
+        $adviser = Auth::user();
+        $adviserRecord = $adviser->adviser;
+        
+        if (!$adviserRecord) {
+            return redirect()->back()->withErrors(['error' => 'Adviser record not found.']);
+        }
+
+        // Verify the adviser has access to this section
+        $hasAccess = $adviserRecord->sections->contains('section_id', $sectionId);
+        
+        if (!$hasAccess) {
+            return redirect()->back()->withErrors(['error' => 'You do not have access to this section.']);
+        }
+
+        // Store the selected section in session
+        $request->session()->put('adviser_current_section_id', $sectionId);
+
+        return redirect()->back()->with('success', 'Section switched successfully.');
     }
 
 

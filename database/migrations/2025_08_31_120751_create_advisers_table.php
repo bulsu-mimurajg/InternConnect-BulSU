@@ -16,12 +16,11 @@ return new class extends Migration
             $table->string('adviser_fname', 50);
             $table->string('adviser_lname', 50);
             $table->boolean('is_active')->default(true);
-            $table->unsignedInteger('section_id');
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
             $table->timestamps();
 
-            // Foreign key constraints
-            $table->foreign('section_id')->references('section_id')->on('sections')->onDelete('cascade');
+            // // Foreign key constraints
+            // $table->foreign('section_id')->references('section_id')->on('sections')->onDelete('cascade');
         });
     }
 

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Adviser extends Model
 {
@@ -11,13 +12,11 @@ class Adviser extends Model
         'adviser_fname',
         'adviser_lname',
         'is_active',
-        'section_id',
         'user_id',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
-        'section_id' => 'integer',
     ];
 
     public function user(): BelongsTo
@@ -25,8 +24,8 @@ class Adviser extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function section(): BelongsTo
+    public function sections(): BelongsToMany
     {
-        return $this->belongsTo(Section::class, 'section_id', 'section_id');
+        return $this->belongsToMany(Section::class, 'adviser_section', 'adviser_id', 'section_id', 'id', 'section_id');
     }
 }

@@ -29,6 +29,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Plus, MoreHorizontal, Edit, Archive, Eye, ArchiveRestore } from 'lucide-react';
 import { type BreadcrumbItem } from '@/types';
 
@@ -41,8 +42,11 @@ interface Adviser {
     adviser_fname: string;
     adviser_lname: string;
     full_name: string;
-    section_id: number;
-    section_name: string;
+    sections: {
+        section_id: number;
+        section_name: string;
+    }[];
+    section_names: string;
     is_active: boolean;
     created_at: string;
     updated_at: string;
@@ -85,7 +89,7 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
         password_confirmation: '',
         adviser_fname: '',
         adviser_lname: '',
-        section_id: '',
+        section_ids: [] as number[],
     });
 
     const editForm = useForm({
@@ -95,7 +99,7 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
         password_confirmation: '',
         adviser_fname: '',
         adviser_lname: '',
-        section_id: '',
+        section_ids: [] as number[],
     });
 
     const handleCreateSubmit = (e: React.FormEvent) => {
@@ -166,7 +170,7 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
             password_confirmation: '',
             adviser_fname: adviser.adviser_fname,
             adviser_lname: adviser.adviser_lname,
-            section_id: adviser.section_id.toString(),
+            section_ids: adviser.sections.map(s => s.section_id),
         });
         setIsEditDialogOpen(true);
     };
@@ -204,6 +208,19 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
         // Navigate to the appropriate view using Inertia router
         const routeName = showArchivedAdvisers ? 'admin.adviser' : 'admin.adviser.archived';
         router.visit(route(routeName));
+    };
+
+    const handleSectionToggle = (sectionId: number, formType: 'create' | 'edit') => {
+        const form = formType === 'create' ? createForm : editForm;
+        const currentSectionIds = form.data.section_ids;
+        
+        if (currentSectionIds.includes(sectionId)) {
+            // Remove section
+            form.setData('section_ids', currentSectionIds.filter(id => id !== sectionId));
+        } else {
+            // Add section
+            form.setData('section_ids', [...currentSectionIds, sectionId]);
+        }
     };
 
     const getStatusBadge = (status: string) => {
@@ -380,28 +397,33 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
                                                         )}
                                                     </div>
                                                 </div>
-                                                <div className="grid grid-cols-4 items-center gap-4">
-                                                    <Label htmlFor="section_id" className="text-right">
-                                                        Section
+                                                <div className="grid grid-cols-4 items-start gap-4">
+                                                    <Label className="text-right pt-2">
+                                                        Sections
                                                     </Label>
                                                     <div className="col-span-3">
-                                                        <Select
-                                                            value={createForm.data.section_id}
-                                                            onValueChange={(value) => createForm.setData('section_id', value)}
-                                                        >
-                                                            <SelectTrigger className={createForm.errors.section_id ? 'border-red-500' : ''}>
-                                                                <SelectValue placeholder="Select a section" />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                {sections.map((section) => (
-                                                                    <SelectItem key={section.section_id} value={section.section_id.toString()}>
+                                                        <div className="space-y-2 max-h-32 overflow-y-auto border rounded-md p-2">
+                                                            {sections.map((section) => (
+                                                                <div key={section.section_id} className="flex items-center space-x-2">
+                                                                    <Checkbox
+                                                                        id={`create-section-${section.section_id}`}
+                                                                        checked={createForm.data.section_ids.includes(section.section_id)}
+                                                                        onCheckedChange={() => handleSectionToggle(section.section_id, 'create')}
+                                                                    />
+                                                                    <Label 
+                                                                        htmlFor={`create-section-${section.section_id}`}
+                                                                        className="text-sm font-normal cursor-pointer"
+                                                                    >
                                                                         {section.section_name}
-                                                                    </SelectItem>
-                                                                ))}
-                                                            </SelectContent>
-                                                        </Select>
-                                                        {createForm.errors.section_id && (
-                                                            <p className="text-red-500 text-xs mt-1">{createForm.errors.section_id}</p>
+                                                                    </Label>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                        {createForm.errors.section_ids && (
+                                                            <p className="text-red-500 text-xs mt-1">{createForm.errors.section_ids}</p>
+                                                        )}
+                                                        {createForm.data.section_ids.length === 0 && (
+                                                            <p className="text-amber-600 text-xs mt-1">Please select at least one section</p>
                                                         )}
                                                     </div>
                                                 </div>
@@ -439,7 +461,7 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
                                             </td>
                                             <td className="py-3 px-4">{adviser.email}</td>
                                             <td className="py-3 px-4">{adviser.full_name}</td>
-                                            <td className="py-3 px-4">{adviser.section_name}</td>
+                                            <td className="py-3 px-4">{adviser.section_names}</td>
                                             <td className="py-3 px-4">{getStatusBadge(adviser.status)}</td>
                                             <td className="py-3 px-4">{adviser.created_at}</td>
                                             <td className="py-3 px-4 text-right">
@@ -517,7 +539,7 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
                                         {advisers.slice(0, 5).map((adviser) => (
                                             <div key={adviser.id} className="text-sm border-b pb-1 mb-1">
                                                 <p><strong>ID:</strong> {adviser.id} | <strong>Username:</strong> {adviser.username} | <strong>Email:</strong> {adviser.email}</p>
-                                                <p><strong>Name:</strong> {adviser.full_name} | <strong>Section:</strong> {adviser.section_name} | <strong>Status:</strong> {adviser.status}</p>
+                                                <p><strong>Name:</strong> {adviser.full_name} | <strong>Sections:</strong> {adviser.section_names} | <strong>Status:</strong> {adviser.status}</p>
                                             </div>
                                         ))}
                                     </div>
@@ -634,26 +656,34 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
                                         required
                                     />
                                 </div>
-                                <div className="grid grid-cols-4 items-center gap-4">
-                                    <Label htmlFor="edit-section-id" className="text-right">
-                                        Section
+                                <div className="grid grid-cols-4 items-start gap-4">
+                                    <Label className="text-right pt-2">
+                                        Sections
                                     </Label>
                                     <div className="col-span-3">
-                                        <Select
-                                            value={editForm.data.section_id}
-                                            onValueChange={(value) => editForm.setData('section_id', value)}
-                                        >
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Select a section" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {sections.map((section) => (
-                                                    <SelectItem key={section.section_id} value={section.section_id.toString()}>
+                                        <div className="space-y-2 max-h-32 overflow-y-auto border rounded-md p-2">
+                                            {sections.map((section) => (
+                                                <div key={section.section_id} className="flex items-center space-x-2">
+                                                    <Checkbox
+                                                        id={`edit-section-${section.section_id}`}
+                                                        checked={editForm.data.section_ids.includes(section.section_id)}
+                                                        onCheckedChange={() => handleSectionToggle(section.section_id, 'edit')}
+                                                    />
+                                                    <Label 
+                                                        htmlFor={`edit-section-${section.section_id}`}
+                                                        className="text-sm font-normal cursor-pointer"
+                                                    >
                                                         {section.section_name}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                                    </Label>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        {editForm.errors.section_ids && (
+                                            <p className="text-red-500 text-xs mt-1">{editForm.errors.section_ids}</p>
+                                        )}
+                                        {editForm.data.section_ids.length === 0 && (
+                                            <p className="text-amber-600 text-xs mt-1">Please select at least one section</p>
+                                        )}
                                     </div>
                                 </div>
                             </div>

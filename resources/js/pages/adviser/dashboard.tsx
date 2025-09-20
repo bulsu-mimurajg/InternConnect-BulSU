@@ -3,6 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import AppLayout from '@/layouts/app-layout';
+import SectionSwitcher from '@/components/SectionSwitcher';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/react';
 import {
@@ -68,14 +69,21 @@ interface PlacementOverview {
     totalUnplaced: number;
 }
 
+interface Section {
+    section_id: number;
+    section_name: string;
+}
+
 interface Props {
     stats: DashboardStats;
     recentAssessments: RecentAssessment[];
     placementOverview: PlacementOverview;
     adviserSection: string | null;
+    adviserSections: Section[];
+    currentSectionId: number | null;
 }
 
-export default function AdviserDashboard({ stats, recentAssessments, adviserSection }: Props) {
+export default function AdviserDashboard({ stats, recentAssessments, adviserSection, adviserSections, currentSectionId }: Props) {
     if (!adviserSection) {
         return (
             <AppLayout breadcrumbs={breadcrumbs}>
@@ -103,11 +111,20 @@ export default function AdviserDashboard({ stats, recentAssessments, adviserSect
             <div className="flex h-full flex-1 flex-col gap-6 rounded-xl p-4">
                 {/* Section Header */}
                 <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-                        <p className="text-muted-foreground">
-                            Section: {adviserSection}
-                        </p>
+                    <div className="flex items-center gap-4">
+                        <div>
+                            <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+                            <p className="text-muted-foreground">
+                                Section: {adviserSection}
+                            </p>
+                        </div>
+                        {currentSectionId && (
+                            <SectionSwitcher 
+                                sections={adviserSections}
+                                currentSectionId={currentSectionId}
+                                className="ml-4"
+                            />
+                        )}
                     </div>
                     <Button asChild>
                         <Link href={route('student-verification')}>

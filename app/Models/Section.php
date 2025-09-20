@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Section extends Model
 {
@@ -28,5 +29,13 @@ class Section extends Model
     public function students(): HasMany
     {
         return $this->hasMany(Student::class, 'section_id');
+    }
+
+    /**
+     * Get the advisers assigned to this section.
+     */
+    public function advisers(): BelongsToMany
+    {
+        return $this->belongsToMany(Adviser::class, 'adviser_section', 'section_id', 'adviser_id', 'section_id', 'id');
     }
 }

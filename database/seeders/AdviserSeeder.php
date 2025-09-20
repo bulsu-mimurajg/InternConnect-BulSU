@@ -18,48 +18,52 @@ class AdviserSeeder extends Seeder
         // Get the user with username 'emman' (created in DatabaseSeeder)
         $emmanUser = User::where('username', 'emman')->first();
         
-        // Get some sections to assign to advisers
-        $sections = Section::where('status', 'active')->take(5)->get();
+        // Get all available sections
+        $sections = Section::where('status', 'active')->get();
 
         $advisers = [
             [
                 'adviser_fname' => 'Emmanuel',
                 'adviser_lname' => 'Santos',
                 'is_active' => true,
-                'section_id' => $sections->first()->section_id ?? 1,
+                'section_ids' => [$sections->first()->section_id ?? 1], // Single section
                 'user_id' => $emmanUser->id ?? 1,
             ],
             [
                 'adviser_fname' => 'Maria',
                 'adviser_lname' => 'Garcia',
                 'is_active' => true,
-                'section_id' => $sections->skip(1)->first()->section_id ?? 2,
+                'section_ids' => $sections->take(2)->pluck('section_id')->toArray(), // Multiple sections
                 'user_id' => null, // Will be created as a new user
             ],
             [
                 'adviser_fname' => 'John',
                 'adviser_lname' => 'Doe',
                 'is_active' => true,
-                'section_id' => $sections->skip(2)->first()->section_id ?? 3,
+                'section_ids' => [$sections->skip(2)->first()->section_id ?? 3], // Single section
                 'user_id' => null, // Will be created as a new user
             ],
             [
                 'adviser_fname' => 'Sarah',
                 'adviser_lname' => 'Wilson',
                 'is_active' => true,
-                'section_id' => $sections->skip(3)->first()->section_id ?? 4,
+                'section_ids' => $sections->skip(1)->take(3)->pluck('section_id')->toArray(), // Multiple sections
                 'user_id' => null, // Will be created as a new user
             ],
             [
                 'adviser_fname' => 'Michael',
                 'adviser_lname' => 'Brown',
                 'is_active' => false,
-                'section_id' => $sections->skip(4)->first()->section_id ?? 5,
+                'section_ids' => $sections->pluck('section_id')->toArray(), // All sections
                 'user_id' => null, // Will be created as a new user
             ],
         ];
 
         foreach ($advisers as $adviserData) {
+            // Extract section_ids before creating adviser
+            $sectionIds = $adviserData['section_ids'];
+            unset($adviserData['section_ids']);
+
             // If no user_id is provided, create a new user for this adviser
             if (!$adviserData['user_id']) {
                 $user = User::create([
@@ -75,7 +79,11 @@ class AdviserSeeder extends Seeder
                 $adviserData['user_id'] = $user->id;
             }
 
-            Adviser::create($adviserData);
+            // Create the adviser
+            $adviser = Adviser::create($adviserData);
+
+            // Attach sections to the adviser
+            $adviser->sections()->attach($sectionIds);
         }
     }
 }

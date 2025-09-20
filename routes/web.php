@@ -150,6 +150,7 @@ Route::middleware(['auth', 'verified', 'role:adviser'])->group(function () {
     Route::post('application/reject', [AdviserController::class, 'rejectStudents'])->name('application.reject');
     Route::post('application/remove-access', [AdviserController::class, 'removeStudentAccess'])->name('application.remove-access');
     Route::post('application/undo', [AdviserController::class, 'undoAction'])->name('application.undo');
+    Route::post('adviser/switch-section/{sectionId}', [AdviserController::class, 'switchSection'])->name('adviser.switch-section');
 });
 
 Route::group(['middleware' => ['auth', 'verified', 'role:student']], function () {
