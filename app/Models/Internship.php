@@ -82,4 +82,12 @@ class Internship extends Model
     {
         return $query->where('slot_count', '>', 0);
     }
+
+    /**
+     * Get endorsements for this internship
+     */
+    public function endorsements(): HasMany
+    {
+        return $this->hasMany(Endorsement::class);
+    }
 }

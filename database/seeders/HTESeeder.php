@@ -19,26 +19,31 @@ class HTESeeder extends Seeder
             [
                 'username' => 'hte_company1',
                 'email' => 'hte1@example.com',
+                'status' => 'verified',
                 'password' => bcrypt('password'),
             ],
             [
                 'username' => 'hte_company2',
                 'email' => 'hte2@example.com',
+                'status' => 'verified',
                 'password' => bcrypt('password'),
             ],
             [
                 'username' => 'hte_company3',
                 'email' => 'hte3@example.com',
+                'status' => 'verified',
                 'password' => bcrypt('password'),
             ],
             [
                 'username' => 'hte_company4',
                 'email' => 'hte4@example.com',
+                'status' => 'verified',
                 'password' => bcrypt('password'),
             ],
             [
                 'username' => 'hte_company5',
                 'email' => 'hte5@example.com',
+                'status' => 'verified',
                 'password' => bcrypt('password'),
             ],
         ];

@@ -213,7 +213,7 @@ export default function StudentMatched({ matchedStudents, filters }: Props) {
         if (status === 'approved') {
             return (
                 <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                    Approved
+                    Endorsed
                 </Badge>
             );
         }
@@ -295,7 +295,7 @@ export default function StudentMatched({ matchedStudents, filters }: Props) {
             
             console.log('Approving student:', student.id, 'for internship:', student.best_match.internship.id);
             
-            const response = await fetch(`/student/${student.id}/approve-placement`, {
+            const response = await fetch(`/student/${student.id}/endorse`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -316,7 +316,7 @@ export default function StudentMatched({ matchedStudents, filters }: Props) {
                 csrfToken = await refreshCsrfToken();
                 
                 // Retry the request with fresh token
-                const retryResponse = await fetch(`/student/${student.id}/approve-placement`, {
+                const retryResponse = await fetch(`/student/${student.id}/endorse`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -576,7 +576,7 @@ export default function StudentMatched({ matchedStudents, filters }: Props) {
             console.log('Proceeding with batch approval for students:', Array.from(selectedStudents));
             
             // Use the new batch approval endpoint
-            const response = await fetch('/student/batch-approve-placements', {
+            const response = await fetch('/student/batch-endorse', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -598,7 +598,7 @@ export default function StudentMatched({ matchedStudents, filters }: Props) {
                 csrfToken = await refreshCsrfToken();
                 
                 // Retry the request with fresh token
-                const retryResponse = await fetch('/student/batch-approve-placements', {
+                const retryResponse = await fetch('/student/batch-endorse', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1026,7 +1026,7 @@ export default function StudentMatched({ matchedStudents, filters }: Props) {
                                             Batch Actions ({selectedStudents.size} student{selectedStudents.size !== 1 ? 's' : ''} selected)
                                         </div>
                                         <div className="mt-1 text-sm text-blue-700">
-                                            You can approve or reject multiple students at once. The system will allow approvals until all slots are filled (0 slots remaining).
+                                            You can endorse or reject multiple students at once. The system will allow endorsements until all slots are filled (0 slots remaining).
                                         </div>
                                     </div>
                                     <div className="flex space-x-2">
@@ -1037,7 +1037,7 @@ export default function StudentMatched({ matchedStudents, filters }: Props) {
                                             className="bg-green-600 hover:bg-green-700"
                                         >
                                             <CheckCircleIcon className="h-4 w-4 mr-2" />
-                                            Approve All ({selectedStudents.size})
+                                            Endorse All ({selectedStudents.size})
                                         </Button>
                                         <Button
                                             variant="destructive"
@@ -1197,7 +1197,7 @@ export default function StudentMatched({ matchedStudents, filters }: Props) {
                                                                 className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
                                                             >
                                                                 <CheckCircleIcon className="h-4 w-4" />
-                                                                Approve
+                                                                Endorse
                                                             </Button>
                                                             
                                                             <Button
@@ -1254,7 +1254,7 @@ export default function StudentMatched({ matchedStudents, filters }: Props) {
                                 <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                                     <div className="flex items-center gap-2 mb-2">
                                         <CheckCircleIcon className="w-5 h-5 text-green-600" />
-                                        <h4 className="font-semibold text-green-800">Students Getting Approved</h4>
+                                        <h4 className="font-semibold text-green-800">Students Getting Endorsed</h4>
                                     </div>
                                     <p className="text-sm text-green-700">
                                         <strong>{conflictData.total_approved || 0}</strong> students will be placed in their best match

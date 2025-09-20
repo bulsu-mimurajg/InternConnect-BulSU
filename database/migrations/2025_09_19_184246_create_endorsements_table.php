@@ -1,7 +1,7 @@
 <?php
 
-use App\Models\Internship;
 use App\Models\Student;
+use App\Models\Internship;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -13,15 +13,18 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('student_matches', function (Blueprint $table) {
+        Schema::create('endorsements', function (Blueprint $table) {
             $table->id();
             $table->foreignIdFor(Student::class)->constrained()->cascadeOnDelete();
             $table->foreignIdFor(Internship::class)->constrained()->cascadeOnDelete();
-            $table->unsignedInteger('rank');
+            $table->enum('status', ['pending', 'endorsed', 'rejected'])->default('pending');
             $table->decimal('compatibility_score', 5, 2);
-            $table->enum('endorsement_status', ['pending', 'endorsed', 'rejected'])->default('pending');
-            $table->enum('placement_status', ['pending', 'approved', 'rejected'])->default('pending');
+            $table->text('notes')->nullable();
+            $table->timestamp('endorsement_date')->nullable();
             $table->timestamps();
+            
+            // Ensure unique endorsement per student-internship pair
+            $table->unique(['student_id', 'internship_id']);
         });
     }
 
@@ -30,6 +33,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('student_matches');
+        Schema::dropIfExists('endorsements');
     }
 };

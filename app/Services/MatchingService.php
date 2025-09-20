@@ -66,7 +66,8 @@ class MatchingService
                 'internship_id' => $scoreData['internship']->id,
                 'compatibility_score' => $scoreData['compatibility_score'],
                 'rank' => $scoreData['rank'],
-                'status' => 'pending', // Default status for new matches
+                'endorsement_status' => 'pending', // Default endorsement status for new matches
+                'placement_status' => 'pending', // Default placement status for new matches
             ]);
         }
     }
@@ -76,7 +77,8 @@ class MatchingService
      */
     public function updateExistingMatchesStatus(): void
     {
-        StudentMatch::whereNull('status')->update(['status' => 'pending']);
+        StudentMatch::whereNull('endorsement_status')->update(['endorsement_status' => 'pending']);
+        StudentMatch::whereNull('placement_status')->update(['placement_status' => 'pending']);
     }
 
     /**
@@ -99,7 +101,8 @@ class MatchingService
                     'internship' => $match->internship,
                     'compatibility_score' => $match->compatibility_score,
                     'rank' => $match->rank,
-                    'status' => $match->status,
+                    'endorsement_status' => $match->endorsement_status,
+                    'placement_status' => $match->placement_status,
                 ];
             });
     }

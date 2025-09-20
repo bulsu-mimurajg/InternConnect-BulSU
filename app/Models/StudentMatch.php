@@ -15,7 +15,8 @@ class StudentMatch extends Model
         'internship_id',
         'rank',
         'compatibility_score',
-        'status',
+        'endorsement_status',
+        'placement_status',
     ];
 
     protected $casts = [
@@ -88,51 +89,99 @@ class StudentMatch extends Model
     }
 
     /**
-     * Scope to get matches with a specific status
+     * Scope to get matches with a specific endorsement status
      */
-    public function scopeWithStatus($query, $status)
+    public function scopeWithEndorsementStatus($query, $status)
     {
-        return $query->where('status', $status);
+        return $query->where('endorsement_status', $status);
     }
 
     /**
-     * Scope to get non-rejected matches (pending and approved)
+     * Scope to get matches with a specific placement status
      */
-    public function scopeNotRejected($query)
+    public function scopeWithPlacementStatus($query, $status)
     {
-        return $query->whereIn('status', ['pending', 'approved']);
+        return $query->where('placement_status', $status);
     }
 
     /**
-     * Scope to get rejected matches
+     * Scope to get non-rejected endorsements (pending and endorsed)
      */
-    public function scopeRejected($query)
+    public function scopeNotRejectedEndorsement($query)
     {
-        return $query->where('status', 'rejected');
+        return $query->whereIn('endorsement_status', ['pending', 'endorsed']);
     }
 
     /**
-     * Check if the match is rejected
+     * Scope to get rejected endorsements
      */
-    public function isRejected(): bool
+    public function scopeRejectedEndorsement($query)
     {
-        return $this->status === 'rejected';
+        return $query->where('endorsement_status', 'rejected');
     }
 
     /**
-     * Check if the match is approved
+     * Scope to get non-rejected placements (pending and approved)
      */
-    public function isApproved(): bool
+    public function scopeNotRejectedPlacement($query)
     {
-        return $this->status === 'approved';
+        return $query->whereIn('placement_status', ['pending', 'approved']);
     }
 
     /**
-     * Check if the match is pending
+     * Scope to get rejected placements
      */
-    public function isPending(): bool
+    public function scopeRejectedPlacement($query)
     {
-        return $this->status === 'pending';
+        return $query->where('placement_status', 'rejected');
+    }
+
+    /**
+     * Check if the endorsement is rejected
+     */
+    public function isEndorsementRejected(): bool
+    {
+        return $this->endorsement_status === 'rejected';
+    }
+
+    /**
+     * Check if the endorsement is endorsed
+     */
+    public function isEndorsementEndorsed(): bool
+    {
+        return $this->endorsement_status === 'endorsed';
+    }
+
+    /**
+     * Check if the endorsement is pending
+     */
+    public function isEndorsementPending(): bool
+    {
+        return $this->endorsement_status === 'pending';
+    }
+
+    /**
+     * Check if the placement is rejected
+     */
+    public function isPlacementRejected(): bool
+    {
+        return $this->placement_status === 'rejected';
+    }
+
+    /**
+     * Check if the placement is approved
+     */
+    public function isPlacementApproved(): bool
+    {
+        return $this->placement_status === 'approved';
+    }
+
+    /**
+     * Check if the placement is pending
+     */
+    public function isPlacementPending(): bool
+    {
+        return $this->placement_status === 'pending';
     }
 
     /**

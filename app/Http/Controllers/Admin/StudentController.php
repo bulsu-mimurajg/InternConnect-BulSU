@@ -9,6 +9,7 @@ use App\Models\Internship;
 use App\Models\StudentScore;
 use App\Models\SubcategoryWeight;
 use App\Models\StudentPlacement;
+use App\Models\Endorsement;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -387,9 +388,11 @@ class StudentController extends Controller
         $matchedStudents = $students->map(function ($student) use ($internshipFilter) {
             if ($internshipFilter && $internshipFilter !== 'all') {
                 // If specific internship is selected, get compatibility score for that internship
+                // Only show students who haven't been endorsed yet
                 $specificMatch = $student->compatibilityScores()
                     ->with(['internship.hte:id,company_name', 'internship.subcategoryWeights.subcategory'])
                     ->where('internship_id', $internshipFilter)
+                    ->where('endorsement_status', 'pending')
                     ->first();
 
                 if ($specificMatch) {
@@ -422,7 +425,7 @@ class StudentController extends Controller
                 // Filter out internships with no available slots
                 $bestMatch = $student->compatibilityScores()
                     ->with(['internship.hte:id,company_name', 'internship.subcategoryWeights.subcategory'])
-                    ->where('status', 'pending') // Only show pending matches for "all internships" filter
+                    ->where('endorsement_status', 'pending') // Only show pending endorsement matches for "all internships" filter
                     ->orderBy('compatibility_score', 'desc')
                     ->get()
                     ->filter(function ($match) {
@@ -693,9 +696,9 @@ class StudentController extends Controller
     // Note: Removed checkInefficientSlots method as it was preventing valid placements
 
     /**
-     * Approve student placement
+     * Endorse student for HTE approval
      */
-    public function approvePlacement(Request $request, Student $student)
+    public function endorseStudent(Request $request, Student $student)
     {
         // Debug logging
         Log::info('Placement approval request received', [
@@ -746,7 +749,18 @@ class StudentController extends Controller
             ], 400);
         }
 
-        // Check if internship exists and has available slots
+        // Check if student already has an endorsement for this internship
+        $existingEndorsement = Endorsement::where('student_id', $student->id)
+            ->where('internship_id', $validated['internship_id'])
+            ->where('status', 'endorsed')
+            ->first();
+        if ($existingEndorsement) {
+            return response()->json([
+                'message' => 'Student already has an endorsement for this internship'
+            ], 400);
+        }
+
+        // Check if internship exists
         $internship = Internship::find($validated['internship_id']);
         if (!$internship) {
             return response()->json([
@@ -754,109 +768,36 @@ class StudentController extends Controller
             ], 404);
         }
 
-        // Note: Removed inefficient slots check as it was preventing valid placements
-        // The slot availability check below handles this properly
-
-        // Check if internship still has available slots
-        $currentApprovedPlacements = $internship->studentPlacements()
-            ->where('status', 'approved')
-            ->count();
-        
-        // Calculate available slots: total slots minus currently approved placements
-        $availableSlots = $internship->slot_count - $currentApprovedPlacements;
-        
-        // Debug logging for slot calculation
-        Log::info('Single placement slot availability check', [
-            'internship_id' => $internship->id,
-            'position_title' => $internship->position_title,
-            'slot_count' => $internship->slot_count,
-            'current_approved_placements' => $currentApprovedPlacements,
-            'available_slots' => $availableSlots,
-            'student_id' => $student->id,
-            'student_name' => "{$student->first_name} {$student->last_name}"
-        ]);
-        
-        if ($availableSlots <= 0) {
-            return response()->json([
-                'message' => "No available slots for this internship. Only {$internship->slot_count} total slots, {$currentApprovedPlacements} already occupied."
-            ], 422);
-        }
-
         try {
-            // Create placement record using DB::table instead of Eloquent create()
-            // This works better with composite primary keys
-            $placementData = [
-                'student_id' => $student->id,
-                'internship_id' => $validated['internship_id'],
-                'status' => 'approved',
-                'compatibility_score' => $validated['compatibility_score'],
-                'placement_date' => now(),
-                'created_at' => now(),
-                'updated_at' => now(),
-            ];
-
-            // Log the placement data being inserted
-            Log::info('Placement data to be inserted:', $placementData);
-            
-            // Ensure all required fields are present and properly formatted
-            if (!isset($placementData['student_id']) || !isset($placementData['internship_id']) || !isset($placementData['compatibility_score'])) {
-                throw new \Exception('Missing required placement data fields');
-            }
-
-            // Ensure data types are correct
-            if (!is_numeric($placementData['compatibility_score']) || $placementData['compatibility_score'] < 0 || $placementData['compatibility_score'] > 100) {
-                throw new \Exception('Invalid compatibility score');
-            }
-
-            if (!is_numeric($placementData['student_id']) || !is_numeric($placementData['internship_id'])) {
-                throw new \Exception('Invalid student or internship ID');
-            }
-            
-            Log::info('Attempting to create placement with data:', $placementData);
-            
-            $inserted = DB::table('student_placements')->insert($placementData);
-            
-            if (!$inserted) {
-                throw new \Exception('Failed to insert placement record');
-            }
-            
-            Log::info('Placement record inserted successfully');
-            
-            // Get the created placement for response
-            $placement = StudentPlacement::where('student_id', $student->id)
-                                ->where('internship_id', $validated['internship_id'])
-                                ->first();
-
-            if (!$placement) {
-                throw new \Exception('Placement record was inserted but could not be retrieved');
-            }
-
-            Log::info('Placement created successfully', ['placement_id' => $placement->getAttributes()]);
-
-            // Update student status
-            $studentUpdated = $student->update(['is_placed' => true]);
-            if (!$studentUpdated) {
-                throw new \Exception('Failed to update student status');
-            }
-            Log::info('Student status updated');
-
-            // Update the corresponding student_match record status to 'approved'
+            // Update the corresponding student_match record endorsement status to 'endorsed'
             $studentMatchUpdated = StudentMatch::where('student_id', $student->id)
                 ->where('internship_id', $validated['internship_id'])
-                ->update(['status' => 'approved']);
+                ->update(['endorsement_status' => 'endorsed']);
+
+            // Create endorsement record
+            $endorsement = Endorsement::create([
+                'student_id' => $student->id,
+                'internship_id' => $validated['internship_id'],
+                'status' => 'endorsed',
+                'compatibility_score' => $validated['compatibility_score'],
+                'endorsement_date' => now(),
+            ]);
             
             if ($studentMatchUpdated) {
-                Log::info('Student match status updated to approved');
+                Log::info('Student match status updated to endorsed');
             } else {
                 Log::warning('Student match status update failed or no matching record found');
             }
 
-            // Note: slot_count is not decremented as it represents total available slots
-            // Available slots are calculated dynamically as slot_count - current_approved_placements
-            Log::info('Placement approved successfully', ['available_slots_remaining' => $internship->slot_count - ($currentApprovedPlacements + 1)]);
+            Log::info('Student endorsed successfully', [
+                'student_id' => $student->id,
+                'internship_id' => $validated['internship_id'],
+                'endorsement_id' => $endorsement->id,
+                'compatibility_score' => $validated['compatibility_score']
+            ]);
 
         } catch (\Illuminate\Database\QueryException $e) {
-            Log::error('Database error in placement approval', [
+            Log::error('Database error in student endorsement', [
                 'error' => $e->getMessage(),
                 'sql' => $e->getSql(),
                 'bindings' => $e->getBindings(),
@@ -867,7 +808,7 @@ class StudentController extends Controller
             // Check for specific database errors
             if ($e->getCode() == 23000) { // Integrity constraint violation
                 return response()->json([
-                    'message' => 'Placement already exists for this student and internship'
+                    'message' => 'Endorsement already exists for this student and internship'
                 ], 400);
             }
             
@@ -875,7 +816,7 @@ class StudentController extends Controller
                 'message' => 'Database error: ' . $e->getMessage()
             ], 500);
         } catch (\Exception $e) {
-            Log::error('Error in placement approval', [
+            Log::error('Error in student endorsement', [
                 'error' => $e->getMessage(),
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
@@ -883,20 +824,20 @@ class StudentController extends Controller
             ]);
             
             return response()->json([
-                'message' => 'Error creating placement: ' . $e->getMessage()
+                'message' => 'Error creating endorsement: ' . $e->getMessage()
             ], 500);
         }
 
         return response()->json([
-            'message' => 'Student placement approved successfully',
-            'placement' => [
-                'id' => $placement->id,
-                'student_id' => $placement->student_id,
-                'internship_id' => $placement->internship_id,
-                'status' => $placement->status,
-                'compatibility_score' => $placement->compatibility_score,
-                'placement_date' => $placement->placement_date,
-                'created_at' => $placement->created_at,
+            'message' => 'Student endorsed successfully',
+            'endorsement' => [
+                'id' => $endorsement->id,
+                'student_id' => $endorsement->student_id,
+                'internship_id' => $endorsement->internship_id,
+                'status' => $endorsement->status,
+                'compatibility_score' => $endorsement->compatibility_score,
+                'endorsement_date' => $endorsement->endorsement_date,
+                'created_at' => $endorsement->created_at,
             ]
         ]);
     }
@@ -1282,7 +1223,7 @@ class StudentController extends Controller
     /**
      * Approve multiple student placements with efficiency checks
      */
-    public function approveBatchPlacements(Request $request)
+    public function endorseBatchStudents(Request $request)
     {
         $validated = $request->validate([
             'student_ids' => 'required|array',
@@ -1296,9 +1237,9 @@ class StudentController extends Controller
         // Note: Removed inefficient slots check as it was preventing valid placements
         // The individual slot availability checks below handle this properly
         
-        // Check if all students can be placed (no conflicts)
+        // Check if all students can be endorsed (no conflicts)
         $errors = [];
-        $successfulPlacements = [];
+        $successfulEndorsements = [];
         
         // Process students in batches to handle slot competition properly
         // First, collect all students and their target matches
@@ -1314,6 +1255,16 @@ class StudentController extends Controller
             $existingPlacement = StudentPlacement::where('student_id', $student->id)->first();
             if ($existingPlacement) {
                 $errors[] = "Student {$student->first_name} {$student->last_name} already has a placement";
+                continue;
+            }
+            
+            // Check if student already has an endorsement for this internship
+            $existingEndorsement = Endorsement::where('student_id', $student->id)
+                ->where('internship_id', $internshipFilter ?? 'any')
+                ->where('status', 'endorsed')
+                ->first();
+            if ($existingEndorsement) {
+                $errors[] = "Student {$student->first_name} {$student->last_name} already has an endorsement for this internship";
                 continue;
             }
             
@@ -1384,28 +1335,21 @@ class StudentController extends Controller
                     $bestMatch = $studentMatch['best_match'];
                     
                     try {
-                        // Create placement record
-                        $placementData = [
-                            'student_id' => $student->id,
-                            'internship_id' => $internship->id,
-                            'status' => 'approved',
-                            'compatibility_score' => $bestMatch->compatibility_score,
-                            'placement_date' => now(),
-                            'created_at' => now(),
-                            'updated_at' => now(),
-                        ];
-                        
-                        DB::table('student_placements')->insert($placementData);
-                        
-                        // Update student status
-                        $student->update(['is_placed' => true]);
-                        
-                        // Update the corresponding student_match record status to 'approved'
+                        // Update the corresponding student_match record endorsement status to 'endorsed'
                         StudentMatch::where('student_id', $student->id)
                             ->where('internship_id', $internship->id)
-                            ->update(['status' => 'approved']);
+                            ->update(['endorsement_status' => 'endorsed']);
+
+                        // Create endorsement record
+                        $endorsement = Endorsement::create([
+                            'student_id' => $student->id,
+                            'internship_id' => $internship->id,
+                            'status' => 'endorsed',
+                            'compatibility_score' => $bestMatch->compatibility_score,
+                            'endorsement_date' => now(),
+                        ]);
                         
-                        $successfulPlacements[] = [
+                        $successfulEndorsements[] = [
                             'student_id' => $student->id,
                             'student_name' => "{$student->first_name} {$student->last_name}",
                             'internship_title' => $internship->position_title,
@@ -1460,28 +1404,21 @@ class StudentController extends Controller
                     $fallbackInternship = $bestAvailableMatch->internship;
                     
                     try {
-                        // Create placement record
-                        $placementData = [
-                            'student_id' => $student->id,
-                            'internship_id' => $fallbackInternship->id,
-                            'status' => 'approved',
-                            'compatibility_score' => $bestAvailableMatch->compatibility_score,
-                            'placement_date' => now(),
-                            'created_at' => now(),
-                            'updated_at' => now(),
-                        ];
-                        
-                        DB::table('student_placements')->insert($placementData);
-                        
-                        // Update student status
-                        $student->update(['is_placed' => true]);
-                        
-                        // Update the corresponding student_match record status to 'approved'
+                        // Update the corresponding student_match record endorsement status to 'endorsed'
                         StudentMatch::where('student_id', $student->id)
                             ->where('internship_id', $fallbackInternship->id)
-                            ->update(['status' => 'approved']);
+                            ->update(['endorsement_status' => 'endorsed']);
                         
-                        $successfulPlacements[] = [
+                        // Create endorsement record
+                        $endorsement = Endorsement::create([
+                            'student_id' => $student->id,
+                            'internship_id' => $fallbackInternship->id,
+                            'status' => 'endorsed',
+                            'compatibility_score' => $bestAvailableMatch->compatibility_score,
+                            'endorsement_date' => now(),
+                        ]);
+                        
+                        $successfulEndorsements[] = [
                             'student_id' => $student->id,
                             'student_name' => "{$student->first_name} {$student->last_name}",
                             'internship_title' => $fallbackInternship->position_title,
@@ -1501,28 +1438,22 @@ class StudentController extends Controller
                     $internship = $bestMatch->internship;
                     
                     try {
-                        // Create placement record
-                        $placementData = [
-                            'student_id' => $student->id,
-                            'internship_id' => $internship->id,
-                            'status' => 'approved',
-                            'compatibility_score' => $bestMatch->compatibility_score,
-                            'placement_date' => now(),
-                            'created_at' => now(),
-                            'updated_at' => now(),
-                        ];
                         
-                        DB::table('student_placements')->insert($placementData);
-                        
-                        // Update student status
-                        $student->update(['is_placed' => true]);
-                        
-                        // Update the corresponding student_match record status to 'approved'
+                        // Update the corresponding student_match record endorsement status to 'endorsed'
                         StudentMatch::where('student_id', $student->id)
                             ->where('internship_id', $internship->id)
-                            ->update(['status' => 'approved']);
+                            ->update(['endorsement_status' => 'endorsed']);
+
+                        // Create endorsement record
+                        Endorsement::create([
+                            'student_id' => $student->id,
+                            'internship_id' => $internship->id,
+                            'status' => 'endorsed',
+                            'compatibility_score' => $bestMatch->compatibility_score,
+                            'endorsement_date' => now(),
+                        ]);
                         
-                        $successfulPlacements[] = [
+                        $successfulEndorsements[] = [
                             'student_id' => $student->id,
                             'student_name' => "{$student->first_name} {$student->last_name}",
                             'internship_title' => $internship->position_title,
@@ -1537,26 +1468,68 @@ class StudentController extends Controller
             }
         }
         
-        if (empty($successfulPlacements)) {
+        if (empty($successfulEndorsements)) {
             return response()->json([
-                'message' => 'No placements were approved due to errors: ' . implode(', ', $errors),
+                'message' => 'No endorsements were created due to errors: ' . implode(', ', $errors),
                 'type' => 'all_failed'
             ], 400);
         }
         
-        $responseMessage = "Successfully approved " . count($successfulPlacements) . " placement(s).";
+        $responseMessage = "Successfully endorsed " . count($successfulEndorsements) . " student(s).";
         if (!empty($errors)) {
             $responseMessage .= " Errors: " . implode(', ', $errors);
         }
         
         return response()->json([
             'message' => $responseMessage,
-            'successful_placements' => $successfulPlacements,
+            'successful_endorsements' => $successfulEndorsements,
             'errors' => $errors,
             'total_requested' => count($studentIds),
-            'total_approved' => count($successfulPlacements),
+            'total_endorsed' => count($successfulEndorsements),
             'total_errors' => count($errors)
         ]);
+    }
+
+    /**
+     * Reject student endorsement
+     */
+    public function rejectEndorsement(Request $request, Student $student)
+    {
+        $validated = $request->validate([
+            'internship_id' => 'required|exists:internships,id',
+        ]);
+
+        try {
+            // Update the corresponding student_match record endorsement status to 'rejected'
+            $studentMatchUpdated = StudentMatch::where('student_id', $student->id)
+                ->where('internship_id', $validated['internship_id'])
+                ->update(['endorsement_status' => 'rejected']);
+
+            if (!$studentMatchUpdated) {
+                return response()->json(['error' => 'Student match not found'], 404);
+            }
+
+            // Create endorsement record
+            Endorsement::create([
+                'student_id' => $student->id,
+                'internship_id' => $validated['internship_id'],
+                'status' => 'rejected',
+                'compatibility_score' => 0, // Set to 0 for rejected endorsements
+                'endorsement_date' => now(),
+            ]);
+
+            return response()->json([
+                'message' => 'Student endorsement rejected successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('SIP Student Rejection Error:', [
+                'error' => $e->getMessage(),
+                'student_id' => $student->id,
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json(['error' => 'An error occurred while rejecting the student'], 500);
+        }
     }
 
 

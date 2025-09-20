@@ -71,4 +71,12 @@ class Student extends Model
         return $this->belongsTo(StudentPlacement::class, 'id', 'student_id')
             ->where('status', 'approved');
     }
+
+    /**
+     * Get endorsements for this student
+     */
+    public function endorsements(): HasMany
+    {
+        return $this->hasMany(Endorsement::class);
+    }
 }

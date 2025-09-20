@@ -12,6 +12,10 @@ use App\Models\Internship;
 use App\Models\SubcategoryWeight;
 use App\Models\Category;
 use App\Models\SubCategory;
+use App\Models\StudentMatch;
+use App\Models\StudentPlacement;
+use App\Models\Student;
+use App\Models\Endorsement;
 use Inertia\Inertia;
 
 class HTEController extends Controller
@@ -761,6 +765,222 @@ class HTEController extends Controller
                 'trace' => $e->getTraceAsString()
             ]);
             return redirect()->back()->withErrors(['error' => 'An error occurred while updating the internship status. Please try again.']);
+        }
+    }
+
+
+    /**
+     * Show HTE endorsement table for endorsed students
+     */
+    public function showEndorsementTable(Request $request)
+    {
+        $user = Auth::user();
+        $hte = $user->hte;
+        
+        if (!$hte) {
+            return redirect()->route('form');
+        }
+
+        // Check if HTE has submitted the assessment form
+        if (!$hte->is_submit) {
+            return redirect()->back()->withErrors(['error' => 'Please complete the assessment form first before managing endorsements.']);
+        }
+
+        // Get HTE's internships
+        $internships = $hte->internships()->active()->get();
+        
+        // Get endorsed students for this HTE's internships
+        // Only show students who haven't been approved/rejected by HTE yet
+        $endorsements = Endorsement::with(['student', 'internship'])
+            ->whereIn('internship_id', $internships->pluck('id'))
+            ->where('status', 'endorsed')
+            ->get()
+            ->filter(function($endorsement) {
+                // Check if the student's placement status is still pending for this internship
+                $studentMatch = \App\Models\StudentMatch::where('student_id', $endorsement->student_id)
+                    ->where('internship_id', $endorsement->internship_id)
+                    ->where('placement_status', 'pending')
+                    ->first();
+                return $studentMatch !== null;
+            });
+
+        // Transform endorsements for frontend
+        $transformedEndorsements = $endorsements->map(function($endorsement) {
+            return [
+                'id' => $endorsement->id,
+                'student' => [
+                    'id' => $endorsement->student->id,
+                    'student_number' => $endorsement->student->student_number,
+                    'first_name' => $endorsement->student->first_name,
+                    'last_name' => $endorsement->student->last_name,
+                    'middle_name' => $endorsement->student->middle_name,
+                    'specialization' => $endorsement->student->specialization,
+                ],
+                'internship' => [
+                    'id' => $endorsement->internship->id,
+                    'position' => $endorsement->internship->position_title,
+                    'department' => $endorsement->internship->department,
+                    'company_name' => $endorsement->internship->hte->company_name,
+                    'hte_id' => $endorsement->internship->hte_id,
+                ],
+                'compatibility_score' => $endorsement->compatibility_score,
+                'endorsement_date' => $endorsement->endorsement_date,
+            ];
+        });
+
+        return Inertia::render('hte/EndorsementTable', [
+            'endorsements' => $transformedEndorsements,
+            'internships' => $internships->map(function($internship) {
+                return [
+                    'id' => $internship->id,
+                    'position' => $internship->position_title,
+                    'department' => $internship->department,
+                    'company_name' => $internship->hte->company_name,
+                    'hte_id' => $internship->hte_id,
+                ];
+            }),
+            'hteId' => $hte->id,
+        ]);
+    }
+
+    /**
+     * Approve endorsed student
+     */
+    public function approveEndorsement(Request $request, $endorsementId)
+    {
+        $user = Auth::user();
+        $hte = $user->hte;
+        
+        if (!$hte) {
+            return response()->json(['error' => 'HTE not found'], 404);
+        }
+
+        try {
+            // Get the endorsement
+            $endorsement = Endorsement::with(['student', 'internship'])
+                ->where('id', $endorsementId)
+                ->whereIn('internship_id', $hte->internships()->pluck('id'))
+                ->first();
+
+            if (!$endorsement) {
+                return redirect()->back()->withErrors(['error' => 'Endorsement not found or access denied']);
+            }
+
+            // Check if student already has a placement
+            $existingPlacement = StudentPlacement::where('student_id', $endorsement->student_id)->first();
+            if ($existingPlacement) {
+                return redirect()->back()->withErrors(['error' => 'Student already has a placement']);
+            }
+
+            // Check if internship has available slots
+            $currentApprovedPlacements = StudentPlacement::where('internship_id', $endorsement->internship_id)
+                ->where('status', 'approved')
+                ->count();
+
+            if ($currentApprovedPlacements >= $endorsement->internship->slot_count) {
+                return redirect()->back()->withErrors(['error' => 'No available slots for this internship']);
+            }
+
+            // Create placement record
+            $placement = StudentPlacement::create([
+                'student_id' => $endorsement->student_id,
+                'internship_id' => $endorsement->internship_id,
+                'status' => 'approved',
+                'compatibility_score' => $endorsement->compatibility_score,
+                'placement_date' => now(),
+            ]);
+
+            // Update student status
+            $endorsement->student->update(['is_placed' => true]);
+
+            // Update the corresponding student_match record placement status to 'approved'
+            StudentMatch::where('student_id', $endorsement->student_id)
+                ->where('internship_id', $endorsement->internship_id)
+                ->update(['placement_status' => 'approved']);
+
+            // Don't update endorsement status - it should remain 'endorsed' from SIP
+            // The placement_status in student_matches is what matters for HTE approval
+
+            return redirect()->back()->with('success', 'Student placement approved successfully');
+
+        } catch (\Exception $e) {
+            Log::error('HTE Endorsement Approval Error:', [
+                'error' => $e->getMessage(),
+                'endorsement_id' => $endorsementId,
+                'hte_id' => $hte->id,
+                'trace' => $e->getTraceAsString()
+            ]);
+            return redirect()->back()->withErrors(['error' => 'An error occurred while approving the student']);
+        }
+    }
+
+    /**
+     * Reject endorsed student and move to next highest compatibility HTE
+     */
+    public function rejectEndorsement(Request $request, $endorsementId)
+    {
+        $user = Auth::user();
+        $hte = $user->hte;
+        
+        if (!$hte) {
+            return redirect()->back()->withErrors(['error' => 'HTE not found']);
+        }
+
+        try {
+            // Get the endorsement
+            $endorsement = Endorsement::with(['student', 'internship'])
+                ->where('id', $endorsementId)
+                ->whereIn('internship_id', $hte->internships()->pluck('id'))
+                ->first();
+
+            if (!$endorsement) {
+                return redirect()->back()->withErrors(['error' => 'Endorsement not found or access denied']);
+            }
+
+            // Update endorsement status to rejected
+            $endorsement->update(['status' => 'rejected']);
+
+            // Update the corresponding student_match record placement status to 'rejected'
+            StudentMatch::where('student_id', $endorsement->student_id)
+                ->where('internship_id', $endorsement->internship_id)
+                ->update(['placement_status' => 'rejected']);
+
+            // Find the student's next highest compatibility HTE
+            $nextMatch = StudentMatch::with(['internship.hte'])
+                ->where('student_id', $endorsement->student_id)
+                ->where('placement_status', 'pending')
+                ->where('endorsement_status', 'endorsed')
+                ->orderBy('rank')
+                ->first();
+
+            if ($nextMatch) {
+                // Create new endorsement for the next highest compatibility HTE
+                Endorsement::create([
+                    'student_id' => $endorsement->student_id,
+                    'internship_id' => $nextMatch->internship_id,
+                    'status' => 'endorsed',
+                    'compatibility_score' => $nextMatch->compatibility_score,
+                    'endorsement_date' => now(),
+                ]);
+
+                Log::info('Student moved to next highest compatibility HTE:', [
+                    'student_id' => $endorsement->student_id,
+                    'old_internship_id' => $endorsement->internship_id,
+                    'new_internship_id' => $nextMatch->internship_id,
+                    'new_hte_id' => $nextMatch->internship->hte_id,
+                ]);
+            }
+
+            return redirect()->back()->with('success', 'Student rejected and moved to next highest compatibility HTE');
+
+        } catch (\Exception $e) {
+            Log::error('HTE Endorsement Rejection Error:', [
+                'error' => $e->getMessage(),
+                'endorsement_id' => $endorsementId,
+                'hte_id' => $hte->id,
+                'trace' => $e->getTraceAsString()
+            ]);
+            return redirect()->back()->withErrors(['error' => 'An error occurred while rejecting the student']);
         }
     }
 }

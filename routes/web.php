@@ -74,7 +74,7 @@ Route::middleware(['auth', 'verified', 'role:admin'])->group(function () {
     // Specific student routes (must come before parameterized routes)
     Route::get('student/matched', [StudentController::class, 'getMatchedStudents'])->name('student-matched');
     Route::post('student/check-batch-conflicts', [StudentController::class, 'checkBatchPlacementConflicts'])->name('student.check-batch-conflicts');
-    Route::post('student/batch-approve-placements', [StudentController::class, 'approveBatchPlacements'])->name('student.batch-approve-placements');
+    Route::post('student/batch-endorse', [StudentController::class, 'endorseBatchStudents'])->name('student.batch-endorse');
     Route::get('student/placed', [StudentController::class, 'getPlacedStudents'])->name('student-placed');
 
     // Parameterized student routes (must come after specific routes)
@@ -84,7 +84,7 @@ Route::middleware(['auth', 'verified', 'role:admin'])->group(function () {
     Route::patch('student/{student}/restore', [StudentController::class, 'restore'])->name('student.restore');
     Route::get('student/{student}/compatibility-scores', [StudentController::class, 'getStudentCompatibilityScores'])->name('student.compatibility-scores');
     Route::get('student/{student}/details', [StudentController::class, 'getStudentDetails'])->name('student.details');
-    Route::post('student/{student}/approve-placement', [StudentController::class, 'approvePlacement'])->name('student.approve-placement');
+    Route::post('student/{student}/endorse', [StudentController::class, 'endorseStudent'])->name('student.endorse');
     Route::post('student/{student}/reject-placement', [StudentController::class, 'rejectPlacement'])->name('student.reject-placement');
 
     // Unverified user routes
@@ -102,6 +102,9 @@ Route::middleware(['auth', 'verified', 'role:admin'])->group(function () {
     Route::get('report', [App\Http\Controllers\AdminController::class, 'report'])->name('report');
     Route::get('report/export/pdf', [App\Http\Controllers\AdminController::class, 'exportPDF'])->name('report.export.pdf');
     Route::get('report/export/excel', [App\Http\Controllers\AdminController::class, 'exportExcel'])->name('report.export.excel');
+    
+    // SIP Endorsement Routes
+    Route::post('admin/reject-endorsement/{student}', [App\Http\Controllers\Admin\StudentController::class, 'rejectEndorsement'])->name('admin.reject-endorsement');
 
     // Email test page
     Route::get('email-test', function () {
@@ -127,6 +130,11 @@ Route::middleware(['auth', 'verified', 'role:hte'])->group(function () {
 
     // Toggle Internship Status
     Route::patch('hte/internship/{id}/toggle-status', [App\Http\Controllers\HTEController::class, 'toggleInternshipStatus'])->name('hte.toggle-internship-status');
+
+    // HTE Endorsement routes
+    Route::get('hte/endorsement-table', [App\Http\Controllers\HTEController::class, 'showEndorsementTable'])->name('hte.endorsement-table');
+    Route::post('hte/approve-endorsement/{endorsementId}', [App\Http\Controllers\HTEController::class, 'approveEndorsement'])->name('hte.approve-endorsement');
+    Route::post('hte/reject-endorsement/{endorsementId}', [App\Http\Controllers\HTEController::class, 'rejectEndorsement'])->name('hte.reject-endorsement');
 
 
 

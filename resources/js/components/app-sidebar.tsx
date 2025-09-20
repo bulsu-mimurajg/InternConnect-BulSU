@@ -88,6 +88,7 @@ export function AppSidebar() {
             main: [
                 { title: 'Dashboard', href: '/hte/dashboard', icon: ClipboardIcon },
                 { title: 'Add Internship', href: '/hte/add-internship', icon: PlusIcon },
+                { title: 'Student Endorsements', href: '/hte/endorsement-table', icon: Check },
                 { title: 'Profile', href: '/hte/profile', icon: UserIcon }
             ]
         };
