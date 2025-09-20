@@ -16,7 +16,12 @@ export default function AuthSimpleLayout({ children, title, description, wide = 
                 <div className="flex flex-col gap-8">
                     <div className="flex flex-col items-center gap-4">
                         <Link href={route('home')} className="flex flex-col items-center gap-2 font-medium">
-                            <div className="mb-1 flex h-22 w-22 items-center justify-center rounded-md">
+                            <div className="mb-1 flex h-22 w-auto items-center justify-center gap-4 rounded-md">
+                                <img 
+                                    src="/bulsu_logo_svg.svg" 
+                                    alt="BulSU Logo" 
+                                    className="h-22 w-auto"
+                                />
                                 <AppLogoIcon className="size-22 fill-current text-[var(--foreground)] dark:text-white" />
                             </div>
                             <span className="sr-only">{title}</span>
