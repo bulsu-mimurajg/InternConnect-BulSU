@@ -42,7 +42,7 @@ class LoginRequest extends FormRequest
         $this->ensureIsNotRateLimited();
 
         if (! Auth::attempt($this->only('username', 'password'), $this->boolean('remember'))) {
-            RateLimiter::hit($this->throttleKey());
+            RateLimiter::hit($this->throttleKey(), 3600);
 
             throw ValidationException::withMessages([
                 'username' => __('auth.failed'),
@@ -53,7 +53,7 @@ class LoginRequest extends FormRequest
         $user = Auth::user();
         if ($user && $user->status !== 'verified') {
             Auth::logout();
-            RateLimiter::hit($this->throttleKey());
+            RateLimiter::hit($this->throttleKey(), 3600);
 
             throw ValidationException::withMessages([
                 'username' => 'Your account is not yet verified. Please contact an administrator.',
@@ -70,7 +70,7 @@ class LoginRequest extends FormRequest
      */
     public function ensureIsNotRateLimited(): void
     {
-        if (! RateLimiter::tooManyAttempts($this->throttleKey(), 5)) {
+        if (! RateLimiter::tooManyAttempts($this->throttleKey(), 5, 3600)) {
             return;
         }
 
