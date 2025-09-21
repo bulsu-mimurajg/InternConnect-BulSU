@@ -163,9 +163,8 @@ Route::middleware(['auth', 'verified', 'role:adviser'])->group(function () {
     Route::get('adviser/dashboard', [AdviserController::class, 'dashboard'])->name('adviser.dashboard');
     Route::get('adviser/student-list', [AdviserController::class, 'getStudents'])->name('adviser.student-list');
     Route::get('student-verification', [AdviserController::class, 'index'])->name('student-verification');
-    Route::get('adviser/report', function () {
-        return Inertia::render('adviser/report');
-    })->name('adviser.report');
+    Route::get('adviser/report', [AdviserController::class, 'reports'])->name('adviser.report');
+    Route::post('adviser/generate-report', [AdviserController::class, 'generateReport'])->name('adviser.generate-report');
     Route::post('application/approve', [AdviserController::class, 'approveStudents'])->name('application.approve');
     Route::post('application/reject', [AdviserController::class, 'rejectStudents'])->name('application.reject');
     Route::post('application/remove-access', [AdviserController::class, 'removeStudentAccess'])->name('application.remove-access');

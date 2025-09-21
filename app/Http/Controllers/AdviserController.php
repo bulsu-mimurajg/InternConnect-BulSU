@@ -676,5 +676,611 @@ class AdviserController extends Controller
         return redirect()->back()->with('success', 'Section switched successfully.');
     }
 
+    /**
+     * Display the report generation page for the adviser's section.
+     */
+    public function reports(Request $request): Response
+    {
+        $adviser = Auth::user();
+        
+        // Get the adviser's sections from advisers table
+        $adviserRecord = $adviser->adviser;
+        
+        if (!$adviserRecord) {
+            return Inertia::render('adviser/report', [
+                'adviserSection' => null,
+                'adviserSections' => [],
+                'currentSectionId' => null,
+            ]);
+        }
+
+        // Get all sections assigned to this adviser
+        $adviserSections = $adviserRecord->sections;
+        
+        if ($adviserSections->isEmpty()) {
+            return Inertia::render('adviser/report', [
+                'adviserSection' => null,
+                'adviserSections' => [],
+                'currentSectionId' => null,
+            ]);
+        }
+
+        // Get current section from session or default to first section
+        $currentSectionId = $this->getCurrentSectionId($request, $adviserSections);
+        $currentSection = $adviserSections->where('section_id', $currentSectionId)->first();
+
+        return Inertia::render('adviser/report', [
+            'adviserSection' => $currentSection->section_name ?? null,
+            'adviserSections' => $adviserSections->map(function ($section) {
+                return [
+                    'section_id' => $section->section_id,
+                    'section_name' => $section->section_name,
+                ];
+            }),
+            'currentSectionId' => $currentSectionId,
+        ]);
+    }
+
+    /**
+     * Generate and download a report for the adviser's section.
+     */
+    public function generateReport(Request $request)
+    {
+        $request->validate([
+            'report_type' => 'required|string|in:student-list,assessment-summary,performance-analysis,progress-report,statistical-summary,monthly-report',
+            'format' => 'required|string|in:pdf,excel,csv',
+            'include_charts' => 'boolean',
+            'include_details' => 'boolean',
+            'date_range' => 'required|string|in:all,current-month,last-month,last-3-months,last-6-months,current-year',
+            'section_id' => 'required|integer|exists:sections,section_id'
+        ]);
+
+        $adviser = Auth::user();
+        $adviserRecord = $adviser->adviser;
+        
+        if (!$adviserRecord) {
+            return back()->withErrors(['error' => 'Adviser record not found.']);
+        }
+
+        // Verify the adviser has access to this section
+        $hasAccess = $adviserRecord->sections->contains('section_id', $request->section_id);
+        
+        if (!$hasAccess) {
+            return back()->withErrors(['error' => 'You do not have access to this section.']);
+        }
+
+        $sectionId = $request->section_id;
+        $reportType = $request->report_type;
+        $format = $request->format;
+
+        // Get report data based on type
+        $reportData = $this->getReportData($sectionId, $reportType, $request->date_range);
+
+        // Generate the report based on format
+        switch ($format) {
+            case 'pdf':
+                return $this->generatePdfReport($reportData, $reportType, $request->include_charts, $request->include_details);
+            case 'excel':
+                return $this->generateExcelReport($reportData, $reportType);
+            case 'csv':
+                return $this->generateCsvReport($reportData, $reportType);
+            default:
+                return back()->withErrors(['error' => 'Invalid format specified.']);
+        }
+    }
+
+    /**
+     * Get overview statistics for reports.
+     */
+    private function getOverviewStats($sectionId): array
+    {
+        $totalStudents = User::whereHas('roles', function ($query) {
+                $query->where('name', 'student');
+            })
+            ->whereHas('academeAccounts', function ($query) use ($sectionId) {
+                $query->where('section_id', $sectionId);
+            })
+            ->where('status', '!=', 'archived')
+            ->count();
+
+        $completedAssessments = User::whereHas('roles', function ($query) {
+                $query->where('name', 'student');
+            })
+            ->whereHas('academeAccounts', function ($query) use ($sectionId) {
+                $query->where('section_id', $sectionId);
+            })
+            ->whereHas('student', function ($query) {
+                $query->where('is_submit', true);
+            })
+            ->where('status', '!=', 'archived')
+            ->count();
+
+        $pendingStudents = User::whereHas('roles', function ($query) {
+                $query->where('name', 'student');
+            })
+            ->whereHas('academeAccounts', function ($query) use ($sectionId) {
+                $query->where('section_id', $sectionId);
+            })
+            ->whereDoesntHave('student')
+            ->where('status', '!=', 'archived')
+            ->count();
+
+        $averageScore = StudentScore::whereHas('student.user.academeAccounts', function ($query) use ($sectionId) {
+                $query->where('section_id', $sectionId);
+            })
+            ->avg('score') ?? 0;
+
+        $highestScore = StudentScore::whereHas('student.user.academeAccounts', function ($query) use ($sectionId) {
+                $query->where('section_id', $sectionId);
+            })
+            ->max('score') ?? 0;
+
+        $lowestScore = StudentScore::whereHas('student.user.academeAccounts', function ($query) use ($sectionId) {
+                $query->where('section_id', $sectionId);
+            })
+            ->min('score') ?? 0;
+
+        return [
+            'totalStudents' => $totalStudents,
+            'completedAssessments' => $completedAssessments,
+            'pendingStudents' => $pendingStudents,
+            'completionRate' => $totalStudents > 0 ? round(($completedAssessments / $totalStudents) * 100, 1) : 0,
+            'averageScore' => round($averageScore, 2),
+            'highestScore' => round($highestScore, 2),
+            'lowestScore' => round($lowestScore, 2),
+            'scoreRange' => round($highestScore - $lowestScore, 2),
+        ];
+    }
+
+    /**
+     * Get assessment analytics data.
+     */
+    private function getAssessmentAnalytics($sectionId): array
+    {
+        $students = User::whereHas('roles', function ($query) {
+                $query->where('name', 'student');
+            })
+            ->whereHas('academeAccounts', function ($query) use ($sectionId) {
+                $query->where('section_id', $sectionId);
+            })
+            ->whereHas('student', function ($query) {
+                $query->where('is_submit', true);
+            })
+            ->where('status', '!=', 'archived')
+            ->with(['student.scores'])
+            ->get();
+
+        $scoreDistribution = [
+            'excellent' => 0, // 90-100%
+            'good' => 0,      // 80-89%
+            'average' => 0,   // 70-79%
+            'below_average' => 0, // 60-69%
+            'poor' => 0       // Below 60%
+        ];
+
+        $totalScores = [];
+        
+        foreach ($students as $user) {
+            $student = $user->student;
+            $totalScore = $student->scores->sum('score');
+            $maxPossibleScore = $student->scores->count() * 5;
+            $percentage = $maxPossibleScore > 0 ? round(($totalScore / $maxPossibleScore) * 100, 1) : 0;
+            
+            $totalScores[] = $percentage;
+            
+            if ($percentage >= 90) {
+                $scoreDistribution['excellent']++;
+            } elseif ($percentage >= 80) {
+                $scoreDistribution['good']++;
+            } elseif ($percentage >= 70) {
+                $scoreDistribution['average']++;
+            } elseif ($percentage >= 60) {
+                $scoreDistribution['below_average']++;
+            } else {
+                $scoreDistribution['poor']++;
+            }
+        }
+
+        return [
+            'scoreDistribution' => $scoreDistribution,
+            'totalScores' => $totalScores,
+            'medianScore' => count($totalScores) > 0 ? round($this->array_median($totalScores), 2) : 0,
+            'standardDeviation' => count($totalScores) > 1 ? round($this->array_standard_deviation($totalScores), 2) : 0,
+        ];
+    }
+
+    /**
+     * Get category breakdown data.
+     */
+    private function getCategoryBreakdown($sectionId): array
+    {
+        $categoryScores = StudentScore::whereHas('student.user.academeAccounts', function ($query) use ($sectionId) {
+                $query->where('section_id', $sectionId);
+            })
+            ->with(['subcategory.category'])
+            ->get()
+            ->groupBy('subcategory.category.category_name')
+            ->map(function ($scores, $categoryName) {
+                return [
+                    'category' => $categoryName,
+                    'averageScore' => round($scores->avg('score'), 2),
+                    'totalQuestions' => $scores->count(),
+                    'maxPossibleScore' => $scores->count() * 5,
+                    'percentage' => round(($scores->avg('score') / 5) * 100, 1),
+                ];
+            })
+            ->values()
+            ->toArray();
+
+        return $categoryScores;
+    }
+
+    /**
+     * Get student progress data.
+     */
+    private function getStudentProgress($sectionId): array
+    {
+        return User::whereHas('roles', function ($query) {
+                $query->where('name', 'student');
+            })
+            ->whereHas('academeAccounts', function ($query) use ($sectionId) {
+                $query->where('section_id', $sectionId);
+            })
+            ->where('status', '!=', 'archived')
+            ->with(['student.scores.subcategory.category'])
+            ->get()
+            ->map(function ($user) {
+                $student = $user->student;
+                $hasAssessment = $student && $student->is_submit;
+                
+                if ($hasAssessment) {
+                    $totalScore = $student->scores->sum('score');
+                    $maxPossibleScore = $student->scores->count() * 5;
+                    $percentage = $maxPossibleScore > 0 ? round(($totalScore / $maxPossibleScore) * 100, 1) : 0;
+                    
+                    return [
+                        'id' => $user->id,
+                        'username' => $user->username,
+                        'name' => $student->first_name . ' ' . $student->last_name,
+                        'status' => $user->status,
+                        'hasAssessment' => true,
+                        'score' => $totalScore,
+                        'percentage' => $percentage,
+                        'submittedAt' => $student->updated_at->format('M d, Y'),
+                        'rank' => 0, // Will be calculated on frontend
+                    ];
+                } else {
+                    return [
+                        'id' => $user->id,
+                        'username' => $user->username,
+                        'name' => $student ? ($student->first_name . ' ' . $student->last_name) : 'Pending',
+                        'status' => $user->status,
+                        'hasAssessment' => false,
+                        'score' => 0,
+                        'percentage' => 0,
+                        'submittedAt' => null,
+                        'rank' => 0,
+                    ];
+                }
+            })
+            ->sortByDesc('percentage')
+            ->values()
+            ->map(function ($student, $index) {
+                $student['rank'] = $index + 1;
+                return $student;
+            })
+            ->toArray();
+    }
+
+    /**
+     * Get monthly trends data.
+     */
+    private function getMonthlyTrends($sectionId): array
+    {
+        // Get assessment submissions by month for the last 6 months
+        $months = [];
+        $submissions = [];
+        
+        for ($i = 5; $i >= 0; $i--) {
+            $date = now()->subMonths($i);
+            $monthName = $date->format('M Y');
+            
+            $count = User::whereHas('roles', function ($query) {
+                    $query->where('name', 'student');
+                })
+                ->whereHas('academeAccounts', function ($query) use ($sectionId) {
+                    $query->where('section_id', $sectionId);
+                })
+                ->whereHas('student', function ($query) use ($date) {
+                    $query->where('is_submit', true)
+                          ->whereMonth('updated_at', $date->month)
+                          ->whereYear('updated_at', $date->year);
+                })
+                ->where('status', '!=', 'archived')
+                ->count();
+            
+            $months[] = $monthName;
+            $submissions[] = $count;
+        }
+
+        return [
+            'months' => $months,
+            'submissions' => $submissions,
+        ];
+    }
+
+    /**
+     * Calculate median of an array.
+     */
+    private function array_median($array)
+    {
+        sort($array);
+        $count = count($array);
+        $middle = floor($count / 2);
+        
+        if ($count % 2 == 0) {
+            return ($array[$middle - 1] + $array[$middle]) / 2;
+        } else {
+            return $array[$middle];
+        }
+    }
+
+    /**
+     * Calculate standard deviation of an array.
+     */
+    private function array_standard_deviation($array)
+    {
+        $count = count($array);
+        if ($count <= 1) return 0;
+        
+        $mean = array_sum($array) / $count;
+        $variance = 0;
+        
+        foreach ($array as $value) {
+            $variance += pow($value - $mean, 2);
+        }
+        
+        return sqrt($variance / ($count - 1));
+    }
+
+    /**
+     * Get report data based on report type and date range.
+     */
+    private function getReportData($sectionId, $reportType, $dateRange)
+    {
+        $dateFilter = $this->getDateFilter($dateRange);
+        
+        switch ($reportType) {
+            case 'student-list':
+                return $this->getStudentListData($sectionId, $dateFilter);
+            case 'assessment-summary':
+                return $this->getAssessmentSummaryData($sectionId, $dateFilter);
+            case 'performance-analysis':
+                return $this->getPerformanceAnalysisData($sectionId, $dateFilter);
+            case 'progress-report':
+                return $this->getProgressReportData($sectionId, $dateFilter);
+            case 'statistical-summary':
+                return $this->getStatisticalSummaryData($sectionId, $dateFilter);
+            case 'monthly-report':
+                return $this->getMonthlyReportData($sectionId, $dateFilter);
+            default:
+                return [];
+        }
+    }
+
+    /**
+     * Get date filter for reports.
+     */
+    private function getDateFilter($dateRange)
+    {
+        switch ($dateRange) {
+            case 'current-month':
+                return [
+                    'start' => now()->startOfMonth(),
+                    'end' => now()->endOfMonth()
+                ];
+            case 'last-month':
+                return [
+                    'start' => now()->subMonth()->startOfMonth(),
+                    'end' => now()->subMonth()->endOfMonth()
+                ];
+            case 'last-3-months':
+                return [
+                    'start' => now()->subMonths(3)->startOfMonth(),
+                    'end' => now()->endOfMonth()
+                ];
+            case 'last-6-months':
+                return [
+                    'start' => now()->subMonths(6)->startOfMonth(),
+                    'end' => now()->endOfMonth()
+                ];
+            case 'current-year':
+                return [
+                    'start' => now()->startOfYear(),
+                    'end' => now()->endOfYear()
+                ];
+            default: // 'all'
+                return null;
+        }
+    }
+
+    /**
+     * Get student list data for reports.
+     */
+    private function getStudentListData($sectionId, $dateFilter)
+    {
+        $query = User::whereHas('roles', function ($query) {
+                $query->where('name', 'student');
+            })
+            ->whereHas('academeAccounts', function ($query) use ($sectionId) {
+                $query->where('section_id', $sectionId);
+            })
+            ->where('status', '!=', 'archived')
+            ->with(['academeAccounts.section', 'student.scores.subcategory.category']);
+
+        if ($dateFilter) {
+            $query->whereHas('student', function ($query) use ($dateFilter) {
+                $query->whereBetween('updated_at', [$dateFilter['start'], $dateFilter['end']]);
+            });
+        }
+
+        return $query->get()->map(function ($user) {
+            $student = $user->student;
+            $hasAssessment = $student && $student->is_submit;
+            
+            return [
+                'username' => $user->username,
+                'email' => $user->email,
+                'name' => $student ? ($student->first_name . ' ' . $student->last_name) : 'Pending',
+                'status' => $user->status,
+                'section' => $user->academeAccounts->first()->section->section_name ?? '',
+                'hasAssessment' => $hasAssessment,
+                'assessmentScore' => $hasAssessment ? $student->scores->sum('score') : 0,
+                'assessmentPercentage' => $hasAssessment ? round(($student->scores->sum('score') / ($student->scores->count() * 5)) * 100, 1) : 0,
+                'submittedAt' => $hasAssessment ? $student->updated_at->format('Y-m-d H:i:s') : null,
+            ];
+        })->toArray();
+    }
+
+    /**
+     * Get assessment summary data for reports.
+     */
+    private function getAssessmentSummaryData($sectionId, $dateFilter)
+    {
+        $overviewStats = $this->getOverviewStats($sectionId);
+        $assessmentAnalytics = $this->getAssessmentAnalytics($sectionId);
+        
+        return [
+            'overview' => $overviewStats,
+            'analytics' => $assessmentAnalytics,
+            'generated_at' => now()->format('Y-m-d H:i:s'),
+        ];
+    }
+
+    /**
+     * Get performance analysis data for reports.
+     */
+    private function getPerformanceAnalysisData($sectionId, $dateFilter)
+    {
+        $categoryBreakdown = $this->getCategoryBreakdown($sectionId);
+        $studentProgress = $this->getStudentProgress($sectionId);
+        
+        return [
+            'categoryBreakdown' => $categoryBreakdown,
+            'topPerformers' => array_slice($studentProgress, 0, 10),
+            'generated_at' => now()->format('Y-m-d H:i:s'),
+        ];
+    }
+
+    /**
+     * Get progress report data for reports.
+     */
+    private function getProgressReportData($sectionId, $dateFilter)
+    {
+        $studentProgress = $this->getStudentProgress($sectionId);
+        $overviewStats = $this->getOverviewStats($sectionId);
+        
+        return [
+            'students' => $studentProgress,
+            'overview' => $overviewStats,
+            'generated_at' => now()->format('Y-m-d H:i:s'),
+        ];
+    }
+
+    /**
+     * Get statistical summary data for reports.
+     */
+    private function getStatisticalSummaryData($sectionId, $dateFilter)
+    {
+        $overviewStats = $this->getOverviewStats($sectionId);
+        $assessmentAnalytics = $this->getAssessmentAnalytics($sectionId);
+        $categoryBreakdown = $this->getCategoryBreakdown($sectionId);
+        
+        return [
+            'overview' => $overviewStats,
+            'analytics' => $assessmentAnalytics,
+            'categories' => $categoryBreakdown,
+            'generated_at' => now()->format('Y-m-d H:i:s'),
+        ];
+    }
+
+    /**
+     * Get monthly report data for reports.
+     */
+    private function getMonthlyReportData($sectionId, $dateFilter)
+    {
+        $monthlyTrends = $this->getMonthlyTrends($sectionId);
+        $overviewStats = $this->getOverviewStats($sectionId);
+        
+        return [
+            'trends' => $monthlyTrends,
+            'overview' => $overviewStats,
+            'generated_at' => now()->format('Y-m-d H:i:s'),
+        ];
+    }
+
+    /**
+     * Generate PDF report.
+     */
+    private function generatePdfReport($reportData, $reportType, $includeCharts, $includeDetails)
+    {
+        // For now, return a simple response
+        // In a real implementation, you would use a PDF library like DomPDF or TCPDF
+        $filename = $reportType . '_report_' . now()->format('Y-m-d_H-i-s') . '.pdf';
+        
+        return response()->json([
+            'message' => 'PDF report generation not yet implemented',
+            'filename' => $filename,
+            'data' => $reportData
+        ]);
+    }
+
+    /**
+     * Generate Excel report.
+     */
+    private function generateExcelReport($reportData, $reportType)
+    {
+        // For now, return a simple response
+        // In a real implementation, you would use a library like Laravel Excel
+        $filename = $reportType . '_report_' . now()->format('Y-m-d_H-i-s') . '.xlsx';
+        
+        return response()->json([
+            'message' => 'Excel report generation not yet implemented',
+            'filename' => $filename,
+            'data' => $reportData
+        ]);
+    }
+
+    /**
+     * Generate CSV report.
+     */
+    private function generateCsvReport($reportData, $reportType)
+    {
+        $filename = $reportType . '_report_' . now()->format('Y-m-d_H-i-s') . '.csv';
+        
+        // Simple CSV generation
+        $csvData = '';
+        if (!empty($reportData)) {
+            if (isset($reportData[0]) && is_array($reportData[0])) {
+                // Array of objects/arrays
+                $headers = array_keys($reportData[0]);
+                $csvData .= implode(',', $headers) . "\n";
+                
+                foreach ($reportData as $row) {
+                    $csvData .= implode(',', array_map(function($value) {
+                        return '"' . str_replace('"', '""', $value) . '"';
+                    }, $row)) . "\n";
+                }
+            } else {
+                // Single object/array
+                $csvData = json_encode($reportData, JSON_PRETTY_PRINT);
+            }
+        }
+        
+        return response($csvData)
+            ->header('Content-Type', 'text/csv')
+            ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
+    }
+
 
 }
