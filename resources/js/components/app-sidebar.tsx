@@ -58,6 +58,7 @@ const roleBasedNav: Record<string, { main: NavItem[]; footer: NavItem[] }> = {
             { title: 'Dashboard', href: '/adviser/dashboard', icon: ClipboardIcon },
             { title: 'Student Verification', href: '/student-verification', icon: Check },
             { title: 'Student List', href: '/adviser/student-list', icon: UserIcon },
+            { title: 'Report', href: '/adviser/report', icon: PrinterIcon },
         ],
         footer: [],
     },

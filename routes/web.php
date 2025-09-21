@@ -56,7 +56,7 @@ Route::middleware(['auth', 'verified', 'role:admin'])->group(function () {
     Route::put('admin/deadlines/{deadline}', [AdminController::class, 'updateDeadline'])->name('admin.deadlines.update');
     Route::patch('admin/deadlines/{deadline}/extend', [AdminController::class, 'extendDeadline'])->name('admin.deadlines.extend');
     Route::delete('admin/deadlines/{deadline}', [AdminController::class, 'deleteDeadline'])->name('admin.deadlines.delete');
-    
+
     // Automatic deadline processing routes
     Route::post('admin/deadlines/process-sip', [AdminController::class, 'processSipEndorsements'])->name('admin.deadlines.process-sip');
     Route::post('admin/deadlines/process-hte', [AdminController::class, 'processHtePlacements'])->name('admin.deadlines.process-hte');
@@ -116,7 +116,7 @@ Route::middleware(['auth', 'verified', 'role:admin'])->group(function () {
     Route::get('report', [App\Http\Controllers\AdminController::class, 'report'])->name('report');
     Route::get('report/export/pdf', [App\Http\Controllers\AdminController::class, 'exportPDF'])->name('report.export.pdf');
     Route::get('report/export/excel', [App\Http\Controllers\AdminController::class, 'exportExcel'])->name('report.export.excel');
-    
+
     // SIP Endorsement Routes
     Route::post('admin/reject-endorsement/{student}', [App\Http\Controllers\Admin\StudentController::class, 'rejectEndorsement'])->name('admin.reject-endorsement');
 
@@ -149,7 +149,7 @@ Route::middleware(['auth', 'verified', 'role:hte'])->group(function () {
     Route::get('hte/endorsement-table', [App\Http\Controllers\HTEController::class, 'showEndorsementTable'])->name('hte.endorsement-table');
     Route::post('hte/approve-endorsement/{endorsementId}', [App\Http\Controllers\HTEController::class, 'approveEndorsement'])->name('hte.approve-endorsement');
     Route::post('hte/reject-endorsement/{endorsementId}', [App\Http\Controllers\HTEController::class, 'rejectEndorsement'])->name('hte.reject-endorsement');
-    
+
     // HTE Placed Students routes
     Route::get('hte/placed-students', [App\Http\Controllers\HTEController::class, 'showPlacedStudents'])->name('hte.placed-students');
 
@@ -163,6 +163,9 @@ Route::middleware(['auth', 'verified', 'role:adviser'])->group(function () {
     Route::get('adviser/dashboard', [AdviserController::class, 'dashboard'])->name('adviser.dashboard');
     Route::get('adviser/student-list', [AdviserController::class, 'getStudents'])->name('adviser.student-list');
     Route::get('student-verification', [AdviserController::class, 'index'])->name('student-verification');
+    Route::get('adviser/report', function () {
+        return Inertia::render('adviser/report');
+    })->name('adviser.report');
     Route::post('application/approve', [AdviserController::class, 'approveStudents'])->name('application.approve');
     Route::post('application/reject', [AdviserController::class, 'rejectStudents'])->name('application.reject');
     Route::post('application/remove-access', [AdviserController::class, 'removeStudentAccess'])->name('application.remove-access');
@@ -379,7 +382,7 @@ Route::group(['middleware' => ['auth', 'verified', 'role:student']], function ()
         $studentAdditionalInfos = \App\Models\StudentAdditionalInfo::with('additionalInfo')
             ->where('student_id', $student->id)
             ->get();
-        
+
         foreach ($studentAdditionalInfos as $studentInfo) {
             $additionalInfoData[] = [
                 'info_name' => $studentInfo->additionalInfo->info_name,
