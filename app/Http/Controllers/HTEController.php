@@ -829,7 +829,7 @@ class HTEController extends Controller
         });
 
         return Inertia::render('hte/EndorsementTable', [
-            'endorsements' => $transformedEndorsements,
+            'endorsements' => $transformedEndorsements->values()->toArray(),
             'internships' => $internships->map(function($internship) {
                 return [
                     'id' => $internship->id,
@@ -838,7 +838,7 @@ class HTEController extends Controller
                     'company_name' => $internship->hte->company_name,
                     'hte_id' => $internship->hte_id,
                 ];
-            }),
+            })->values()->toArray(),
             'hteId' => $hte->id,
         ]);
     }
@@ -946,14 +946,19 @@ class HTEController extends Controller
                 ->update(['placement_status' => 'rejected']);
 
             // Find the student's next highest compatibility HTE
+            // Look for pending endorsement matches (not yet endorsed by admin)
             $nextMatch = StudentMatch::with(['internship.hte'])
                 ->where('student_id', $endorsement->student_id)
-                ->where('placement_status', 'pending')
-                ->where('endorsement_status', 'endorsed')
-                ->orderBy('rank')
+                ->where('endorsement_status', 'pending')
+                ->orderBy('compatibility_score', 'desc')
                 ->first();
 
             if ($nextMatch) {
+                // Update the next match's endorsement status to 'endorsed'
+                StudentMatch::where('student_id', $endorsement->student_id)
+                    ->where('internship_id', $nextMatch->internship_id)
+                    ->update(['endorsement_status' => 'endorsed']);
+
                 // Create new endorsement for the next highest compatibility HTE
                 Endorsement::create([
                     'student_id' => $endorsement->student_id,
@@ -982,5 +987,120 @@ class HTEController extends Controller
             ]);
             return redirect()->back()->withErrors(['error' => 'An error occurred while rejecting the student']);
         }
+    }
+
+    /**
+     * Show placed students for this HTE
+     */
+    public function showPlacedStudents(Request $request)
+    {
+        $user = Auth::user();
+        $hte = $user->hte;
+        
+        if (!$hte) {
+            return redirect()->back()->withErrors(['error' => 'HTE not found']);
+        }
+
+        $sectionFilter = $request->get('section');
+        $internshipFilter = $request->get('internship');
+        $searchQuery = $request->get('search');
+
+        // Get HTE's internships
+        $internships = $hte->internships()->active()->get();
+
+        // Base query for placed students for this HTE's internships
+        $query = StudentPlacement::with(['student.section', 'internship.hte'])
+            ->whereIn('internship_id', $internships->pluck('id'))
+            ->where('status', 'approved'); // Only show approved placements
+
+        // Apply section filter
+        if ($sectionFilter && $sectionFilter !== 'all') {
+            $query->whereHas('student.section', function($q) use ($sectionFilter) {
+                $q->where('section_name', $sectionFilter);
+            });
+        }
+
+        // Apply internship filter
+        if ($internshipFilter && $internshipFilter !== 'all') {
+            $query->where('internship_id', $internshipFilter);
+        }
+
+        // Apply search filter
+        if ($searchQuery) {
+            $query->whereHas('student', function ($q) use ($searchQuery) {
+                $q->where('first_name', 'like', "%{$searchQuery}%")
+                  ->orWhere('last_name', 'like', "%{$searchQuery}%")
+                  ->orWhere('student_number', 'like', "%{$searchQuery}%");
+            });
+        }
+
+        $placedStudents = $query->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($placement) {
+                return [
+                    'id' => $placement->id,
+                    'student' => [
+                        'id' => $placement->student->id,
+                        'student_number' => $placement->student->student_number,
+                        'first_name' => $placement->student->first_name,
+                        'last_name' => $placement->student->last_name,
+                        'middle_name' => $placement->student->middle_name,
+                        'section' => $placement->student->section->section_name ?? '',
+                        'specialization' => $placement->student->specialization,
+                    ],
+                    'internship' => [
+                        'id' => $placement->internship->id,
+                        'position_title' => $placement->internship->position_title,
+                        'department' => $placement->internship->department,
+                        'hte' => [
+                            'company_name' => $placement->internship->hte->company_name,
+                        ],
+                    ],
+                    'status' => $placement->status,
+                    'compatibility_score' => $placement->compatibility_score,
+                    'placement_date' => $placement->placement_date,
+                    'created_at' => $placement->created_at,
+                ];
+            });
+
+        // Get section options for filter
+        $sectionOptions = StudentPlacement::with(['student.section'])
+            ->whereIn('internship_id', $internships->pluck('id'))
+            ->where('status', 'approved')
+            ->get()
+            ->groupBy('student.section.section_name')
+            ->map(function ($placements, $sectionName) {
+                return [
+                    'name' => $sectionName,
+                    'total_placements' => $placements->count(),
+                ];
+            })
+            ->values();
+
+        // Get internship options for filter
+        $internshipOptions = $internships->map(function ($internship) {
+            $placementCount = StudentPlacement::where('internship_id', $internship->id)
+                ->where('status', 'approved')
+                ->count();
+            
+            return [
+                'id' => $internship->id,
+                'position_title' => $internship->position_title,
+                'department' => $internship->department,
+                'total_placements' => $placementCount,
+            ];
+        });
+
+        return Inertia::render('hte/PlacedStudents', [
+            'placed_students' => $placedStudents,
+            'section_options' => $sectionOptions,
+            'internship_options' => $internshipOptions,
+            'filters' => [
+                'section' => $sectionFilter,
+                'internship' => $internshipFilter,
+                'search' => $searchQuery,
+            ],
+            'hteId' => $hte->id,
+        ]);
     }
 }

@@ -59,6 +59,7 @@ class DatabaseSeeder extends Seeder
         $this->call(StudentScoreSeeder::class);
         $this->call(StudentMatchSeeder::class);
         $this->call(PlacementSeeder::class);
+        $this->call(DeadlineSeeder::class);
 
     }
 }

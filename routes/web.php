@@ -73,6 +73,7 @@ Route::middleware(['auth', 'verified', 'role:admin'])->group(function () {
 
     // Specific student routes (must come before parameterized routes)
     Route::get('student/matched', [StudentController::class, 'getMatchedStudents'])->name('student-matched');
+    Route::get('student/endorsed', [StudentController::class, 'getEndorsedStudents'])->name('student-endorsed');
     Route::post('student/check-batch-conflicts', [StudentController::class, 'checkBatchPlacementConflicts'])->name('student.check-batch-conflicts');
     Route::post('student/batch-endorse', [StudentController::class, 'endorseBatchStudents'])->name('student.batch-endorse');
     Route::get('student/placed', [StudentController::class, 'getPlacedStudents'])->name('student-placed');
@@ -135,6 +136,9 @@ Route::middleware(['auth', 'verified', 'role:hte'])->group(function () {
     Route::get('hte/endorsement-table', [App\Http\Controllers\HTEController::class, 'showEndorsementTable'])->name('hte.endorsement-table');
     Route::post('hte/approve-endorsement/{endorsementId}', [App\Http\Controllers\HTEController::class, 'approveEndorsement'])->name('hte.approve-endorsement');
     Route::post('hte/reject-endorsement/{endorsementId}', [App\Http\Controllers\HTEController::class, 'rejectEndorsement'])->name('hte.reject-endorsement');
+    
+    // HTE Placed Students routes
+    Route::get('hte/placed-students', [App\Http\Controllers\HTEController::class, 'showPlacedStudents'])->name('hte.placed-students');
 
 
 

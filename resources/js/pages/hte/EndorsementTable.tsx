@@ -37,20 +37,24 @@ interface Endorsement {
 }
 
 interface Props {
-    endorsements: Endorsement[];
-    internships: Internship[];
+    endorsements?: Endorsement[];
+    internships?: Internship[];
     hteId: number;
 }
 
-export default function EndorsementTable({ endorsements, internships, hteId }: Props) {
+export default function EndorsementTable({ endorsements = [], internships = [], hteId }: Props) {
     const [selectedInternship, setSelectedInternship] = useState<string>('all');
     const [loading, setLoading] = useState<Record<number, boolean>>({});
     const { flash } = usePage<{ flash: { success?: string; error?: string } }>().props;
 
+    // Ensure arrays are always arrays
+    const safeEndorsements = Array.isArray(endorsements) ? endorsements : [];
+    const safeInternships = Array.isArray(internships) ? internships : [];
+
     // Filter endorsements by selected internship
     const filteredEndorsements = selectedInternship === 'all' 
-        ? endorsements 
-        : endorsements.filter(endorsement => endorsement.internship.id === parseInt(selectedInternship));
+        ? safeEndorsements 
+        : safeEndorsements.filter(endorsement => endorsement.internship.id === parseInt(selectedInternship));
 
     // Sort by company name, position, department
     const sortedEndorsements = [...filteredEndorsements].sort((a, b) => {
@@ -169,7 +173,7 @@ export default function EndorsementTable({ endorsements, internships, hteId }: P
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="all">All Internships</SelectItem>
-                                    {internships.map((internship) => (
+                                    {safeInternships.map((internship) => (
                                         <SelectItem key={internship.id} value={internship.id.toString()}>
                                             {internship.position} - {internship.department}
                                         </SelectItem>
@@ -200,23 +204,30 @@ export default function EndorsementTable({ endorsements, internships, hteId }: P
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <div className="overflow-x-auto">
-                                <table className="w-full">
-                                    <thead>
-                                        <tr className="border-b border-gray-200">
-                                            <th className="text-left py-3 px-4 font-semibold text-sm">Student</th>
-                                            <th className="text-left py-3 px-4 font-semibold text-sm">Student Number</th>
-                                            <th className="text-left py-3 px-4 font-semibold text-sm">Specialization</th>
-                                            <th className="text-left py-3 px-4 font-semibold text-sm">Company</th>
-                                            <th className="text-left py-3 px-4 font-semibold text-sm">Position</th>
-                                            <th className="text-left py-3 px-4 font-semibold text-sm">Department</th>
-                                            <th className="text-left py-3 px-4 font-semibold text-sm">Compatibility</th>
-                                            <th className="text-left py-3 px-4 font-semibold text-sm">Endorsed Date</th>
-                                            <th className="text-right py-3 px-4 font-semibold text-sm">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {sortedEndorsements.map((endorsement) => (
+                            {sortedEndorsements.length === 0 ? (
+                                <div className="text-center py-8 text-muted-foreground">
+                                    <User className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                                    <p className="text-lg font-medium">No endorsed students</p>
+                                    <p className="text-sm">No students have been endorsed for your internships yet.</p>
+                                </div>
+                            ) : (
+                                <div className="overflow-x-auto">
+                                    <table className="w-full">
+                                        <thead>
+                                            <tr className="border-b border-gray-200">
+                                                <th className="text-left py-3 px-4 font-semibold text-sm">Student</th>
+                                                <th className="text-left py-3 px-4 font-semibold text-sm">Student Number</th>
+                                                <th className="text-left py-3 px-4 font-semibold text-sm">Specialization</th>
+                                                <th className="text-left py-3 px-4 font-semibold text-sm">Company</th>
+                                                <th className="text-left py-3 px-4 font-semibold text-sm">Position</th>
+                                                <th className="text-left py-3 px-4 font-semibold text-sm">Department</th>
+                                                <th className="text-left py-3 px-4 font-semibold text-sm">Compatibility</th>
+                                                <th className="text-left py-3 px-4 font-semibold text-sm">Endorsed Date</th>
+                                                <th className="text-right py-3 px-4 font-semibold text-sm">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {sortedEndorsements.map((endorsement) => (
                                             <tr key={endorsement.id} className="border-b border-gray-100">
                                                 <td className="py-3 px-4">
                                                     <div className="flex items-center gap-2">
@@ -286,9 +297,10 @@ export default function EndorsementTable({ endorsements, internships, hteId }: P
                                                 </td>
                                             </tr>
                                         ))}
-                                    </tbody>
-                                </table>
-                            </div>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
                 )}

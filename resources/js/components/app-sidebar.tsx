@@ -13,6 +13,7 @@ import {
     PersonStandingIcon,
     PrinterIcon,
     UserIcon,
+    UsersIcon,
     PlusIcon,
     CalendarIcon,
     FileTextIcon, Check
@@ -31,6 +32,7 @@ const roleBasedNav: Record<string, { main: NavItem[]; footer: NavItem[] }> = {
                 subNav: [
                     { title: 'List', href: '/student/list' },
                     { title: 'Match', href: '/student/matched' },
+                    { title: 'Endorsed', href: '/student/endorsed' },
                     { title: 'Place', href: '/student/placed' },
                 ],
             },
@@ -89,6 +91,7 @@ export function AppSidebar() {
                 { title: 'Dashboard', href: '/hte/dashboard', icon: ClipboardIcon },
                 { title: 'Add Internship', href: '/hte/add-internship', icon: PlusIcon },
                 { title: 'Student Endorsements', href: '/hte/endorsement-table', icon: Check },
+                { title: 'Placed Students', href: '/hte/placed-students', icon: UsersIcon },
                 { title: 'Profile', href: '/hte/profile', icon: UserIcon }
             ]
         };

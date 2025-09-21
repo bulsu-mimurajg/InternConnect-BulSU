@@ -1,0 +1,410 @@
+import React, { useState, useEffect } from 'react';
+import { Head, router } from '@inertiajs/react';
+import AdminLayout from '@/layouts/admin/layout';
+import Heading from '@/components/heading';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { 
+    UserIcon, 
+    CheckCircleIcon,
+    XCircleIcon,
+    ClockIcon,
+    SearchIcon,
+    FilterIcon,
+    Building2,
+    Briefcase,
+    GraduationCap,
+    Star,
+    AlertCircle,
+    CheckCircle2
+} from 'lucide-react';
+
+interface EndorsedStudent {
+    id: number;
+    student: {
+        id: number;
+        student_number: string;
+        first_name: string;
+        last_name: string;
+        middle_name?: string;
+        section: string;
+        specialization?: string;
+    };
+    internship: {
+        id: number;
+        position_title: string;
+        department: string;
+        hte: {
+            company_name: string;
+        };
+    };
+    endorsement_status: 'pending' | 'endorsed' | 'rejected';
+    placement_status: 'pending' | 'approved' | 'rejected';
+    compatibility_score: number;
+    endorsement_date?: string;
+    created_at: string;
+}
+
+interface SectionOption {
+    name: string;
+    total_endorsements: number;
+}
+
+interface InternshipOption {
+    id: number;
+    position_title: string;
+    department: string;
+    company_name: string;
+    total_endorsements: number;
+}
+
+interface Props {
+    endorsed_students: EndorsedStudent[];
+    section_options: SectionOption[];
+    internship_options: InternshipOption[];
+    filters: {
+        section: string | null;
+        internship: string | null;
+        search: string | null;
+        status: string | null;
+    };
+}
+
+export default function StudentEndorsed({ 
+    endorsed_students = [], 
+    section_options = [], 
+    internship_options = [], 
+    filters 
+}: Props) {
+    const [localFilters, setLocalFilters] = useState({
+        section: filters.section || 'all',
+        internship: filters.internship || 'all',
+        search: filters.search || '',
+        status: filters.status || 'all',
+    });
+
+    // Update local filters when props change
+    useEffect(() => {
+        setLocalFilters({
+            section: filters.section || 'all',
+            internship: filters.internship || 'all',
+            search: filters.search || '',
+            status: filters.status || 'all'
+        });
+    }, [filters]);
+
+    const handleFilterChange = (filterType: 'section' | 'internship' | 'search' | 'status', value: string) => {
+        const newFilters = { ...localFilters, [filterType]: value };
+        setLocalFilters(newFilters);
+
+        // Apply filters immediately
+        const params = new URLSearchParams();
+        if (newFilters.section && newFilters.section !== 'all') {
+            params.append('section', newFilters.section);
+        }
+        if (newFilters.internship && newFilters.internship !== 'all') {
+            params.append('internship', newFilters.internship);
+        }
+        if (newFilters.search) {
+            params.append('search', newFilters.search);
+        }
+        if (newFilters.status && newFilters.status !== 'all') {
+            params.append('status', newFilters.status);
+        }
+
+        router.get('/student/endorsed', params.toString() ? Object.fromEntries(params) : {}, {
+            preserveState: true,
+            replace: true
+        });
+    };
+
+    const clearFilters = () => {
+        setLocalFilters({ section: 'all', internship: 'all', search: '', status: 'all' });
+        router.get('/student/endorsed', {}, {
+            preserveState: true,
+            replace: true
+        });
+    };
+
+    const getPlacementStatusColor = (status: string) => {
+        switch (status) {
+            case 'approved':
+                return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+            case 'rejected':
+                return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
+            case 'pending':
+            default:
+                return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
+        }
+    };
+
+    const getPlacementStatusIcon = (status: string) => {
+        switch (status) {
+            case 'approved':
+                return <CheckCircle2 className="h-4 w-4" />;
+            case 'rejected':
+                return <XCircleIcon className="h-4 w-4" />;
+            case 'pending':
+            default:
+                return <ClockIcon className="h-4 w-4" />;
+        }
+    };
+
+    const getPlacementStatusText = (status: string) => {
+        switch (status) {
+            case 'approved':
+                return 'Approved by HTE';
+            case 'rejected':
+                return 'Rejected by HTE';
+            case 'pending':
+            default:
+                return 'Pending HTE Review';
+        }
+    };
+
+    return (
+        <AdminLayout>
+            <Head title="Endorsed Students" />
+            
+            <div className="space-y-6">
+                <div className="flex justify-between items-center">
+                    <Heading 
+                        title="Endorsed Students" 
+                        description="View and track students who have been endorsed for internships and their HTE approval status."
+                    />
+                </div>
+
+                {/* Filters Section */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <FilterIcon className="h-5 w-5" />
+                            Filters
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                            {/* Section Filter */}
+                            <div className="space-y-2">
+                                <Label htmlFor="section-filter">Section</Label>
+                                <Select
+                                    value={localFilters.section}
+                                    onValueChange={(value) => handleFilterChange('section', value)}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="All Sections" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">All Sections</SelectItem>
+                                        {section_options.map((section) => (
+                                            <SelectItem key={section.name} value={section.name}>
+                                                {section.name} ({section.total_endorsements})
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            {/* Internship Filter */}
+                            <div className="space-y-2">
+                                <Label htmlFor="internship-filter">Internship</Label>
+                                <Select
+                                    value={localFilters.internship}
+                                    onValueChange={(value) => handleFilterChange('internship', value)}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="All Internships" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">All Internships</SelectItem>
+                                        {internship_options.map((internship) => (
+                                            <SelectItem key={internship.id} value={internship.id.toString()}>
+                                                {internship.position_title} - {internship.company_name} ({internship.total_endorsements})
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            {/* Status Filter */}
+                            <div className="space-y-2">
+                                <Label htmlFor="status-filter">HTE Status</Label>
+                                <Select
+                                    value={localFilters.status}
+                                    onValueChange={(value) => handleFilterChange('status', value)}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="All Statuses" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">All Statuses</SelectItem>
+                                        <SelectItem value="pending_hte">Pending HTE Review</SelectItem>
+                                        <SelectItem value="approved_hte">Approved by HTE</SelectItem>
+                                        <SelectItem value="rejected_hte">Rejected by HTE</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            {/* Search Filter */}
+                            <div className="space-y-2">
+                                <Label htmlFor="search-filter">Search</Label>
+                                <div className="relative">
+                                    <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                    <Input
+                                        id="search-filter"
+                                        placeholder="Search students..."
+                                        value={localFilters.search}
+                                        onChange={(e) => handleFilterChange('search', e.target.value)}
+                                        className="pl-10"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Clear Filters */}
+                            <div className="space-y-2">
+                                <Label>&nbsp;</Label>
+                                <Button
+                                    variant="outline"
+                                    onClick={clearFilters}
+                                    className="w-full"
+                                >
+                                    Clear Filters
+                                </Button>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* Results Summary */}
+                <div className="flex items-center justify-between">
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                        Showing {endorsed_students.length} endorsed student{endorsed_students.length !== 1 ? 's' : ''}
+                    </p>
+                </div>
+
+                {/* Endorsed Students Table */}
+                {endorsed_students.length === 0 ? (
+                    <Card>
+                        <CardContent className="text-center py-12">
+                            <UserIcon className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                                No Endorsed Students
+                            </h3>
+                            <p className="text-gray-600 dark:text-gray-400">
+                                No students have been endorsed for internships yet.
+                            </p>
+                        </CardContent>
+                    </Card>
+                ) : (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Endorsed Students</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="overflow-x-auto">
+                                <table className="w-full">
+                                    <thead>
+                                        <tr className="border-b border-gray-200">
+                                            <th className="text-left py-3 px-4 font-semibold text-sm">Student</th>
+                                            <th className="text-left py-3 px-4 font-semibold text-sm">Student Number</th>
+                                            <th className="text-left py-3 px-4 font-semibold text-sm">Section</th>
+                                            <th className="text-left py-3 px-4 font-semibold text-sm">Specialization</th>
+                                            <th className="text-left py-3 px-4 font-semibold text-sm">Position</th>
+                                            <th className="text-left py-3 px-4 font-semibold text-sm">Company</th>
+                                            <th className="text-left py-3 px-4 font-semibold text-sm">Compatibility</th>
+                                            <th className="text-left py-3 px-4 font-semibold text-sm">HTE Status</th>
+                                            <th className="text-left py-3 px-4 font-semibold text-sm">Endorsed Date</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {endorsed_students.map((endorsement) => (
+                                            <tr key={endorsement.id} className="border-b border-gray-100">
+                                                <td className="py-3 px-4">
+                                                    <div className="flex items-center gap-2">
+                                                        <UserIcon className="h-4 w-4 text-muted-foreground" />
+                                                        <div>
+                                                            <div className="font-medium">
+                                                                {endorsement.student.first_name} {endorsement.student.last_name}
+                                                            </div>
+                                                            {endorsement.student.middle_name && (
+                                                                <div className="text-sm text-muted-foreground">
+                                                                    {endorsement.student.middle_name}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="py-3 px-4">
+                                                    <div className="flex items-center gap-2">
+                                                        <GraduationCap className="h-4 w-4 text-muted-foreground" />
+                                                        <span className="font-mono text-sm">
+                                                            {endorsement.student.student_number}
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                                <td className="py-3 px-4">
+                                                    <Badge variant="secondary">
+                                                        {endorsement.student.section}
+                                                    </Badge>
+                                                </td>
+                                                <td className="py-3 px-4">
+                                                    <span className="text-sm">
+                                                        {endorsement.student.specialization || 'N/A'}
+                                                    </span>
+                                                </td>
+                                                <td className="py-3 px-4">
+                                                    <div className="flex items-center gap-2">
+                                                        <Briefcase className="h-4 w-4 text-muted-foreground" />
+                                                        <span className="font-medium">
+                                                            {endorsement.internship.position_title}
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                                <td className="py-3 px-4">
+                                                    <div className="flex items-center gap-2">
+                                                        <Building2 className="h-4 w-4 text-muted-foreground" />
+                                                        <span className="text-sm">
+                                                            {endorsement.internship.hte.company_name}
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                                <td className="py-3 px-4">
+                                                    <div className="flex items-center gap-1">
+                                                        <Star className="h-4 w-4 text-yellow-500" />
+                                                        <span className="font-medium">
+                                                            {endorsement.compatibility_score}%
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                                <td className="py-3 px-4">
+                                                    <Badge className={getPlacementStatusColor(endorsement.placement_status)}>
+                                                        <div className="flex items-center gap-1">
+                                                            {getPlacementStatusIcon(endorsement.placement_status)}
+                                                            {getPlacementStatusText(endorsement.placement_status)}
+                                                        </div>
+                                                    </Badge>
+                                                </td>
+                                                <td className="py-3 px-4">
+                                                    <span className="text-sm text-muted-foreground">
+                                                        {endorsement.endorsement_date 
+                                                            ? new Date(endorsement.endorsement_date).toLocaleDateString()
+                                                            : new Date(endorsement.created_at).toLocaleDateString()
+                                                        }
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
+            </div>
+        </AdminLayout>
+    );
+}

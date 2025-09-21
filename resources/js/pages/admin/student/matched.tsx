@@ -438,8 +438,12 @@ export default function StudentMatched({ matchedStudents, filters }: Props) {
                 });
                 
                 if (retryResponse.ok) {
-                    await retryResponse.json();
-                    setErrorMessage('Student placement rejected successfully!');
+                    const result = await retryResponse.json();
+                    if (result.fallback) {
+                        setErrorMessage(`Student rejected and moved to next match: ${result.new_internship.position_title} at ${result.new_internship.company_name} (${result.new_internship.compatibility_score}% compatibility)`);
+                    } else {
+                        setErrorMessage('Student placement rejected successfully!');
+                    }
                     setErrorType('success');
                     setTimeout(() => {
                         window.location.reload();
@@ -469,7 +473,11 @@ export default function StudentMatched({ matchedStudents, filters }: Props) {
             console.log('Response data:', result);
             
             if (response.ok) {
-                setErrorMessage('Student placement rejected successfully!');
+                if (result.fallback) {
+                    setErrorMessage(`Student rejected and moved to next match: ${result.new_internship.position_title} at ${result.new_internship.company_name} (${result.new_internship.compatibility_score}% compatibility)`);
+                } else {
+                    setErrorMessage('Student placement rejected successfully!');
+                }
                 setErrorType('success');
                 setTimeout(() => {
                     window.location.reload();
@@ -613,15 +621,19 @@ export default function StudentMatched({ matchedStudents, filters }: Props) {
                 
                 if (retryResponse.ok) {
                     const result = await retryResponse.json();
-                    if (result.total_approved > 0) {
-                        setErrorMessage(`Successfully approved ${result.total_approved} placement(s)!`);
+                    if (result.total_endorsed > 0) {
+                        setErrorMessage(`Successfully endorsed ${result.total_endorsed} student(s)!`);
                         setErrorType('success');
                         setSelectedStudents(new Set());
                         setTimeout(() => {
                             window.location.reload();
                         }, 1500);
                     } else {
-                        setErrorMessage('No placements were approved. Please check the selection and try again.');
+                        if (result.errors && result.errors.length > 0) {
+                            setErrorMessage(`No students were endorsed. Errors: ${result.errors.join(', ')}`);
+                        } else {
+                            setErrorMessage('No students were endorsed. Please check the selection and try again.');
+                        }
                         setErrorType('error');
                     }
                     return;
@@ -650,15 +662,19 @@ export default function StudentMatched({ matchedStudents, filters }: Props) {
             
             if (response.ok) {
                 // Success
-                if (result.total_approved > 0) {
-                    setErrorMessage(`Successfully approved ${result.total_approved} placement(s)!`);
+                if (result.total_endorsed > 0) {
+                    setErrorMessage(`Successfully endorsed ${result.total_endorsed} student(s)!`);
                     setErrorType('success');
                     setSelectedStudents(new Set());
                     setTimeout(() => {
                         window.location.reload();
                     }, 1500);
                 } else {
-                    setErrorMessage('No placements were approved. Please check the selection and try again.');
+                    if (result.errors && result.errors.length > 0) {
+                        setErrorMessage(`No students were endorsed. Errors: ${result.errors.join(', ')}`);
+                    } else {
+                        setErrorMessage('No students were endorsed. Please check the selection and try again.');
+                    }
                     setErrorType('error');
                 }
             } else {
