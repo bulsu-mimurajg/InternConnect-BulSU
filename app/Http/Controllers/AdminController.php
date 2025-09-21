@@ -16,6 +16,8 @@ use App\Models\Question;
 use App\Models\Category;
 use App\Services\ChartGeneratorService;
 use App\Services\NotificationService;
+use App\Services\AutomaticEndorsementService;
+use App\Services\AutomaticPlacementService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -1292,6 +1294,8 @@ class AdminController extends Controller
             ['value' => 'student_verification', 'label' => 'Student Verification (Adviser Side)'],
             ['value' => 'student_assessment_form', 'label' => 'Student Assessment Form (Student Side)'],
             ['value' => 'hte_assessment_form', 'label' => 'HTE Assessment Form (HTE Side)'],
+            ['value' => 'sip_endorsement', 'label' => 'SIP Endorsement (Admin Side)'],
+            ['value' => 'student_placements_by_hte', 'label' => 'Student Placements by HTE (HTE Side)'],
         ];
 
         return Inertia::render('admin/events', [
@@ -1318,7 +1322,7 @@ class AdminController extends Controller
         try {
             $request->validate([
                 'title' => 'required|string|max:255',
-                'category' => 'required|in:student_verification,student_assessment_form,hte_assessment_form',
+                'category' => 'required|in:student_verification,student_assessment_form,hte_assessment_form,sip_endorsement,student_placements_by_hte',
                 'start_date' => 'required|date',
                 'end_date' => 'required|date|after:start_date',
             ]);
@@ -1381,7 +1385,7 @@ class AdminController extends Controller
     {
         $request->validate([
             'title' => 'required|string|max:255',
-            'category' => 'required|in:student_verification,student_assessment_form,hte_assessment_form',
+            'category' => 'required|in:student_verification,student_assessment_form,hte_assessment_form,sip_endorsement,student_placements_by_hte',
             'start_date' => 'required|date',
             'end_date' => 'required|date|after:start_date',
         ]);
@@ -1459,6 +1463,94 @@ class AdminController extends Controller
             ]);
             
             return redirect()->back()->withErrors(['error' => 'Failed to delete deadline: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Process automatic SIP endorsements
+     */
+    public function processSipEndorsements()
+    {
+        try {
+            $service = new AutomaticEndorsementService();
+            $results = $service->processSipEndorsements();
+
+            $message = "SIP Endorsements processed successfully. ";
+            $message .= "Endorsed: {$results['endorsed_count']} students, ";
+            $message .= "Skipped: {$results['skipped_count']} students";
+
+            if (!empty($results['errors'])) {
+                $message .= ". Errors: " . count($results['errors']);
+            }
+
+            return redirect()->back()->with('success', $message);
+
+        } catch (\Exception $e) {
+            Log::error('SIP Endorsement Processing Error:', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return redirect()->back()->withErrors(['error' => 'Failed to process SIP endorsements: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Process automatic HTE placements
+     */
+    public function processHtePlacements()
+    {
+        try {
+            $service = new AutomaticPlacementService();
+            $results = $service->processHtePlacements();
+
+            $message = "HTE Placements processed successfully. ";
+            $message .= "Placed: {$results['placed_count']} students, ";
+            $message .= "Skipped: {$results['skipped_count']} students";
+
+            if (!empty($results['errors'])) {
+                $message .= ". Errors: " . count($results['errors']);
+            }
+
+            return redirect()->back()->with('success', $message);
+
+        } catch (\Exception $e) {
+            Log::error('HTE Placement Processing Error:', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return redirect()->back()->withErrors(['error' => 'Failed to process HTE placements: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Process all automatic deadlines
+     */
+    public function processAllDeadlines()
+    {
+        try {
+            $sipService = new AutomaticEndorsementService();
+            $hteService = new AutomaticPlacementService();
+
+            $sipResults = $sipService->processSipEndorsements();
+            $hteResults = $hteService->processHtePlacements();
+
+            $message = "All deadlines processed successfully. ";
+            $message .= "SIP Endorsed: {$sipResults['endorsed_count']} students, ";
+            $message .= "HTE Placed: {$hteResults['placed_count']} students";
+
+            $totalErrors = count($sipResults['errors']) + count($hteResults['errors']);
+            if ($totalErrors > 0) {
+                $message .= ". Total Errors: {$totalErrors}";
+            }
+
+            return redirect()->back()->with('success', $message);
+
+        } catch (\Exception $e) {
+            Log::error('All Deadlines Processing Error:', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return redirect()->back()->withErrors(['error' => 'Failed to process deadlines: ' . $e->getMessage()]);
         }
     }
 }

@@ -56,6 +56,8 @@ class Deadline extends Model
             'student_verification' => 'Student Verification',
             'student_assessment_form' => 'Student Assessment Form',
             'hte_assessment_form' => 'HTE Assessment Form',
+            'sip_endorsement' => 'SIP Endorsement',
+            'student_placements_by_hte' => 'Student Placements by HTE',
             default => $this->category,
         };
     }

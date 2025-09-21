@@ -56,6 +56,11 @@ Route::middleware(['auth', 'verified', 'role:admin'])->group(function () {
     Route::put('admin/deadlines/{deadline}', [AdminController::class, 'updateDeadline'])->name('admin.deadlines.update');
     Route::patch('admin/deadlines/{deadline}/extend', [AdminController::class, 'extendDeadline'])->name('admin.deadlines.extend');
     Route::delete('admin/deadlines/{deadline}', [AdminController::class, 'deleteDeadline'])->name('admin.deadlines.delete');
+    
+    // Automatic deadline processing routes
+    Route::post('admin/deadlines/process-sip', [AdminController::class, 'processSipEndorsements'])->name('admin.deadlines.process-sip');
+    Route::post('admin/deadlines/process-hte', [AdminController::class, 'processHtePlacements'])->name('admin.deadlines.process-hte');
+    Route::post('admin/deadlines/process-all', [AdminController::class, 'processAllDeadlines'])->name('admin.deadlines.process-all');
 
     // Forms Management routes
     Route::get('admin/forms', [App\Http\Controllers\QuestionController::class, 'index'])->name('admin.forms');

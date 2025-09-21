@@ -203,7 +203,7 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
                             Manage application deadlines and important dates
                         </p>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-wrap">
                         <Button
                             variant="outline"
                             onClick={() => setShowArchived(!showArchived)}
@@ -216,6 +216,42 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
                         >
                             <PlusIcon className="h-4 w-4" />
                             Add Deadline
+                        </Button>
+                        <Button
+                            variant="secondary"
+                            onClick={() => {
+                                if (confirm('Process SIP endorsements automatically? This will endorse students based on their highest compatibility scores.')) {
+                                    post('/admin/deadlines/process-sip');
+                                }
+                            }}
+                            className="flex items-center gap-2"
+                        >
+                            <ClockIcon className="h-4 w-4" />
+                            Process SIP Endorsements
+                        </Button>
+                        <Button
+                            variant="secondary"
+                            onClick={() => {
+                                if (confirm('Process HTE placements automatically? This will place students based on their ranking and available slots.')) {
+                                    post('/admin/deadlines/process-hte');
+                                }
+                            }}
+                            className="flex items-center gap-2"
+                        >
+                            <ClockIcon className="h-4 w-4" />
+                            Process HTE Placements
+                        </Button>
+                        <Button
+                            variant="default"
+                            onClick={() => {
+                                if (confirm('Process all automatic deadlines? This will run both SIP endorsements and HTE placements.')) {
+                                    post('/admin/deadlines/process-all');
+                                }
+                            }}
+                            className="flex items-center gap-2"
+                        >
+                            <ClockIcon className="h-4 w-4" />
+                            Process All Deadlines
                         </Button>
                     </div>
                 </div>
