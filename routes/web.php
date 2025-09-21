@@ -164,9 +164,9 @@ Route::middleware(['auth', 'verified', 'role:adviser'])->group(function () {
     Route::get('adviser/student-list', [AdviserController::class, 'getStudents'])->name('adviser.student-list');
     Route::get('student-verification', [AdviserController::class, 'index'])->name('student-verification');
     Route::get('adviser/report', [AdviserController::class, 'reports'])->name('adviser.report');
-    Route::get('adviser/report/export/pdf', [AdviserController::class, 'exportPDF'])->name('adviser.report.export.pdf');
-    Route::get('adviser/report/export/excel', [AdviserController::class, 'exportExcel'])->name('adviser.report.export.excel');
-    Route::get('adviser/report/export/csv', [AdviserController::class, 'exportCSV'])->name('adviser.report.export.csv');
+    Route::get('adviser/report/export/{reportType}/pdf', [AdviserController::class, 'exportPDF'])->name('adviser.report.export.pdf');
+    Route::get('adviser/report/export/{reportType}/excel', [AdviserController::class, 'exportExcel'])->name('adviser.report.export.excel');
+    Route::get('adviser/report/export/{reportType}/csv', [AdviserController::class, 'exportCSV'])->name('adviser.report.export.csv');
     Route::post('application/approve', [AdviserController::class, 'approveStudents'])->name('application.approve');
     Route::post('application/reject', [AdviserController::class, 'rejectStudents'])->name('application.reject');
     Route::post('application/remove-access', [AdviserController::class, 'removeStudentAccess'])->name('application.remove-access');

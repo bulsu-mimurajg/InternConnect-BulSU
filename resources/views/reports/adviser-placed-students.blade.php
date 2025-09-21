@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Student List Report - {{ $sectionName }}</title>
+    <title>Placed Students Report - {{ $sectionName }}</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -72,19 +72,17 @@
             border-top: 1px solid #ddd;
             padding-top: 10px;
         }
-        .category-section {
-            margin-bottom: 20px;
-        }
-        .category-title {
+        .section-title {
             font-weight: bold;
-            margin-bottom: 10px;
+            margin: 20px 0 10px 0;
             color: #333;
+            font-size: 14px;
         }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>Student List Report</h1>
+        <h1>Placed Students Report</h1>
         <p>Section: {{ $sectionName }}</p>
         <p>Generated: {{ $generatedAt }}</p>
     </div>
@@ -95,51 +93,55 @@
             <div class="stat-label">Total Students</div>
         </div>
         <div class="stat-item">
-            <div class="stat-value">{{ $overviewStats['completedAssessments'] }}</div>
-            <div class="stat-label">Completed Assessments</div>
+            <div class="stat-value">{{ count($placedStudents) }}</div>
+            <div class="stat-label">Placed Students</div>
         </div>
         <div class="stat-item">
-            <div class="stat-value">{{ $overviewStats['completionRate'] }}%</div>
-            <div class="stat-label">Completion Rate</div>
+            <div class="stat-value">{{ $overviewStats['totalStudents'] > 0 ? round((count($placedStudents) / $overviewStats['totalStudents']) * 100, 1) : 0 }}%</div>
+            <div class="stat-label">Placement Rate</div>
         </div>
         <div class="stat-item">
-            <div class="stat-value">{{ $overviewStats['averageScore'] }}</div>
-            <div class="stat-label">Average Score</div>
+            <div class="stat-value">{{ count($placedStudents) > 0 ? round(collect($placedStudents)->avg('compatibility_score'), 1) : 0 }}</div>
+            <div class="stat-label">Avg Compatibility</div>
         </div>
     </div>
 
-    <h2>Student Information</h2>
+    <div class="section-title">Placed Students Details</div>
     <table>
         <thead>
             <tr>
-                <th>Rank</th>
+                <th>Student Number</th>
                 <th>Name</th>
-                <th>Username</th>
-                <th>Email</th>
+                <th>Section</th>
+                <th>Company</th>
+                <th>Position</th>
+                <th>Department</th>
+                <th>Compatibility Score</th>
                 <th>Status</th>
-                <th>Assessment</th>
-                <th>Score</th>
-                <th>Percentage</th>
-                <th>Submitted</th>
+                <th>Placement Date</th>
             </tr>
         </thead>
         <tbody>
-            @foreach($studentProgress as $student)
+            @foreach($placedStudents as $placement)
             <tr>
-                <td>{{ $student['rank'] }}</td>
-                <td>{{ $student['name'] }}</td>
-                <td>{{ $student['username'] }}</td>
-                <td>{{ $student['email'] ?? 'N/A' }}</td>
-                <td>{{ ucfirst($student['status']) }}</td>
-                <td>{{ $student['hasAssessment'] ? 'Completed' : 'Pending' }}</td>
-                <td>{{ $student['hasAssessment'] ? $student['score'] : 'N/A' }}</td>
-                <td>{{ $student['hasAssessment'] ? $student['percentage'] . '%' : 'N/A' }}</td>
-                <td>{{ $student['submittedAt'] ?? 'N/A' }}</td>
+                <td>{{ $placement['student']['student_number'] }}</td>
+                <td>{{ $placement['student']['first_name'] }} {{ $placement['student']['last_name'] }}</td>
+                <td>{{ $placement['student']['section'] }}</td>
+                <td>{{ $placement['internship']['hte']['company_name'] }}</td>
+                <td>{{ $placement['internship']['position_title'] }}</td>
+                <td>{{ $placement['internship']['department'] }}</td>
+                <td>{{ $placement['compatibility_score'] }}%</td>
+                <td>{{ ucfirst($placement['status']) }}</td>
+                <td>{{ $placement['placement_date'] ? $placement['placement_date']->format('M d, Y') : 'N/A' }}</td>
             </tr>
             @endforeach
         </tbody>
     </table>
 
+    @if(empty($placedStudents))
+    <div class="section-title">No Placed Students</div>
+    <p>There are currently no placed students in this section.</p>
+    @endif
 
     <div class="footer">
         <p>This report was generated automatically by the InternConnect System</p>

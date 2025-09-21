@@ -722,9 +722,9 @@ class AdviserController extends Controller
     }
 
     /**
-     * Export student list report to PDF
+     * Export report to PDF based on report type
      */
-    public function exportPDF(Request $request): \Illuminate\Http\Response
+    public function exportPDF(Request $request, $reportType): \Illuminate\Http\Response
     {
         $adviser = Auth::user();
         $adviserRecord = $adviser->adviser;
@@ -745,33 +745,34 @@ class AdviserController extends Controller
             abort(403, 'You do not have access to this section.');
         }
 
-        // Get report data
-        $overviewStats = $this->getOverviewStats($currentSectionId);
-        $studentProgress = $this->getStudentProgress($currentSectionId);
-        $categoryBreakdown = $this->getCategoryBreakdown($currentSectionId);
+        // Validate report type
+        $validReportTypes = ['student-list', 'assessment-summary', 'performance-analysis', 'progress-report', 'endorsed-students', 'placed-students'];
+        if (!in_array($reportType, $validReportTypes)) {
+            abort(404, 'Invalid report type.');
+        }
+
+        // Get report data based on type
+        $reportData = $this->getReportDataForType($currentSectionId, $reportType);
         $sectionName = \App\Models\Section::find($currentSectionId)->section_name ?? 'Unknown Section';
 
         // Generate HTML content for PDF
-        $html = view('reports.adviser-student-list', [
-            'overviewStats' => $overviewStats,
-            'studentProgress' => $studentProgress,
-            'categoryBreakdown' => $categoryBreakdown,
+        $html = view("reports.adviser-{$reportType}", array_merge($reportData, [
             'sectionName' => $sectionName,
             'generatedAt' => now()->format('F d, Y \a\t h:i A'),
-        ])->render();
+        ]))->render();
 
         // Generate PDF using DomPDF
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html);
         $pdf->setPaper('A4', 'portrait');
 
         // Return PDF download
-        return $pdf->download('student-list-report-' . now()->format('Y-m-d') . '.pdf');
+        return $pdf->download("{$reportType}-report-" . now()->format('Y-m-d') . '.pdf');
     }
 
     /**
-     * Export student list report to Excel (CSV format)
+     * Export report to Excel (CSV format) based on report type
      */
-    public function exportExcel(Request $request): \Illuminate\Http\Response
+    public function exportExcel(Request $request, $reportType): \Illuminate\Http\Response
     {
         $adviser = Auth::user();
         $adviserRecord = $adviser->adviser;
@@ -792,40 +793,27 @@ class AdviserController extends Controller
             abort(403, 'You do not have access to this section.');
         }
 
-        $sectionName = \App\Models\Section::find($currentSectionId)->section_name ?? 'Unknown Section';
-        $studentData = $this->getStudentListData($currentSectionId, null);
-
-        // Create CSV content
-        $csvContent = "Student List Report - {$sectionName}\n";
-        $csvContent .= "Generated: " . now()->format('F d, Y \a\t h:i A') . "\n\n";
-        
-        $csvContent .= "Student Information\n";
-        $csvContent .= "Username,Email,Name,Status,Section,Has Assessment,Assessment Score,Assessment Percentage,Submitted At\n";
-        
-        foreach ($studentData as $student) {
-            $csvContent .= $student['username'] . ",";
-            $csvContent .= $student['email'] . ",";
-            $csvContent .= '"' . $student['name'] . '",';
-            $csvContent .= $student['status'] . ",";
-            $csvContent .= $student['section'] . ",";
-            $csvContent .= ($student['hasAssessment'] ? 'Yes' : 'No') . ",";
-            $csvContent .= $student['assessmentScore'] . ",";
-            $csvContent .= $student['assessmentPercentage'] . ",";
-            $csvContent .= ($student['submittedAt'] ?? 'N/A') . "\n";
+        // Validate report type
+        $validReportTypes = ['student-list', 'assessment-summary', 'performance-analysis', 'progress-report', 'endorsed-students', 'placed-students'];
+        if (!in_array($reportType, $validReportTypes)) {
+            abort(404, 'Invalid report type.');
         }
+
+        $sectionName = \App\Models\Section::find($currentSectionId)->section_name ?? 'Unknown Section';
+        $csvContent = $this->generateCSVContent($currentSectionId, $reportType, $sectionName);
 
         return response($csvContent, 200, [
             'Content-Type' => 'text/csv',
-            'Content-Disposition' => 'attachment; filename="student-list-report-' . now()->format('Y-m-d') . '.csv"',
+            'Content-Disposition' => 'attachment; filename="' . $reportType . '-report-' . now()->format('Y-m-d') . '.csv"',
         ]);
     }
 
     /**
-     * Export student list report to CSV
+     * Export report to CSV based on report type
      */
-    public function exportCSV(Request $request): \Illuminate\Http\Response
+    public function exportCSV(Request $request, $reportType): \Illuminate\Http\Response
     {
-        return $this->exportExcel($request); // Same implementation for now
+        return $this->exportExcel($request, $reportType); // Same implementation for now
     }
 
     /**
@@ -1141,6 +1129,339 @@ class AdviserController extends Controller
         })->toArray();
     }
 
+    /**
+     * Get report data based on report type
+     */
+    private function getReportDataForType($sectionId, $reportType): array
+    {
+        switch ($reportType) {
+            case 'student-list':
+                return [
+                    'overviewStats' => $this->getOverviewStats($sectionId),
+                    'studentProgress' => $this->getStudentProgress($sectionId),
+                ];
+            case 'assessment-summary':
+                return [
+                    'overviewStats' => $this->getOverviewStats($sectionId),
+                    'assessmentAnalytics' => $this->getAssessmentAnalytics($sectionId),
+                ];
+            case 'performance-analysis':
+                return [
+                    'categoryBreakdown' => $this->getCategoryBreakdown($sectionId),
+                    'topPerformers' => array_slice($this->getStudentProgress($sectionId), 0, 10),
+                    'assessmentAnalytics' => $this->getAssessmentAnalytics($sectionId),
+                ];
+            case 'progress-report':
+                return [
+                    'studentProgress' => $this->getStudentProgress($sectionId),
+                    'overviewStats' => $this->getOverviewStats($sectionId),
+                ];
+            case 'endorsed-students':
+                return [
+                    'endorsedStudents' => $this->getEndorsedStudents($sectionId),
+                    'overviewStats' => $this->getOverviewStats($sectionId),
+                ];
+            case 'placed-students':
+                return [
+                    'placedStudents' => $this->getPlacedStudents($sectionId),
+                    'overviewStats' => $this->getOverviewStats($sectionId),
+                ];
+            default:
+                return [];
+        }
+    }
+
+    /**
+     * Generate CSV content based on report type
+     */
+    private function generateCSVContent($sectionId, $reportType, $sectionName): string
+    {
+        $csvContent = ucwords(str_replace('-', ' ', $reportType)) . " Report - {$sectionName}\n";
+        $csvContent .= "Generated: " . now()->format('F d, Y \a\t h:i A') . "\n\n";
+
+        switch ($reportType) {
+            case 'student-list':
+                return $this->generateStudentListCSV($sectionId, $csvContent);
+            case 'assessment-summary':
+                return $this->generateAssessmentSummaryCSV($sectionId, $csvContent);
+            case 'performance-analysis':
+                return $this->generatePerformanceAnalysisCSV($sectionId, $csvContent);
+            case 'progress-report':
+                return $this->generateProgressReportCSV($sectionId, $csvContent);
+            case 'endorsed-students':
+                return $this->generateEndorsedStudentsCSV($sectionId, $csvContent);
+            case 'placed-students':
+                return $this->generatePlacedStudentsCSV($sectionId, $csvContent);
+            default:
+                return $csvContent;
+        }
+    }
+
+    /**
+     * Generate Student List CSV
+     */
+    private function generateStudentListCSV($sectionId, $csvContent): string
+    {
+        $studentData = $this->getStudentListData($sectionId, null);
+        
+        $csvContent .= "Student Information\n";
+        $csvContent .= "Username,Email,Name,Status,Section,Has Assessment,Assessment Score,Assessment Percentage,Submitted At\n";
+        
+        foreach ($studentData as $student) {
+            $csvContent .= $student['username'] . ",";
+            $csvContent .= $student['email'] . ",";
+            $csvContent .= '"' . $student['name'] . '",';
+            $csvContent .= $student['status'] . ",";
+            $csvContent .= $student['section'] . ",";
+            $csvContent .= ($student['hasAssessment'] ? 'Yes' : 'No') . ",";
+            $csvContent .= $student['assessmentScore'] . ",";
+            $csvContent .= $student['assessmentPercentage'] . ",";
+            $csvContent .= ($student['submittedAt'] ?? 'N/A') . "\n";
+        }
+
+        return $csvContent;
+    }
+
+    /**
+     * Generate Assessment Summary CSV
+     */
+    private function generateAssessmentSummaryCSV($sectionId, $csvContent): string
+    {
+        $overviewStats = $this->getOverviewStats($sectionId);
+        $assessmentAnalytics = $this->getAssessmentAnalytics($sectionId);
+        
+        $csvContent .= "Assessment Summary\n";
+        $csvContent .= "Total Students," . $overviewStats['totalStudents'] . "\n";
+        $csvContent .= "Completed Assessments," . $overviewStats['completedAssessments'] . "\n";
+        $csvContent .= "Completion Rate," . $overviewStats['completionRate'] . "%\n";
+        $csvContent .= "Average Score," . $overviewStats['averageScore'] . "\n";
+        $csvContent .= "Highest Score," . $overviewStats['highestScore'] . "\n";
+        $csvContent .= "Lowest Score," . $overviewStats['lowestScore'] . "\n";
+        $csvContent .= "Score Range," . $overviewStats['scoreRange'] . "\n\n";
+
+        $csvContent .= "Score Distribution\n";
+        $csvContent .= "Excellent (90-100%)," . $assessmentAnalytics['scoreDistribution']['excellent'] . "\n";
+        $csvContent .= "Good (80-89%)," . $assessmentAnalytics['scoreDistribution']['good'] . "\n";
+        $csvContent .= "Average (70-79%)," . $assessmentAnalytics['scoreDistribution']['average'] . "\n";
+        $csvContent .= "Below Average (60-69%)," . $assessmentAnalytics['scoreDistribution']['below_average'] . "\n";
+        $csvContent .= "Poor (<60%)," . $assessmentAnalytics['scoreDistribution']['poor'] . "\n\n";
+
+        $csvContent .= "Statistical Analysis\n";
+        $csvContent .= "Median Score," . $assessmentAnalytics['medianScore'] . "%\n";
+        $csvContent .= "Standard Deviation," . $assessmentAnalytics['standardDeviation'] . "\n";
+
+        return $csvContent;
+    }
+
+    /**
+     * Generate Performance Analysis CSV
+     */
+    private function generatePerformanceAnalysisCSV($sectionId, $csvContent): string
+    {
+        $categoryBreakdown = $this->getCategoryBreakdown($sectionId);
+        $topPerformers = array_slice($this->getStudentProgress($sectionId), 0, 10);
+        
+        $csvContent .= "Category Performance\n";
+        $csvContent .= "Category,Average Score,Total Questions,Percentage\n";
+        foreach ($categoryBreakdown as $category) {
+            $csvContent .= $category['category'] . ",";
+            $csvContent .= $category['averageScore'] . ",";
+            $csvContent .= $category['totalQuestions'] . ",";
+            $csvContent .= $category['percentage'] . "%\n";
+        }
+        $csvContent .= "\n";
+
+        $csvContent .= "Top Performers\n";
+        $csvContent .= "Rank,Name,Username,Score,Percentage,Submitted At\n";
+        foreach ($topPerformers as $student) {
+            if ($student['hasAssessment']) {
+                $csvContent .= $student['rank'] . ",";
+                $csvContent .= '"' . $student['name'] . '",';
+                $csvContent .= $student['username'] . ",";
+                $csvContent .= $student['score'] . ",";
+                $csvContent .= $student['percentage'] . ",";
+                $csvContent .= ($student['submittedAt'] ?? 'N/A') . "\n";
+            }
+        }
+
+        return $csvContent;
+    }
+
+    /**
+     * Generate Progress Report CSV
+     */
+    private function generateProgressReportCSV($sectionId, $csvContent): string
+    {
+        $studentProgress = $this->getStudentProgress($sectionId);
+        $overviewStats = $this->getOverviewStats($sectionId);
+        
+        $csvContent .= "Progress Overview\n";
+        $csvContent .= "Total Students," . $overviewStats['totalStudents'] . "\n";
+        $csvContent .= "Completed Assessments," . $overviewStats['completedAssessments'] . "\n";
+        $csvContent .= "Pending Students," . $overviewStats['pendingStudents'] . "\n";
+        $csvContent .= "Completion Rate," . $overviewStats['completionRate'] . "%\n\n";
+
+        $csvContent .= "Student Progress\n";
+        $csvContent .= "Rank,Name,Username,Status,Has Assessment,Score,Percentage,Submitted At\n";
+        foreach ($studentProgress as $student) {
+            $csvContent .= $student['rank'] . ",";
+            $csvContent .= '"' . $student['name'] . '",';
+            $csvContent .= $student['username'] . ",";
+            $csvContent .= $student['status'] . ",";
+            $csvContent .= ($student['hasAssessment'] ? 'Yes' : 'No') . ",";
+            $csvContent .= ($student['hasAssessment'] ? $student['score'] : 'N/A') . ",";
+            $csvContent .= ($student['hasAssessment'] ? $student['percentage'] : 'N/A') . ",";
+            $csvContent .= ($student['submittedAt'] ?? 'N/A') . "\n";
+        }
+
+        return $csvContent;
+    }
+
+    /**
+     * Get endorsed students for the adviser's section
+     */
+    private function getEndorsedStudents($sectionId): array
+    {
+        return \App\Models\Endorsement::whereHas('student.user.academeAccounts', function ($query) use ($sectionId) {
+                $query->where('section_id', $sectionId);
+            })
+            ->with(['student.user', 'internship.hte'])
+            ->get()
+            ->map(function ($endorsement) {
+                return [
+                    'id' => $endorsement->id,
+                    'student' => [
+                        'id' => $endorsement->student->id,
+                        'student_number' => $endorsement->student->student_number,
+                        'first_name' => $endorsement->student->first_name,
+                        'last_name' => $endorsement->student->last_name,
+                        'middle_name' => $endorsement->student->middle_name,
+                        'section' => $endorsement->student->section->section_name ?? '',
+                        'specialization' => $endorsement->student->specialization,
+                    ],
+                    'internship' => [
+                        'id' => $endorsement->internship->id,
+                        'position_title' => $endorsement->internship->position_title,
+                        'department' => $endorsement->internship->department,
+                        'hte' => [
+                            'company_name' => $endorsement->internship->hte->company_name,
+                        ],
+                    ],
+                    'status' => $endorsement->status,
+                    'compatibility_score' => $endorsement->compatibility_score,
+                    'endorsement_date' => $endorsement->endorsement_date,
+                    'notes' => $endorsement->notes,
+                    'created_at' => $endorsement->created_at,
+                ];
+            })
+            ->sortByDesc('created_at')
+            ->values()
+            ->toArray();
+    }
+
+    /**
+     * Get placed students for the adviser's section
+     */
+    private function getPlacedStudents($sectionId): array
+    {
+        return \App\Models\StudentPlacement::whereHas('student.user.academeAccounts', function ($query) use ($sectionId) {
+                $query->where('section_id', $sectionId);
+            })
+            ->with(['student.user', 'internship.hte'])
+            ->get()
+            ->map(function ($placement) {
+                return [
+                    'id' => $placement->id,
+                    'student' => [
+                        'id' => $placement->student->id,
+                        'student_number' => $placement->student->student_number,
+                        'first_name' => $placement->student->first_name,
+                        'last_name' => $placement->student->last_name,
+                        'middle_name' => $placement->student->middle_name,
+                        'section' => $placement->student->section->section_name ?? '',
+                        'specialization' => $placement->student->specialization,
+                    ],
+                    'internship' => [
+                        'id' => $placement->internship->id,
+                        'position_title' => $placement->internship->position_title,
+                        'department' => $placement->internship->department,
+                        'hte' => [
+                            'company_name' => $placement->internship->hte->company_name,
+                        ],
+                    ],
+                    'status' => $placement->status,
+                    'compatibility_score' => $placement->compatibility_score,
+                    'placement_date' => $placement->placement_date,
+                    'created_at' => $placement->created_at,
+                ];
+            })
+            ->sortByDesc('created_at')
+            ->values()
+            ->toArray();
+    }
+
+    /**
+     * Generate Endorsed Students CSV
+     */
+    private function generateEndorsedStudentsCSV($sectionId, $csvContent): string
+    {
+        $endorsedStudents = $this->getEndorsedStudents($sectionId);
+        $overviewStats = $this->getOverviewStats($sectionId);
+        
+        $csvContent .= "Endorsed Students Summary\n";
+        $csvContent .= "Total Students," . $overviewStats['totalStudents'] . "\n";
+        $csvContent .= "Endorsed Students," . count($endorsedStudents) . "\n";
+        $csvContent .= "Endorsement Rate," . ($overviewStats['totalStudents'] > 0 ? round((count($endorsedStudents) / $overviewStats['totalStudents']) * 100, 1) : 0) . "%\n\n";
+
+        $csvContent .= "Endorsed Students Details\n";
+        $csvContent .= "Student Number,Name,Section,Company,Position,Department,Compatibility Score,Status,Endorsement Date,Notes\n";
+        
+        foreach ($endorsedStudents as $endorsement) {
+            $csvContent .= $endorsement['student']['student_number'] . ",";
+            $csvContent .= '"' . $endorsement['student']['first_name'] . ' ' . $endorsement['student']['last_name'] . '",';
+            $csvContent .= $endorsement['student']['section'] . ",";
+            $csvContent .= '"' . $endorsement['internship']['hte']['company_name'] . '",';
+            $csvContent .= '"' . $endorsement['internship']['position_title'] . '",';
+            $csvContent .= '"' . $endorsement['internship']['department'] . '",';
+            $csvContent .= $endorsement['compatibility_score'] . ",";
+            $csvContent .= $endorsement['status'] . ",";
+            $csvContent .= ($endorsement['endorsement_date'] ? $endorsement['endorsement_date']->format('Y-m-d') : 'N/A') . ",";
+            $csvContent .= '"' . ($endorsement['notes'] ?? 'N/A') . '"\n';
+        }
+
+        return $csvContent;
+    }
+
+    /**
+     * Generate Placed Students CSV
+     */
+    private function generatePlacedStudentsCSV($sectionId, $csvContent): string
+    {
+        $placedStudents = $this->getPlacedStudents($sectionId);
+        $overviewStats = $this->getOverviewStats($sectionId);
+        
+        $csvContent .= "Placed Students Summary\n";
+        $csvContent .= "Total Students," . $overviewStats['totalStudents'] . "\n";
+        $csvContent .= "Placed Students," . count($placedStudents) . "\n";
+        $csvContent .= "Placement Rate," . ($overviewStats['totalStudents'] > 0 ? round((count($placedStudents) / $overviewStats['totalStudents']) * 100, 1) : 0) . "%\n\n";
+
+        $csvContent .= "Placed Students Details\n";
+        $csvContent .= "Student Number,Name,Section,Company,Position,Department,Compatibility Score,Status,Placement Date\n";
+        
+        foreach ($placedStudents as $placement) {
+            $csvContent .= $placement['student']['student_number'] . ",";
+            $csvContent .= '"' . $placement['student']['first_name'] . ' ' . $placement['student']['last_name'] . '",';
+            $csvContent .= $placement['student']['section'] . ",";
+            $csvContent .= '"' . $placement['internship']['hte']['company_name'] . '",';
+            $csvContent .= '"' . $placement['internship']['position_title'] . '",';
+            $csvContent .= '"' . $placement['internship']['department'] . '",';
+            $csvContent .= $placement['compatibility_score'] . ",";
+            $csvContent .= $placement['status'] . ",";
+            $csvContent .= ($placement['placement_date'] ? $placement['placement_date']->format('Y-m-d') : 'N/A') . "\n";
+        }
+
+        return $csvContent;
+    }
 
 
 }

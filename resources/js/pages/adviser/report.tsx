@@ -1,19 +1,16 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
 import AppLayout from '@/layouts/app-layout';
 import SectionSwitcher from '@/components/SectionSwitcher';
 import { type BreadcrumbItem } from '@/types';
-import { Head, router } from '@inertiajs/react';
+import { Head } from '@inertiajs/react';
 import { useState } from 'react';
 import {
     FileTextIcon,
     DownloadIcon,
     UsersIcon,
-    BarChart3Icon,
-    CalendarIcon,
-    FilterIcon
+    BarChart3Icon
 } from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -41,9 +38,6 @@ export default function AdviserReport({
 }: Props) {
     const [selectedReportType, setSelectedReportType] = useState<string>('');
     const [selectedFormat, setSelectedFormat] = useState<string>('pdf');
-    const [includeCharts, setIncludeCharts] = useState<boolean>(true);
-    const [includeDetails, setIncludeDetails] = useState<boolean>(true);
-    const [dateRange, setDateRange] = useState<string>('all');
     const [isGenerating, setIsGenerating] = useState<boolean>(false);
 
     const reportTypes = [
@@ -51,8 +45,8 @@ export default function AdviserReport({
         { value: 'assessment-summary', label: 'Assessment Summary Report', description: 'Overview of assessment completion and performance' },
         { value: 'performance-analysis', label: 'Performance Analysis Report', description: 'Detailed analysis of student performance by category' },
         { value: 'progress-report', label: 'Progress Report', description: 'Student progress tracking and completion status' },
-        { value: 'statistical-summary', label: 'Statistical Summary Report', description: 'Statistical analysis and trends' },
-        { value: 'monthly-report', label: 'Monthly Activity Report', description: 'Monthly submission trends and activity' }
+        { value: 'endorsed-students', label: 'Endorsed Students Report', description: 'Students who have been endorsed for internship placement' },
+        { value: 'placed-students', label: 'Placed Students Report', description: 'Students who have been successfully placed in internships' }
     ];
 
     const exportFormats = [
@@ -61,34 +55,26 @@ export default function AdviserReport({
         { value: 'csv', label: 'CSV File' }
     ];
 
-    const dateRanges = [
-        { value: 'all', label: 'All Time' },
-        { value: 'current-month', label: 'Current Month' },
-        { value: 'last-month', label: 'Last Month' },
-        { value: 'last-3-months', label: 'Last 3 Months' },
-        { value: 'last-6-months', label: 'Last 6 Months' },
-        { value: 'current-year', label: 'Current Year' }
-    ];
 
     const handleGenerateReport = () => {
         if (!selectedReportType) return;
 
         setIsGenerating(true);
         
-        // Determine the export route based on format
+        // Determine the export route based on format and report type
         let exportRoute;
         switch (selectedFormat) {
             case 'pdf':
-                exportRoute = route('adviser.report.export.pdf');
+                exportRoute = route('adviser.report.export.pdf', { reportType: selectedReportType });
                 break;
             case 'excel':
-                exportRoute = route('adviser.report.export.excel');
+                exportRoute = route('adviser.report.export.excel', { reportType: selectedReportType });
                 break;
             case 'csv':
-                exportRoute = route('adviser.report.export.csv');
+                exportRoute = route('adviser.report.export.csv', { reportType: selectedReportType });
                 break;
             default:
-                exportRoute = route('adviser.report.export.csv');
+                exportRoute = route('adviser.report.export.csv', { reportType: selectedReportType });
         }
 
         // Open the export URL in a new window/tab
@@ -124,7 +110,7 @@ export default function AdviserReport({
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Reports" />
-            <div className="flex h-full flex-1 flex-col gap-6 rounded-xl p-4">
+            <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
@@ -147,7 +133,7 @@ export default function AdviserReport({
                 {/* Report Generation Form */}
                 <div className="grid gap-6 md:grid-cols-2">
                     {/* Report Type Selection */}
-                    <Card>
+                    <Card className="flex flex-col">
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
                                 <FileTextIcon className="h-5 w-5" />
@@ -157,17 +143,17 @@ export default function AdviserReport({
                                 Select the type of report you want to generate
                             </CardDescription>
                         </CardHeader>
-                        <CardContent className="space-y-4">
+                        <CardContent className="flex-1 flex flex-col justify-end">
                             <Select value={selectedReportType} onValueChange={setSelectedReportType}>
-                                <SelectTrigger>
+                                <SelectTrigger className="h-12 text-base">
                                     <SelectValue placeholder="Choose a report type" />
                                 </SelectTrigger>
-                                <SelectContent>
+                                <SelectContent className="max-h-60">
                                     {reportTypes.map((type) => (
-                                        <SelectItem key={type.value} value={type.value}>
-                                            <div>
-                                                <div className="font-medium">{type.label}</div>
-                                                <div className="text-xs text-muted-foreground">{type.description}</div>
+                                        <SelectItem key={type.value} value={type.value} className="py-3">
+                                            <div className="flex flex-col items-start">
+                                                <div className="font-semibold text-sm">{type.label}</div>
+                                                <div className="text-xs text-muted-foreground mt-1">{type.description}</div>
                                             </div>
                                         </SelectItem>
                                     ))}
@@ -187,7 +173,7 @@ export default function AdviserReport({
                                 Configure how the report will be exported
                             </CardDescription>
                         </CardHeader>
-                        <CardContent className="space-y-4">
+                        <CardContent>
                             <div>
                                 <label className="text-sm font-medium">Format</label>
                                 <Select value={selectedFormat} onValueChange={setSelectedFormat}>
@@ -203,66 +189,14 @@ export default function AdviserReport({
                                     </SelectContent>
                                 </Select>
                             </div>
-
-                            <div>
-                                <label className="text-sm font-medium">Date Range</label>
-                                <Select value={dateRange} onValueChange={setDateRange}>
-                                    <SelectTrigger className="mt-1">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {dateRanges.map((range) => (
-                                            <SelectItem key={range.value} value={range.value}>
-                                                {range.label}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
                         </CardContent>
                     </Card>
                 </div>
 
-                {/* Report Options */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <FilterIcon className="h-5 w-5" />
-                            Report Options
-                        </CardTitle>
-                        <CardDescription>
-                            Customize what to include in your report
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="flex items-center space-x-6">
-                            <div className="flex items-center space-x-2">
-                                <Checkbox 
-                                    id="include-charts" 
-                                    checked={includeCharts} 
-                                    onCheckedChange={(checked) => setIncludeCharts(checked === true)}
-                                />
-                                <label htmlFor="include-charts" className="text-sm font-medium">
-                                    Include Charts and Graphs
-                                </label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                                <Checkbox 
-                                    id="include-details" 
-                                    checked={includeDetails} 
-                                    onCheckedChange={(checked) => setIncludeDetails(checked === true)}
-                                />
-                                <label htmlFor="include-details" className="text-sm font-medium">
-                                    Include Detailed Information
-                                </label>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
 
                 {/* Generate Report Button */}
                 <Card>
-                    <CardContent className="pt-6">
+                    <CardContent className="pt-4">
                         <div className="flex items-center justify-between">
                             <div>
                                 <h3 className="text-lg font-semibold">Ready to Generate Report</h3>
@@ -294,7 +228,7 @@ export default function AdviserReport({
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <div className="grid gap-4 md:grid-cols-3">
+                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                             <Button 
                                 variant="outline" 
                                 className="h-auto p-4 flex-col gap-2"
@@ -329,17 +263,32 @@ export default function AdviserReport({
                                 variant="outline" 
                                 className="h-auto p-4 flex-col gap-2"
                                 onClick={() => {
-                                    setSelectedReportType('monthly-report');
+                                    setSelectedReportType('endorsed-students');
                                     setSelectedFormat('pdf');
-                                    setDateRange('current-month');
                                 }}
                             >
-                                <CalendarIcon className="h-6 w-6" />
-                                <span>Monthly Report</span>
+                                <FileTextIcon className="h-6 w-6" />
+                                <span>Endorsed Students</span>
                                 <span className="text-xs text-muted-foreground">
-                                    Current month activity report
+                                    View endorsed students report
                                 </span>
                             </Button>
+
+                            <Button 
+                                variant="outline" 
+                                className="h-auto p-4 flex-col gap-2"
+                                onClick={() => {
+                                    setSelectedReportType('placed-students');
+                                    setSelectedFormat('pdf');
+                                }}
+                            >
+                                <DownloadIcon className="h-6 w-6" />
+                                <span>Placed Students</span>
+                                <span className="text-xs text-muted-foreground">
+                                    View placed students report
+                                </span>
+                            </Button>
+
                         </div>
                     </CardContent>
                 </Card>

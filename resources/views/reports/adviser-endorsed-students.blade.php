@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Student List Report - {{ $sectionName }}</title>
+    <title>Endorsed Students Report - {{ $sectionName }}</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -72,19 +72,17 @@
             border-top: 1px solid #ddd;
             padding-top: 10px;
         }
-        .category-section {
-            margin-bottom: 20px;
-        }
-        .category-title {
+        .section-title {
             font-weight: bold;
-            margin-bottom: 10px;
+            margin: 20px 0 10px 0;
             color: #333;
+            font-size: 14px;
         }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>Student List Report</h1>
+        <h1>Endorsed Students Report</h1>
         <p>Section: {{ $sectionName }}</p>
         <p>Generated: {{ $generatedAt }}</p>
     </div>
@@ -95,51 +93,55 @@
             <div class="stat-label">Total Students</div>
         </div>
         <div class="stat-item">
-            <div class="stat-value">{{ $overviewStats['completedAssessments'] }}</div>
-            <div class="stat-label">Completed Assessments</div>
+            <div class="stat-value">{{ count($endorsedStudents) }}</div>
+            <div class="stat-label">Endorsed Students</div>
         </div>
         <div class="stat-item">
-            <div class="stat-value">{{ $overviewStats['completionRate'] }}%</div>
-            <div class="stat-label">Completion Rate</div>
+            <div class="stat-value">{{ $overviewStats['totalStudents'] > 0 ? round((count($endorsedStudents) / $overviewStats['totalStudents']) * 100, 1) : 0 }}%</div>
+            <div class="stat-label">Endorsement Rate</div>
         </div>
         <div class="stat-item">
-            <div class="stat-value">{{ $overviewStats['averageScore'] }}</div>
-            <div class="stat-label">Average Score</div>
+            <div class="stat-value">{{ count($endorsedStudents) > 0 ? round(collect($endorsedStudents)->avg('compatibility_score'), 1) : 0 }}</div>
+            <div class="stat-label">Avg Compatibility</div>
         </div>
     </div>
 
-    <h2>Student Information</h2>
+    <div class="section-title">Endorsed Students Details</div>
     <table>
         <thead>
             <tr>
-                <th>Rank</th>
+                <th>Student Number</th>
                 <th>Name</th>
-                <th>Username</th>
-                <th>Email</th>
+                <th>Section</th>
+                <th>Company</th>
+                <th>Position</th>
+                <th>Department</th>
+                <th>Compatibility Score</th>
                 <th>Status</th>
-                <th>Assessment</th>
-                <th>Score</th>
-                <th>Percentage</th>
-                <th>Submitted</th>
+                <th>Endorsement Date</th>
             </tr>
         </thead>
         <tbody>
-            @foreach($studentProgress as $student)
+            @foreach($endorsedStudents as $endorsement)
             <tr>
-                <td>{{ $student['rank'] }}</td>
-                <td>{{ $student['name'] }}</td>
-                <td>{{ $student['username'] }}</td>
-                <td>{{ $student['email'] ?? 'N/A' }}</td>
-                <td>{{ ucfirst($student['status']) }}</td>
-                <td>{{ $student['hasAssessment'] ? 'Completed' : 'Pending' }}</td>
-                <td>{{ $student['hasAssessment'] ? $student['score'] : 'N/A' }}</td>
-                <td>{{ $student['hasAssessment'] ? $student['percentage'] . '%' : 'N/A' }}</td>
-                <td>{{ $student['submittedAt'] ?? 'N/A' }}</td>
+                <td>{{ $endorsement['student']['student_number'] }}</td>
+                <td>{{ $endorsement['student']['first_name'] }} {{ $endorsement['student']['last_name'] }}</td>
+                <td>{{ $endorsement['student']['section'] }}</td>
+                <td>{{ $endorsement['internship']['hte']['company_name'] }}</td>
+                <td>{{ $endorsement['internship']['position_title'] }}</td>
+                <td>{{ $endorsement['internship']['department'] }}</td>
+                <td>{{ $endorsement['compatibility_score'] }}%</td>
+                <td>{{ ucfirst($endorsement['status']) }}</td>
+                <td>{{ $endorsement['endorsement_date'] ? $endorsement['endorsement_date']->format('M d, Y') : 'N/A' }}</td>
             </tr>
             @endforeach
         </tbody>
     </table>
 
+    @if(empty($endorsedStudents))
+    <div class="section-title">No Endorsed Students</div>
+    <p>There are currently no endorsed students in this section.</p>
+    @endif
 
     <div class="footer">
         <p>This report was generated automatically by the InternConnect System</p>
