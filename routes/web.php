@@ -308,7 +308,7 @@ Route::group(['middleware' => ['auth', 'verified', 'role:student']], function ()
     Route::get('assessment', [AssessmentController::class, 'index'])->name('assessment');
     Route::get('student-profile', function () {
         $user = Auth::user();
-        $student = $user->student;
+        $student = $user->student()->with('section')->first();
 
 
 
@@ -335,14 +335,18 @@ Route::group(['middleware' => ['auth', 'verified', 'role:student']], function ()
                 'first_name' => $student->first_name,
                 'last_name' => $student->last_name,
                 'middle_name' => $student->middle_name,
+                'phone' => $student->phone,
                 'section' => $student->section->section_name ?? null,
                 'specialization' => $student->specialization,
+                'address' => $student->address,
+                'birth_date' => $student->birth_date,
                 'is_submit' => $student->is_submit,
             ];
 
             return Inertia::render('student/profile', [
                 'student' => $formattedStudent,
                 'categories' => [],
+                'additional_info' => [],
                 'hasSubmitted' => false
             ]);
         }
@@ -370,21 +374,38 @@ Route::group(['middleware' => ['auth', 'verified', 'role:student']], function ()
             ];
         })->toArray();
 
+        // Get student's additional info
+        $additionalInfoData = [];
+        $studentAdditionalInfos = \App\Models\StudentAdditionalInfo::with('additionalInfo')
+            ->where('student_id', $student->id)
+            ->get();
+        
+        foreach ($studentAdditionalInfos as $studentInfo) {
+            $additionalInfoData[] = [
+                'info_name' => $studentInfo->additionalInfo->info_name,
+                'info_value' => $studentInfo->info,
+            ];
+        }
+
         $formattedStudent = [
             'id' => $student->id,
             'student_number' => $student->student_number,
             'first_name' => $student->first_name,
             'last_name' => $student->last_name,
             'middle_name' => $student->middle_name,
+            'phone' => $student->phone,
             'section' => $student->section->section_name ?? null,
             'specialization' => $student->specialization,
+            'address' => $student->address,
+            'birth_date' => $student->birth_date,
             'is_submit' => $student->is_submit,
         ];
 
         return Inertia::render('student/profile', [
             'student' => $formattedStudent,
             'categories' => $transformedCategories,
-            'hasSubmitted' => true
+            'additional_info' => $additionalInfoData,
+            'hasSubmitted' => $student->is_submit
         ]);
     })->name('student-profile');
 

@@ -10,7 +10,8 @@ import {
     GraduationCap,
     BookOpen,
     CheckCircle,
-    Clock
+    Clock,
+    Link
 } from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -32,6 +33,11 @@ interface Category {
     subcategories: Subcategory[];
 }
 
+interface AdditionalInfo {
+    info_name: string;
+    info_value: string;
+}
+
 interface Student {
     id: number;
     student_number: string;
@@ -49,6 +55,7 @@ interface Student {
 interface ProfileProps {
     student: Student | null;
     categories: Category[];
+    additional_info?: AdditionalInfo[];
     hasSubmitted?: boolean;
 }
 
@@ -59,7 +66,7 @@ const navigationItems = [
     { id: 'soft', label: 'Soft Skills', icon: CheckCircle },
 ];
 
-export default function Profile({ student, categories, hasSubmitted = true }: ProfileProps) {
+export default function Profile({ student, categories, additional_info = [], hasSubmitted = true }: ProfileProps) {
     const [activeTab, setActiveTab] = useState('basic');
 
     if (!student) {
@@ -174,6 +181,68 @@ export default function Profile({ student, categories, hasSubmitted = true }: Pr
                         <label className="text-sm font-medium text-muted-foreground">Address</label>
                         <p className="text-lg">{student.address || 'Not provided'}</p>
                     </div>
+                </CardContent>
+            </Card>
+
+            {/* Additional Information Card */}
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <Link className="h-5 w-5" />
+                        Additional Information
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    {additional_info.length > 0 ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {additional_info.map((info, index) => (
+                                <div key={index}>
+                                    <label className="text-sm font-medium text-muted-foreground">
+                                        {info.info_name}
+                                    </label>
+                                    <p className="text-lg break-all">
+                                        {info.info_value ? (
+                                            <a 
+                                                href={info.info_value} 
+                                                target="_blank" 
+                                                rel="noopener noreferrer"
+                                                className="text-blue-600 hover:text-blue-800 underline"
+                                            >
+                                                {info.info_value}
+                                            </a>
+                                        ) : (
+                                            'Not provided'
+                                        )}
+                                    </p>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="text-center py-6">
+                            <div className="mx-auto w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-3">
+                                <Link className="h-6 w-6 text-gray-400" />
+                            </div>
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                                No Additional Information
+                            </h3>
+                            <p className="text-muted-foreground text-sm">
+                                {hasSubmitted 
+                                    ? "You haven't provided any additional information yet."
+                                    : "Complete the assessment to provide additional information."
+                                }
+                            </p>
+                            {!hasSubmitted && (
+                                <div className="mt-3">
+                                    <a
+                                        href="/assessment"
+                                        className="inline-flex items-center px-3 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm"
+                                    >
+                                        Take Assessment
+                                    </a>
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </CardContent>
             </Card>
         </div>
