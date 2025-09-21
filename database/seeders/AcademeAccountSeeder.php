@@ -15,36 +15,40 @@ class AcademeAccountSeeder extends Seeder
      */
     public function run(): void
     {
-        // Get or create sections
-        $sections = Section::all();
-        
-        if ($sections->isEmpty()) {
-            $sections = Section::create([
-                'section_name' => 'BSIT-1A',
-                'status' => 'active'
-            ]);
-            $sections = collect([$sections]);
-        }
-
-        // Get students only (advisers now use their own table for section assignment)
+        // Get all students with their student records
         $students = User::whereHas('roles', function ($query) {
             $query->where('name', 'student');
-        })->get();
+        })->with('student')->get();
 
-        // Assign students to sections
-        foreach ($students as $index => $student) {
-            $section = $sections->get($index % $sections->count());
-            
-            AcademeAccount::updateOrCreate(
-                [
-                    'user_id' => $student->id,
-                    'section_id' => $section->section_id,
-                ],
-                [
-                    'user_id' => $student->id,
-                    'section_id' => $section->section_id,
-                ]
-            );
+        $createdCount = 0;
+        $updatedCount = 0;
+
+        foreach ($students as $student) {
+            if ($student->student) {
+                // Use the section_id from the student record to maintain consistency
+                $sectionId = $student->student->section_id;
+                
+                $academeAccount = AcademeAccount::updateOrCreate(
+                    [
+                        'user_id' => $student->id,
+                        'section_id' => $sectionId,
+                    ],
+                    [
+                        'user_id' => $student->id,
+                        'section_id' => $sectionId,
+                    ]
+                );
+                
+                if ($academeAccount->wasRecentlyCreated) {
+                    $createdCount++;
+                } else {
+                    $updatedCount++;
+                }
+            }
         }
+
+        $this->command->info("AcademeAccount seeder completed!");
+        $this->command->info("Created: {$createdCount} accounts");
+        $this->command->info("Updated: {$updatedCount} accounts");
     }
 }

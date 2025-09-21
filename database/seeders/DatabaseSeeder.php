@@ -41,6 +41,7 @@ class DatabaseSeeder extends Seeder
         $clairoUser = User::factory()->student()->create([
             'username' => 'clairo',
             'email' => 'clairo@example.com',
+            'status' => 'verified',
             'password' => bcrypt('password'),
         ]);
 
@@ -48,7 +49,7 @@ class DatabaseSeeder extends Seeder
 
         $this->call(CategorySeeder::class);
         $this->call(SectionSeeder::class);
-        
+
         // Create student record for clairo after sections are seeded
         $section = \App\Models\Section::where('section_name', 'BSIT-4A')->first();
         if ($section) {
@@ -63,23 +64,30 @@ class DatabaseSeeder extends Seeder
                 'specialization' => 'Programming',
                 'address' => 'Test Address, Quezon City',
                 'birth_date' => '2000-01-01',
-                'is_submit' => false,
+                'is_submit' => true, // Set to true so it appears in reports
                 'is_placed' => false,
                 'is_active' => true,
             ]);
+
+            // Create academe account for clairo
+            \App\Models\AcademeAccount::create([
+                'user_id' => $clairoUser->id,
+                'section_id' => $section->section_id,
+            ]);
         }
-        
-        $this->call(AcademeAccountSeeder::class);
+
         $this->call(HTESeeder::class);
-        $this->call(AdviserSeeder::class);
         $this->call(InternshipSeeder::class);
         $this->call(ExtendedInternshipSeeder::class);
         $this->call(StudentSeeder::class);
         $this->call(ExtendedStudentSeeder::class);
+        $this->call(AcademeAccountSeeder::class);
         $this->call(InternshipCriteriaSeeder::class);
         $this->call(StudentScoreSeeder::class);
         $this->call(StudentMatchSeeder::class);
         $this->call(PlacementSeeder::class);
+        $this->call(AdviserSeeder::class);
+        $this->call(EndorsementPlacementSeeder::class);
         $this->call(DeadlineSeeder::class);
         $this->call(AdditionalInfoSeeder::class);
     }

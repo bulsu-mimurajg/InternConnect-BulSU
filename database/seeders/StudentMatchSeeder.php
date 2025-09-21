@@ -28,6 +28,10 @@ class StudentMatchSeeder extends Seeder
             return;
         }
 
+        // Clear existing matches to prevent duplicates
+        $this->command->info('Clearing existing student matches...');
+        StudentMatch::truncate();
+
         $this->command->info('Creating student-internship matches...');
         
         $matchingService = new MatchingService();
