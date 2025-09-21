@@ -1,5 +1,6 @@
 import { useFormContext } from 'react-hook-form';
 import { useEffect, useState } from 'react';
+import { usePage } from '@inertiajs/react';
 
 interface Skill {
     name: string;
@@ -11,6 +12,16 @@ interface Skill {
 interface Section {
     title: string;
     skills: Skill[];
+}
+
+interface AdditionalInfo {
+    id: number;
+    info_name: string;
+    is_active: boolean;
+}
+
+interface PageProps extends Record<string, unknown> {
+    additionalInfos?: AdditionalInfo[];
 }
 
 interface PersonalField {
@@ -35,6 +46,7 @@ type SummarySection = PersonalSection | SkillSection;
 export default function Summary() {
     const { watch } = useFormContext();
     const formData = watch();
+    const { additionalInfos = [] } = usePage<PageProps>().props;
     const [sections, setSections] = useState<SummarySection[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -64,14 +76,17 @@ export default function Summary() {
                 const technicalData = await technicalResponse.json();
                 const softData = await softResponse.json();
 
+                // Create additional info fields
+                const additionalInfoFields = additionalInfos.map((info) => ({
+                    name: info.info_name.toLowerCase().replace(/[ -]/g, '_'),
+                    label: info.info_name,
+                }));
+
                 const allSections: SummarySection[] = [
                     {
-                        title: 'Personal Information',
+                        title: 'Additional Information',
                         type: 'personal' as const,
-                        fields: [
-                            { name: 'linkedin', label: 'LinkedIn Profile Link' },
-                            { name: 'facebook', label: 'Facebook Profile Link' }
-                        ]
+                        fields: additionalInfoFields
                     },
                     {
                         title: 'Language Proficiency',

@@ -49,6 +49,13 @@ class AssessmentController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        // Log the incoming request for debugging
+        \Log::info('Assessment submission attempt', [
+            'user_id' => Auth::id(),
+            'request_data' => $request->all(),
+            'has_csrf_token' => $request->has('_token'),
+        ]);
+
         // Check if student assessment form deadline is active
         if (!\App\Models\Deadline::isActiveForCategory('student_assessment_form')) {
             return redirect()->back()->withErrors(['error' => 'No current Deadline or Deadline is expired. You cannot submit assessments at this time.']);
@@ -57,6 +64,9 @@ class AssessmentController extends Controller
         // Get all questions from database to build dynamic validation rules
         $questions = Question::where('access', 'Student')->where('is_active', true)->get();
         $additionalInfos = AdditionalInfo::where('is_active', true)->get();
+
+        // Initialize validation rules array
+        $validationRules = [];
 
         // Add validation rules for each question
         foreach ($questions as $question) {
@@ -71,41 +81,58 @@ class AssessmentController extends Controller
             $validationRules[$fieldName] = 'required|string|max:255';
         }
 
+        // If no validation rules are set, add a dummy rule to prevent empty validation
+        if (empty($validationRules)) {
+            $validationRules['dummy'] = 'nullable|string';
+        }
+
+        // Remove dummy field from request data if it exists
+        if ($request->has('dummy')) {
+            $request->request->remove('dummy');
+        }
+
         // Validate the request
-        $request->validate($validationRules);
+        try {
+            $request->validate($validationRules);
+            \Log::info('Assessment validation passed', [
+                'validation_rules_count' => count($validationRules),
+                'request_fields_count' => count($request->all())
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            \Log::error('Assessment validation failed', [
+                'errors' => $e->errors(),
+                'request_data' => $request->all(),
+                'validation_rules' => $validationRules
+            ]);
+            throw $e;
+        }
 
         try {
             // Get the authenticated user
             $user = Auth::user();
+            \Log::info('Processing assessment for user', ['user_id' => $user->id]);
 
-            // Find or create student record
+            // Find student record
             $student = Student::where('user_id', $user->id)->first();
 
             if (!$student) {
-                // Create a new student record if it doesn't exist
-                $student = Student::create([
-                    'user_id' => $user->id,
-                ]);
+                \Log::error('Student record not found for user', ['user_id' => $user->id]);
+                return redirect()->back()->withErrors(['error' => 'Student profile not found. Please contact administrator.']);
+            } else {
+                \Log::info('Found existing student record', ['student_id' => $student->id]);
             }
 
             // Store assessment data in session for now (or you can store in a different way)
             $assessmentData = [
                 'student_id' => $student->id,
-                'personal_info' => [
-                    'first_name' => $request->firstName,
-                    'last_name' => $request->lastName,
-                    'middle_name' => $request->middleName,
-                    'suffix' => $request->suffix,
-                    'province' => $request->province,
-                    'city' => $request->city,
-                    'zip' => $request->zip,
-                ],
+                'additional_info' => [],
                 'questions' => [],
                 'submitted_at' => now(),
             ];
 
             // Store question responses and compute scores
             $subcategoryScores = [];
+            \Log::info('Processing questions', ['questions_count' => $questions->count()]);
 
             foreach ($questions as $question) {
                 $subcategory = $question->subcategory;
@@ -134,6 +161,7 @@ class AssessmentController extends Controller
             }
 
             // Compute mean scores for each subcategory and store in student_score table
+            \Log::info('Computing scores', ['subcategory_count' => count($subcategoryScores)]);
             foreach ($subcategoryScores as $subcategoryId => $scores) {
                 $meanScore = (array_sum($scores) / count($scores));
 
@@ -150,31 +178,48 @@ class AssessmentController extends Controller
             }
 
             // Store additional info data
+            \Log::info('Processing additional info', ['additional_info_count' => $additionalInfos->count()]);
             foreach ($additionalInfos as $additionalInfo) {
                 $fieldName = strtolower(str_replace([' ', '-'], ['_', '_'], $additionalInfo->info_name));
                 
                 if ($request->has($fieldName)) {
+                    $infoValue = $request->input($fieldName);
+                    
+                    // Store in database
                     StudentAdditionalInfo::updateOrCreate(
                         [
                             'student_id' => $student->id,
                             'additional_info_id' => $additionalInfo->id,
                         ],
                         [
-                            'info' => $request->input($fieldName),
+                            'info' => $infoValue,
                         ]
                     );
+                    
+                    // Add to assessment data
+                    $assessmentData['additional_info'][] = [
+                        'info_name' => $additionalInfo->info_name,
+                        'info_value' => $infoValue,
+                    ];
                 }
             }
 
             // Update student's is_submit status to true
+            \Log::info('Updating student submission status', ['student_id' => $student->id]);
             $student->update(['is_submit' => true]);
 
             // Store in session for now (you can modify this to store in database later)
             session(['assessment_data' => $assessmentData]);
 
+            \Log::info('Assessment submitted successfully', ['student_id' => $student->id]);
             return redirect()->route('assessment')->with('success', 'Assessment submitted successfully!');
 
         } catch (\Exception $e) {
+            \Log::error('Assessment submission failed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'user_id' => Auth::id()
+            ]);
             return redirect()->back()->with('error', 'Failed to submit assessment. Please try again.');
         }
     }
@@ -331,6 +376,19 @@ class AssessmentController extends Controller
                 }]);
             }])->get();
 
+            // Get student's additional info
+            $additionalInfoData = [];
+            $studentAdditionalInfos = StudentAdditionalInfo::with('additionalInfo')
+                ->where('student_id', $student->id)
+                ->get();
+            
+            foreach ($studentAdditionalInfos as $studentInfo) {
+                $additionalInfoData[] = [
+                    'info_name' => $studentInfo->additionalInfo->info_name,
+                    'info_value' => $studentInfo->info,
+                ];
+            }
+
             $profileData = [
                 'student' => [
                     'id' => $student->id,
@@ -345,7 +403,8 @@ class AssessmentController extends Controller
                     'birth_date' => $student->birth_date,
                     'is_submit' => $student->is_submit,
                 ],
-                'categories' => []
+                'categories' => [],
+                'additional_info' => $additionalInfoData,
             ];
 
             foreach ($categories as $category) {
@@ -446,6 +505,21 @@ class AssessmentController extends Controller
                     ->first();
             }
 
+            // Get student's additional info (if submitted)
+            $additionalInfoData = [];
+            if ($hasSubmitted) {
+                $studentAdditionalInfos = StudentAdditionalInfo::with('additionalInfo')
+                    ->where('student_id', $student->id)
+                    ->get();
+                
+                foreach ($studentAdditionalInfos as $studentInfo) {
+                    $additionalInfoData[] = [
+                        'info_name' => $studentInfo->additionalInfo->info_name,
+                        'info_value' => $studentInfo->info,
+                    ];
+                }
+            }
+
             $dashboardData = [
                 'student' => [
                     'id' => $student->id,
@@ -483,6 +557,7 @@ class AssessmentController extends Controller
                     'match_score' => $currentPlacement->compatibility_score ?? 0,
                     'status' => $currentPlacement->status ?? 'pending',
                 ] : null,
+                'additional_info' => $additionalInfoData,
             ];
 
             return response()->json($dashboardData);

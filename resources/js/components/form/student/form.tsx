@@ -42,14 +42,12 @@ export default function StudentForm() {
     const additionalInfoFields = additionalInfos.map(info => 
         info.info_name.toLowerCase().replace(/[ -]/g, '_')
     );
-    
-    const stepOneFields = ['linkedin', 'facebook', ...additionalInfoFields];
 
     const steps = [
         {
             id: 'Step 1',
-            name: 'Personal Information',
-            fields: stepOneFields,
+            name: 'Additional Information',
+            fields: [...additionalInfoFields],
         },
         {
             id: 'Step 2',
@@ -70,10 +68,6 @@ export default function StudentForm() {
     ];
     // Create dynamic validation schema
     const createFormSchema = () => {
-        const baseSchema = {
-            linkedin: z.string().min(1, 'LinkedIn Profile is required'),
-            facebook: z.string().min(1, 'Facebook link is required')
-        };
 
         // Add additional info fields to validation schema
         const additionalInfoSchema: Record<string, z.ZodString> = {};
@@ -99,13 +93,20 @@ export default function StudentForm() {
             softSchema[field] = z.string().min(1, 'This field is required');
         });
 
-        return z.object({
-            ...baseSchema,
+        // Ensure we always have at least one field in the schema
+        const schemaFields = {
             ...additionalInfoSchema,
             ...languageSchema,
             ...technicalSchema,
             ...softSchema,
-        });
+        };
+
+        // If no fields are present, add a dummy field to prevent empty schema
+        if (Object.keys(schemaFields).length === 0) {
+            schemaFields['dummy'] = z.string();
+        }
+
+        return z.object(schemaFields);
     };
 
     const FormSchema = createFormSchema();
@@ -117,12 +118,25 @@ export default function StudentForm() {
     });
 
     function onSubmit(values: z.infer<typeof FormSchema>) {
+        console.log('Form submission values:', values);
         setIsSubmitting(true);
-        router.post('/assessment', values, {
-            onSuccess: () => {
+        
+        // Remove dummy field if it exists
+        const cleanValues = { ...values };
+        if (cleanValues.dummy !== undefined) {
+            delete cleanValues.dummy;
+        }
+        
+        router.post('/assessment', cleanValues, {
+            onSuccess: (page) => {
+                console.log('Form submission successful:', page);
                 setIsSubmitting(false);
             },
-            onError: () => {
+            onError: (errors) => {
+                console.error('Form submission failed:', errors);
+                setIsSubmitting(false);
+            },
+            onFinish: () => {
                 setIsSubmitting(false);
             }
         });

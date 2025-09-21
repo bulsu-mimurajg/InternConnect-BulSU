@@ -42,6 +42,11 @@ class StudentScoreSeeder extends Seeder
         ];
 
         foreach ($students as $student) {
+            // Skip clairo - let them test the form submission without pre-generated scores
+            if ($student->user && $student->user->username === 'clairo') {
+                continue;
+            }
+            
             foreach ($subcategories as $subcategory) {
                 // Generate a random score between 1 and 5 with more variation
                 $score = round(mt_rand(100, 500) / 100, 2);
@@ -87,7 +92,12 @@ class StudentScoreSeeder extends Seeder
         $this->createStandoutStudents($students, $subcategories);
 
         // Mark all students as having submitted assessments since we're creating scores for them
+        // EXCEPT for clairo (who should be able to test the form)
         foreach ($students as $student) {
+            // Skip clairo - let them test the form submission
+            if ($student->user && $student->user->username === 'clairo') {
+                continue;
+            }
             $student->update(['is_submit' => true]);
         }
 
@@ -99,8 +109,8 @@ class StudentScoreSeeder extends Seeder
      */
     private function createStandoutStudents($students, $subcategories)
     {
-        // Get a few students to make them stand out
-        $standoutStudents = $students->take(3);
+        // Get a few students to make them stand out (excluding clairo)
+        $standoutStudents = $students->where('user.username', '!=', 'clairo')->take(3);
         $programmingSubcategories = $subcategories->whereIn('subcategory_name', ['Java', 'Python', 'JavaScript']);
         $softSkillSubcategories = $subcategories->whereIn('subcategory_name', ['Communication Skills', 'Problem-Solving and Analytical Skills']);
 

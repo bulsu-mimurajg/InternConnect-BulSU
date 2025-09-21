@@ -7,16 +7,6 @@ const personalInfoSections = [
     {
         title: 'Basic Student Information',
         fields: [
-            {
-                name: 'linkedin',
-                label: 'Linkedin Profile Link',
-                placeholder: 'linkedin.com/jemswoi',
-            },
-            {
-                name: 'facebook',
-                label: 'Facebook Profile Link',
-                placeholder: 'facebook.com/jemswoi',
-            }
         ],
     }
 ];

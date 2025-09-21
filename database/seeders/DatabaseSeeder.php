@@ -38,7 +38,7 @@ class DatabaseSeeder extends Seeder
             'password' => bcrypt('password'),
         ]);
 
-        User::factory()->student()->create([
+        $clairoUser = User::factory()->student()->create([
             'username' => 'clairo',
             'email' => 'clairo@example.com',
             'password' => bcrypt('password'),
@@ -48,6 +48,27 @@ class DatabaseSeeder extends Seeder
 
         $this->call(CategorySeeder::class);
         $this->call(SectionSeeder::class);
+        
+        // Create student record for clairo after sections are seeded
+        $section = \App\Models\Section::where('section_name', 'BSIT-4A')->first();
+        if ($section) {
+            Student::create([
+                'user_id' => $clairoUser->id,
+                'student_number' => '2021-0004',
+                'first_name' => 'Clairo',
+                'middle_name' => 'Test',
+                'last_name' => 'Student',
+                'phone' => '09123456792',
+                'section_id' => $section->section_id,
+                'specialization' => 'Programming',
+                'address' => 'Test Address, Quezon City',
+                'birth_date' => '2000-01-01',
+                'is_submit' => false,
+                'is_placed' => false,
+                'is_active' => true,
+            ]);
+        }
+        
         $this->call(AcademeAccountSeeder::class);
         $this->call(HTESeeder::class);
         $this->call(AdviserSeeder::class);
@@ -60,6 +81,6 @@ class DatabaseSeeder extends Seeder
         $this->call(StudentMatchSeeder::class);
         $this->call(PlacementSeeder::class);
         $this->call(DeadlineSeeder::class);
-
+        $this->call(AdditionalInfoSeeder::class);
     }
 }
