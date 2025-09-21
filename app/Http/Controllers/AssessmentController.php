@@ -11,6 +11,8 @@ use App\Models\SubCategory;
 use App\Models\Question; // Added this import
 use App\Models\StudentScore;
 use App\Models\Internship; // Added this import
+use App\Models\AdditionalInfo;
+use App\Models\StudentAdditionalInfo;
 use App\Services\MatchingService;
 use Inertia\Inertia;
 
@@ -32,10 +34,16 @@ class AssessmentController extends Controller
             $deadlineInfo = \App\Models\Deadline::getActiveForCategory('student_assessment_form');
         }
 
+        // Get active additional info fields
+        $additionalInfos = AdditionalInfo::where('is_active', true)
+            ->orderBy('info_name')
+            ->get();
+
         return Inertia::render('student/assessment', [
             'hasSubmitted' => $hasSubmitted,
             'deadlineActive' => $deadlineActive,
             'deadlineInfo' => $deadlineInfo,
+            'additionalInfos' => $additionalInfos,
         ]);
     }
 
@@ -48,12 +56,19 @@ class AssessmentController extends Controller
 
         // Get all questions from database to build dynamic validation rules
         $questions = Question::where('access', 'Student')->where('is_active', true)->get();
+        $additionalInfos = AdditionalInfo::where('is_active', true)->get();
 
         // Add validation rules for each question
         foreach ($questions as $question) {
             $subcategory = $question->subcategory;
             $fieldName = strtolower(str_replace(['+', '/', ' ', '-'], ['plus', '_', '_', '_'], $subcategory->subcategory_name)) . '_' . $question->id;
             $validationRules[$fieldName] = 'required|integer|min:1|max:5';
+        }
+
+        // Add validation rules for additional info fields
+        foreach ($additionalInfos as $additionalInfo) {
+            $fieldName = strtolower(str_replace([' ', '-'], ['_', '_'], $additionalInfo->info_name));
+            $validationRules[$fieldName] = 'required|string|max:255';
         }
 
         // Validate the request
@@ -132,6 +147,23 @@ class AssessmentController extends Controller
                         'score' => $meanScore,
                     ]
                 );
+            }
+
+            // Store additional info data
+            foreach ($additionalInfos as $additionalInfo) {
+                $fieldName = strtolower(str_replace([' ', '-'], ['_', '_'], $additionalInfo->info_name));
+                
+                if ($request->has($fieldName)) {
+                    StudentAdditionalInfo::updateOrCreate(
+                        [
+                            'student_id' => $student->id,
+                            'additional_info_id' => $additionalInfo->id,
+                        ],
+                        [
+                            'info' => $request->input($fieldName),
+                        ]
+                    );
+                }
             }
 
             // Update student's is_submit status to true

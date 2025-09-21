@@ -10,12 +10,22 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useState } from 'react';
 import { Path, useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { router } from '@inertiajs/react';
+import { router, usePage } from '@inertiajs/react';
 import { FormFieldsProvider } from '@/contexts/FormFieldsContext';
+
+interface AdditionalInfo {
+    id: number;
+    info_name: string;
+    is_active: boolean;
+}
+
+interface PageProps extends Record<string, unknown> {
+    additionalInfos?: AdditionalInfo[];
+}
 
 export default function StudentForm() {
     const [isSubmitting, setIsSubmitting] = useState(false);
-
+    const { additionalInfos = [] } = usePage<PageProps>().props;
 
     // Dynamic field tracking
     const [dynamicFields, setDynamicFields] = useState<{
@@ -28,7 +38,12 @@ export default function StudentForm() {
         softSkills: [],
     });
 
-    const stepOneFields = ['linkedin', 'facebook'];
+    // Create additional info field names
+    const additionalInfoFields = additionalInfos.map(info => 
+        info.info_name.toLowerCase().replace(/[ -]/g, '_')
+    );
+    
+    const stepOneFields = ['linkedin', 'facebook', ...additionalInfoFields];
 
     const steps = [
         {
@@ -60,6 +75,12 @@ export default function StudentForm() {
             facebook: z.string().min(1, 'Facebook link is required')
         };
 
+        // Add additional info fields to validation schema
+        const additionalInfoSchema: Record<string, z.ZodString> = {};
+        additionalInfoFields.forEach(field => {
+            additionalInfoSchema[field] = z.string().min(1, 'This field is required');
+        });
+
         // Add dynamic fields for language proficiency
         const languageSchema: Record<string, z.ZodString> = {};
         dynamicFields.languageProficiency.forEach(field => {
@@ -80,6 +101,7 @@ export default function StudentForm() {
 
         return z.object({
             ...baseSchema,
+            ...additionalInfoSchema,
             ...languageSchema,
             ...technicalSchema,
             ...softSchema,

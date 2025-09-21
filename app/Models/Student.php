@@ -79,4 +79,12 @@ class Student extends Model
     {
         return $this->hasMany(Endorsement::class);
     }
+
+    /**
+     * Get additional info for this student
+     */
+    public function additionalInfos(): HasMany
+    {
+        return $this->hasMany(StudentAdditionalInfo::class);
+    }
 }

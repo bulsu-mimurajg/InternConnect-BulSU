@@ -15,6 +15,7 @@ return new class extends Migration
         Schema::create('student_additional_infos', function (Blueprint $table) {
             $table->id();
             $table->foreignIdFor(AdditionalInfo::class);
+            $table->foreignId('student_id')->constrained('students')->onDelete('cascade');
             $table->string('info');
             $table->timestamps();
         });

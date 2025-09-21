@@ -70,6 +70,14 @@ Route::middleware(['auth', 'verified', 'role:admin'])->group(function () {
     Route::patch('admin/questions/{question}/restore', [App\Http\Controllers\QuestionController::class, 'restore'])->name('admin.questions.restore');
     Route::get('admin/categories/{category}/subcategories', [App\Http\Controllers\QuestionController::class, 'getSubcategories'])->name('admin.categories.subcategories');
 
+    // Additional Info Management routes
+    Route::get('admin/additional-info', [App\Http\Controllers\AdditionalInfoController::class, 'index'])->name('admin.additional-info');
+    Route::post('admin/additional-info', [App\Http\Controllers\AdditionalInfoController::class, 'store'])->name('admin.additional-info.store');
+    Route::put('admin/additional-info/{additionalInfo}', [App\Http\Controllers\AdditionalInfoController::class, 'update'])->name('admin.additional-info.update');
+    Route::patch('admin/additional-info/{additionalInfo}/archive', [App\Http\Controllers\AdditionalInfoController::class, 'archive'])->name('admin.additional-info.archive');
+    Route::patch('admin/additional-info/{additionalInfo}/restore', [App\Http\Controllers\AdditionalInfoController::class, 'restore'])->name('admin.additional-info.restore');
+    Route::get('api/additional-info/active', [App\Http\Controllers\AdditionalInfoController::class, 'getActive'])->name('api.additional-info.active');
+
     Route::get('student', function () {
         return redirect()->route('student-list');
     })->name('student');
