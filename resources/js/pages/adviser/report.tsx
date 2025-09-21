@@ -75,16 +75,29 @@ export default function AdviserReport({
 
         setIsGenerating(true);
         
-        router.post(route('adviser.generate-report'), {
-            report_type: selectedReportType,
-            format: selectedFormat,
-            include_charts: includeCharts,
-            include_details: includeDetails,
-            date_range: dateRange,
-            section_id: currentSectionId
-        }, {
-            onFinish: () => setIsGenerating(false)
-        });
+        // Determine the export route based on format
+        let exportRoute;
+        switch (selectedFormat) {
+            case 'pdf':
+                exportRoute = route('adviser.report.export.pdf');
+                break;
+            case 'excel':
+                exportRoute = route('adviser.report.export.excel');
+                break;
+            case 'csv':
+                exportRoute = route('adviser.report.export.csv');
+                break;
+            default:
+                exportRoute = route('adviser.report.export.csv');
+        }
+
+        // Open the export URL in a new window/tab
+        window.open(exportRoute, '_blank');
+
+        // Reset generating state after a delay
+        setTimeout(() => {
+            setIsGenerating(false);
+        }, 2000);
     };
 
     if (!adviserSection) {

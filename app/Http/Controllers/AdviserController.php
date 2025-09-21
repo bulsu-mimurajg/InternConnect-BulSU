@@ -722,51 +722,110 @@ class AdviserController extends Controller
     }
 
     /**
-     * Generate and download a report for the adviser's section.
+     * Export student list report to PDF
      */
-    public function generateReport(Request $request)
+    public function exportPDF(Request $request): \Illuminate\Http\Response
     {
-        $request->validate([
-            'report_type' => 'required|string|in:student-list,assessment-summary,performance-analysis,progress-report,statistical-summary,monthly-report',
-            'format' => 'required|string|in:pdf,excel,csv',
-            'include_charts' => 'boolean',
-            'include_details' => 'boolean',
-            'date_range' => 'required|string|in:all,current-month,last-month,last-3-months,last-6-months,current-year',
-            'section_id' => 'required|integer|exists:sections,section_id'
-        ]);
-
         $adviser = Auth::user();
         $adviserRecord = $adviser->adviser;
         
         if (!$adviserRecord) {
-            return back()->withErrors(['error' => 'Adviser record not found.']);
+            abort(403, 'Adviser record not found.');
+        }
+
+        // Get current section from session
+        $currentSectionId = $request->session()->get('adviser_current_section_id');
+        if (!$currentSectionId) {
+            $currentSectionId = $adviserRecord->sections->first()->section_id;
         }
 
         // Verify the adviser has access to this section
-        $hasAccess = $adviserRecord->sections->contains('section_id', $request->section_id);
-        
+        $hasAccess = $adviserRecord->sections->contains('section_id', $currentSectionId);
         if (!$hasAccess) {
-            return back()->withErrors(['error' => 'You do not have access to this section.']);
+            abort(403, 'You do not have access to this section.');
         }
 
-        $sectionId = $request->section_id;
-        $reportType = $request->report_type;
-        $format = $request->format;
+        // Get report data
+        $overviewStats = $this->getOverviewStats($currentSectionId);
+        $studentProgress = $this->getStudentProgress($currentSectionId);
+        $categoryBreakdown = $this->getCategoryBreakdown($currentSectionId);
+        $sectionName = \App\Models\Section::find($currentSectionId)->section_name ?? 'Unknown Section';
 
-        // Get report data based on type
-        $reportData = $this->getReportData($sectionId, $reportType, $request->date_range);
+        // Generate HTML content for PDF
+        $html = view('reports.adviser-student-list', [
+            'overviewStats' => $overviewStats,
+            'studentProgress' => $studentProgress,
+            'categoryBreakdown' => $categoryBreakdown,
+            'sectionName' => $sectionName,
+            'generatedAt' => now()->format('F d, Y \a\t h:i A'),
+        ])->render();
 
-        // Generate the report based on format
-        switch ($format) {
-            case 'pdf':
-                return $this->generatePdfReport($reportData, $reportType, $request->include_charts, $request->include_details);
-            case 'excel':
-                return $this->generateExcelReport($reportData, $reportType);
-            case 'csv':
-                return $this->generateCsvReport($reportData, $reportType);
-            default:
-                return back()->withErrors(['error' => 'Invalid format specified.']);
+        // Generate PDF using DomPDF
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html);
+        $pdf->setPaper('A4', 'portrait');
+
+        // Return PDF download
+        return $pdf->download('student-list-report-' . now()->format('Y-m-d') . '.pdf');
+    }
+
+    /**
+     * Export student list report to Excel (CSV format)
+     */
+    public function exportExcel(Request $request): \Illuminate\Http\Response
+    {
+        $adviser = Auth::user();
+        $adviserRecord = $adviser->adviser;
+        
+        if (!$adviserRecord) {
+            abort(403, 'Adviser record not found.');
         }
+
+        // Get current section from session
+        $currentSectionId = $request->session()->get('adviser_current_section_id');
+        if (!$currentSectionId) {
+            $currentSectionId = $adviserRecord->sections->first()->section_id;
+        }
+
+        // Verify the adviser has access to this section
+        $hasAccess = $adviserRecord->sections->contains('section_id', $currentSectionId);
+        if (!$hasAccess) {
+            abort(403, 'You do not have access to this section.');
+        }
+
+        $sectionName = \App\Models\Section::find($currentSectionId)->section_name ?? 'Unknown Section';
+        $studentData = $this->getStudentListData($currentSectionId, null);
+
+        // Create CSV content
+        $csvContent = "Student List Report - {$sectionName}\n";
+        $csvContent .= "Generated: " . now()->format('F d, Y \a\t h:i A') . "\n\n";
+        
+        $csvContent .= "Student Information\n";
+        $csvContent .= "Username,Email,Name,Status,Section,Has Assessment,Assessment Score,Assessment Percentage,Submitted At\n";
+        
+        foreach ($studentData as $student) {
+            $csvContent .= $student['username'] . ",";
+            $csvContent .= $student['email'] . ",";
+            $csvContent .= '"' . $student['name'] . '",';
+            $csvContent .= $student['status'] . ",";
+            $csvContent .= $student['section'] . ",";
+            $csvContent .= ($student['hasAssessment'] ? 'Yes' : 'No') . ",";
+            $csvContent .= $student['assessmentScore'] . ",";
+            $csvContent .= $student['assessmentPercentage'] . ",";
+            $csvContent .= ($student['submittedAt'] ?? 'N/A') . "\n";
+        }
+
+        return response($csvContent, 200, [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="student-list-report-' . now()->format('Y-m-d') . '.csv"',
+        ]);
+    }
+
+    /**
+     * Export student list report to CSV
+     */
+    public function exportCSV(Request $request): \Illuminate\Http\Response
+    {
+        return $this->exportExcel($request); // Same implementation for now
     }
 
     /**
@@ -1043,66 +1102,6 @@ class AdviserController extends Controller
         return sqrt($variance / ($count - 1));
     }
 
-    /**
-     * Get report data based on report type and date range.
-     */
-    private function getReportData($sectionId, $reportType, $dateRange)
-    {
-        $dateFilter = $this->getDateFilter($dateRange);
-        
-        switch ($reportType) {
-            case 'student-list':
-                return $this->getStudentListData($sectionId, $dateFilter);
-            case 'assessment-summary':
-                return $this->getAssessmentSummaryData($sectionId, $dateFilter);
-            case 'performance-analysis':
-                return $this->getPerformanceAnalysisData($sectionId, $dateFilter);
-            case 'progress-report':
-                return $this->getProgressReportData($sectionId, $dateFilter);
-            case 'statistical-summary':
-                return $this->getStatisticalSummaryData($sectionId, $dateFilter);
-            case 'monthly-report':
-                return $this->getMonthlyReportData($sectionId, $dateFilter);
-            default:
-                return [];
-        }
-    }
-
-    /**
-     * Get date filter for reports.
-     */
-    private function getDateFilter($dateRange)
-    {
-        switch ($dateRange) {
-            case 'current-month':
-                return [
-                    'start' => now()->startOfMonth(),
-                    'end' => now()->endOfMonth()
-                ];
-            case 'last-month':
-                return [
-                    'start' => now()->subMonth()->startOfMonth(),
-                    'end' => now()->subMonth()->endOfMonth()
-                ];
-            case 'last-3-months':
-                return [
-                    'start' => now()->subMonths(3)->startOfMonth(),
-                    'end' => now()->endOfMonth()
-                ];
-            case 'last-6-months':
-                return [
-                    'start' => now()->subMonths(6)->startOfMonth(),
-                    'end' => now()->endOfMonth()
-                ];
-            case 'current-year':
-                return [
-                    'start' => now()->startOfYear(),
-                    'end' => now()->endOfYear()
-                ];
-            default: // 'all'
-                return null;
-        }
-    }
 
     /**
      * Get student list data for reports.
@@ -1142,145 +1141,6 @@ class AdviserController extends Controller
         })->toArray();
     }
 
-    /**
-     * Get assessment summary data for reports.
-     */
-    private function getAssessmentSummaryData($sectionId, $dateFilter)
-    {
-        $overviewStats = $this->getOverviewStats($sectionId);
-        $assessmentAnalytics = $this->getAssessmentAnalytics($sectionId);
-        
-        return [
-            'overview' => $overviewStats,
-            'analytics' => $assessmentAnalytics,
-            'generated_at' => now()->format('Y-m-d H:i:s'),
-        ];
-    }
-
-    /**
-     * Get performance analysis data for reports.
-     */
-    private function getPerformanceAnalysisData($sectionId, $dateFilter)
-    {
-        $categoryBreakdown = $this->getCategoryBreakdown($sectionId);
-        $studentProgress = $this->getStudentProgress($sectionId);
-        
-        return [
-            'categoryBreakdown' => $categoryBreakdown,
-            'topPerformers' => array_slice($studentProgress, 0, 10),
-            'generated_at' => now()->format('Y-m-d H:i:s'),
-        ];
-    }
-
-    /**
-     * Get progress report data for reports.
-     */
-    private function getProgressReportData($sectionId, $dateFilter)
-    {
-        $studentProgress = $this->getStudentProgress($sectionId);
-        $overviewStats = $this->getOverviewStats($sectionId);
-        
-        return [
-            'students' => $studentProgress,
-            'overview' => $overviewStats,
-            'generated_at' => now()->format('Y-m-d H:i:s'),
-        ];
-    }
-
-    /**
-     * Get statistical summary data for reports.
-     */
-    private function getStatisticalSummaryData($sectionId, $dateFilter)
-    {
-        $overviewStats = $this->getOverviewStats($sectionId);
-        $assessmentAnalytics = $this->getAssessmentAnalytics($sectionId);
-        $categoryBreakdown = $this->getCategoryBreakdown($sectionId);
-        
-        return [
-            'overview' => $overviewStats,
-            'analytics' => $assessmentAnalytics,
-            'categories' => $categoryBreakdown,
-            'generated_at' => now()->format('Y-m-d H:i:s'),
-        ];
-    }
-
-    /**
-     * Get monthly report data for reports.
-     */
-    private function getMonthlyReportData($sectionId, $dateFilter)
-    {
-        $monthlyTrends = $this->getMonthlyTrends($sectionId);
-        $overviewStats = $this->getOverviewStats($sectionId);
-        
-        return [
-            'trends' => $monthlyTrends,
-            'overview' => $overviewStats,
-            'generated_at' => now()->format('Y-m-d H:i:s'),
-        ];
-    }
-
-    /**
-     * Generate PDF report.
-     */
-    private function generatePdfReport($reportData, $reportType, $includeCharts, $includeDetails)
-    {
-        // For now, return a simple response
-        // In a real implementation, you would use a PDF library like DomPDF or TCPDF
-        $filename = $reportType . '_report_' . now()->format('Y-m-d_H-i-s') . '.pdf';
-        
-        return response()->json([
-            'message' => 'PDF report generation not yet implemented',
-            'filename' => $filename,
-            'data' => $reportData
-        ]);
-    }
-
-    /**
-     * Generate Excel report.
-     */
-    private function generateExcelReport($reportData, $reportType)
-    {
-        // For now, return a simple response
-        // In a real implementation, you would use a library like Laravel Excel
-        $filename = $reportType . '_report_' . now()->format('Y-m-d_H-i-s') . '.xlsx';
-        
-        return response()->json([
-            'message' => 'Excel report generation not yet implemented',
-            'filename' => $filename,
-            'data' => $reportData
-        ]);
-    }
-
-    /**
-     * Generate CSV report.
-     */
-    private function generateCsvReport($reportData, $reportType)
-    {
-        $filename = $reportType . '_report_' . now()->format('Y-m-d_H-i-s') . '.csv';
-        
-        // Simple CSV generation
-        $csvData = '';
-        if (!empty($reportData)) {
-            if (isset($reportData[0]) && is_array($reportData[0])) {
-                // Array of objects/arrays
-                $headers = array_keys($reportData[0]);
-                $csvData .= implode(',', $headers) . "\n";
-                
-                foreach ($reportData as $row) {
-                    $csvData .= implode(',', array_map(function($value) {
-                        return '"' . str_replace('"', '""', $value) . '"';
-                    }, $row)) . "\n";
-                }
-            } else {
-                // Single object/array
-                $csvData = json_encode($reportData, JSON_PRETTY_PRINT);
-            }
-        }
-        
-        return response($csvData)
-            ->header('Content-Type', 'text/csv')
-            ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
-    }
 
 
 }
