@@ -1,0 +1,490 @@
+---
+globs: *.tsx,*.ts
+description: TypeScript and React development patterns for modern applications
+---
+
+# TypeScript & React Development Patterns
+
+## **TypeScript Best Practices**
+
+### **Type Definitions**
+```typescript
+// Interface definitions for data structures
+interface Student {
+  id: number | string;
+  student_number: string;
+  last_name: string;
+  first_name: string;
+  middle_name?: string;
+  section: string;
+  specialization?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// Props interfaces for components
+interface StudentListProps {
+  students: Student[];
+  unverifiedUsers?: UnverifiedUser[];
+  archivedStudents?: Student[];
+  archivedUnverifiedUsers?: UnverifiedUser[];
+  onEdit?: (studentId: number | string) => void;
+  onArchive?: (studentId: number | string) => void;
+}
+
+// Generic types for reusable components
+interface TableColumn<T> {
+  key: keyof T;
+  label: string;
+  render?: (value: T[keyof T], item: T) => React.ReactNode;
+  sortable?: boolean;
+}
+```
+
+### **Form Types with Zod**
+```typescript
+import { z } from 'zod';
+
+// Zod schemas for form validation
+const StudentFormSchema = z.object({
+  student_number: z.string().min(1, 'Student number is required'),
+  last_name: z.string().min(1, 'Last name is required'),
+  first_name: z.string().min(1, 'First name is required'),
+  middle_name: z.string().optional(),
+  section: z.string().min(1, 'Section is required'),
+  specialization: z.string().optional(),
+  email: z.string().email('Invalid email address'),
+});
+
+type StudentFormData = z.infer<typeof StudentFormSchema>;
+
+// Form component with proper typing
+export default function StudentForm() {
+  const form = useForm<StudentFormData>({
+    resolver: zodResolver(StudentFormSchema),
+    defaultValues: {
+      student_number: '',
+      last_name: '',
+      first_name: '',
+      middle_name: '',
+      section: '',
+      specialization: '',
+      email: '',
+    },
+  });
+
+  const onSubmit = (values: StudentFormData) => {
+    // Handle form submission
+  };
+}
+```
+
+### **API Response Types**
+```typescript
+// API response wrappers
+interface ApiResponse<T> {
+  data: T;
+  message: string;
+  success: boolean;
+}
+
+interface PaginatedResponse<T> {
+  data: T[];
+  current_page: number;
+  last_page: number;
+  per_page: number;
+  total: number;
+}
+
+// Inertia.js page props typing
+interface SharedData {
+  auth: {
+    user: User;
+    role: string;
+  };
+  flash: {
+    message?: string;
+    error?: string;
+  };
+}
+
+// Component props with Inertia
+interface Props {
+  students: Student[];
+  filters: StudentFilters;
+}
+
+export default function StudentList({ students, filters }: Props) {
+  const { auth } = usePage<SharedData>().props;
+  // Component logic
+}
+```
+
+## **React Component Patterns**
+
+### **Functional Components with Hooks**
+```typescript
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useForm } from 'react-hook-form';
+import { router } from '@inertiajs/react';
+
+// Component with state management
+export default function StudentList({ students, filters }: Props) {
+  const [showUnverified, setShowUnverified] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  // Memoized filtered data
+  const filteredStudents = useMemo(() => {
+    return students.filter(student => 
+      student.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      student.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      student.student_number.includes(searchTerm)
+    );
+  }, [students, searchTerm]);
+
+  // Event handlers with useCallback
+  const handleEdit = useCallback((studentId: number | string) => {
+    router.get(`/student/${studentId}/edit`);
+  }, []);
+
+  const handleArchive = useCallback((studentId: number | string) => {
+    if (confirm('Are you sure you want to archive this student?')) {
+      router.patch(`/student/${studentId}/archive`);
+    }
+  }, []);
+
+  return (
+    // JSX content
+  );
+}
+```
+
+### **Custom Hooks**
+```typescript
+// Custom hook for form state management
+function useStudentForm(initialData?: Partial<StudentFormData>) {
+  const form = useForm<StudentFormData>({
+    resolver: zodResolver(StudentFormSchema),
+    defaultValues: {
+      student_number: '',
+      last_name: '',
+      first_name: '',
+      middle_name: '',
+      section: '',
+      specialization: '',
+      email: '',
+      ...initialData,
+    },
+  });
+
+  const onSubmit = useCallback((values: StudentFormData) => {
+    router.post('/students', values, {
+      onSuccess: () => {
+        form.reset();
+        // Show success message
+      },
+      onError: (errors) => {
+        // Handle validation errors
+        Object.entries(errors).forEach(([key, value]) => {
+          form.setError(key as keyof StudentFormData, {
+            type: 'manual',
+            message: value as string,
+          });
+        });
+      },
+    });
+  }, [form]);
+
+  return { form, onSubmit };
+}
+
+// Custom hook for API data fetching
+function useStudents(filters: StudentFilters) {
+  const [students, setStudents] = useState<Student[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchStudents = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch(`/api/students?${new URLSearchParams(filters)}`);
+        const data = await response.json();
+        setStudents(data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'An error occurred');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStudents();
+  }, [filters]);
+
+  return { students, loading, error };
+}
+```
+
+### **Context Providers**
+```typescript
+// Form context for multi-step forms
+interface FormFieldsContextType {
+  registerField: (fieldName: string) => void;
+  unregisterField: (fieldName: string) => void;
+  validateFields: (fields: string[]) => Promise<boolean>;
+}
+
+const FormFieldsContext = createContext<FormFieldsContextType | null>(null);
+
+export function FormFieldsProvider({ children }: { children: React.ReactNode }) {
+  const [fields, setFields] = useState<Set<string>>(new Set());
+
+  const registerField = useCallback((fieldName: string) => {
+    setFields(prev => new Set(prev).add(fieldName));
+  }, []);
+
+  const unregisterField = useCallback((fieldName: string) => {
+    setFields(prev => {
+      const newFields = new Set(prev);
+      newFields.delete(fieldName);
+      return newFields;
+    });
+  }, []);
+
+  const validateFields = useCallback(async (fieldsToValidate: string[]) => {
+    // Validation logic
+    return true;
+  }, []);
+
+  return (
+    <FormFieldsContext.Provider value={{
+      registerField,
+      unregisterField,
+      validateFields,
+    }}>
+      {children}
+    </FormFieldsContext.Provider>
+  );
+}
+
+export function useFormFields() {
+  const context = useContext(FormFieldsContext);
+  if (!context) {
+    throw new Error('useFormFields must be used within FormFieldsProvider');
+  }
+  return context;
+}
+```
+
+## **Error Handling & Loading States**
+
+### **Error Boundaries**
+```typescript
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error?: Error;
+}
+
+class ErrorBoundary extends Component<
+  { children: React.ReactNode },
+  ErrorBoundaryState
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error('Error caught by boundary:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex items-center justify-center p-8">
+          <div className="text-center">
+            <h2 className="text-lg font-semibold text-destructive">
+              Something went wrong
+            </h2>
+            <p className="text-muted-foreground mt-2">
+              Please refresh the page and try again.
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+```
+
+### **Loading States**
+```typescript
+// Loading component
+function LoadingSpinner({ size = 'default' }: { size?: 'sm' | 'default' | 'lg' }) {
+  const sizeClasses = {
+    sm: 'h-4 w-4',
+    default: 'h-6 w-6',
+    lg: 'h-8 w-8',
+  };
+
+  return (
+    <div className="flex items-center justify-center">
+      <LoaderIcon className={`animate-spin ${sizeClasses[size]}`} />
+    </div>
+  );
+}
+
+// Conditional rendering with loading
+export default function StudentList({ students, loading }: Props) {
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <LoadingSpinner size="lg" />
+      </div>
+    );
+  }
+
+  return (
+    // Component content
+  );
+}
+```
+
+## **Performance Optimization**
+
+### **Memoization**
+```typescript
+// Memoized components
+const StudentCard = memo(({ student, onEdit, onArchive }: StudentCardProps) => {
+  return (
+    <Card>
+      {/* Card content */}
+    </Card>
+  );
+});
+
+// Memoized callbacks
+const handleEdit = useCallback((studentId: number | string) => {
+  router.get(`/student/${studentId}/edit`);
+}, []);
+
+// Memoized computed values
+const filteredStudents = useMemo(() => {
+  return students.filter(student => 
+    student.is_active && 
+    student.section === selectedSection
+  );
+}, [students, selectedSection]);
+```
+
+### **Lazy Loading**
+```typescript
+// Lazy component loading
+const StudentForm = lazy(() => import('@/components/StudentForm'));
+const StudentDetails = lazy(() => import('@/components/StudentDetails'));
+
+// Route-based lazy loading
+const routes = {
+  '/students': lazy(() => import('@/pages/StudentList')),
+  '/students/create': lazy(() => import('@/pages/StudentCreate')),
+  '/students/:id/edit': lazy(() => import('@/pages/StudentEdit')),
+};
+```
+
+## **Testing Patterns**
+
+### **Component Testing**
+```typescript
+// Test setup with proper typing
+import { render, screen, fireEvent } from '@testing-library/react';
+import { StudentList } from '@/components/StudentList';
+
+const mockStudents: Student[] = [
+  {
+    id: 1,
+    student_number: '2023-001',
+    first_name: 'John',
+    last_name: 'Doe',
+    section: 'CS-3A',
+    is_active: true,
+  },
+];
+
+describe('StudentList', () => {
+  it('renders student list correctly', () => {
+    render(<StudentList students={mockStudents} />);
+    
+    expect(screen.getByText('John Doe')).toBeInTheDocument();
+    expect(screen.getByText('2023-001')).toBeInTheDocument();
+  });
+
+  it('handles edit button click', () => {
+    const mockOnEdit = jest.fn();
+    render(<StudentList students={mockStudents} onEdit={mockOnEdit} />);
+    
+    fireEvent.click(screen.getByRole('button', { name: /edit/i }));
+    expect(mockOnEdit).toHaveBeenCalledWith(1);
+  });
+});
+```
+
+## **Code Organization**
+
+### **File Structure**
+```typescript
+// Component file organization
+// components/StudentList/index.tsx
+export { default } from './StudentList';
+export type { StudentListProps } from './types';
+
+// components/StudentList/StudentList.tsx
+// Main component implementation
+
+// components/StudentList/types.ts
+export interface StudentListProps {
+  students: Student[];
+  // ... other props
+}
+
+// components/StudentList/hooks.ts
+export function useStudentList() {
+  // Custom hooks for this component
+}
+
+// components/StudentList/utils.ts
+export function formatStudentName(student: Student): string {
+  // Utility functions
+}
+```
+
+### **Import Organization**
+```typescript
+// 1. React and external libraries
+import { useState, useCallback, useMemo } from 'react';
+import { Head, router } from '@inertiajs/react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+
+// 2. UI components
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+
+// 3. Internal components and layouts
+import AdminLayout from '@/layouts/admin/layout';
+import { StudentCard } from '@/components/StudentCard';
+
+// 4. Icons
+import { UsersIcon, EditIcon, ArchiveIcon } from 'lucide-react';
+
+// 5. Types and utilities
+import { type Student, type StudentListProps } from '@/types';
+import { cn } from '@/lib/utils';
+```
