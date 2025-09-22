@@ -6,7 +6,6 @@ import { type NavItem, type NavGroup, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
 import {
     ClipboardIcon,
-    HeadsetIcon,
     InfoIcon,
     PrinterIcon,
     UserIcon,
@@ -17,8 +16,7 @@ import {
     ChartNoAxesColumnIcon,
     BriefcaseBusinessIcon,
     GraduationCapIcon,
-    SchoolIcon,
-    NotepadTextIcon, UserRoundIcon, MonitorCogIcon
+    NotepadTextIcon, UserRoundIcon, MonitorCogIcon, GavelIcon, StepBackIcon
 } from 'lucide-react';
 import AppLogo from './app-logo';
 
@@ -63,7 +61,7 @@ const roleBasedNav: Record<string, { main: NavItem[]; groups?: NavGroup[]; foote
                 title: 'Partner Management',
                 items: [
                     { title: 'HTE', href: '/hte', icon: BriefcaseBusinessIcon },
-                    { title: 'Adviser', href: '/adviser', icon: SchoolIcon },
+                    { title: 'Adviser', href: '/adviser', icon: GavelIcon },
                 ]
             },
             {
@@ -73,7 +71,10 @@ const roleBasedNav: Record<string, { main: NavItem[]; groups?: NavGroup[]; foote
                 ]
             },
         ],
-        footer: [],
+        footer: [
+            { title: 'About', href: '/about', icon: InfoIcon },
+            { title: 'Contact', href: '/contact', icon: StepBackIcon },
+        ],
     },
     hte: {
         main: [
@@ -81,7 +82,10 @@ const roleBasedNav: Record<string, { main: NavItem[]; groups?: NavGroup[]; foote
             { title: 'Form', href: '/form', icon: NotepadTextIcon },
             { title: 'Profile', href: '/hte/profile', icon: UserRoundIcon }
         ],
-        footer: [],
+        footer: [
+            { title: 'About', href: '/about', icon: InfoIcon },
+            { title: 'Contact', href: '/contact', icon: StepBackIcon },
+        ],
     },
     adviser: {
         main: [
@@ -90,7 +94,10 @@ const roleBasedNav: Record<string, { main: NavItem[]; groups?: NavGroup[]; foote
             { title: 'Student List', href: '/adviser/student-list', icon: GraduationCapIcon },
             { title: 'Report', href: '/adviser/report', icon: PrinterIcon },
         ],
-        footer: [],
+        footer: [
+            { title: 'About', href: '/about', icon: InfoIcon },
+            { title: 'Contact', href: '/contact', icon: StepBackIcon },
+        ],
     },
     student: {
         main: [
@@ -100,7 +107,7 @@ const roleBasedNav: Record<string, { main: NavItem[]; groups?: NavGroup[]; foote
         ],
         footer: [
             { title: 'About', href: '/about', icon: InfoIcon },
-            { title: 'Contact', href: '/contact', icon: HeadsetIcon },
+            { title: 'Contact', href: '/contact', icon: StepBackIcon },
         ],
     },
     guest: {
