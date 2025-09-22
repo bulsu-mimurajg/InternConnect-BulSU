@@ -144,7 +144,7 @@ export default function AdditionalInfoPage({ additionalInfos, filters }: Additio
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Additional Info Management" />
-            <div className="space-y-6">
+            <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
                 {/* Success Message */}
                 {flash?.success && (
                     <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">

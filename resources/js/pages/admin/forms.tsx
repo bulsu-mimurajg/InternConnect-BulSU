@@ -210,7 +210,7 @@ export default function FormsPage({ questions, categories, subcategories, filter
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Forms Management" />
-            <div className="space-y-6">
+            <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
                 {/* Success Message */}
                 {flash?.success && (
                     <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">

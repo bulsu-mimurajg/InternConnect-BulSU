@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import AdminLayout from '@/layouts/admin/layout';
 import Heading from '@/components/heading';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,7 +14,15 @@ import {
     XCircleIcon,
     ClockIcon,
     SearchIcon,
-    FilterIcon
+    FilterIcon,
+    UsersIcon,
+    TargetIcon,
+    Building2,
+    Briefcase,
+    GraduationCap,
+    Star,
+    ArrowUpDownIcon,
+    FileTextIcon
 } from 'lucide-react';
 
 // breadcrumbs is unused, so we'll remove it
@@ -144,12 +152,15 @@ export default function StudentPlaced({ placedStudents = [], filters }: Props) {
         <AdminLayout>
             <Head title="Placed Students" />
             
-            <div className="space-y-6">
-                <div className="flex justify-between items-center">
-                    <Heading 
-                        title="Placed Students" 
-                        description="View and manage student internship placements."
-                    />
+            <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-3xl font-bold tracking-tight">Placed Students</h1>
+                        <p className="text-muted-foreground">
+                            View and manage student internship placements and their approval status
+                        </p>
+                    </div>
                 </div>
 
                 {/* Filters Section */}
@@ -159,6 +170,9 @@ export default function StudentPlaced({ placedStudents = [], filters }: Props) {
                             <FilterIcon className="h-5 w-5" />
                             Filters & Search
                         </CardTitle>
+                        <CardDescription>
+                            Filter placed students by section, internship, or search by name
+                        </CardDescription>
                     </CardHeader>
                     <CardContent>
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -240,6 +254,7 @@ export default function StudentPlaced({ placedStudents = [], filters }: Props) {
                                     onClick={clearFilters}
                                     className="w-full"
                                 >
+                                    <ArrowUpDownIcon className="h-4 w-4 mr-2" />
                                     Clear Filters
                                 </Button>
                             </div>
@@ -247,133 +262,138 @@ export default function StudentPlaced({ placedStudents = [], filters }: Props) {
                     </CardContent>
                 </Card>
 
-                    {/* Summary Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <Card>
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium">Total Placements</CardTitle>
-                                <UserIcon className="h-4 w-4 text-muted-foreground" />
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-2xl font-bold">{placedStudents.length}</div>
-                                <p className="text-xs text-muted-foreground">
-                                    Students with placement decisions
-                                </p>
-                            </CardContent>
-                        </Card>
-
-                        <Card>
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium">Approved</CardTitle>
-                                <CheckCircleIcon className="h-4 w-4 text-muted-foreground" />
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-2xl font-bold">
-                                    {placedStudents.filter(s => s.status && s.status === 'approved').length}
-                                </div>
-                                <p className="text-xs text-muted-foreground">
-                                    Successfully placed students
-                                </p>
-                            </CardContent>
-                        </Card>
-
-                        <Card>
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium">Pending</CardTitle>
-                                <ClockIcon className="h-4 w-4 text-muted-foreground" />
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-2xl font-bold">
-                                    {placedStudents.filter(s => s.status && s.status === 'pending').length}
-                                </div>
-                                <p className="text-xs text-muted-foreground">
-                                    Awaiting decision
-                                </p>
-                            </CardContent>
-                        </Card>
-                    </div>
-
-                    {/* Placements Table */}
+                {/* Summary Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <Card>
-                        <CardHeader>
-                            <CardTitle>Student Placements</CardTitle>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Total Placements</CardTitle>
+                            <UsersIcon className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
-                            {placedStudents.length === 0 ? (
-                                <div className="text-center py-12">
-                                    <div className="text-gray-400 mb-4">
-                                        <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                        </svg>
-                                    </div>
-                                    <h3 className="text-lg font-medium text-gray-900 mb-2">No Placements Found</h3>
-                                    <p className="text-gray-500">
-                                        {localFilters.section !== 'all' || localFilters.internship !== 'all' || localFilters.search
-                                            ? 'Try adjusting your filters or search criteria.'
-                                            : 'Students need to be placed through the matching process.'
-                                        }
-                                    </p>
-                                </div>
-                            ) : (
-                                <div className="overflow-x-auto">
-                                    <table className="w-full">
-                                        <thead>
-                                            <tr className="border-b border-gray-200">
-                                                <th className="text-left py-3 px-4 font-semibold text-sm">Student</th>
-                                                <th className="text-left py-3 px-4 font-semibold text-sm">Section</th>
-                                                <th className="text-left py-3 px-4 font-semibold text-sm">Internship</th>
-                                                <th className="text-left py-3 px-4 font-semibold text-sm">Compatibility</th>
-                                                <th className="text-left py-3 px-4 font-semibold text-sm">Status</th>
-                                                <th className="text-left py-3 px-4 font-semibold text-sm">Date</th>
-                                            </tr>
-                                        </thead>
+                            <div className="text-2xl font-bold">{placedStudents.length}</div>
+                            <p className="text-xs text-muted-foreground">
+                                Students with placement decisions
+                            </p>
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Approved</CardTitle>
+                            <CheckCircleIcon className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">
+                                {placedStudents.filter(s => s.status && s.status === 'approved').length}
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                                Successfully placed students
+                            </p>
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Pending</CardTitle>
+                            <ClockIcon className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">
+                                {placedStudents.filter(s => s.status && s.status === 'pending').length}
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                                Awaiting decision
+                            </p>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                {/* Placements Table */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <TargetIcon className="h-5 w-5" />
+                            Student Placements
+                        </CardTitle>
+                        <CardDescription>
+                            Students who have been placed in internship positions
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        {placedStudents.length === 0 ? (
+                            <div className="text-center py-12">
+                                <FileTextIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                                <h3 className="text-lg font-medium mb-2">No Placements Found</h3>
+                                <p className="text-muted-foreground">
+                                    {localFilters.section !== 'all' || localFilters.internship !== 'all' || localFilters.search
+                                        ? 'Try adjusting your filters or search criteria.'
+                                        : 'Students need to be placed through the matching process.'
+                                    }
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full">
+                                    <thead>
+                                        <tr className="border-b">
+                                            <th className="text-left p-3 font-medium text-muted-foreground">Student</th>
+                                            <th className="text-left p-3 font-medium text-muted-foreground">Section</th>
+                                            <th className="text-left p-3 font-medium text-muted-foreground">Internship</th>
+                                            <th className="text-left p-3 font-medium text-muted-foreground">Compatibility</th>
+                                            <th className="text-left p-3 font-medium text-muted-foreground">Status</th>
+                                            <th className="text-left p-3 font-medium text-muted-foreground">Date</th>
+                                        </tr>
+                                    </thead>
                                         <tbody>
                                             {placedStudents.map((placement) => (
-                                                <tr key={placement.id} className="border-b border-gray-100 hover:bg-gray-50">
-                                                    <td className="py-3 px-4">
+                                                <tr key={placement.id} className="border-b hover:bg-muted/50 transition-colors">
+                                                    <td className="p-3">
                                                         <div>
-                                                            <div className="font-medium text-gray-900">
+                                                            <div className="font-medium">
                                                                 {placement.student?.last_name || 'N/A'}, {placement.student?.first_name || 'N/A'}
                                                             </div>
-                                                            <div className="text-sm text-gray-500">
+                                                            <div className="text-sm text-muted-foreground">
                                                                 {placement.student?.student_number || 'N/A'}
                                                             </div>
                                                             {placement.student?.middle_name && (
-                                                                <div className="text-xs text-gray-400">
+                                                                <div className="text-xs text-muted-foreground">
                                                                     {placement.student.middle_name}
                                                                 </div>
                                                             )}
                                                         </div>
                                                     </td>
-                                                    <td className="py-3 px-4">
+                                                    <td className="p-3">
                                                         <div>
                                                             <Badge variant="outline">{placement.student?.section || 'N/A'}</Badge>
                                                             {placement.student?.specialization && (
-                                                                <div className="text-xs text-gray-500 mt-1">
+                                                                <div className="text-xs text-muted-foreground mt-1">
                                                                     {placement.student.specialization}
                                                                 </div>
                                                             )}
                                                         </div>
                                                     </td>
-                                                    <td className="py-3 px-4">
+                                                    <td className="p-3">
                                                         <div>
-                                                            <div className="font-medium text-gray-900">
+                                                            <div className="font-medium">
                                                                 {placement.internship?.position_title || 'N/A'}
                                                             </div>
-                                                            <div className="text-sm text-gray-500">
+                                                            <div className="text-sm text-muted-foreground">
                                                                 {placement.internship?.hte?.company_name || 'N/A'}
                                                             </div>
-                                                            <div className="text-xs text-gray-400">
+                                                            <div className="text-xs text-muted-foreground">
                                                                 {placement.internship?.department || 'N/A'}
                                                             </div>
                                                         </div>
                                                     </td>
-                                                    <td className="py-3 px-4">
-                                                        <Badge variant="outline">
-                                                            {placement.compatibility_score || 0}%
-                                                        </Badge>
+                                                    <td className="p-3">
+                                                        <div className="flex items-center gap-2">
+                                                            <Star className="h-4 w-4 text-yellow-300" />
+                                                            <span className="font-medium">
+                                                                {placement.compatibility_score || 0}%
+                                                            </span>
+                                                        </div>
                                                     </td>
-                                                    <td className="py-3 px-4">
+                                                    <td className="p-3">
                                                         <Badge className={getStatusColor(placement.status || 'pending')}>
                                                             <div className="flex items-center gap-1">
                                                                 {getStatusIcon(placement.status || 'pending')}
@@ -381,8 +401,8 @@ export default function StudentPlaced({ placedStudents = [], filters }: Props) {
                                                             </div>
                                                         </Badge>
                                                     </td>
-                                                    <td className="py-3 px-4">
-                                                        <div className="text-sm text-gray-500">
+                                                    <td className="p-3">
+                                                        <div className="text-sm text-muted-foreground">
                                                             {placement.created_at ? new Date(placement.created_at).toLocaleDateString() : 'N/A'}
                                                         </div>
                                                     </td>
@@ -394,7 +414,7 @@ export default function StudentPlaced({ placedStudents = [], filters }: Props) {
                             )}
                         </CardContent>
                     </Card>
-                </div>
+            </div>
         </AdminLayout>
     );
 }

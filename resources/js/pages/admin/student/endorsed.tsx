@@ -3,7 +3,7 @@ import { Head, router } from '@inertiajs/react';
 import AdminLayout from '@/layouts/admin/layout';
 import Heading from '@/components/heading';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,7 +20,11 @@ import {
     GraduationCap,
     Star,
     AlertCircle,
-    CheckCircle2
+    CheckCircle2,
+    UsersIcon,
+    TargetIcon,
+    InfoIcon,
+    ArrowUpDownIcon
 } from 'lucide-react';
 
 interface EndorsedStudent {
@@ -170,12 +174,15 @@ export default function StudentEndorsed({
         <AdminLayout>
             <Head title="Endorsed Students" />
             
-            <div className="space-y-6">
-                <div className="flex justify-between items-center">
-                    <Heading 
-                        title="Endorsed Students" 
-                        description="View and track students who have been endorsed for internships and their HTE approval status."
-                    />
+            <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-3xl font-bold tracking-tight">Endorsed Students</h1>
+                        <p className="text-muted-foreground">
+                            View and track students who have been endorsed for internships and their HTE approval status
+                        </p>
+                    </div>
                 </div>
 
                 {/* Filters Section */}
@@ -183,8 +190,11 @@ export default function StudentEndorsed({
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                             <FilterIcon className="h-5 w-5" />
-                            Filters
+                            Filters & Search
                         </CardTitle>
+                        <CardDescription>
+                            Filter endorsed students by section, internship, status, or search by name
+                        </CardDescription>
                     </CardHeader>
                     <CardContent>
                         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
@@ -272,6 +282,7 @@ export default function StudentEndorsed({
                                     onClick={clearFilters}
                                     className="w-full"
                                 >
+                                    <ArrowUpDownIcon className="h-4 w-4 mr-2" />
                                     Clear Filters
                                 </Button>
                             </div>
@@ -290,11 +301,11 @@ export default function StudentEndorsed({
                 {endorsed_students.length === 0 ? (
                     <Card>
                         <CardContent className="text-center py-12">
-                            <UserIcon className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                            <UsersIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                            <h3 className="text-lg font-medium mb-2">
                                 No Endorsed Students
                             </h3>
-                            <p className="text-gray-600 dark:text-gray-400">
+                            <p className="text-muted-foreground">
                                 No students have been endorsed for internships yet.
                             </p>
                         </CardContent>
@@ -302,43 +313,46 @@ export default function StudentEndorsed({
                 ) : (
                     <Card>
                         <CardHeader>
-                            <CardTitle>Endorsed Students</CardTitle>
+                            <CardTitle className="flex items-center gap-2">
+                                <TargetIcon className="h-5 w-5" />
+                                Endorsed Students
+                            </CardTitle>
+                            <CardDescription>
+                                Students who have been endorsed for internships and their HTE approval status
+                            </CardDescription>
                         </CardHeader>
                         <CardContent>
                             <div className="overflow-x-auto">
                                 <table className="w-full">
                                     <thead>
-                                        <tr className="border-b border-gray-200">
-                                            <th className="text-left py-3 px-4 font-semibold text-sm">Student</th>
-                                            <th className="text-left py-3 px-4 font-semibold text-sm">Student Number</th>
-                                            <th className="text-left py-3 px-4 font-semibold text-sm">Section</th>
-                                            <th className="text-left py-3 px-4 font-semibold text-sm">Specialization</th>
-                                            <th className="text-left py-3 px-4 font-semibold text-sm">Position</th>
-                                            <th className="text-left py-3 px-4 font-semibold text-sm">Company</th>
-                                            <th className="text-left py-3 px-4 font-semibold text-sm">Compatibility</th>
-                                            <th className="text-left py-3 px-4 font-semibold text-sm">HTE Status</th>
-                                            <th className="text-left py-3 px-4 font-semibold text-sm">Endorsed Date</th>
+                                        <tr className="border-b">
+                                            <th className="text-left p-3 font-medium text-muted-foreground">Student</th>
+                                            <th className="text-left p-3 font-medium text-muted-foreground">Student ID</th>
+                                            <th className="text-left p-3 font-medium text-muted-foreground">Section</th>
+                                            <th className="text-left p-3 font-medium text-muted-foreground">Specialization</th>
+                                            <th className="text-left p-3 font-medium text-muted-foreground">Position</th>
+                                            <th className="text-left p-3 font-medium text-muted-foreground">Company</th>
+                                            <th className="text-left p-3 font-medium text-muted-foreground">Compatibility</th>
+                                            <th className="text-left p-3 font-medium text-muted-foreground">HTE Status</th>
+                                            <th className="text-left p-3 font-medium text-muted-foreground">Endorsed Date</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {endorsed_students.map((endorsement) => (
-                                            <tr key={endorsement.id} className="border-b border-gray-100">
-                                                <td className="py-3 px-4">
-                                                    <div className="flex items-center gap-2">
-                                                        <UserIcon className="h-4 w-4 text-muted-foreground" />
-                                                        <div>
-                                                            <div className="font-medium">
-                                                                {endorsement.student.first_name} {endorsement.student.last_name}
-                                                            </div>
-                                                            {endorsement.student.middle_name && (
-                                                                <div className="text-sm text-muted-foreground">
-                                                                    {endorsement.student.middle_name}
-                                                                </div>
-                                                            )}
+                                            <tr key={endorsement.id} className="border-b hover:bg-muted/50 transition-colors">
+                                                <td className="p-3">
+                                                    <div>
+                                                        <div className="font-medium">
+                                                            {endorsement.student.last_name}, {endorsement.student.first_name}
                                                         </div>
+                                                        {endorsement.student.middle_name && (
+                                                            <div className="text-sm text-muted-foreground">
+                                                                {endorsement.student.middle_name}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </td>
-                                                <td className="py-3 px-4">
+                                                <td className="p-3">
                                                     <div className="flex items-center gap-2">
                                                         <GraduationCap className="h-4 w-4 text-muted-foreground" />
                                                         <span className="font-mono text-sm">
@@ -346,17 +360,17 @@ export default function StudentEndorsed({
                                                         </span>
                                                     </div>
                                                 </td>
-                                                <td className="py-3 px-4">
-                                                    <Badge variant="secondary">
+                                                <td className="p-3">
+                                                    <Badge variant="outline">
                                                         {endorsement.student.section}
                                                     </Badge>
                                                 </td>
-                                                <td className="py-3 px-4">
-                                                    <span className="text-sm">
-                                                        {endorsement.student.specialization || 'N/A'}
+                                                <td className="p-3">
+                                                    <span className="text-sm text-muted-foreground">
+                                                        {endorsement.student.specialization || '-'}
                                                     </span>
                                                 </td>
-                                                <td className="py-3 px-4">
+                                                <td className="p-3">
                                                     <div className="flex items-center gap-2">
                                                         <Briefcase className="h-4 w-4 text-muted-foreground" />
                                                         <span className="font-medium">
@@ -364,7 +378,7 @@ export default function StudentEndorsed({
                                                         </span>
                                                     </div>
                                                 </td>
-                                                <td className="py-3 px-4">
+                                                <td className="p-3">
                                                     <div className="flex items-center gap-2">
                                                         <Building2 className="h-4 w-4 text-muted-foreground" />
                                                         <span className="text-sm">
@@ -372,15 +386,15 @@ export default function StudentEndorsed({
                                                         </span>
                                                     </div>
                                                 </td>
-                                                <td className="py-3 px-4">
-                                                    <div className="flex items-center gap-1">
-                                                        <Star className="h-4 w-4 text-yellow-500" />
+                                                <td className="p-3">
+                                                    <div className="flex items-center gap-2">
+                                                        <Star className="h-4 w-4 text-yellow-300" />
                                                         <span className="font-medium">
                                                             {endorsement.compatibility_score}%
                                                         </span>
                                                     </div>
                                                 </td>
-                                                <td className="py-3 px-4">
+                                                <td className="p-3">
                                                     <Badge className={getPlacementStatusColor(endorsement.placement_status)}>
                                                         <div className="flex items-center gap-1">
                                                             {getPlacementStatusIcon(endorsement.placement_status)}
@@ -388,7 +402,7 @@ export default function StudentEndorsed({
                                                         </div>
                                                     </Badge>
                                                 </td>
-                                                <td className="py-3 px-4">
+                                                <td className="p-3">
                                                     <span className="text-sm text-muted-foreground">
                                                         {endorsement.endorsement_date 
                                                             ? new Date(endorsement.endorsement_date).toLocaleDateString()

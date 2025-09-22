@@ -126,13 +126,13 @@ export default function AdminDashboard({
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Admin Dashboard" />
-            <div className="space-y-6">
+            <div className="space-y-6 p-6">
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="text-3xl font-bold tracking-tight">Admin Dashboard</h1>
                         <p className="text-muted-foreground">
-                            Overview of the SIP (Student Internship Program) system
+                            Dashboard of the SIP
                         </p>
                     </div>
                 </div>

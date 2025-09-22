@@ -67,13 +67,7 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [selectedAdviser, setSelectedAdviser] = useState<Adviser | null>(null);
-    const [showDebug, setShowDebug] = useState(false);
     const [showArchivedAdvisers, setShowArchivedAdvisers] = useState(showArchived);
-
-    // Debug: Log Adviser data received from backend
-    console.log('Adviser Management - Received Advisers:', advisers);
-    console.log('Adviser Management - Total Advisers:', advisers.length);
-    console.log('Adviser Management - Sections:', sections);
 
     const createForm = useForm({
         email: '',
@@ -98,45 +92,14 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
     const handleCreateSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
-        // Debug: Log form data before submission
-        console.log('Adviser Creation - Form Data:', createForm.data);
-        console.log('Adviser Creation - CSRF Token:', document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'));
-
         createForm.post(route('admin.adviser.store'), {
             onSuccess: () => {
-                console.log('Adviser Creation - Success!');
                 setIsCreateDialogOpen(false);
                 createForm.reset();
             },
             onError: (errors) => {
-                console.error('Adviser Creation - Errors:', errors);
-                console.error('Adviser Creation - Error Details:', JSON.stringify(errors, null, 2));
-
-                // Log specific error types
-                if (errors.email) {
-                    console.error('Email Error:', errors.email);
-                }
-                if (errors.username) {
-                    console.error('Username Error:', errors.username);
-                }
-                if (errors.password) {
-                    console.error('Password Error:', errors.password);
-                }
-                if (errors.password_confirmation) {
-                    console.error('Password Confirmation Error:', errors.password_confirmation);
-                }
-                if (errors.adviser_fname) {
-                    console.error('First Name Error:', errors.adviser_fname);
-                }
-                if (errors.adviser_lname) {
-                    console.error('Last Name Error:', errors.adviser_lname);
-                }
-                if (errors.section_id) {
-                    console.error('Section Error:', errors.section_id);
-                }
-                if (errors.error) {
-                    console.error('General Error:', errors.error);
-                }
+                // Handle validation errors
+                console.error('Adviser creation failed:', errors);
             },
         });
     };
@@ -233,49 +196,39 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Adviser Management" />
 
-            <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
-                <Card>
-                    <CardHeader>
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <CardTitle>Adviser Management</CardTitle>
-                                <CardDescription>
-                                    Manage adviser accounts and their sections
-                                </CardDescription>
-                                <div className="mt-2">
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => setShowDebug(!showDebug)}
-                                    >
-                                        {showDebug ? 'Hide' : 'Show'} Debug Info
-                                    </Button>
-                                </div>
-                            </div>
-                            <div className="flex gap-2">
-                                <Button
-                                    variant="outline"
-                                    onClick={toggleArchivedView}
-                                >
-                                    {showArchivedAdvisers ? (
-                                        <>
-                                            <Eye className="mr-2 h-4 w-4" />
-                                            Show Active
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Archive className="mr-2 h-4 w-4" />
-                                            Show Archived
-                                        </>
-                                    )}
+            <div className="flex h-full flex-1 flex-col gap-6 p-4 md:p-6">
+                {/* Header Section */}
+                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                    <div className="space-y-1">
+                        <h1 className="text-2xl font-bold tracking-tight">Adviser Management</h1>
+                        <p className="text-muted-foreground">
+                            Manage adviser accounts and their assigned sections
+                        </p>
+                    </div>
+                    <div className="flex gap-2">
+                        <Button
+                            variant="outline"
+                            onClick={toggleArchivedView}
+                        >
+                            {showArchivedAdvisers ? (
+                                <>
+                                    <Eye className="mr-2 h-4 w-4" />
+                                    Show Active
+                                </>
+                            ) : (
+                                <>
+                                    <Archive className="mr-2 h-4 w-4" />
+                                    Show Archived
+                                </>
+                            )}
+                        </Button>
+                        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+                            <DialogTrigger asChild>
+                                <Button>
+                                    <Plus className="mr-2 h-4 w-4" />
+                                    Add Adviser
                                 </Button>
-                                <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-                                    <DialogTrigger asChild>
-                                        <Button>
-                                            <Plus className="mr-2 h-4 w-4" />
-                                            Add Adviser
-                                        </Button>
-                                    </DialogTrigger>
+                            </DialogTrigger>
                                     <DialogContent className="sm:max-w-[425px]">
                                         <DialogHeader>
                                             <DialogTitle>Create New Adviser Account</DialogTitle>
@@ -430,17 +383,28 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
                                     </DialogContent>
                                 </Dialog>
                             </div>
-                        </div>
+                </div>
+
+                {/* Advisers Table */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Advisers</CardTitle>
+                        <CardDescription>
+                            {showArchivedAdvisers 
+                                ? 'Archived adviser accounts' 
+                                : 'Active adviser accounts and their assigned sections'
+                            }
+                        </CardDescription>
                     </CardHeader>
                     <CardContent>
                         <div className="overflow-x-auto">
                             <table className="w-full">
                                 <thead>
-                                    <tr className="border-b border-gray-200">
+                                    <tr className="border-b">
                                         <th className="text-left py-3 px-4 font-semibold text-sm">Username</th>
                                         <th className="text-left py-3 px-4 font-semibold text-sm">Email</th>
                                         <th className="text-left py-3 px-4 font-semibold text-sm">Name</th>
-                                        <th className="text-left py-3 px-4 font-semibold text-sm">Section</th>
+                                        <th className="text-left py-3 px-4 font-semibold text-sm">Sections</th>
                                         <th className="text-left py-3 px-4 font-semibold text-sm">Status</th>
                                         <th className="text-left py-3 px-4 font-semibold text-sm">Created</th>
                                         <th className="text-right py-3 px-4 font-semibold text-sm">Actions</th>
@@ -448,19 +412,21 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
                                 </thead>
                                 <tbody>
                                     {advisers.map((adviser) => (
-                                        <tr key={adviser.id} className={`border-b border-gray-100 hover:bg-gray-50 ${adviser.status === 'archived' ? 'bg-gray-100 opacity-75' : ''}`}>
+                                        <tr key={adviser.id} className={`border-b hover:bg-muted/50 transition-colors ${adviser.status === 'archived' ? 'opacity-75' : ''}`}>
                                             <td className="py-3 px-4 font-medium">
                                                 {adviser.username}
                                             </td>
-                                            <td className="py-3 px-4">{adviser.email}</td>
+                                            <td className="py-3 px-4 text-sm text-muted-foreground">{adviser.email}</td>
                                             <td className="py-3 px-4">{adviser.full_name}</td>
-                                            <td className="py-3 px-4">{adviser.section_names}</td>
+                                            <td className="py-3 px-4 text-sm text-muted-foreground">{adviser.section_names}</td>
                                             <td className="py-3 px-4">{getStatusBadge(adviser.status)}</td>
-                                            <td className="py-3 px-4">{adviser.created_at}</td>
+                                            <td className="py-3 px-4 text-sm text-muted-foreground">
+                                                {new Date(adviser.created_at).toLocaleDateString()}
+                                            </td>
                                             <td className="py-3 px-4 text-right">
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" className="h-8 w-8 p-0">
+                                                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                                                             <MoreHorizontal className="h-4 w-4" />
                                                         </Button>
                                                     </DropdownMenuTrigger>
@@ -472,7 +438,7 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
                                                         {adviser.status === 'archived' ? (
                                                             <DropdownMenuItem
                                                                 onClick={() => handleUnarchive(adviser)}
-                                                                className="text-green-600"
+                                                                className="text-green-600 focus:text-green-600"
                                                             >
                                                                 <ArchiveRestore className="mr-2 h-4 w-4" />
                                                                 Unarchive
@@ -480,7 +446,7 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
                                                         ) : (
                                                             <DropdownMenuItem
                                                                 onClick={() => handleArchive(adviser)}
-                                                                className="text-red-600"
+                                                                className="text-destructive focus:text-destructive"
                                                             >
                                                                 <Archive className="mr-2 h-4 w-4" />
                                                                 Archive
@@ -497,71 +463,6 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
                     </CardContent>
                 </Card>
 
-                {/* Debug Panel */}
-                {showDebug && (
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Debug Information</CardTitle>
-                            <CardDescription>
-                                Debug data for adviser management
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-4">
-                                <div>
-                                    <h4 className="font-semibold">Adviser Data Summary:</h4>
-                                    <p>Total Advisers: {advisers.length}</p>
-                                    <p>Active Advisers: {advisers.filter(a => a.is_active).length}</p>
-                                    <p>Verified Advisers: {advisers.filter(a => a.status === 'verified').length}</p>
-                                </div>
-
-                                <div>
-                                    <h4 className="font-semibold">Sections Available:</h4>
-                                    <div className="max-h-40 overflow-y-auto">
-                                        {sections.map((section) => (
-                                            <div key={section.section_id} className="text-sm border-b pb-1 mb-1">
-                                                <p><strong>ID:</strong> {section.section_id} | <strong>Name:</strong> {section.section_name}</p>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <h4 className="font-semibold">Recent Advisers:</h4>
-                                    <div className="max-h-40 overflow-y-auto">
-                                        {advisers.slice(0, 5).map((adviser) => (
-                                            <div key={adviser.id} className="text-sm border-b pb-1 mb-1">
-                                                <p><strong>ID:</strong> {adviser.id} | <strong>Username:</strong> {adviser.username} | <strong>Email:</strong> {adviser.email}</p>
-                                                <p><strong>Name:</strong> {adviser.full_name} | <strong>Sections:</strong> {adviser.section_names} | <strong>Status:</strong> {adviser.status}</p>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <h4 className="font-semibold">Form Data (Create):</h4>
-                                    <pre className="text-xs bg-gray-100 p-2 rounded overflow-x-auto">
-                                        {JSON.stringify(createForm.data, null, 2)}
-                                    </pre>
-                                </div>
-
-                                <div>
-                                    <h4 className="font-semibold">Form Errors (Create):</h4>
-                                    <pre className="text-xs bg-red-100 p-2 rounded overflow-x-auto">
-                                        {JSON.stringify(createForm.errors, null, 2)}
-                                    </pre>
-                                </div>
-
-                                <div>
-                                    <h4 className="font-semibold">Form Data (Edit):</h4>
-                                    <pre className="text-xs bg-gray-100 p-2 rounded overflow-x-auto">
-                                        {JSON.stringify(editForm.data, null, 2)}
-                                    </pre>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                )}
 
                 {/* Edit Dialog */}
                 <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
