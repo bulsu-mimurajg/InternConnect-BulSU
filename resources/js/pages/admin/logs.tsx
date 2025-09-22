@@ -30,7 +30,7 @@ interface LogsProps {
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
-        title: 'Logs',
+        title: 'Audit Logs',
         href: '/admin/logs',
     },
 ];
@@ -141,10 +141,10 @@ export default function Logs({ activities }: LogsProps) {
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Activity Logs" />
+            <Head title="Audit Logs" />
             <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
                 <div className="flex items-center justify-between">
-                    <h1 className="text-2xl font-semibold">Activity Logs</h1>
+                    <h1 className="text-2xl font-semibold">Audit Logs</h1>
                     <div className="text-sm text-gray-500">
                         Total: {activities.total} activities
                     </div>

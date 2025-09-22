@@ -2,7 +2,7 @@ import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
-import { type NavItem, type SharedData } from '@/types';
+import { type NavItem, type NavGroup, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
 import {
     ClipboardIcon,
@@ -22,37 +22,56 @@ import {
 } from 'lucide-react';
 import AppLogo from './app-logo';
 
-const roleBasedNav: Record<string, { main: NavItem[]; footer: NavItem[] }> = {
+const roleBasedNav: Record<string, { main: NavItem[]; groups?: NavGroup[]; footer: NavItem[] }> = {
     admin: {
-        main: [
-
-            { title: 'Dashboard', href: '/admin-dashboard', icon: ChartNoAxesColumnIcon },
+        main: [],
+        groups: [
             {
-                title: 'Student',
-                href: '/student',
-                icon: GraduationCapIcon,
-                subNav: [
-                    { title: 'List', href: '/student/list' },
-                    { title: 'Match', href: '/student/matched' },
-                    { title: 'Endorsed', href: '/student/endorsed' },
-                    { title: 'Place', href: '/student/placed' },
-                ],
+                title: 'Overview & Analytics',
+                items: [
+                    { title: 'Dashboard', href: '/admin-dashboard', icon: ChartNoAxesColumnIcon },
+                    { title: 'Audit Logs', href: '/admin/logs', icon: MonitorCogIcon },
+                    { title: 'Reports', href: '/report', icon: PrinterIcon },
+                ]
             },
-            { title: 'HTE', href: '/hte', icon: BriefcaseBusinessIcon },
-            { title: 'Adviser', href: '/adviser', icon: SchoolIcon },
             {
-                title: 'Form',
-                href: '/form',
-                icon: NotepadTextIcon,
-                subNav: [
-                    { title: 'Additional Info Tab', href: '/forms/additional-info'},
-                    { title: 'Student Assessment', href: '/forms/assessment'},
-                ],
+                title: 'Student Management',
+                items: [
+                    {
+                        title: 'Student',
+                        href: '/student',
+                        icon: GraduationCapIcon,
+                        subNav: [
+                            { title: 'List', href: '/student/list' },
+                            { title: 'Match', href: '/student/matched' },
+                            { title: 'Endorsed', href: '/student/endorsed' },
+                            { title: 'Place', href: '/student/placed' },
+                        ],
+                    },
+                    {
+                        title: 'Form',
+                        href: '/form',
+                        icon: NotepadTextIcon,
+                        subNav: [
+                            { title: 'Additional Info Tab', href: '/forms/additional-info'},
+                            { title: 'Student Assessment', href: '/forms/assessment'},
+                        ],
+                    },
+                ]
             },
-
-            { title: 'Events', href: '/admin/events', icon: CalendarIcon },
-            { title: 'Reports', href: '/report', icon: PrinterIcon },
-            { title: 'Audit Logs', href: '/admin/logs', icon: MonitorCogIcon },
+            {
+                title: 'Partner Management',
+                items: [
+                    { title: 'HTE', href: '/hte', icon: BriefcaseBusinessIcon },
+                    { title: 'Adviser', href: '/adviser', icon: SchoolIcon },
+                ]
+            },
+            {
+                title: 'Events',
+                items: [
+                    { title: 'Events', href: '/admin/events', icon: CalendarIcon },
+                ]
+            },
         ],
         footer: [],
     },
@@ -125,7 +144,7 @@ export function AppSidebar() {
             </SidebarHeader>
 
             <SidebarContent>
-                <NavMain items={nav.main} />
+                <NavMain items={nav.main} groups={nav.groups} role={role} />
             </SidebarContent>
 
             <SidebarFooter>
