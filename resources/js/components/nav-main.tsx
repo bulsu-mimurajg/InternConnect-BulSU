@@ -4,7 +4,7 @@ import { type NavItem, type NavGroup, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@radix-ui/react-collapsible';
 import { ChevronDownIcon } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -38,19 +38,23 @@ export function NavMain({ items = [], groups = [], role }: { items?: NavItem[]; 
         }
     };
     
+    // Memoize items and groups to prevent infinite re-renders
+    const memoizedItems = useMemo(() => items, [JSON.stringify(items)]);
+    const memoizedGroups = useMemo(() => groups, [JSON.stringify(groups)]);
+
     // Initialize open sections based on current URL
     useEffect(() => {
         const newOpenSections: Record<string, boolean> = {};
         
         // Handle single items array
-        items.forEach((item) => {
+        memoizedItems.forEach((item) => {
             if (item.subNav) {
                 newOpenSections[item.title] = currentUrl.startsWith(item.href);
             }
         });
         
         // Handle grouped navigation
-        groups.forEach((group) => {
+        memoizedGroups.forEach((group) => {
             group.items.forEach((item) => {
                 if (item.subNav) {
                     newOpenSections[item.title] = currentUrl.startsWith(item.href);
@@ -59,7 +63,7 @@ export function NavMain({ items = [], groups = [], role }: { items?: NavItem[]; 
         });
         
         setOpenSections(newOpenSections);
-    }, [currentUrl, items, groups]);
+    }, [currentUrl, memoizedItems, memoizedGroups]);
     
     // Toggle section open/close
     const toggleSection = (title: string, event: React.MouseEvent) => {
@@ -174,7 +178,7 @@ export function NavMain({ items = [], groups = [], role }: { items?: NavItem[]; 
                     <SidebarGroup key={groupIndex} className="px-2 py-0">
                         <SidebarGroupLabel>{group.title}</SidebarGroupLabel>
                         <SidebarMenu>
-                            {renderNavItems(group.items)}
+                            {renderNavItems(memoizedGroups[groupIndex]?.items || [])}
                         </SidebarMenu>
                     </SidebarGroup>
                 ))}
@@ -187,7 +191,7 @@ export function NavMain({ items = [], groups = [], role }: { items?: NavItem[]; 
         <SidebarGroup className="px-2 py-0">
             <SidebarGroupLabel>{getRoleLabel(role)}</SidebarGroupLabel>
             <SidebarMenu>
-                {renderNavItems(items)}
+                {renderNavItems(memoizedItems)}
             </SidebarMenu>
         </SidebarGroup>
     );

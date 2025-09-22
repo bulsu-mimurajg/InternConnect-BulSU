@@ -18,6 +18,7 @@ import {
     GraduationCapIcon,
     NotepadTextIcon, UserRoundIcon, MonitorCogIcon, GavelIcon, StepBackIcon
 } from 'lucide-react';
+import { useMemo } from 'react';
 import AppLogo from './app-logo';
 
 const roleBasedNav: Record<string, { main: NavItem[]; groups?: NavGroup[]; footer: NavItem[] }> = {
@@ -120,21 +121,25 @@ export function AppSidebar() {
     const { auth } = usePage<SharedData>().props;
 
     const role = auth.role ?? 'guest';
-    let nav = roleBasedNav[role] ?? roleBasedNav['guest'];
+    const baseNav = roleBasedNav[role] ?? roleBasedNav['guest'];
 
-    // For HTE users, show Dashboard and Profile if they already have an HTE
-    if (role === 'hte' && auth.user.hte) {
-        nav = {
-            ...nav,
-            main: [
-                { title: 'Dashboard', href: '/hte/dashboard', icon: ClipboardIcon },
-                { title: 'Add Internship', href: '/hte/add-internship', icon: PlusIcon },
-                { title: 'Student Endorsements', href: '/hte/endorsement-table', icon: Check },
-                { title: 'Placed Students', href: '/hte/placed-students', icon: UsersIcon },
-                { title: 'Profile', href: '/hte/profile', icon: UserIcon }
-            ]
-        };
-    }
+    // Memoize the navigation to prevent infinite re-renders
+    const nav = useMemo(() => {
+        // For HTE users, show Dashboard and Profile if they already have an HTE
+        if (role === 'hte' && auth.user.hte) {
+            return {
+                ...baseNav,
+                main: [
+                    { title: 'Dashboard', href: '/hte/dashboard', icon: ClipboardIcon },
+                    { title: 'Add Internship', href: '/hte/add-internship', icon: PlusIcon },
+                    { title: 'Student Endorsements', href: '/hte/endorsement-table', icon: Check },
+                    { title: 'Placed Students', href: '/hte/placed-students', icon: UsersIcon },
+                    { title: 'Profile', href: '/hte/profile', icon: UserIcon }
+                ]
+            };
+        }
+        return baseNav;
+    }, [role, auth.user.hte, baseNav]);
 
     return (
         <Sidebar collapsible="icon" variant="inset">
