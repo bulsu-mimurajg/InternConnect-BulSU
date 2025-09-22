@@ -6,17 +6,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { CalendarIcon, PlusIcon, EditIcon, TrashIcon } from 'lucide-react';
 import { ClockIcon } from 'lucide-react';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
-    {
-        title: 'Dashboard',
-        href: '/admin-dashboard',
-    },
     {
         title: 'Events',
         href: '/admin/events',
@@ -70,7 +66,7 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         if (editingDeadline) {
             put(`/admin/deadlines/${editingDeadline.id}`, {
                 onSuccess: () => {
@@ -187,7 +183,7 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
                         {flash.success}
                     </div>
                 )}
-                
+
                 {/* Error Message */}
                 {flash?.error && (
                     <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
@@ -207,7 +203,7 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
                             </p>
                         </div>
                     </div>
-                    
+
                     {/* Action Buttons */}
                     <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                         {/* Primary Actions */}
@@ -228,7 +224,7 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
                                 {showArchived ? 'Show Active' : 'Show Expired'}
                             </Button>
                         </div>
-                        
+
                         {/* Automation Section */}
                         <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                                 <Button
@@ -283,8 +279,8 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
                                 {editingDeadline ? 'Edit Deadline' : 'Add New Deadline'}
                             </CardTitle>
                             <CardDescription className="text-sm text-muted-foreground">
-                                {editingDeadline 
-                                    ? 'Update the deadline information below.' 
+                                {editingDeadline
+                                    ? 'Update the deadline information below.'
                                     : 'Enter the deadline information below.'
                                 }
                             </CardDescription>
@@ -376,18 +372,18 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
                                         </ul>
                                     </div>
                                 )}
-                                
+
                                 <div className="flex flex-col sm:flex-row gap-3 pt-4">
-                                    <Button 
-                                        type="submit" 
+                                    <Button
+                                        type="submit"
                                         disabled={processing}
                                         className="flex-1 sm:flex-none h-9"
                                     >
                                         {processing ? 'Saving...' : (editingDeadline ? 'Update Deadline' : 'Create Deadline')}
                                     </Button>
-                                    <Button 
-                                        type="button" 
-                                        variant="outline" 
+                                    <Button
+                                        type="button"
+                                        variant="outline"
                                         onClick={handleCancel}
                                         className="flex-1 sm:flex-none h-9"
                                     >
@@ -410,8 +406,8 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
                             </Badge>
                         </CardTitle>
                         <CardDescription className="text-sm text-muted-foreground">
-                            {showArchived 
-                                ? 'Manage expired application deadlines' 
+                            {showArchived
+                                ? 'Manage expired application deadlines'
                                 : 'Manage active application deadlines'
                             }
                         </CardDescription>
@@ -428,14 +424,14 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
                                             {showArchived ? 'No expired deadlines found' : 'No deadlines found'}
                                         </h3>
                                         <p className="text-sm text-muted-foreground max-w-sm">
-                                            {showArchived 
+                                            {showArchived
                                                 ? 'No deadlines have expired yet.'
                                                 : 'Get started by creating your first deadline.'
                                             }
                                         </p>
                                     </div>
                                     {!showArchived && (
-                                        <Button 
+                                        <Button
                                             onClick={() => setShowForm(true)}
                                             className="h-9 px-6"
                                         >
@@ -448,7 +444,7 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
                         ) : (
                             <div className="space-y-4">
                                 {currentDeadlines.map((deadline) => (
-                                    <Card 
+                                    <Card
                                         key={deadline.id}
                                         className="border-border hover:shadow-md transition-all duration-200"
                                     >
@@ -466,7 +462,7 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
                                                             </Badge>
                                                         </div>
                                                     </div>
-                                                    
+
                                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                                                         <div className="flex items-center gap-2">
                                                             <span className="font-medium text-muted-foreground">Start:</span>
@@ -477,14 +473,14 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
                                                             <span className="text-foreground">{formatDateTime(deadline.end_date)}</span>
                                                         </div>
                                                     </div>
-                                                    
+
                                                     <div className="text-xs text-muted-foreground pt-2 border-t border-border">
                                                         <span>Created: {deadline.created_at}</span>
                                                         <span className="mx-2">•</span>
                                                         <span>Updated: {deadline.updated_at}</span>
                                                     </div>
                                                 </div>
-                                                
+
                                                 <div className="flex flex-row md:flex-col gap-2 md:gap-3">
                                                     {!deadline.is_expired && (
                                                         <Button
@@ -560,18 +556,18 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
                                     </ul>
                                 </div>
                             )}
-                            
+
                             <div className="flex flex-col sm:flex-row gap-3">
-                                <Button 
-                                    onClick={handleExtendSubmit} 
+                                <Button
+                                    onClick={handleExtendSubmit}
                                     disabled={extending}
                                     className="flex-1 sm:flex-none h-9"
                                 >
                                     {extending ? 'Extending...' : 'Confirm Extension'}
                                 </Button>
-                                <Button 
-                                    type="button" 
-                                    variant="outline" 
+                                <Button
+                                    type="button"
+                                    variant="outline"
                                     onClick={handleExtendCancel}
                                     className="flex-1 sm:flex-none h-9"
                                 >

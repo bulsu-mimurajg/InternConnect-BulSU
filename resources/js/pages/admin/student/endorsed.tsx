@@ -26,6 +26,14 @@ import {
     InfoIcon,
     ArrowUpDownIcon
 } from 'lucide-react';
+import type { BreadcrumbItem } from '@/types';
+
+const breadcrumbs: BreadcrumbItem[] = [
+    {
+        title: 'Endorsed Students',
+        href: '/student/endorsed',
+    },
+];
 
 interface EndorsedStudent {
     id: number;
@@ -171,7 +179,7 @@ export default function StudentEndorsed({
     };
 
     return (
-        <AdminLayout>
+        <AdminLayout breadcrumbs={breadcrumbs}>
             <Head title="Endorsed Students" />
             
             <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">

@@ -26,8 +26,14 @@ import {
     InfoIcon,
     ArrowUpDownIcon
 } from 'lucide-react';
+import type { BreadcrumbItem } from '@/types';
 
-// breadcrumbs is unused, so we'll remove it
+const breadcrumbs: BreadcrumbItem[] = [
+    {
+        title: 'Student Matches',
+        href: '/student/matched',
+    },
+];
 
 interface MatchedStudent {
     id: number;
@@ -812,7 +818,7 @@ export default function StudentMatched({ matchedStudents, filters }: Props) {
         <>
             <Head title="Student Matches" />
 
-            <AdminLayout>
+            <AdminLayout breadcrumbs={breadcrumbs}>
                 <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
                     {/* Header */}
                     <div className="flex items-center justify-between">

@@ -24,8 +24,14 @@ import {
     ArrowUpDownIcon,
     FileTextIcon
 } from 'lucide-react';
+import type { BreadcrumbItem } from '@/types';
 
-// breadcrumbs is unused, so we'll remove it
+const breadcrumbs: BreadcrumbItem[] = [
+    {
+        title: 'Placed Students',
+        href: '/student/placed',
+    },
+];
 
 interface PlacedStudent {
     id: number;
@@ -149,7 +155,7 @@ export default function StudentPlaced({ placedStudents = [], filters }: Props) {
     };
 
     return (
-        <AdminLayout>
+        <AdminLayout breadcrumbs={breadcrumbs}>
             <Head title="Placed Students" />
             
             <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">

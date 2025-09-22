@@ -13,10 +13,6 @@ import { type BreadcrumbItem, type Question, type Category, type SubCategory } f
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
-        title: 'Dashboard',
-        href: '/admin-dashboard',
-    },
-    {
         title: 'Assessment Form',
         href: '/forms/assessment',
     },

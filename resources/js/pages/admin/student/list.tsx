@@ -5,8 +5,14 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { UsersIcon, UserCheckIcon, ArchiveIcon, RotateCcwIcon, EditIcon, UserXIcon } from 'lucide-react';
 import { useState } from 'react';
+import type { BreadcrumbItem } from '@/types';
 
-// breadcrumbs is unused, so we'll remove it
+const breadcrumbs: BreadcrumbItem[] = [
+    {
+        title: 'Student List',
+        href: '/admin/student-list',
+    },
+];
 
 interface Student {
     id: number | string;
@@ -81,25 +87,25 @@ export default function StudentList({ students, unverifiedUsers = [], archivedSt
     };
 
     return (
-        <AdminLayout>
+        <AdminLayout breadcrumbs={breadcrumbs}>
             <Head title="Student List" />
             <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="text-3xl font-bold tracking-tight">
-                            {showArchived 
-                                ? 'Archived Students' 
-                                : showUnverified 
-                                    ? 'Pending Verification' 
+                            {showArchived
+                                ? 'Archived Students'
+                                : showUnverified
+                                    ? 'Pending Verification'
                                     : 'Student Directory'
                             }
                         </h1>
                         <p className="text-muted-foreground">
-                            {showArchived 
-                                ? 'Manage archived student accounts' 
-                                : showUnverified 
-                                    ? 'Review and verify student applications' 
+                            {showArchived
+                                ? 'Manage archived student accounts'
+                                : showUnverified
+                                    ? 'Review and verify student applications'
                                     : 'View and manage verified students'
                             }
                         </p>
