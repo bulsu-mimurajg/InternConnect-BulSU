@@ -18,7 +18,7 @@ import {
     BriefcaseBusinessIcon,
     GraduationCapIcon,
     SchoolIcon,
-    NotepadTextIcon, UserRoundIcon
+    NotepadTextIcon, UserRoundIcon, MonitorCogIcon
 } from 'lucide-react';
 import AppLogo from './app-logo';
 
@@ -52,6 +52,7 @@ const roleBasedNav: Record<string, { main: NavItem[]; footer: NavItem[] }> = {
 
             { title: 'Events', href: '/admin/events', icon: CalendarIcon },
             { title: 'Reports', href: '/report', icon: PrinterIcon },
+            { title: 'Audit Logs', href: '/admin/logs', icon: MonitorCogIcon },
         ],
         footer: [],
     },

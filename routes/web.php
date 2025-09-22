@@ -125,6 +125,10 @@ Route::middleware(['auth', 'verified', 'role:admin'])->group(function () {
     Route::get('report/general/export/pdf/{reportType}', [App\Http\Controllers\AdminController::class, 'exportGeneralPDF'])->name('report.general.export.pdf');
     Route::get('report/general/export/excel/{reportType}', [App\Http\Controllers\AdminController::class, 'exportGeneralExcel'])->name('report.general.export.excel');
 
+    Route::get('admin/logs', function () {
+        return Inertia::render('admin/logs');
+    });
+
     // SIP Endorsement Routes
     Route::post('admin/reject-endorsement/{student}', [App\Http\Controllers\Admin\StudentController::class, 'rejectEndorsement'])->name('admin.reject-endorsement');
 
