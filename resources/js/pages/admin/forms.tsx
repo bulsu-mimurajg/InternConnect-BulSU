@@ -17,8 +17,8 @@ const breadcrumbs: BreadcrumbItem[] = [
         href: '/admin-dashboard',
     },
     {
-        title: 'Forms',
-        href: '/admin/forms',
+        title: 'Assessment Form',
+        href: '/forms/assessment',
     },
 ];
 
@@ -52,19 +52,19 @@ export default function FormsPage({ questions, categories, subcategories, filter
     });
 
     // Filter questions based on archive status
-    const filteredQuestions = questions.filter(question => 
+    const filteredQuestions = questions.filter(question =>
         showArchived ? !question.is_active : question.is_active
     );
 
     // Apply filters and search
     const applyFilters = useCallback(() => {
         const params = new URLSearchParams();
-        
+
         if (searchTerm) params.set('search', searchTerm);
         if (filterCategory) params.set('category_id', filterCategory);
         if (filterSubcategory) params.set('subcategory_id', filterSubcategory);
-        
-        router.get('/admin/forms', Object.fromEntries(params), {
+
+        router.get('/forms/assessment', Object.fromEntries(params), {
             preserveState: true,
             replace: true,
         });
@@ -117,9 +117,9 @@ export default function FormsPage({ questions, categories, subcategories, filter
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         if (editingQuestion) {
-            put(`/admin/questions/${editingQuestion.id}`, {
+            put(`/forms/questions/${editingQuestion.id}`, {
                 onSuccess: () => {
                     reset();
                     setShowForm(false);
@@ -132,7 +132,7 @@ export default function FormsPage({ questions, categories, subcategories, filter
                 },
             });
         } else {
-            post('/admin/questions', {
+            post('/forms/questions', {
                 onSuccess: () => {
                     reset();
                     setShowForm(false);
@@ -152,7 +152,7 @@ export default function FormsPage({ questions, categories, subcategories, filter
             question: question.question,
             subcategory_id: question.subcategory_id.toString(),
         });
-        
+
         // Set the category and subcategories
         const categoryId = question.subcategory.category.id.toString();
         setSelectedCategory(categoryId);
@@ -163,13 +163,13 @@ export default function FormsPage({ questions, categories, subcategories, filter
 
     const handleArchive = (id: number) => {
         if (confirm('Are you sure you want to archive this question?')) {
-            patch(`/admin/questions/${id}/archive`);
+            patch(`/forms/questions/${id}/archive`);
         }
     };
 
     const handleRestore = (id: number) => {
         if (confirm('Are you sure you want to restore this question?')) {
-            patch(`/admin/questions/${id}/restore`);
+            patch(`/forms/questions/${id}/restore`);
         }
     };
 
@@ -217,7 +217,7 @@ export default function FormsPage({ questions, categories, subcategories, filter
                         {flash.success}
                     </div>
                 )}
-                
+
                 {/* Error Message */}
                 {flash?.error && (
                     <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
@@ -296,8 +296,8 @@ export default function FormsPage({ questions, categories, subcategories, filter
                             {/* Subcategory Filter */}
                             <div className="space-y-2">
                                 <Label htmlFor="filter-subcategory">Subcategory</Label>
-                                <Select 
-                                    value={filterSubcategory || "all"} 
+                                <Select
+                                    value={filterSubcategory || "all"}
                                     onValueChange={(value) => setFilterSubcategory(value === "all" ? "" : value)}
                                     disabled={!filterCategory}
                                 >
@@ -341,8 +341,8 @@ export default function FormsPage({ questions, categories, subcategories, filter
                                 {editingQuestion ? 'Edit Question' : 'Add New Question'}
                             </CardTitle>
                             <CardDescription>
-                                {editingQuestion 
-                                    ? 'Update the question information below.' 
+                                {editingQuestion
+                                    ? 'Update the question information below.'
                                     : 'Enter the question information below.'
                                 }
                             </CardDescription>
@@ -383,8 +383,8 @@ export default function FormsPage({ questions, categories, subcategories, filter
 
                                     <div className="space-y-2">
                                         <Label htmlFor="subcategory">Subcategory</Label>
-                                        <Select 
-                                            value={data.subcategory_id} 
+                                        <Select
+                                            value={data.subcategory_id}
                                             onValueChange={(value) => setData('subcategory_id', value)}
                                         >
                                             <SelectTrigger>
@@ -417,7 +417,7 @@ export default function FormsPage({ questions, categories, subcategories, filter
                                         </ul>
                                     </div>
                                 )}
-                                
+
                                 <div className="flex gap-2">
                                     <Button type="submit" disabled={processing}>
                                         {processing ? 'Saving...' : (editingQuestion ? 'Update' : 'Create')}
@@ -439,8 +439,8 @@ export default function FormsPage({ questions, categories, subcategories, filter
                             {showArchived ? 'Archived Questions' : 'Active Questions'}
                         </CardTitle>
                         <CardDescription>
-                            {showArchived 
-                                ? 'Manage archived assessment questions' 
+                            {showArchived
+                                ? 'Manage archived assessment questions'
                                 : 'Manage active assessment questions'
                             }
                         </CardDescription>
@@ -453,7 +453,7 @@ export default function FormsPage({ questions, categories, subcategories, filter
                                     {showArchived ? 'No archived questions found' : 'No questions found'}
                                 </h3>
                                 <p className="text-muted-foreground mb-4">
-                                    {showArchived 
+                                    {showArchived
                                         ? 'No questions have been archived yet.'
                                         : 'Get started by creating your first question.'
                                     }

@@ -5,18 +5,20 @@ import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, Sid
 import { type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
 import {
-    BookCheckIcon,
     ClipboardIcon,
-    ClipboardListIcon,
     HeadsetIcon,
     InfoIcon,
-    PersonStandingIcon,
     PrinterIcon,
     UserIcon,
     UsersIcon,
     PlusIcon,
     CalendarIcon,
-    FileTextIcon, Check
+    Check,
+    ChartNoAxesColumnIcon,
+    BriefcaseBusinessIcon,
+    GraduationCapIcon,
+    SchoolIcon,
+    NotepadTextIcon, UserRoundIcon
 } from 'lucide-react';
 import AppLogo from './app-logo';
 
@@ -24,11 +26,11 @@ const roleBasedNav: Record<string, { main: NavItem[]; footer: NavItem[] }> = {
     admin: {
         main: [
 
-            { title: 'Dashboard', href: '/admin-dashboard', icon: ClipboardIcon },
+            { title: 'Dashboard', href: '/admin-dashboard', icon: ChartNoAxesColumnIcon },
             {
                 title: 'Student',
                 href: '/student',
-                icon: ClipboardListIcon,
+                icon: GraduationCapIcon,
                 subNav: [
                     { title: 'List', href: '/student/list' },
                     { title: 'Match', href: '/student/matched' },
@@ -36,10 +38,18 @@ const roleBasedNav: Record<string, { main: NavItem[]; footer: NavItem[] }> = {
                     { title: 'Place', href: '/student/placed' },
                 ],
             },
-            { title: 'HTE', href: '/hte', icon: UserIcon },
-            { title: 'Adviser', href: '/adviser', icon: PersonStandingIcon },
-            { title: 'Forms', href: '/admin/forms', icon: FileTextIcon },
-            { title: 'Additional Info', href: '/admin/additional-info', icon: PlusIcon },
+            { title: 'HTE', href: '/hte', icon: BriefcaseBusinessIcon },
+            { title: 'Adviser', href: '/adviser', icon: SchoolIcon },
+            {
+                title: 'Form',
+                href: '/form',
+                icon: NotepadTextIcon,
+                subNav: [
+                    { title: 'Additional Info Tab', href: '/forms/additional-info'},
+                    { title: 'Student Assessment', href: '/forms/assessment'},
+                ],
+            },
+
             { title: 'Events', href: '/admin/events', icon: CalendarIcon },
             { title: 'Reports', href: '/report', icon: PrinterIcon },
         ],
@@ -47,26 +57,26 @@ const roleBasedNav: Record<string, { main: NavItem[]; footer: NavItem[] }> = {
     },
     hte: {
         main: [
-            { title: 'Dashboard', href: '/hte/dashboard', icon: ClipboardIcon },
-            { title: 'Form', href: '/form', icon: ClipboardListIcon },
-            { title: 'Profile', href: '/hte/profile', icon: UserIcon }
+            { title: 'Dashboard', href: '/hte/dashboard', icon: ChartNoAxesColumnIcon },
+            { title: 'Form', href: '/form', icon: NotepadTextIcon },
+            { title: 'Profile', href: '/hte/profile', icon: UserRoundIcon }
         ],
         footer: [],
     },
     adviser: {
         main: [
-            { title: 'Dashboard', href: '/adviser/dashboard', icon: ClipboardIcon },
+            { title: 'Dashboard', href: '/adviser/dashboard', icon: ChartNoAxesColumnIcon },
             { title: 'Student Verification', href: '/student-verification', icon: Check },
-            { title: 'Student List', href: '/adviser/student-list', icon: UserIcon },
+            { title: 'Student List', href: '/adviser/student-list', icon: GraduationCapIcon },
             { title: 'Report', href: '/adviser/report', icon: PrinterIcon },
         ],
         footer: [],
     },
     student: {
         main: [
-            { title: 'Dashboard', href: '/student/dashboard', icon: ClipboardIcon },
-            { title: 'Assessment', href: '/assessment', icon: BookCheckIcon },
-            { title: 'Profile', href: '/student-profile', icon: UserIcon },
+            { title: 'Dashboard', href: '/student/dashboard', icon: ChartNoAxesColumnIcon },
+            { title: 'Assessment', href: '/assessment', icon: NotepadTextIcon },
+            { title: 'Profile', href: '/student-profile', icon: UserRoundIcon },
         ],
         footer: [
             { title: 'About', href: '/about', icon: InfoIcon },

@@ -16,7 +16,7 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
     {
         title: 'Additional Info',
-        href: '/admin/additional-info',
+        href: '/forms/additional-info',
     },
 ];
 
@@ -47,17 +47,17 @@ export default function AdditionalInfoPage({ additionalInfos, filters }: Additio
     });
 
     // Filter additional infos based on archive status
-    const filteredInfos = additionalInfos.filter(info => 
+    const filteredInfos = additionalInfos.filter(info =>
         showArchived ? !info.is_active : info.is_active
     );
 
     // Apply filters and search
     const applyFilters = useCallback(() => {
         const params = new URLSearchParams();
-        
+
         if (searchTerm) params.set('search', searchTerm);
-        
-        router.get('/admin/additional-info', Object.fromEntries(params), {
+
+        router.get('/forms/additional-info', Object.fromEntries(params), {
             preserveState: true,
             replace: true,
         });
@@ -78,9 +78,9 @@ export default function AdditionalInfoPage({ additionalInfos, filters }: Additio
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         if (editingInfo) {
-            put(`/admin/additional-info/${editingInfo.id}`, {
+            put(`/forms/additional-info/${editingInfo.id}`, {
                 onSuccess: () => {
                     reset();
                     setShowForm(false);
@@ -91,7 +91,7 @@ export default function AdditionalInfoPage({ additionalInfos, filters }: Additio
                 },
             });
         } else {
-            post('/admin/additional-info', {
+            post('/forms/additional-info', {
                 onSuccess: () => {
                     reset();
                     setShowForm(false);
@@ -113,13 +113,13 @@ export default function AdditionalInfoPage({ additionalInfos, filters }: Additio
 
     const handleArchive = (id: number) => {
         if (confirm('Are you sure you want to archive this additional info?')) {
-            patch(`/admin/additional-info/${id}/archive`);
+            patch(`/forms/additional-info/${id}/archive`);
         }
     };
 
     const handleRestore = (id: number) => {
         if (confirm('Are you sure you want to restore this additional info?')) {
-            patch(`/admin/additional-info/${id}/restore`);
+            patch(`/forms/additional-info/${id}/restore`);
         }
     };
 
@@ -151,7 +151,7 @@ export default function AdditionalInfoPage({ additionalInfos, filters }: Additio
                         {flash.success}
                     </div>
                 )}
-                
+
                 {/* Error Message */}
                 {flash?.error && (
                     <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
@@ -233,8 +233,8 @@ export default function AdditionalInfoPage({ additionalInfos, filters }: Additio
                                 {editingInfo ? 'Edit Field' : 'Add New Field'}
                             </CardTitle>
                             <CardDescription>
-                                {editingInfo 
-                                    ? 'Update the field information below.' 
+                                {editingInfo
+                                    ? 'Update the field information below.'
                                     : 'Enter the field information below.'
                                 }
                             </CardDescription>
@@ -266,7 +266,7 @@ export default function AdditionalInfoPage({ additionalInfos, filters }: Additio
                                         </ul>
                                     </div>
                                 )}
-                                
+
                                 <div className="flex gap-2">
                                     <Button type="submit" disabled={processing}>
                                         {processing ? 'Saving...' : (editingInfo ? 'Update' : 'Create')}
@@ -288,8 +288,8 @@ export default function AdditionalInfoPage({ additionalInfos, filters }: Additio
                             {showArchived ? 'Archived Fields' : 'Active Fields'}
                         </CardTitle>
                         <CardDescription>
-                            {showArchived 
-                                ? 'Manage archived additional info fields' 
+                            {showArchived
+                                ? 'Manage archived additional info fields'
                                 : 'Manage active additional info fields'
                             }
                         </CardDescription>
@@ -302,7 +302,7 @@ export default function AdditionalInfoPage({ additionalInfos, filters }: Additio
                                     {showArchived ? 'No archived fields found' : 'No fields found'}
                                 </h3>
                                 <p className="text-muted-foreground mb-4">
-                                    {showArchived 
+                                    {showArchived
                                         ? 'No fields have been archived yet.'
                                         : 'Get started by creating your first field.'
                                     }

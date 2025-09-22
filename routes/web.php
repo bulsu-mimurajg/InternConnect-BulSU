@@ -63,19 +63,19 @@ Route::middleware(['auth', 'verified', 'role:admin'])->group(function () {
     Route::post('admin/deadlines/process-all', [AdminController::class, 'processAllDeadlines'])->name('admin.deadlines.process-all');
 
     // Forms Management routes
-    Route::get('admin/forms', [App\Http\Controllers\QuestionController::class, 'index'])->name('admin.forms');
-    Route::post('admin/questions', [App\Http\Controllers\QuestionController::class, 'store'])->name('admin.questions.store');
-    Route::put('admin/questions/{question}', [App\Http\Controllers\QuestionController::class, 'update'])->name('admin.questions.update');
-    Route::patch('admin/questions/{question}/archive', [App\Http\Controllers\QuestionController::class, 'archive'])->name('admin.questions.archive');
-    Route::patch('admin/questions/{question}/restore', [App\Http\Controllers\QuestionController::class, 'restore'])->name('admin.questions.restore');
-    Route::get('admin/categories/{category}/subcategories', [App\Http\Controllers\QuestionController::class, 'getSubcategories'])->name('admin.categories.subcategories');
+    Route::get('forms/assessment', [App\Http\Controllers\QuestionController::class, 'index'])->name('admin.forms');
+    Route::post('forms/questions', [App\Http\Controllers\QuestionController::class, 'store'])->name('admin.questions.store');
+    Route::put('forms/questions/{question}', [App\Http\Controllers\QuestionController::class, 'update'])->name('admin.questions.update');
+    Route::patch('forms/questions/{question}/archive', [App\Http\Controllers\QuestionController::class, 'archive'])->name('admin.questions.archive');
+    Route::patch('forms/questions/{question}/restore', [App\Http\Controllers\QuestionController::class, 'restore'])->name('admin.questions.restore');
+    Route::get('forms/categories/{category}/subcategories', [App\Http\Controllers\QuestionController::class, 'getSubcategories'])->name('admin.categories.subcategories');
 
     // Additional Info Management routes
-    Route::get('admin/additional-info', [App\Http\Controllers\AdditionalInfoController::class, 'index'])->name('admin.additional-info');
-    Route::post('admin/additional-info', [App\Http\Controllers\AdditionalInfoController::class, 'store'])->name('admin.additional-info.store');
-    Route::put('admin/additional-info/{additionalInfo}', [App\Http\Controllers\AdditionalInfoController::class, 'update'])->name('admin.additional-info.update');
-    Route::patch('admin/additional-info/{additionalInfo}/archive', [App\Http\Controllers\AdditionalInfoController::class, 'archive'])->name('admin.additional-info.archive');
-    Route::patch('admin/additional-info/{additionalInfo}/restore', [App\Http\Controllers\AdditionalInfoController::class, 'restore'])->name('admin.additional-info.restore');
+    Route::get('forms/additional-info', [App\Http\Controllers\AdditionalInfoController::class, 'index'])->name('admin.additional-info');
+    Route::post('forms/additional-info', [App\Http\Controllers\AdditionalInfoController::class, 'store'])->name('admin.additional-info.store');
+    Route::put('forms/additional-info/{additionalInfo}', [App\Http\Controllers\AdditionalInfoController::class, 'update'])->name('admin.additional-info.update');
+    Route::patch('forms/additional-info/{additionalInfo}/archive', [App\Http\Controllers\AdditionalInfoController::class, 'archive'])->name('admin.additional-info.archive');
+    Route::patch('forms/additional-info/{additionalInfo}/restore', [App\Http\Controllers\AdditionalInfoController::class, 'restore'])->name('admin.additional-info.restore');
     Route::get('api/additional-info/active', [App\Http\Controllers\AdditionalInfoController::class, 'getActive'])->name('api.additional-info.active');
 
     Route::get('student', function () {
@@ -116,11 +116,11 @@ Route::middleware(['auth', 'verified', 'role:admin'])->group(function () {
     Route::get('report', [App\Http\Controllers\AdminController::class, 'report'])->name('report');
     Route::get('report/export/pdf', [App\Http\Controllers\AdminController::class, 'exportPDF'])->name('report.export.pdf');
     Route::get('report/export/excel', [App\Http\Controllers\AdminController::class, 'exportExcel'])->name('report.export.excel');
-    
+
     // Section-specific report exports
     Route::get('report/section/{sectionId}/export/pdf/{reportType}', [App\Http\Controllers\AdminController::class, 'exportSectionPDF'])->name('report.section.export.pdf');
     Route::get('report/section/{sectionId}/export/excel/{reportType}', [App\Http\Controllers\AdminController::class, 'exportSectionExcel'])->name('report.section.export.excel');
-    
+
     // General report exports
     Route::get('report/general/export/pdf/{reportType}', [App\Http\Controllers\AdminController::class, 'exportGeneralPDF'])->name('report.general.export.pdf');
     Route::get('report/general/export/excel/{reportType}', [App\Http\Controllers\AdminController::class, 'exportGeneralExcel'])->name('report.general.export.excel');
