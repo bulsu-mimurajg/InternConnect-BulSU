@@ -4,13 +4,6 @@ import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
 
 import {
     Dialog,
@@ -104,11 +97,11 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
 
     const handleCreateSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         // Debug: Log form data before submission
         console.log('Adviser Creation - Form Data:', createForm.data);
         console.log('Adviser Creation - CSRF Token:', document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'));
-        
+
         createForm.post(route('admin.adviser.store'), {
             onSuccess: () => {
                 console.log('Adviser Creation - Success!');
@@ -118,7 +111,7 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
             onError: (errors) => {
                 console.error('Adviser Creation - Errors:', errors);
                 console.error('Adviser Creation - Error Details:', JSON.stringify(errors, null, 2));
-                
+
                 // Log specific error types
                 if (errors.email) {
                     console.error('Email Error:', errors.email);
@@ -213,7 +206,7 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
     const handleSectionToggle = (sectionId: number, formType: 'create' | 'edit') => {
         const form = formType === 'create' ? createForm : editForm;
         const currentSectionIds = form.data.section_ids;
-        
+
         if (currentSectionIds.includes(sectionId)) {
             // Remove section
             form.setData('section_ids', currentSectionIds.filter(id => id !== sectionId));
@@ -239,7 +232,7 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Adviser Management" />
-            
+
             <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
                 <Card>
                     <CardHeader>
@@ -250,9 +243,9 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
                                     Manage adviser accounts and their sections
                                 </CardDescription>
                                 <div className="mt-2">
-                                    <Button 
-                                        variant="outline" 
-                                        size="sm" 
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
                                         onClick={() => setShowDebug(!showDebug)}
                                     >
                                         {showDebug ? 'Hide' : 'Show'} Debug Info
@@ -260,8 +253,8 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
                                 </div>
                             </div>
                             <div className="flex gap-2">
-                                <Button 
-                                    variant="outline" 
+                                <Button
+                                    variant="outline"
                                     onClick={toggleArchivedView}
                                 >
                                     {showArchivedAdvisers ? (
@@ -410,7 +403,7 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
                                                                         checked={createForm.data.section_ids.includes(section.section_id)}
                                                                         onCheckedChange={() => handleSectionToggle(section.section_id, 'create')}
                                                                     />
-                                                                    <Label 
+                                                                    <Label
                                                                         htmlFor={`create-section-${section.section_id}`}
                                                                         className="text-sm font-normal cursor-pointer"
                                                                     >
@@ -477,7 +470,7 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
                                                             Edit
                                                         </DropdownMenuItem>
                                                         {adviser.status === 'archived' ? (
-                                                            <DropdownMenuItem 
+                                                            <DropdownMenuItem
                                                                 onClick={() => handleUnarchive(adviser)}
                                                                 className="text-green-600"
                                                             >
@@ -485,7 +478,7 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
                                                                 Unarchive
                                                             </DropdownMenuItem>
                                                         ) : (
-                                                            <DropdownMenuItem 
+                                                            <DropdownMenuItem
                                                                 onClick={() => handleArchive(adviser)}
                                                                 className="text-red-600"
                                                             >
@@ -521,7 +514,7 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
                                     <p>Active Advisers: {advisers.filter(a => a.is_active).length}</p>
                                     <p>Verified Advisers: {advisers.filter(a => a.status === 'verified').length}</p>
                                 </div>
-                                
+
                                 <div>
                                     <h4 className="font-semibold">Sections Available:</h4>
                                     <div className="max-h-40 overflow-y-auto">
@@ -669,7 +662,7 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
                                                         checked={editForm.data.section_ids.includes(section.section_id)}
                                                         onCheckedChange={() => handleSectionToggle(section.section_id, 'edit')}
                                                     />
-                                                    <Label 
+                                                    <Label
                                                         htmlFor={`edit-section-${section.section_id}`}
                                                         className="text-sm font-normal cursor-pointer"
                                                     >

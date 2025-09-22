@@ -19,6 +19,7 @@ use App\Services\NotificationService;
 use App\Services\AutomaticEndorsementService;
 use App\Services\AutomaticPlacementService;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Spatie\Activitylog\Models\Activity;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -298,6 +299,33 @@ class AdminController extends Controller
             ->take(10)
             ->values()
             ->toArray();
+    }
+
+    /**
+     * Display activity logs page
+     */
+    public function logs(): Response
+    {
+        $activities = Activity::with(['causer', 'subject'])
+            ->latest()
+            ->paginate(20)
+            ->through(function ($activity) {
+                return [
+                    'id' => $activity->id,
+                    'description' => $activity->description,
+                    'causer_name' => $activity->causer ? $activity->causer->username : 'System',
+                    'causer_email' => $activity->causer ? $activity->causer->email : null,
+                    'subject_type' => $activity->subject_type,
+                    'subject_id' => $activity->subject_id,
+                    'properties' => $activity->properties,
+                    'created_at' => $activity->created_at->format('M d, Y H:i:s'),
+                    'created_at_human' => $activity->created_at->diffForHumans(),
+                ];
+            });
+
+        return Inertia::render('admin/logs', [
+            'activities' => $activities,
+        ]);
     }
 
     /**
@@ -956,6 +984,18 @@ class AdminController extends Controller
             DB::commit();
             Log::info('HTE creation transaction committed successfully');
 
+            // Log the activity
+            activity()
+                ->causedBy(Auth::user())
+                ->performedOn($hte)
+                ->withProperties([
+                    'hte_id' => $hte->id,
+                    'company_name' => $hte->company_name,
+                    'email' => $user->email,
+                    'username' => $user->username,
+                ])
+                ->log('created HTE account');
+
             return redirect()->route('admin.hte')->with('success', 'HTE account created successfully.');
         } catch (\Exception $e) {
             DB::rollBack();
@@ -1005,6 +1045,19 @@ class AdminController extends Controller
         try {
             DB::beginTransaction();
 
+            // Capture old values before update
+            $oldValues = [
+                'email' => $hte->user->email,
+                'username' => $hte->user->username,
+                'company_name' => $hte->company_name,
+                'company_address' => $hte->company_address,
+                'company_email' => $hte->company_email,
+                'cperson_fname' => $hte->cperson_fname,
+                'cperson_lname' => $hte->cperson_lname,
+                'cperson_position' => $hte->cperson_position,
+                'cperson_contactnum' => $hte->cperson_contactnum,
+            ];
+
             // Update user
             $userData = [
                 'email' => $request->email,
@@ -1030,6 +1083,42 @@ class AdminController extends Controller
 
             DB::commit();
 
+            // Capture new values after update
+            $newValues = [
+                'email' => $request->email,
+                'username' => $request->username,
+                'company_name' => $request->company_name,
+                'company_address' => $request->company_address,
+                'company_email' => $request->company_email,
+                'cperson_fname' => $request->cperson_fname,
+                'cperson_lname' => $request->cperson_lname,
+                'cperson_position' => $request->cperson_position,
+                'cperson_contactnum' => $request->cperson_contactnum,
+            ];
+
+            // Determine which fields actually changed
+            $changes = [];
+            foreach ($newValues as $key => $newValue) {
+                if ($oldValues[$key] !== $newValue) {
+                    $changes[$key] = [
+                        'old' => $oldValues[$key],
+                        'new' => $newValue,
+                    ];
+                }
+            }
+
+            // Log the activity with before/after values
+            activity()
+                ->causedBy(Auth::user())
+                ->performedOn($hte)
+                ->withProperties([
+                    'hte_id' => $hte->id,
+                    'company_name' => $hte->company_name,
+                    'changes' => $changes,
+                    'password_changed' => $request->filled('password'),
+                ])
+                ->log('updated HTE account');
+
             return redirect()->route('admin.hte')->with('success', 'HTE account updated successfully.');
         } catch (\Exception $e) {
             DB::rollBack();
@@ -1053,6 +1142,16 @@ class AdminController extends Controller
 
             DB::commit();
 
+            // Log the activity
+            activity()
+                ->causedBy(Auth::user())
+                ->performedOn($hte)
+                ->withProperties([
+                    'hte_id' => $hte->id,
+                    'company_name' => $hte->company_name,
+                ])
+                ->log('archived HTE account');
+
             return redirect()->route('admin.hte')->with('success', 'HTE account archived successfully.');
         } catch (\Exception $e) {
             DB::rollBack();
@@ -1075,6 +1174,16 @@ class AdminController extends Controller
             $hte->update(['is_active' => true]);
 
             DB::commit();
+
+            // Log the activity
+            activity()
+                ->causedBy(Auth::user())
+                ->performedOn($hte)
+                ->withProperties([
+                    'hte_id' => $hte->id,
+                    'company_name' => $hte->company_name,
+                ])
+                ->log('unarchived HTE account');
 
             return redirect()->route('admin.hte.archived')->with('success', 'HTE account unarchived successfully.');
         } catch (\Exception $e) {
@@ -1169,6 +1278,19 @@ class AdminController extends Controller
 
             DB::commit();
 
+            // Log the activity
+            activity()
+                ->causedBy(Auth::user())
+                ->performedOn($adviser)
+                ->withProperties([
+                    'adviser_id' => $adviser->id,
+                    'adviser_name' => $adviser->adviser_fname . ' ' . $adviser->adviser_lname,
+                    'email' => $user->email,
+                    'username' => $user->username,
+                    'sections' => Section::whereIn('section_id', $request->section_ids)->pluck('section_name')->toArray(),
+                ])
+                ->log('created adviser account');
+
             return redirect()->route('admin.adviser')->with('success', 'Adviser account created successfully.');
         } catch (\Exception $e) {
             DB::rollBack();
@@ -1210,6 +1332,15 @@ class AdminController extends Controller
         try {
             DB::beginTransaction();
 
+            // Capture old values before update
+            $oldValues = [
+                'email' => $adviser->user->email,
+                'username' => $adviser->user->username,
+                'adviser_fname' => $adviser->adviser_fname,
+                'adviser_lname' => $adviser->adviser_lname,
+                'sections' => $adviser->sections->pluck('section_name')->toArray(),
+            ];
+
             // Update user
             $userData = [
                 'email' => $request->email,
@@ -1233,6 +1364,43 @@ class AdminController extends Controller
 
             DB::commit();
 
+            // Get section names for new section IDs
+            $newSectionNames = Section::whereIn('section_id', $request->section_ids)
+                ->pluck('section_name')
+                ->toArray();
+
+            // Capture new values after update
+            $newValues = [
+                'email' => $request->email,
+                'username' => $request->username,
+                'adviser_fname' => $request->adviser_fname,
+                'adviser_lname' => $request->adviser_lname,
+                'sections' => $newSectionNames,
+            ];
+
+            // Determine which fields actually changed
+            $changes = [];
+            foreach ($newValues as $key => $newValue) {
+                if ($oldValues[$key] !== $newValue) {
+                    $changes[$key] = [
+                        'old' => $oldValues[$key],
+                        'new' => $newValue,
+                    ];
+                }
+            }
+
+            // Log the activity with before/after values
+            activity()
+                ->causedBy(Auth::user())
+                ->performedOn($adviser)
+                ->withProperties([
+                    'adviser_id' => $adviser->id,
+                    'adviser_name' => $adviser->adviser_fname . ' ' . $adviser->adviser_lname,
+                    'changes' => $changes,
+                    'password_changed' => $request->filled('password'),
+                ])
+                ->log('updated adviser account');
+
             return redirect()->route('admin.adviser')->with('success', 'Adviser account updated successfully.');
         } catch (\Exception $e) {
             DB::rollBack();
@@ -1255,6 +1423,16 @@ class AdminController extends Controller
             $adviser->update(['is_active' => false]);
 
             DB::commit();
+
+            // Log the activity
+            activity()
+                ->causedBy(Auth::user())
+                ->performedOn($adviser)
+                ->withProperties([
+                    'adviser_id' => $adviser->id,
+                    'adviser_name' => $adviser->adviser_fname . ' ' . $adviser->adviser_lname,
+                ])
+                ->log('archived adviser account');
 
             return redirect()->route('admin.adviser')->with('success', 'Adviser account archived successfully.');
         } catch (\Exception $e) {
@@ -1322,6 +1500,16 @@ class AdminController extends Controller
             $adviser->update(['is_active' => true]);
 
             DB::commit();
+
+            // Log the activity
+            activity()
+                ->causedBy(Auth::user())
+                ->performedOn($adviser)
+                ->withProperties([
+                    'adviser_id' => $adviser->id,
+                    'adviser_name' => $adviser->adviser_fname . ' ' . $adviser->adviser_lname,
+                ])
+                ->log('unarchived adviser account');
 
             return redirect()->route('admin.adviser.archived')->with('success', 'Adviser account unarchived successfully.');
         } catch (\Exception $e) {
@@ -1501,6 +1689,19 @@ class AdminController extends Controller
             // Send notifications for new deadline
             $notificationService = new NotificationService();
             $notificationService->notifyNewDeadline($deadline);
+
+            // Log the activity
+            activity()
+                ->causedBy(Auth::user())
+                ->performedOn($deadline)
+                ->withProperties([
+                    'deadline_id' => $deadline->id,
+                    'title' => $deadline->title,
+                    'category' => $deadline->category,
+                    'start_date' => $deadline->start_date,
+                    'end_date' => $deadline->end_date,
+                ])
+                ->log('created deadline');
 
             return redirect()->route('admin.events')->with('success', 'Deadline created successfully.');
         } catch (\Exception $e) {
