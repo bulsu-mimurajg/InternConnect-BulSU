@@ -22,13 +22,19 @@ class AutomaticEndorsementService
         ];
 
         try {
-            // Check if SIP endorsement deadline has passed
+            // Check if SIP endorsement deadline has passed or is about to expire (1 minute before)
             $deadline = Deadline::where('category', 'sip_endorsement')
-                ->where('status', 'expired')
+                ->where(function($query) {
+                    $query->where('status', 'expired')
+                        ->orWhere(function($q) {
+                            $q->where('status', 'active')
+                                ->where('end_date', '<=', now()->addMinute()); // 1 minute before expiry
+                        });
+                })
                 ->first();
 
             if (!$deadline) {
-                Log::info('SIP endorsement deadline not found or not expired');
+                Log::info('SIP endorsement deadline not found, not expired, or not about to expire');
                 return $results;
             }
 

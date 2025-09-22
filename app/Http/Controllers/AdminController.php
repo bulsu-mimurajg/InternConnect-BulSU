@@ -37,16 +37,16 @@ class AdminController extends Controller
     {
         // Get comprehensive statistics
         $stats = $this->getDashboardStats();
-        
+
         // Get recent activity
         $recentActivity = $this->getRecentActivity();
-        
+
         // Get placement overview
         $placementOverview = $this->getPlacementOverview();
-        
+
         // Get section statistics
         $sectionStats = $this->getSectionStats();
-        
+
         // Get HTE statistics
         $hteStats = $this->getHTEStats();
 
@@ -66,32 +66,32 @@ class AdminController extends Controller
     {
         // Total students
         $totalStudents = Student::where('is_active', true)->count();
-        
+
         // Students who have completed assessment
         $completedAssessments = Student::where('is_active', true)
             ->where('is_submit', true)
             ->count();
-        
+
         // Students who have been placed
         $placedStudents = StudentPlacement::where('status', 'approved')->count();
-        
+
         // Total HTEs
         $totalHTEs = HTE::where('is_active', true)->count();
-        
+
         // Active HTEs (submitted form)
         $activeHTEs = HTE::where('is_active', true)
             ->where('is_submit', true)
             ->count();
-        
+
         // Total internships
         $totalInternships = Internship::where('is_active', true)->count();
-        
+
         // Total available slots
         $totalSlots = Internship::where('is_active', true)->sum('slot_count');
-        
+
         // Pending placements
         $pendingPlacements = StudentPlacement::where('status', 'pending')->count();
-        
+
         // Calculate rates
         $completionRate = $totalStudents > 0 ? round(($completedAssessments / $totalStudents) * 100, 1) : 0;
         $placementRate = $completedAssessments > 0 ? round(($placedStudents / $completedAssessments) * 100, 1) : 0;
@@ -298,22 +298,22 @@ class AdminController extends Controller
     {
         // Get comprehensive statistics
         $stats = $this->getDashboardStats();
-        
+
         // Get detailed placement analytics
         $placementAnalytics = $this->getPlacementAnalytics();
-        
+
         // Get student performance analytics
         $studentAnalytics = $this->getStudentAnalytics();
-        
+
         // Get HTE performance analytics
         $hteAnalytics = $this->getHTEAnalytics();
-        
+
         // Get section performance analytics
         $sectionAnalytics = $this->getSectionAnalytics();
-        
+
         // Get assessment completion trends
         $assessmentTrends = $this->getAssessmentTrends();
-        
+
         // Get placement trends
         $placementTrends = $this->getPlacementTrends();
 
@@ -342,7 +342,7 @@ class AdminController extends Controller
                 $totalSlots = $placements->sum('internship.slot_count');
                 $filledSlots = $placements->count();
                 $successRate = $totalSlots > 0 ? round(($filledSlots / $totalSlots) * 100, 1) : 0;
-                
+
                 return [
                     'company' => $companyName,
                     'totalSlots' => $totalSlots,
@@ -402,16 +402,16 @@ class AdminController extends Controller
             ->map(function ($category) {
                 $totalScore = 0;
                 $totalCount = 0;
-                
+
                 foreach ($category->subCategories as $subcategory) {
                     foreach ($subcategory->studentScores as $score) {
                         $totalScore += $score->score;
                         $totalCount++;
                     }
                 }
-                
+
                 $avgScore = $totalCount > 0 ? round($totalScore / $totalCount, 2) : 0;
-                
+
                 return [
                     'category' => $category->category_name,
                     'avgScore' => $avgScore,
@@ -470,9 +470,9 @@ class AdminController extends Controller
                 $filledSlots = StudentPlacement::whereHas('internship', function ($query) use ($hte) {
                     $query->where('hte_id', $hte->id);
                 })->where('status', 'approved')->count();
-                
+
                 $utilizationRate = $totalSlots > 0 ? round(($filledSlots / $totalSlots) * 100, 1) : 0;
-                
+
                 return [
                     'id' => $hte->id,
                     'company_name' => $hte->company_name,
@@ -522,7 +522,7 @@ class AdminController extends Controller
                 $placedStudents = $students->filter(function ($student) {
                     return $student->placements()->where('status', 'approved')->exists();
                 })->count();
-                
+
                 // Calculate average scores for this section
                 $totalScore = 0;
                 $scoreCount = 0;
@@ -630,7 +630,7 @@ class AdminController extends Controller
             'assessmentTrends' => $assessmentTrends,
             'placementTrends' => $placementTrends,
         ];
-        
+
         $chartImages = $chartGenerator->generateChartsForPDF($chartData);
 
         // Generate HTML content for PDF with charts
@@ -649,7 +649,7 @@ class AdminController extends Controller
         // Generate PDF using DomPDF
         $pdf = Pdf::loadHTML($html);
         $pdf->setPaper('A4', 'portrait');
-        
+
         // Clean up temporary chart files
         $chartGenerator->cleanupTempFiles($chartImages);
 
@@ -671,7 +671,7 @@ class AdminController extends Controller
 
         // Create CSV content
         $csvContent = "Comprehensive Report - " . now()->format('F d, Y') . "\n\n";
-        
+
         // Key Statistics
         $csvContent .= "KEY STATISTICS\n";
         $csvContent .= "Total Students," . $stats['totalStudents'] . "\n";
@@ -882,12 +882,12 @@ class AdminController extends Controller
                 'trace' => $e->getTraceAsString(),
                 'request_data' => $request->all(),
             ]);
-            
+
             // If it's a validation exception, return the validation errors
             if ($e instanceof \Illuminate\Validation\ValidationException) {
                 return redirect()->back()->withErrors($e->errors());
             }
-            
+
             return redirect()->back()->withErrors(['error' => 'Failed to create HTE account: ' . $e->getMessage()]);
         }
     }
@@ -1095,7 +1095,7 @@ class AdminController extends Controller
                 'trace' => $e->getTraceAsString(),
                 'request_data' => $request->all(),
             ]);
-            
+
             return redirect()->back()->withErrors(['error' => 'Failed to create adviser account: ' . $e->getMessage()]);
         }
     }
@@ -1253,6 +1253,60 @@ class AdminController extends Controller
      */
     public function eventsManagement(): Response
     {
+        // Proactively process deadlines if expired or about to expire (1 minute window)
+        try {
+            $nowPlusOneMinute = now()->addMinute();
+
+            // Auto-run SIP endorsements when deadline expired or within 1 minute to expiry
+            $sipAutoTrigger = \App\Models\Deadline::where('category', 'sip_endorsement')
+                ->where(function($query) use ($nowPlusOneMinute) {
+                    $query->where('status', 'expired')
+                        ->orWhere(function($q) use ($nowPlusOneMinute) {
+                            $q->where('status', 'active')
+                                ->where('end_date', '<=', $nowPlusOneMinute);
+                        });
+                })
+                ->exists();
+
+            if ($sipAutoTrigger) {
+                // Ensure this only runs once per minute
+                if (\Illuminate\Support\Facades\Cache::lock('auto-process-sip', 60)->get()) {
+                    try {
+                        $service = new \App\Services\AutomaticEndorsementService();
+                        $service->processSipEndorsements();
+                    } finally {
+                        \Illuminate\Support\Facades\Cache::lock('auto-process-sip', 60)->release();
+                    }
+                }
+            }
+
+            // Auto-run HTE placements when deadline expired or within 1 minute to expiry
+            $hteAutoTrigger = \App\Models\Deadline::where('category', 'student_placements_by_hte')
+                ->where(function($query) use ($nowPlusOneMinute) {
+                    $query->where('status', 'expired')
+                        ->orWhere(function($q) use ($nowPlusOneMinute) {
+                            $q->where('status', 'active')
+                                ->where('end_date', '<=', $nowPlusOneMinute);
+                        });
+                })
+                ->exists();
+
+            if ($hteAutoTrigger) {
+                if (\Illuminate\Support\Facades\Cache::lock('auto-process-hte', 60)->get()) {
+                    try {
+                        $service = new \App\Services\AutomaticPlacementService();
+                        $service->processHtePlacements();
+                    } finally {
+                        \Illuminate\Support\Facades\Cache::lock('auto-process-hte', 60)->release();
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Auto deadline processing on eventsManagement failed', [
+                'error' => $e->getMessage(),
+            ]);
+        }
+
         // Get active deadlines
         $activeDeadlines = Deadline::getActive()
             ->map(function ($deadline) {
@@ -1373,7 +1427,7 @@ class AdminController extends Controller
                 'trace' => $e->getTraceAsString(),
                 'request_data' => $request->all(),
             ]);
-            
+
             return redirect()->back()->withErrors(['error' => 'Failed to create deadline: ' . $e->getMessage()]);
         }
     }
@@ -1418,7 +1472,7 @@ class AdminController extends Controller
                 'deadline_id' => $deadline->id,
                 'request_data' => $request->all(),
             ]);
-            
+
             return redirect()->back()->withErrors(['error' => 'Failed to update deadline: ' . $e->getMessage()]);
         }
     }
@@ -1442,7 +1496,7 @@ class AdminController extends Controller
                 'deadline_id' => $deadline->id,
                 'request_data' => $request->all(),
             ]);
-            
+
             return redirect()->back()->withErrors(['error' => 'Failed to extend deadline: ' . $e->getMessage()]);
         }
     }
@@ -1461,7 +1515,7 @@ class AdminController extends Controller
                 'error' => $e->getMessage(),
                 'deadline_id' => $deadline->id,
             ]);
-            
+
             return redirect()->back()->withErrors(['error' => 'Failed to delete deadline: ' . $e->getMessage()]);
         }
     }

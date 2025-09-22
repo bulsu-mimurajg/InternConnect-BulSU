@@ -23,10 +23,15 @@ class AppServiceProvider extends ServiceProvider
         // Schedule automatic deadline processing
         $this->app->booted(function () {
             $schedule = $this->app->make(Schedule::class);
-            
-            // Run every hour to check for expired deadlines
+
+            // First update deadline statuses, then process them
+            $schedule->command('deadlines:update-statuses')
+                ->everyMinute()
+                ->withoutOverlapping();
+
+            // Run every minute to check for expired deadlines and deadlines about to expire
             $schedule->command('deadlines:process --type=all')
-                ->hourly()
+                ->everyMinute()
                 ->withoutOverlapping()
                 ->runInBackground();
         });

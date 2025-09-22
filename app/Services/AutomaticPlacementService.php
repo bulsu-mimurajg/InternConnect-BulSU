@@ -23,13 +23,19 @@ class AutomaticPlacementService
         ];
 
         try {
-            // Check if HTE placement deadline has passed
+            // Check if HTE placement deadline has passed or is about to expire (1 minute before)
             $deadline = Deadline::where('category', 'student_placements_by_hte')
-                ->where('status', 'expired')
+                ->where(function($query) {
+                    $query->where('status', 'expired')
+                        ->orWhere(function($q) {
+                            $q->where('status', 'active')
+                                ->where('end_date', '<=', now()->addMinute()); // 1 minute before expiry
+                        });
+                })
                 ->first();
 
             if (!$deadline) {
-                Log::info('HTE placement deadline not found or not expired');
+                Log::info('HTE placement deadline not found, not expired, or not about to expire');
                 return $results;
             }
 
@@ -77,12 +83,12 @@ class AutomaticPlacementService
     {
         $internship = $endorsements->first()->internship;
         $totalSlots = $internship->slot_count;
-        
+
         // Get current approved placements
         $currentPlacements = StudentPlacement::where('internship_id', $internshipId)
             ->where('status', 'approved')
             ->count();
-        
+
         $availableSlots = $totalSlots - $currentPlacements;
 
         if ($availableSlots <= 0) {
@@ -105,7 +111,7 @@ class AutomaticPlacementService
                 $this->placeStudent($endorsement);
                 $placedStudents[] = $endorsement;
                 $results['placed_count']++;
-                
+
                 Log::info("Placed student {$endorsement->student_id} in internship {$internshipId} (rank: " . ($index + 1) . ")");
             } else {
                 // No more slots available, try fallback
@@ -133,14 +139,31 @@ class AutomaticPlacementService
      */
     private function placeStudent(Endorsement $endorsement): void
     {
-        // Create student placement record
-        StudentPlacement::create([
-            'student_id' => $endorsement->student_id,
-            'internship_id' => $endorsement->internship_id,
-            'status' => 'approved',
-            'compatibility_score' => $endorsement->compatibility_score,
-            'placement_date' => now(),
-        ]);
+        // Check if placement already exists
+        $existingPlacement = StudentPlacement::where('student_id', $endorsement->student_id)
+            ->where('internship_id', $endorsement->internship_id)
+            ->first();
+
+        if ($existingPlacement) {
+            // Update existing placement to approved if not already
+            if ($existingPlacement->status !== 'approved') {
+                $existingPlacement->update([
+                    'status' => 'approved',
+                    'placement_date' => now(),
+                ]);
+            }
+            Log::info("Updated existing placement for student {$endorsement->student_id} in internship {$endorsement->internship_id}");
+        } else {
+            // Create new student placement record
+            StudentPlacement::create([
+                'student_id' => $endorsement->student_id,
+                'internship_id' => $endorsement->internship_id,
+                'status' => 'approved',
+                'compatibility_score' => $endorsement->compatibility_score,
+                'placement_date' => now(),
+            ]);
+            Log::info("Created new placement for student {$endorsement->student_id} in internship {$endorsement->internship_id}");
+        }
 
         // Update student as placed
         $endorsement->student->update(['is_placed' => true]);
