@@ -51,15 +51,19 @@
             width: 100%;
             border-collapse: collapse;
             margin-bottom: 30px;
+            table-layout: auto;
+            font-size: 10px;
         }
         th, td {
             border: 1px solid #ddd;
-            padding: 8px;
+            padding: 4px 6px;
             text-align: left;
+            word-wrap: break-word;
         }
         th {
             background-color: #f2f2f2;
             font-weight: bold;
+            font-size: 10px;
         }
         tr:nth-child(even) {
             background-color: #f9f9f9;

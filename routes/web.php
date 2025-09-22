@@ -116,6 +116,14 @@ Route::middleware(['auth', 'verified', 'role:admin'])->group(function () {
     Route::get('report', [App\Http\Controllers\AdminController::class, 'report'])->name('report');
     Route::get('report/export/pdf', [App\Http\Controllers\AdminController::class, 'exportPDF'])->name('report.export.pdf');
     Route::get('report/export/excel', [App\Http\Controllers\AdminController::class, 'exportExcel'])->name('report.export.excel');
+    
+    // Section-specific report exports
+    Route::get('report/section/{sectionId}/export/pdf/{reportType}', [App\Http\Controllers\AdminController::class, 'exportSectionPDF'])->name('report.section.export.pdf');
+    Route::get('report/section/{sectionId}/export/excel/{reportType}', [App\Http\Controllers\AdminController::class, 'exportSectionExcel'])->name('report.section.export.excel');
+    
+    // General report exports
+    Route::get('report/general/export/pdf/{reportType}', [App\Http\Controllers\AdminController::class, 'exportGeneralPDF'])->name('report.general.export.pdf');
+    Route::get('report/general/export/excel/{reportType}', [App\Http\Controllers\AdminController::class, 'exportGeneralExcel'])->name('report.general.export.excel');
 
     // SIP Endorsement Routes
     Route::post('admin/reject-endorsement/{student}', [App\Http\Controllers\Admin\StudentController::class, 'rejectEndorsement'])->name('admin.reject-endorsement');

@@ -272,6 +272,13 @@ class AdminController extends Controller
                 $totalInternships = $hte->internships->count();
                 $activeInternships = $hte->internships->where('is_active', true)->count();
                 $totalSlots = $hte->internships->sum('slot_count');
+                
+                // Calculate filled slots from placements
+                $filledSlots = StudentPlacement::whereHas('internship', function ($query) use ($hte) {
+                    $query->where('hte_id', $hte->id);
+                })->where('status', 'approved')->count();
+                
+                $utilizationRate = $totalSlots > 0 ? round(($filledSlots / $totalSlots) * 100, 1) : 0;
 
                 return [
                     'id' => $hte->id,
@@ -282,10 +289,12 @@ class AdminController extends Controller
                     'totalInternships' => $totalInternships,
                     'activeInternships' => $activeInternships,
                     'totalSlots' => $totalSlots,
+                    'filledSlots' => $filledSlots,
+                    'utilizationRate' => $utilizationRate,
                     'created_at' => $hte->created_at->format('M d, Y'),
                 ];
             })
-            ->sortByDesc('totalSlots')
+            ->sortByDesc('utilizationRate')
             ->take(10)
             ->values()
             ->toArray();
@@ -296,35 +305,108 @@ class AdminController extends Controller
      */
     public function report(): Response
     {
-        // Get comprehensive statistics
-        $stats = $this->getDashboardStats();
-
-        // Get detailed placement analytics
-        $placementAnalytics = $this->getPlacementAnalytics();
-
-        // Get student performance analytics
-        $studentAnalytics = $this->getStudentAnalytics();
-
-        // Get HTE performance analytics
-        $hteAnalytics = $this->getHTEAnalytics();
-
-        // Get section performance analytics
-        $sectionAnalytics = $this->getSectionAnalytics();
-
-        // Get assessment completion trends
-        $assessmentTrends = $this->getAssessmentTrends();
-
-        // Get placement trends
-        $placementTrends = $this->getPlacementTrends();
+        // Get all sections for report generation
+        $sections = Section::orderBy('section_name')->get();
 
         return Inertia::render('admin/report', [
-            'stats' => $stats,
-            'placementAnalytics' => $placementAnalytics,
-            'studentAnalytics' => $studentAnalytics,
-            'hteAnalytics' => $hteAnalytics,
-            'sectionAnalytics' => $sectionAnalytics,
-            'assessmentTrends' => $assessmentTrends,
-            'placementTrends' => $placementTrends,
+            'sections' => $sections,
+        ]);
+    }
+
+    /**
+     * Export section-specific report to PDF
+     */
+    public function exportSectionPDF(Request $request, $sectionId, $reportType): \Illuminate\Http\Response
+    {
+        // Validate report type
+        $validReportTypes = ['student-list', 'placed-students', 'registered-students', 'assessment-summary', 'performance-analysis'];
+        if (!in_array($reportType, $validReportTypes)) {
+            abort(404, 'Invalid report type.');
+        }
+
+        // Get section
+        $section = Section::findOrFail($sectionId);
+        
+        // Get report data based on type
+        $reportData = $this->getSectionReportData($sectionId, $reportType);
+
+        // Generate HTML content for PDF
+        $html = view("reports.admin-{$reportType}", array_merge($reportData, [
+            'sectionName' => $section->section_name,
+            'generatedAt' => now()->format('F d, Y \a\t h:i A'),
+        ]))->render();
+
+        // Generate PDF using DomPDF
+        $pdf = Pdf::loadHTML($html);
+        $pdf->setPaper('A4', 'portrait');
+
+        // Return PDF download
+        return $pdf->download("{$reportType}-report-{$section->section_name}-" . now()->format('Y-m-d') . '.pdf');
+    }
+
+    /**
+     * Export section-specific report to Excel (CSV format)
+     */
+    public function exportSectionExcel(Request $request, $sectionId, $reportType): \Illuminate\Http\Response
+    {
+        // Validate report type
+        $validReportTypes = ['student-list', 'placed-students', 'registered-students', 'assessment-summary', 'performance-analysis'];
+        if (!in_array($reportType, $validReportTypes)) {
+            abort(404, 'Invalid report type.');
+        }
+
+        $section = Section::findOrFail($sectionId);
+        $csvContent = $this->generateSectionCSVContent($sectionId, $reportType, $section->section_name);
+
+        return response($csvContent, 200, [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="' . $reportType . '-report-' . $section->section_name . '-' . now()->format('Y-m-d') . '.csv"',
+        ]);
+    }
+
+    /**
+     * Export general report to PDF
+     */
+    public function exportGeneralPDF(Request $request, $reportType): \Illuminate\Http\Response
+    {
+        // Validate report type
+        $validReportTypes = ['comprehensive', 'overview', 'all-students', 'all-placements', 'hte-performance', 'section-comparison'];
+        if (!in_array($reportType, $validReportTypes)) {
+            abort(404, 'Invalid report type.');
+        }
+
+        // Get report data based on type
+        $reportData = $this->getGeneralReportData($reportType);
+
+        // Generate HTML content for PDF
+        $html = view("reports.admin-general-{$reportType}", array_merge($reportData, [
+            'generatedAt' => now()->format('F d, Y \a\t h:i A'),
+        ]))->render();
+
+        // Generate PDF using DomPDF
+        $pdf = Pdf::loadHTML($html);
+        $pdf->setPaper('A4', 'portrait');
+
+        // Return PDF download
+        return $pdf->download("{$reportType}-report-" . now()->format('Y-m-d') . '.pdf');
+    }
+
+    /**
+     * Export general report to Excel (CSV format)
+     */
+    public function exportGeneralExcel(Request $request, $reportType): \Illuminate\Http\Response
+    {
+        // Validate report type
+        $validReportTypes = ['comprehensive', 'overview', 'all-students', 'all-placements', 'hte-performance', 'section-comparison'];
+        if (!in_array($reportType, $validReportTypes)) {
+            abort(404, 'Invalid report type.');
+        }
+
+        $csvContent = $this->generateGeneralCSVContent($reportType);
+
+        return response($csvContent, 200, [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="' . $reportType . '-report-' . now()->format('Y-m-d') . '.csv"',
         ]);
     }
 
@@ -1606,5 +1688,703 @@ class AdminController extends Controller
             ]);
             return redirect()->back()->withErrors(['error' => 'Failed to process deadlines: ' . $e->getMessage()]);
         }
+    }
+
+    /**
+     * Get section-specific report data
+     */
+    private function getSectionReportData($sectionId, $reportType): array
+    {
+        switch ($reportType) {
+            case 'student-list':
+                return [
+                    'students' => $this->getSectionStudents($sectionId),
+                    'overviewStats' => $this->getSectionOverviewStats($sectionId),
+                ];
+            case 'placed-students':
+                return [
+                    'placedStudents' => $this->getSectionPlacedStudents($sectionId),
+                    'overviewStats' => $this->getSectionOverviewStats($sectionId),
+                ];
+            case 'registered-students':
+                return [
+                    'registeredStudents' => $this->getSectionRegisteredStudents($sectionId),
+                    'overviewStats' => $this->getSectionOverviewStats($sectionId),
+                ];
+            case 'assessment-summary':
+                return [
+                    'assessmentData' => $this->getSectionAssessmentData($sectionId),
+                    'overviewStats' => $this->getSectionOverviewStats($sectionId),
+                ];
+            case 'performance-analysis':
+                return [
+                    'performanceData' => $this->getSectionPerformanceData($sectionId),
+                    'overviewStats' => $this->getSectionOverviewStats($sectionId),
+                ];
+            default:
+                return [];
+        }
+    }
+
+    /**
+     * Get general report data
+     */
+    private function getGeneralReportData($reportType): array
+    {
+        switch ($reportType) {
+            case 'comprehensive':
+                return [
+                    'stats' => $this->getDashboardStats(),
+                    'sectionStats' => $this->getSectionStats(),
+                    'sectionAnalytics' => $this->getSectionAnalytics(),
+                    'hteStats' => $this->getHTEStats(),
+                    'allStudents' => $this->getAllStudents(),
+                    'allPlacements' => $this->getAllPlacements(),
+                ];
+            case 'overview':
+                return [
+                    'stats' => $this->getDashboardStats(),
+                    'sectionStats' => $this->getSectionStats(),
+                ];
+            case 'all-students':
+                return [
+                    'allStudents' => $this->getAllStudents(),
+                    'stats' => $this->getDashboardStats(),
+                ];
+            case 'all-placements':
+                return [
+                    'allPlacements' => $this->getAllPlacements(),
+                    'stats' => $this->getDashboardStats(),
+                ];
+            case 'hte-performance':
+                return [
+                    'hteStats' => $this->getHTEStats(),
+                    'stats' => $this->getDashboardStats(),
+                ];
+            case 'section-comparison':
+                return [
+                    'sectionAnalytics' => $this->getSectionAnalytics(),
+                    'stats' => $this->getDashboardStats(),
+                ];
+            default:
+                return [];
+        }
+    }
+
+    /**
+     * Get section students
+     */
+    private function getSectionStudents($sectionId): array
+    {
+        return User::whereHas('roles', function ($query) {
+                $query->where('name', 'student');
+            })
+            ->whereHas('academeAccounts', function ($query) use ($sectionId) {
+                $query->where('section_id', $sectionId);
+            })
+            ->where('status', '!=', 'archived')
+            ->with(['academeAccounts.section', 'student.scores.subcategory.category'])
+            ->get()
+            ->map(function ($user) {
+                $student = $user->student;
+                $hasAssessment = $student && $student->is_submit;
+                
+                return [
+                    'username' => $user->username,
+                    'email' => $user->email,
+                    'name' => $student ? ($student->first_name . ' ' . $student->last_name) : 'Pending',
+                    'status' => $user->status,
+                    'section' => $user->academeAccounts->first()->section->section_name ?? '',
+                    'hasAssessment' => $hasAssessment,
+                    'assessmentScore' => $hasAssessment ? $student->scores->sum('score') : 0,
+                    'assessmentPercentage' => $hasAssessment ? round(($student->scores->sum('score') / ($student->scores->count() * 5)) * 100, 1) : 0,
+                    'submittedAt' => $hasAssessment ? $student->updated_at->format('Y-m-d H:i:s') : null,
+                ];
+            })
+            ->toArray();
+    }
+
+    /**
+     * Get section placed students
+     */
+    private function getSectionPlacedStudents($sectionId): array
+    {
+        return StudentPlacement::whereHas('student.user.academeAccounts', function ($query) use ($sectionId) {
+                $query->where('section_id', $sectionId);
+            })
+            ->with(['student.user', 'internship.hte'])
+            ->get()
+            ->map(function ($placement) {
+                return [
+                    'student_number' => $placement->student->student_number,
+                    'name' => $placement->student->first_name . ' ' . $placement->student->last_name,
+                    'section' => $placement->student->section->section_name ?? '',
+                    'company' => $placement->internship->hte->company_name,
+                    'position' => $placement->internship->position_title,
+                    'department' => $placement->internship->department,
+                    'compatibility_score' => $placement->compatibility_score,
+                    'status' => $placement->status,
+                    'placement_date' => $placement->placement_date ? $placement->placement_date->format('Y-m-d') : 'N/A',
+                ];
+            })
+            ->toArray();
+    }
+
+    /**
+     * Get section registered students
+     */
+    private function getSectionRegisteredStudents($sectionId): array
+    {
+        return User::whereHas('roles', function ($query) {
+                $query->where('name', 'student');
+            })
+            ->whereHas('academeAccounts', function ($query) use ($sectionId) {
+                $query->where('section_id', $sectionId);
+            })
+            ->where('status', '!=', 'archived')
+            ->with(['academeAccounts.section', 'student'])
+            ->get()
+            ->map(function ($user) {
+                return [
+                    'username' => $user->username,
+                    'email' => $user->email,
+                    'name' => $user->student ? ($user->student->first_name . ' ' . $user->student->last_name) : 'Pending',
+                    'status' => $user->status,
+                    'section' => $user->academeAccounts->first()->section->section_name ?? '',
+                    'registered_at' => $user->created_at->format('Y-m-d H:i:s'),
+                    'is_verified' => $user->student ? true : false,
+                ];
+            })
+            ->toArray();
+    }
+
+    /**
+     * Get section overview stats
+     */
+    private function getSectionOverviewStats($sectionId): array
+    {
+        $totalStudents = User::whereHas('roles', function ($query) {
+                $query->where('name', 'student');
+            })
+            ->whereHas('academeAccounts', function ($query) use ($sectionId) {
+                $query->where('section_id', $sectionId);
+            })
+            ->where('status', '!=', 'archived')
+            ->count();
+
+        $completedAssessments = User::whereHas('roles', function ($query) {
+                $query->where('name', 'student');
+            })
+            ->whereHas('academeAccounts', function ($query) use ($sectionId) {
+                $query->where('section_id', $sectionId);
+            })
+            ->whereHas('student', function ($query) {
+                $query->where('is_submit', true);
+            })
+            ->where('status', '!=', 'archived')
+            ->count();
+
+        $placedStudents = StudentPlacement::whereHas('student.user.academeAccounts', function ($query) use ($sectionId) {
+                $query->where('section_id', $sectionId);
+            })
+            ->where('status', 'approved')
+            ->count();
+
+        return [
+            'totalStudents' => $totalStudents,
+            'completedAssessments' => $completedAssessments,
+            'placedStudents' => $placedStudents,
+            'completionRate' => $totalStudents > 0 ? round(($completedAssessments / $totalStudents) * 100, 1) : 0,
+            'placementRate' => $completedAssessments > 0 ? round(($placedStudents / $completedAssessments) * 100, 1) : 0,
+        ];
+    }
+
+    /**
+     * Get section assessment data
+     */
+    private function getSectionAssessmentData($sectionId): array
+    {
+        $students = User::whereHas('roles', function ($query) {
+                $query->where('name', 'student');
+            })
+            ->whereHas('academeAccounts', function ($query) use ($sectionId) {
+                $query->where('section_id', $sectionId);
+            })
+            ->whereHas('student', function ($query) {
+                $query->where('is_submit', true);
+            })
+            ->where('status', '!=', 'archived')
+            ->with(['student.scores.subcategory.category'])
+            ->get();
+
+        $categoryScores = [];
+        $totalScores = [];
+
+        foreach ($students as $user) {
+            $student = $user->student;
+            $totalScore = $student->scores->sum('score');
+            $maxPossibleScore = $student->scores->count() * 5;
+            $percentage = $maxPossibleScore > 0 ? round(($totalScore / $maxPossibleScore) * 100, 1) : 0;
+            
+            $totalScores[] = $percentage;
+
+            foreach ($student->scores->groupBy('subcategory.category.category_name') as $categoryName => $scores) {
+                if (!isset($categoryScores[$categoryName])) {
+                    $categoryScores[$categoryName] = [];
+                }
+                $categoryScores[$categoryName][] = $scores->avg('score');
+            }
+        }
+
+        $categoryAverages = [];
+        foreach ($categoryScores as $category => $scores) {
+            $categoryAverages[] = [
+                'category' => $category,
+                'averageScore' => round(array_sum($scores) / count($scores), 2),
+                'totalAssessments' => count($scores),
+            ];
+        }
+
+        return [
+            'categoryScores' => $categoryAverages,
+            'averageScore' => count($totalScores) > 0 ? round(array_sum($totalScores) / count($totalScores), 2) : 0,
+            'totalAssessments' => count($totalScores),
+        ];
+    }
+
+    /**
+     * Get section performance data
+     */
+    private function getSectionPerformanceData($sectionId): array
+    {
+        $students = User::whereHas('roles', function ($query) {
+                $query->where('name', 'student');
+            })
+            ->whereHas('academeAccounts', function ($query) use ($sectionId) {
+                $query->where('section_id', $sectionId);
+            })
+            ->whereHas('student', function ($query) {
+                $query->where('is_submit', true);
+            })
+            ->where('status', '!=', 'archived')
+            ->with(['student.scores.subcategory.category'])
+            ->get()
+            ->map(function ($user) {
+                $student = $user->student;
+                $totalScore = $student->scores->sum('score');
+                $maxPossibleScore = $student->scores->count() * 5;
+                $percentage = $maxPossibleScore > 0 ? round(($totalScore / $maxPossibleScore) * 100, 1) : 0;
+                
+                return [
+                    'name' => $student->first_name . ' ' . $student->last_name,
+                    'student_number' => $student->student_number,
+                    'score' => $totalScore,
+                    'percentage' => $percentage,
+                    'submittedAt' => $student->updated_at->format('Y-m-d'),
+                ];
+            })
+            ->sortByDesc('percentage')
+            ->values()
+            ->toArray();
+
+        return [
+            'topPerformers' => array_slice($students, 0, 10),
+            'allStudents' => $students,
+        ];
+    }
+
+    /**
+     * Get all students across all sections
+     */
+    private function getAllStudents(): array
+    {
+        return User::whereHas('roles', function ($query) {
+                $query->where('name', 'student');
+            })
+            ->where('status', '!=', 'archived')
+            ->with(['academeAccounts.section', 'student.scores.subcategory.category'])
+            ->get()
+            ->map(function ($user) {
+                $student = $user->student;
+                $hasAssessment = $student && $student->is_submit;
+                
+                return [
+                    'username' => $user->username,
+                    'email' => $user->email,
+                    'name' => $student ? ($student->first_name . ' ' . $student->last_name) : 'Pending',
+                    'status' => $user->status,
+                    'section' => $user->academeAccounts->first()->section->section_name ?? '',
+                    'hasAssessment' => $hasAssessment,
+                    'assessmentScore' => $hasAssessment ? $student->scores->sum('score') : 0,
+                    'assessmentPercentage' => $hasAssessment ? round(($student->scores->sum('score') / ($student->scores->count() * 5)) * 100, 1) : 0,
+                    'submittedAt' => $hasAssessment ? $student->updated_at->format('Y-m-d H:i:s') : null,
+                ];
+            })
+            ->toArray();
+    }
+
+    /**
+     * Get all placements across all sections
+     */
+    private function getAllPlacements(): array
+    {
+        return StudentPlacement::with(['student.user', 'internship.hte'])
+            ->get()
+            ->map(function ($placement) {
+                return [
+                    'student_number' => $placement->student->student_number,
+                    'name' => $placement->student->first_name . ' ' . $placement->student->last_name,
+                    'section' => $placement->student->section->section_name ?? '',
+                    'company' => $placement->internship->hte->company_name,
+                    'position' => $placement->internship->position_title,
+                    'department' => $placement->internship->department,
+                    'compatibility_score' => $placement->compatibility_score,
+                    'status' => $placement->status,
+                    'placement_date' => $placement->placement_date ? $placement->placement_date->format('Y-m-d') : 'N/A',
+                ];
+            })
+            ->toArray();
+    }
+
+    /**
+     * Generate section CSV content
+     */
+    private function generateSectionCSVContent($sectionId, $reportType, $sectionName): string
+    {
+        $csvContent = ucwords(str_replace('-', ' ', $reportType)) . " Report - {$sectionName}\n";
+        $csvContent .= "Generated: " . now()->format('F d, Y \a\t h:i A') . "\n\n";
+
+        switch ($reportType) {
+            case 'student-list':
+                return $this->generateSectionStudentListCSV($sectionId, $csvContent);
+            case 'placed-students':
+                return $this->generateSectionPlacedStudentsCSV($sectionId, $csvContent);
+            case 'registered-students':
+                return $this->generateSectionRegisteredStudentsCSV($sectionId, $csvContent);
+            case 'assessment-summary':
+                return $this->generateSectionAssessmentSummaryCSV($sectionId, $csvContent);
+            case 'performance-analysis':
+                return $this->generateSectionPerformanceAnalysisCSV($sectionId, $csvContent);
+            default:
+                return $csvContent;
+        }
+    }
+
+    /**
+     * Generate general CSV content
+     */
+    private function generateGeneralCSVContent($reportType): string
+    {
+        $csvContent = ucwords(str_replace('-', ' ', $reportType)) . " Report\n";
+        $csvContent .= "Generated: " . now()->format('F d, Y \a\t h:i A') . "\n\n";
+
+        switch ($reportType) {
+            case 'comprehensive':
+                return $this->generateComprehensiveCSV($csvContent);
+            case 'overview':
+                return $this->generateOverviewCSV($csvContent);
+            case 'all-students':
+                return $this->generateAllStudentsCSV($csvContent);
+            case 'all-placements':
+                return $this->generateAllPlacementsCSV($csvContent);
+            case 'hte-performance':
+                return $this->generateHTEPerformanceCSV($csvContent);
+            case 'section-comparison':
+                return $this->generateSectionComparisonCSV($csvContent);
+            default:
+                return $csvContent;
+        }
+    }
+
+    // CSV generation methods (simplified versions)
+    private function generateSectionStudentListCSV($sectionId, $csvContent): string
+    {
+        $studentData = $this->getSectionStudents($sectionId);
+        
+        $csvContent .= "Student Information\n";
+        $csvContent .= "Username,Email,Name,Status,Section,Has Assessment,Assessment Score,Assessment Percentage,Submitted At\n";
+        
+        foreach ($studentData as $student) {
+            $csvContent .= $student['username'] . ",";
+            $csvContent .= $student['email'] . ",";
+            $csvContent .= '"' . $student['name'] . '",';
+            $csvContent .= $student['status'] . ",";
+            $csvContent .= $student['section'] . ",";
+            $csvContent .= ($student['hasAssessment'] ? 'Yes' : 'No') . ",";
+            $csvContent .= $student['assessmentScore'] . ",";
+            $csvContent .= $student['assessmentPercentage'] . ",";
+            $csvContent .= ($student['submittedAt'] ?? 'N/A') . "\n";
+        }
+
+        return $csvContent;
+    }
+
+    private function generateSectionPlacedStudentsCSV($sectionId, $csvContent): string
+    {
+        $placedStudents = $this->getSectionPlacedStudents($sectionId);
+        
+        $csvContent .= "Placed Students\n";
+        $csvContent .= "Student Number,Name,Section,Company,Position,Department,Compatibility Score,Status,Placement Date\n";
+        
+        foreach ($placedStudents as $placement) {
+            $csvContent .= $placement['student_number'] . ",";
+            $csvContent .= '"' . $placement['name'] . '",';
+            $csvContent .= $placement['section'] . ",";
+            $csvContent .= '"' . $placement['company'] . '",';
+            $csvContent .= '"' . $placement['position'] . '",';
+            $csvContent .= '"' . $placement['department'] . '",';
+            $csvContent .= $placement['compatibility_score'] . ",";
+            $csvContent .= $placement['status'] . ",";
+            $csvContent .= $placement['placement_date'] . "\n";
+        }
+
+        return $csvContent;
+    }
+
+    private function generateSectionRegisteredStudentsCSV($sectionId, $csvContent): string
+    {
+        $registeredStudents = $this->getSectionRegisteredStudents($sectionId);
+        
+        $csvContent .= "Registered Students\n";
+        $csvContent .= "Username,Email,Name,Status,Section,Registered At,Is Verified\n";
+        
+        foreach ($registeredStudents as $student) {
+            $csvContent .= $student['username'] . ",";
+            $csvContent .= $student['email'] . ",";
+            $csvContent .= '"' . $student['name'] . '",';
+            $csvContent .= $student['status'] . ",";
+            $csvContent .= $student['section'] . ",";
+            $csvContent .= $student['registered_at'] . ",";
+            $csvContent .= ($student['is_verified'] ? 'Yes' : 'No') . "\n";
+        }
+
+        return $csvContent;
+    }
+
+    private function generateSectionAssessmentSummaryCSV($sectionId, $csvContent): string
+    {
+        $assessmentData = $this->getSectionAssessmentData($sectionId);
+        $overviewStats = $this->getSectionOverviewStats($sectionId);
+        
+        $csvContent .= "Assessment Summary\n";
+        $csvContent .= "Total Students," . $overviewStats['totalStudents'] . "\n";
+        $csvContent .= "Completed Assessments," . $overviewStats['completedAssessments'] . "\n";
+        $csvContent .= "Completion Rate," . $overviewStats['completionRate'] . "%\n";
+        $csvContent .= "Average Score," . $assessmentData['averageScore'] . "\n\n";
+
+        $csvContent .= "Category Performance\n";
+        $csvContent .= "Category,Average Score,Total Assessments\n";
+        foreach ($assessmentData['categoryScores'] as $category) {
+            $csvContent .= $category['category'] . ",";
+            $csvContent .= $category['averageScore'] . ",";
+            $csvContent .= $category['totalAssessments'] . "\n";
+        }
+
+        return $csvContent;
+    }
+
+    private function generateSectionPerformanceAnalysisCSV($sectionId, $csvContent): string
+    {
+        $performanceData = $this->getSectionPerformanceData($sectionId);
+        
+        $csvContent .= "Performance Analysis\n";
+        $csvContent .= "Rank,Name,Student Number,Score,Percentage,Submitted At\n";
+        
+        foreach ($performanceData['allStudents'] as $index => $student) {
+            $csvContent .= ($index + 1) . ",";
+            $csvContent .= '"' . $student['name'] . '",';
+            $csvContent .= $student['student_number'] . ",";
+            $csvContent .= $student['score'] . ",";
+            $csvContent .= $student['percentage'] . ",";
+            $csvContent .= $student['submittedAt'] . "\n";
+        }
+
+        return $csvContent;
+    }
+
+    private function generateComprehensiveCSV($csvContent): string
+    {
+        $stats = $this->getDashboardStats();
+        $sectionStats = $this->getSectionStats();
+        $sectionAnalytics = $this->getSectionAnalytics();
+        $hteStats = $this->getHTEStats();
+        $allStudents = $this->getAllStudents();
+        $allPlacements = $this->getAllPlacements();
+        
+        $csvContent .= "COMPREHENSIVE SYSTEM REPORT\n";
+        $csvContent .= "Generated: " . now()->format('F d, Y \a\t h:i A') . "\n\n";
+        
+        // System Overview
+        $csvContent .= "SYSTEM OVERVIEW\n";
+        $csvContent .= "Total Students," . $stats['totalStudents'] . "\n";
+        $csvContent .= "Completed Assessments," . $stats['completedAssessments'] . "\n";
+        $csvContent .= "Placed Students," . $stats['placedStudents'] . "\n";
+        $csvContent .= "Total HTEs," . $stats['totalHTEs'] . "\n";
+        $csvContent .= "Active HTEs," . $stats['activeHTEs'] . "\n";
+        $csvContent .= "Total Internships," . $stats['totalInternships'] . "\n";
+        $csvContent .= "Total Slots," . $stats['totalSlots'] . "\n";
+        $csvContent .= "Completion Rate," . $stats['completionRate'] . "%\n";
+        $csvContent .= "Placement Rate," . $stats['placementRate'] . "%\n\n";
+
+        // Section Performance
+        $csvContent .= "SECTION PERFORMANCE\n";
+        $csvContent .= "Section,Total Students,Completed Assessments,Placed Students,Completion Rate,Placement Rate,Average Score\n";
+        foreach ($sectionAnalytics as $section) {
+            $csvContent .= $section['section'] . ",";
+            $csvContent .= $section['totalStudents'] . ",";
+            $csvContent .= $section['completedAssessments'] . ",";
+            $csvContent .= $section['placedStudents'] . ",";
+            $csvContent .= $section['completionRate'] . "%,";
+            $csvContent .= $section['placementRate'] . "%,";
+            $csvContent .= $section['avgScore'] . "\n";
+        }
+        $csvContent .= "\n";
+
+        // HTE Performance
+        $csvContent .= "HTE PERFORMANCE\n";
+        $csvContent .= "Company,Contact Person,Is Submit,Total Internships,Active Internships,Total Slots,Filled Slots,Utilization Rate,Created At\n";
+        foreach ($hteStats as $hte) {
+            $csvContent .= '"' . $hte['company_name'] . '",';
+            $csvContent .= '"' . $hte['contact_person'] . '",';
+            $csvContent .= ($hte['is_submit'] ? 'Yes' : 'No') . ",";
+            $csvContent .= $hte['totalInternships'] . ",";
+            $csvContent .= $hte['activeInternships'] . ",";
+            $csvContent .= $hte['totalSlots'] . ",";
+            $csvContent .= $hte['filledSlots'] . ",";
+            $csvContent .= $hte['utilizationRate'] . "%,";
+            $csvContent .= $hte['created_at'] . "\n";
+        }
+        $csvContent .= "\n";
+
+        // All Students Summary
+        $csvContent .= "ALL STUDENTS SUMMARY\n";
+        $csvContent .= "Total Students," . count($allStudents) . "\n";
+        $csvContent .= "Students with Assessments," . count(array_filter($allStudents, fn($s) => $s['hasAssessment'])) . "\n";
+        $csvContent .= "Students without Assessments," . count(array_filter($allStudents, fn($s) => !$s['hasAssessment'])) . "\n\n";
+
+        // All Placements Summary
+        $csvContent .= "ALL PLACEMENTS SUMMARY\n";
+        $csvContent .= "Total Placements," . count($allPlacements) . "\n";
+        $csvContent .= "Approved Placements," . count(array_filter($allPlacements, fn($p) => $p['status'] === 'approved')) . "\n";
+        $csvContent .= "Pending Placements," . count(array_filter($allPlacements, fn($p) => $p['status'] === 'pending')) . "\n";
+        $csvContent .= "Rejected Placements," . count(array_filter($allPlacements, fn($p) => $p['status'] === 'rejected')) . "\n";
+
+        return $csvContent;
+    }
+
+    private function generateOverviewCSV($csvContent): string
+    {
+        $stats = $this->getDashboardStats();
+        $sectionStats = $this->getSectionStats();
+        
+        $csvContent .= "System Overview\n";
+        $csvContent .= "Total Students," . $stats['totalStudents'] . "\n";
+        $csvContent .= "Completed Assessments," . $stats['completedAssessments'] . "\n";
+        $csvContent .= "Placed Students," . $stats['placedStudents'] . "\n";
+        $csvContent .= "Total HTEs," . $stats['totalHTEs'] . "\n";
+        $csvContent .= "Active HTEs," . $stats['activeHTEs'] . "\n";
+        $csvContent .= "Total Internships," . $stats['totalInternships'] . "\n";
+        $csvContent .= "Total Slots," . $stats['totalSlots'] . "\n";
+        $csvContent .= "Completion Rate," . $stats['completionRate'] . "%\n";
+        $csvContent .= "Placement Rate," . $stats['placementRate'] . "%\n\n";
+
+        $csvContent .= "Section Performance\n";
+        $csvContent .= "Section,Total Students,Completed Assessments,Placed Students,Completion Rate,Placement Rate\n";
+        foreach ($sectionStats as $section) {
+            $csvContent .= $section['section'] . ",";
+            $csvContent .= $section['totalStudents'] . ",";
+            $csvContent .= $section['completedAssessments'] . ",";
+            $csvContent .= $section['placedStudents'] . ",";
+            $csvContent .= $section['completionRate'] . "%,";
+            $csvContent .= $section['placementRate'] . "%\n";
+        }
+
+        return $csvContent;
+    }
+
+    private function generateAllStudentsCSV($csvContent): string
+    {
+        $allStudents = $this->getAllStudents();
+        
+        $csvContent .= "All Students\n";
+        $csvContent .= "Username,Email,Name,Status,Section,Has Assessment,Assessment Score,Assessment Percentage,Submitted At\n";
+        
+        foreach ($allStudents as $student) {
+            $csvContent .= $student['username'] . ",";
+            $csvContent .= $student['email'] . ",";
+            $csvContent .= '"' . $student['name'] . '",';
+            $csvContent .= $student['status'] . ",";
+            $csvContent .= $student['section'] . ",";
+            $csvContent .= ($student['hasAssessment'] ? 'Yes' : 'No') . ",";
+            $csvContent .= $student['assessmentScore'] . ",";
+            $csvContent .= $student['assessmentPercentage'] . ",";
+            $csvContent .= ($student['submittedAt'] ?? 'N/A') . "\n";
+        }
+
+        return $csvContent;
+    }
+
+    private function generateAllPlacementsCSV($csvContent): string
+    {
+        $allPlacements = $this->getAllPlacements();
+        
+        $csvContent .= "All Placements\n";
+        $csvContent .= "Student Number,Name,Section,Company,Position,Department,Compatibility Score,Status,Placement Date\n";
+        
+        foreach ($allPlacements as $placement) {
+            $csvContent .= $placement['student_number'] . ",";
+            $csvContent .= '"' . $placement['name'] . '",';
+            $csvContent .= $placement['section'] . ",";
+            $csvContent .= '"' . $placement['company'] . '",';
+            $csvContent .= '"' . $placement['position'] . '",';
+            $csvContent .= '"' . $placement['department'] . '",';
+            $csvContent .= $placement['compatibility_score'] . ",";
+            $csvContent .= $placement['status'] . ",";
+            $csvContent .= $placement['placement_date'] . "\n";
+        }
+
+        return $csvContent;
+    }
+
+    private function generateHTEPerformanceCSV($csvContent): string
+    {
+        $hteStats = $this->getHTEStats();
+        
+        $csvContent .= "HTE Performance\n";
+        $csvContent .= "Company,Contact Person,Is Submit,Total Internships,Active Internships,Total Slots,Filled Slots,Utilization Rate,Created At\n";
+        
+        foreach ($hteStats as $hte) {
+            $csvContent .= '"' . $hte['company_name'] . '",';
+            $csvContent .= '"' . $hte['contact_person'] . '",';
+            $csvContent .= ($hte['is_submit'] ? 'Yes' : 'No') . ",";
+            $csvContent .= $hte['totalInternships'] . ",";
+            $csvContent .= $hte['activeInternships'] . ",";
+            $csvContent .= $hte['totalSlots'] . ",";
+            $csvContent .= $hte['filledSlots'] . ",";
+            $csvContent .= $hte['utilizationRate'] . "%,";
+            $csvContent .= $hte['created_at'] . "\n";
+        }
+
+        return $csvContent;
+    }
+
+    private function generateSectionComparisonCSV($csvContent): string
+    {
+        $sectionAnalytics = $this->getSectionAnalytics();
+        
+        $csvContent .= "Section Comparison\n";
+        $csvContent .= "Section,Total Students,Completed Assessments,Placed Students,Completion Rate,Placement Rate,Average Score\n";
+        
+        foreach ($sectionAnalytics as $section) {
+            $csvContent .= $section['section'] . ",";
+            $csvContent .= $section['totalStudents'] . ",";
+            $csvContent .= $section['completedAssessments'] . ",";
+            $csvContent .= $section['placedStudents'] . ",";
+            $csvContent .= $section['completionRate'] . "%,";
+            $csvContent .= $section['placementRate'] . "%,";
+            $csvContent .= $section['avgScore'] . "\n";
+        }
+
+        return $csvContent;
     }
 }
