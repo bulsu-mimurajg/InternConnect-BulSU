@@ -146,6 +146,19 @@ Route::middleware(['auth', 'verified', 'role:hte'])->group(function () {
 
     Route::get('hte/report', [App\Http\Controllers\HTEController::class, 'report'])->name('hte.report');
 
+    // HTE Report Generation Routes
+    // General HTE reports (PDF)
+    Route::get('hte/report/general/export/pdf/{reportType}', [App\Http\Controllers\HTEController::class, 'generateGeneralReportPdf'])->name('hte.report.general.export.pdf');
+    
+    // General HTE reports (Excel/CSV)
+    Route::get('hte/report/general/export/excel/{reportType}', [App\Http\Controllers\HTEController::class, 'generateGeneralReportExcel'])->name('hte.report.general.export.excel');
+    
+    // Internship-specific HTE reports (PDF)
+    Route::get('hte/report/internship/{internshipId}/export/pdf/{reportType}', [App\Http\Controllers\HTEController::class, 'generateInternshipReportPdf'])->name('hte.report.internship.export.pdf');
+    
+    // Internship-specific HTE reports (Excel/CSV)
+    Route::get('hte/report/internship/{internshipId}/export/excel/{reportType}', [App\Http\Controllers\HTEController::class, 'generateInternshipReportExcel'])->name('hte.report.internship.export.excel');
+
     // Add Internship routes (only accessible after HTE form submission)
     Route::get('hte/add-internship', [App\Http\Controllers\HTEController::class, 'showAddInternship'])->name('hte.add-internship');
     Route::post('hte/add-internship', [App\Http\Controllers\HTEController::class, 'storeInternship'])->name('hte.store-internship');

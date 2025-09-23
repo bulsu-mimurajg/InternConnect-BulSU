@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 use App\Models\HTE;
 use App\Models\Internship;
@@ -1105,6 +1106,611 @@ class HTEController extends Controller
 
     public function report()
     {
-        return Inertia::render('hte/report');
+        $user = Auth::user();
+        $hte = $user->hte;
+
+        if (!$hte) {
+            return redirect()->route('form');
+        }
+
+        // Check if HTE has submitted the assessment form
+        if (!$hte->is_submit) {
+            return redirect()->route('form')->with('warning', 'Please complete the assessment form first before accessing reports.');
+        }
+
+        // Get HTE's internships for report generation
+        $internships = $hte->internships()->get()->map(function($internship) {
+            return [
+                'id' => $internship->id,
+                'position_title' => $internship->position_title,
+                'department' => $internship->department,
+                'slot_count' => $internship->slot_count,
+                'is_active' => $internship->is_active,
+            ];
+        });
+
+        return Inertia::render('hte/report', [
+            'internships' => $internships,
+        ]);
+    }
+
+    /**
+     * Generate general HTE report (PDF)
+     */
+    public function generateGeneralReportPdf(Request $request, $reportType): \Illuminate\Http\Response
+    {
+        $user = Auth::user();
+        $hte = $user->hte;
+
+        if (!$hte || !$hte->is_submit) {
+            abort(403, 'Access denied. Please complete your assessment form first.');
+        }
+
+        // Validate report type
+        $validReportTypes = [
+            'company-overview',
+            'placed-students', 
+            'internship-slots'
+        ];
+
+        if (!in_array($reportType, $validReportTypes)) {
+            abort(404, 'Invalid report type.');
+        }
+
+        // Get report data based on type
+        $reportData = $this->getHTEGeneralReportData($hte, $reportType);
+
+        // Generate HTML content for PDF
+        $html = view("reports.hte-{$reportType}", array_merge($reportData, [
+            'hte' => $hte,
+            'generatedAt' => now()->format('F d, Y \a\t h:i A'),
+        ]))->render();
+
+        // Generate PDF using DomPDF
+        $pdf = Pdf::loadHTML($html);
+        $pdf->setPaper('A4', 'portrait');
+
+        // Return PDF download
+        $filename = $this->generateFilename($hte, $reportType, 'pdf');
+        return $pdf->download($filename);
+    }
+
+    /**
+     * Generate general HTE report (Excel/CSV)
+     */
+    public function generateGeneralReportExcel(Request $request, $reportType): \Illuminate\Http\Response
+    {
+        $user = Auth::user();
+        $hte = $user->hte;
+
+        if (!$hte || !$hte->is_submit) {
+            abort(403, 'Access denied. Please complete your assessment form first.');
+        }
+
+        // Validate report type
+        $validReportTypes = [
+            'company-overview',
+            'placed-students',
+            'internship-slots'
+        ];
+
+        if (!in_array($reportType, $validReportTypes)) {
+            abort(404, 'Invalid report type.');
+        }
+
+        $csvContent = $this->generateHTEGeneralCSVContent($hte, $reportType);
+        $filename = $this->generateFilename($hte, $reportType, 'csv');
+
+        return response($csvContent, 200, [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ]);
+    }
+
+    /**
+     * Generate internship-specific HTE report (PDF)
+     */
+    public function generateInternshipReportPdf(Request $request, $internshipId, $reportType): \Illuminate\Http\Response
+    {
+        $user = Auth::user();
+        $hte = $user->hte;
+
+        if (!$hte || !$hte->is_submit) {
+            abort(403, 'Access denied. Please complete your assessment form first.');
+        }
+
+        // Validate that the internship belongs to this HTE
+        $internship = $hte->internships()->find($internshipId);
+        if (!$internship) {
+            abort(404, 'Internship not found or access denied.');
+        }
+
+        // Validate report type
+        $validReportTypes = [
+            'internship-performance',
+            'student-compatibility'
+        ];
+
+        if (!in_array($reportType, $validReportTypes)) {
+            abort(404, 'Invalid report type.');
+        }
+
+        // Get report data based on type
+        $reportData = $this->getHTEInternshipReportData($hte, $internship, $reportType);
+
+        // Generate HTML content for PDF
+        $html = view("reports.hte-internship-{$reportType}", array_merge($reportData, [
+            'hte' => $hte,
+            'internship' => $internship,
+            'generatedAt' => now()->format('F d, Y \a\t h:i A'),
+        ]))->render();
+
+        // Generate PDF using DomPDF
+        $pdf = Pdf::loadHTML($html);
+        $pdf->setPaper('A4', 'portrait');
+
+        // Return PDF download
+        $filename = $this->generateFilename($hte, $reportType, 'pdf', $internship);
+        return $pdf->download($filename);
+    }
+
+    /**
+     * Generate internship-specific HTE report (Excel/CSV)
+     */
+    public function generateInternshipReportExcel(Request $request, $internshipId, $reportType): \Illuminate\Http\Response
+    {
+        $user = Auth::user();
+        $hte = $user->hte;
+
+        if (!$hte || !$hte->is_submit) {
+            abort(403, 'Access denied. Please complete your assessment form first.');
+        }
+
+        // Validate that the internship belongs to this HTE
+        $internship = $hte->internships()->find($internshipId);
+        if (!$internship) {
+            abort(404, 'Internship not found or access denied.');
+        }
+
+        // Validate report type
+        $validReportTypes = [
+            'internship-performance',
+            'student-compatibility'
+        ];
+
+        if (!in_array($reportType, $validReportTypes)) {
+            abort(404, 'Invalid report type.');
+        }
+
+        $csvContent = $this->generateHTEInternshipCSVContent($hte, $internship, $reportType);
+        $filename = $this->generateFilename($hte, $reportType, 'csv', $internship);
+
+        return response($csvContent, 200, [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ]);
+    }
+
+    /**
+     * Get HTE general report data
+     */
+    private function getHTEGeneralReportData($hte, $reportType): array
+    {
+        switch ($reportType) {
+            case 'company-overview':
+                return $this->getHTECompanyOverviewData($hte);
+            case 'placed-students':
+                return $this->getHTEPlacedStudentsData($hte);
+            case 'internship-slots':
+                return $this->getHTEInternshipSlotsData($hte);
+            default:
+                return [];
+        }
+    }
+
+    /**
+     * Get HTE internship report data
+     */
+    private function getHTEInternshipReportData($hte, $internship, $reportType): array
+    {
+        switch ($reportType) {
+            case 'internship-performance':
+                return $this->getHTEInternshipPerformanceData($hte, $internship);
+            case 'student-compatibility':
+                return $this->getHTEStudentCompatibilityData($hte, $internship);
+            default:
+                return [];
+        }
+    }
+
+    /**
+     * Generate filename for the report
+     */
+    private function generateFilename($hte, $reportType, $format, $internship = null)
+    {
+        $companyName = preg_replace('/[^a-zA-Z0-9_-]/', '_', $hte->company_name);
+        $reportTypeName = str_replace('-', '_', $reportType);
+        $date = now()->format('Y-m-d');
+        
+        $filename = "HTE_{$companyName}_{$reportTypeName}_{$date}";
+        
+        if ($internship) {
+            $internshipName = preg_replace('/[^a-zA-Z0-9_-]/', '_', $internship->position_title);
+            $filename .= "_{$internshipName}";
+        }
+        
+        $filename .= ".{$format}";
+        
+        return $filename;
+    }
+
+    // Data generation methods for HTE reports
+    private function getHTECompanyOverviewData($hte): array
+    {
+        $internships = $hte->internships()->with('subcategoryWeights.subcategory.category')->get();
+        $totalSlots = $internships->sum('slot_count');
+        $activeInternships = $internships->where('is_active', true)->count();
+        
+        $placedStudents = StudentPlacement::whereHas('internship', function($query) use ($hte) {
+            $query->where('hte_id', $hte->id);
+        })->where('status', 'approved')->count();
+        
+        $utilizationRate = $totalSlots > 0 ? round(($placedStudents / $totalSlots) * 100, 1) : 0;
+        
+        return [
+            'internships' => $internships,
+            'totalSlots' => $totalSlots,
+            'activeInternships' => $activeInternships,
+            'placedStudents' => $placedStudents,
+            'utilizationRate' => $utilizationRate,
+        ];
+    }
+
+    private function getHTEPlacedStudentsData($hte): array
+    {
+        $placedStudents = StudentPlacement::whereHas('internship', function($query) use ($hte) {
+            $query->where('hte_id', $hte->id);
+        })
+        ->with(['student.section', 'internship'])
+        ->where('status', 'approved')
+        ->get()
+        ->map(function($placement) {
+            return [
+                'student_number' => $placement->student->student_number,
+                'name' => $placement->student->first_name . ' ' . $placement->student->last_name,
+                'section' => $placement->student->section->section_name ?? 'N/A',
+                'position' => $placement->internship->position_title,
+                'department' => $placement->internship->department,
+                'compatibility_score' => $placement->compatibility_score,
+                'placement_date' => $placement->placement_date ? $placement->placement_date->format('Y-m-d') : 'N/A',
+            ];
+        });
+
+        return ['placedStudents' => $placedStudents];
+    }
+
+    private function getHTEInternshipSlotsData($hte): array
+    {
+        $internships = $hte->internships()->get()->map(function($internship) {
+            $filledSlots = StudentPlacement::where('internship_id', $internship->id)
+                ->where('status', 'approved')
+                ->count();
+            
+            $utilizationRate = $internship->slot_count > 0 ? 
+                round(($filledSlots / $internship->slot_count) * 100, 1) : 0;
+            
+            return [
+                'id' => $internship->id,
+                'position_title' => $internship->position_title,
+                'department' => $internship->department,
+                'slot_count' => $internship->slot_count,
+                'filled_slots' => $filledSlots,
+                'available_slots' => $internship->slot_count - $filledSlots,
+                'utilization_rate' => $utilizationRate,
+                'is_active' => $internship->is_active,
+            ];
+        });
+
+        return ['internships' => $internships];
+    }
+
+    private function getHTEPlacementTimelineData($hte): array
+    {
+        $placements = StudentPlacement::whereHas('internship', function($query) use ($hte) {
+            $query->where('hte_id', $hte->id);
+        })
+        ->with(['student.section', 'internship'])
+        ->orderBy('created_at', 'desc')
+        ->get()
+        ->map(function($placement) {
+            return [
+                'student_name' => $placement->student->first_name . ' ' . $placement->student->last_name,
+                'position' => $placement->internship->position_title,
+                'status' => $placement->status,
+                'compatibility_score' => $placement->compatibility_score,
+                'created_at' => $placement->created_at->format('Y-m-d H:i:s'),
+                'placement_date' => $placement->placement_date ? $placement->placement_date->format('Y-m-d') : 'N/A',
+            ];
+        });
+
+        return ['placements' => $placements];
+    }
+
+    private function getHTEEndorsementSummaryData($hte): array
+    {
+        $endorsements = Endorsement::whereHas('internship', function($query) use ($hte) {
+            $query->where('hte_id', $hte->id);
+        })
+        ->with(['student.section', 'internship'])
+        ->get()
+        ->groupBy('status')
+        ->map(function($group, $status) {
+            return $group->map(function($endorsement) {
+                return [
+                    'student_name' => $endorsement->student->first_name . ' ' . $endorsement->student->last_name,
+                    'position' => $endorsement->internship->position_title,
+                    'compatibility_score' => $endorsement->compatibility_score,
+                    'endorsement_date' => $endorsement->endorsement_date ? $endorsement->endorsement_date->format('Y-m-d') : 'N/A',
+                ];
+            });
+        });
+
+        return ['endorsements' => $endorsements];
+    }
+
+    private function getHTEInternshipPerformanceData($hte, $internship): array
+    {
+        $placements = StudentPlacement::where('internship_id', $internship->id)
+            ->with(['student.section'])
+            ->get()
+            ->map(function($placement) {
+                return [
+                    'student_name' => $placement->student->first_name . ' ' . $placement->student->last_name,
+                    'section' => $placement->student->section->section_name ?? 'N/A',
+                    'compatibility_score' => $placement->compatibility_score,
+                    'status' => $placement->status,
+                    'placement_date' => $placement->placement_date ? $placement->placement_date->format('Y-m-d') : 'N/A',
+                ];
+            });
+
+        $avgCompatibilityScore = $placements->avg('compatibility_score') ?? 0;
+        $filledSlots = $placements->where('status', 'approved')->count();
+        $utilizationRate = $internship->slot_count > 0 ? 
+            round(($filledSlots / $internship->slot_count) * 100, 1) : 0;
+
+        return [
+            'placements' => $placements,
+            'avgCompatibilityScore' => round($avgCompatibilityScore, 2),
+            'filledSlots' => $filledSlots,
+            'utilizationRate' => $utilizationRate,
+        ];
+    }
+
+    private function getHTEStudentCompatibilityData($hte, $internship): array
+    {
+        $placements = StudentPlacement::where('internship_id', $internship->id)
+            ->with(['student.section'])
+            ->orderBy('compatibility_score', 'desc')
+            ->get()
+            ->map(function($placement) {
+                return [
+                    'student_name' => $placement->student->first_name . ' ' . $placement->student->last_name,
+                    'section' => $placement->student->section->section_name ?? 'N/A',
+                    'compatibility_score' => $placement->compatibility_score,
+                    'status' => $placement->status,
+                ];
+            });
+
+        return ['placements' => $placements];
+    }
+
+    private function getHTECriteriaWeightsData($hte, $internship): array
+    {
+        $weights = $internship->subcategoryWeights()
+            ->with('subcategory.category')
+            ->get()
+            ->map(function($weight) {
+                return [
+                    'category' => $weight->subcategory->category->category_name,
+                    'subcategory' => $weight->subcategory->subcategory_name,
+                    'weight' => $weight->weight,
+                ];
+            });
+
+        return ['weights' => $weights];
+    }
+
+    // CSV generation methods
+    private function generateHTEGeneralCSVContent($hte, $reportType): string
+    {
+        $csvContent = ucwords(str_replace('-', ' ', $reportType)) . " Report - {$hte->company_name}\n";
+        $csvContent .= "Generated: " . now()->format('F d, Y \a\t h:i A') . "\n\n";
+
+        switch ($reportType) {
+            case 'company-overview':
+                return $this->generateHTECompanyOverviewCSV($hte, $csvContent);
+            case 'placed-students':
+                return $this->generateHTEPlacedStudentsCSV($hte, $csvContent);
+            case 'internship-slots':
+                return $this->generateHTEInternshipSlotsCSV($hte, $csvContent);
+            default:
+                return $csvContent;
+        }
+    }
+
+    private function generateHTEInternshipCSVContent($hte, $internship, $reportType): string
+    {
+        $csvContent = ucwords(str_replace('-', ' ', $reportType)) . " Report - {$hte->company_name}\n";
+        $csvContent .= "Internship: {$internship->position_title}\n";
+        $csvContent .= "Generated: " . now()->format('F d, Y \a\t h:i A') . "\n\n";
+
+        switch ($reportType) {
+            case 'internship-performance':
+                return $this->generateHTEInternshipPerformanceCSV($hte, $internship, $csvContent);
+            case 'student-compatibility':
+                return $this->generateHTEStudentCompatibilityCSV($hte, $internship, $csvContent);
+            default:
+                return $csvContent;
+        }
+    }
+
+    // CSV generation helper methods
+    private function generateHTECompanyOverviewCSV($hte, $csvContent): string
+    {
+        $data = $this->getHTECompanyOverviewData($hte);
+        
+        $csvContent .= "Company Overview\n";
+        $csvContent .= "Total Internships," . $data['internships']->count() . "\n";
+        $csvContent .= "Active Internships," . $data['activeInternships'] . "\n";
+        $csvContent .= "Total Slots," . $data['totalSlots'] . "\n";
+        $csvContent .= "Placed Students," . $data['placedStudents'] . "\n";
+        $csvContent .= "Utilization Rate," . $data['utilizationRate'] . "%\n\n";
+
+        $csvContent .= "Internship Details\n";
+        $csvContent .= "Position,Department,Slots,Active Status\n";
+        foreach ($data['internships'] as $internship) {
+            $csvContent .= '"' . $internship->position_title . '",';
+            $csvContent .= '"' . $internship->department . '",';
+            $csvContent .= $internship->slot_count . ",";
+            $csvContent .= ($internship->is_active ? 'Yes' : 'No') . "\n";
+        }
+
+        return $csvContent;
+    }
+
+    private function generateHTEPlacedStudentsCSV($hte, $csvContent): string
+    {
+        $data = $this->getHTEPlacedStudentsData($hte);
+        
+        $csvContent .= "Placed Students\n";
+        $csvContent .= "Student Number,Name,Section,Position,Department,Compatibility Score,Placement Date\n";
+        
+        foreach ($data['placedStudents'] as $student) {
+            $csvContent .= $student['student_number'] . ",";
+            $csvContent .= '"' . $student['name'] . '",';
+            $csvContent .= $student['section'] . ",";
+            $csvContent .= '"' . $student['position'] . '",';
+            $csvContent .= '"' . $student['department'] . '",';
+            $csvContent .= $student['compatibility_score'] . ",";
+            $csvContent .= $student['placement_date'] . "\n";
+        }
+
+        return $csvContent;
+    }
+
+    private function generateHTEInternshipSlotsCSV($hte, $csvContent): string
+    {
+        $data = $this->getHTEInternshipSlotsData($hte);
+        
+        $csvContent .= "Internship Slots Utilization\n";
+        $csvContent .= "Position,Department,Total Slots,Filled Slots,Available Slots,Utilization Rate,Status\n";
+        
+        foreach ($data['internships'] as $internship) {
+            $csvContent .= '"' . $internship['position_title'] . '",';
+            $csvContent .= '"' . $internship['department'] . '",';
+            $csvContent .= $internship['slot_count'] . ",";
+            $csvContent .= $internship['filled_slots'] . ",";
+            $csvContent .= $internship['available_slots'] . ",";
+            $csvContent .= $internship['utilization_rate'] . "%,";
+            $csvContent .= ($internship['is_active'] ? 'Active' : 'Inactive') . "\n";
+        }
+
+        return $csvContent;
+    }
+
+    private function generateHTEPlacementTimelineCSV($hte, $csvContent): string
+    {
+        $data = $this->getHTEPlacementTimelineData($hte);
+        
+        $csvContent .= "Placement Timeline\n";
+        $csvContent .= "Student Name,Position,Status,Compatibility Score,Created At,Placement Date\n";
+        
+        foreach ($data['placements'] as $placement) {
+            $csvContent .= '"' . $placement['student_name'] . '",';
+            $csvContent .= '"' . $placement['position'] . '",';
+            $csvContent .= ucfirst($placement['status']) . ",";
+            $csvContent .= $placement['compatibility_score'] . ",";
+            $csvContent .= $placement['created_at'] . ",";
+            $csvContent .= $placement['placement_date'] . "\n";
+        }
+
+        return $csvContent;
+    }
+
+    private function generateHTEEndorsementSummaryCSV($hte, $csvContent): string
+    {
+        $data = $this->getHTEEndorsementSummaryData($hte);
+        
+        $csvContent .= "Endorsement Summary\n";
+        $csvContent .= "Status,Student Name,Position,Compatibility Score,Endorsement Date\n";
+        
+        foreach ($data['endorsements'] as $status => $endorsements) {
+            foreach ($endorsements as $endorsement) {
+                $csvContent .= ucfirst($status) . ",";
+                $csvContent .= '"' . $endorsement['student_name'] . '",';
+                $csvContent .= '"' . $endorsement['position'] . '",';
+                $csvContent .= $endorsement['compatibility_score'] . ",";
+                $csvContent .= $endorsement['endorsement_date'] . "\n";
+            }
+        }
+
+        return $csvContent;
+    }
+
+    private function generateHTEInternshipPerformanceCSV($hte, $internship, $csvContent): string
+    {
+        $data = $this->getHTEInternshipPerformanceData($hte, $internship);
+        
+        $csvContent .= "Performance Summary\n";
+        $csvContent .= "Average Compatibility Score," . $data['avgCompatibilityScore'] . "\n";
+        $csvContent .= "Filled Slots," . $data['filledSlots'] . "\n";
+        $csvContent .= "Utilization Rate," . $data['utilizationRate'] . "%\n\n";
+
+        $csvContent .= "Student Placements\n";
+        $csvContent .= "Student Name,Section,Compatibility Score,Status,Placement Date\n";
+        
+        foreach ($data['placements'] as $placement) {
+            $csvContent .= '"' . $placement['student_name'] . '",';
+            $csvContent .= $placement['section'] . ",";
+            $csvContent .= $placement['compatibility_score'] . ",";
+            $csvContent .= ucfirst($placement['status']) . ",";
+            $csvContent .= $placement['placement_date'] . "\n";
+        }
+
+        return $csvContent;
+    }
+
+    private function generateHTEStudentCompatibilityCSV($hte, $internship, $csvContent): string
+    {
+        $data = $this->getHTEStudentCompatibilityData($hte, $internship);
+        
+        $csvContent .= "Student Compatibility Rankings\n";
+        $csvContent .= "Rank,Student Name,Section,Compatibility Score,Status\n";
+        
+        foreach ($data['placements'] as $index => $placement) {
+            $csvContent .= ($index + 1) . ",";
+            $csvContent .= '"' . $placement['student_name'] . '",';
+            $csvContent .= $placement['section'] . ",";
+            $csvContent .= $placement['compatibility_score'] . ",";
+            $csvContent .= ucfirst($placement['status']) . "\n";
+        }
+
+        return $csvContent;
+    }
+
+    private function generateHTECriteriaWeightsCSV($hte, $internship, $csvContent): string
+    {
+        $data = $this->getHTECriteriaWeightsData($hte, $internship);
+        
+        $csvContent .= "Criteria Weights\n";
+        $csvContent .= "Category,Subcategory,Weight\n";
+        
+        foreach ($data['weights'] as $weight) {
+            $csvContent .= $weight['category'] . ",";
+            $csvContent .= '"' . $weight['subcategory'] . '",';
+            $csvContent .= $weight['weight'] . "\n";
+        }
+
+        return $csvContent;
     }
 }
