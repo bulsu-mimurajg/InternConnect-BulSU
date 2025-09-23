@@ -144,6 +144,8 @@ Route::middleware(['auth', 'verified', 'role:hte'])->group(function () {
     Route::get('hte/dashboard', [App\Http\Controllers\HTEController::class, 'dashboard'])->name('hte.dashboard');
     Route::get('hte/check-existing', [App\Http\Controllers\HTEController::class, 'checkExistingHTE'])->name('hte.check-existing');
 
+    Route::get('hte/report', [App\Http\Controllers\HTEController::class, 'report'])->name('hte.report');
+
     // Add Internship routes (only accessible after HTE form submission)
     Route::get('hte/add-internship', [App\Http\Controllers\HTEController::class, 'showAddInternship'])->name('hte.add-internship');
     Route::post('hte/add-internship', [App\Http\Controllers\HTEController::class, 'storeInternship'])->name('hte.store-internship');

@@ -20,9 +20,10 @@ interface DeadlineInfo {
 interface Props {
     deadlineActive: boolean;
     deadlineInfo: DeadlineInfo | null;
+    isFormSubmitted: boolean;
 }
 
-export default function HTEFormPage({ deadlineActive, deadlineInfo }: Props) {
+export default function HTEFormPage({ deadlineActive, deadlineInfo, isFormSubmitted }: Props) {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="HTE Form" />
@@ -35,7 +36,8 @@ export default function HTEFormPage({ deadlineActive, deadlineInfo }: Props) {
                         </p>
                     </div>
                 )}
-                <HTEForm />
+
+                <HTEForm isFormSubmitted={isFormSubmitted} />
             </div>
         </AppLayout>
     );

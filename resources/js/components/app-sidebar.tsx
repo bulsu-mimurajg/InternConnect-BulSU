@@ -5,10 +5,8 @@ import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, Sid
 import { type NavItem, type NavGroup, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
 import {
-    ClipboardIcon,
     InfoIcon,
     PrinterIcon,
-    UserIcon,
     UsersIcon,
     PlusIcon,
     CalendarIcon,
@@ -18,7 +16,6 @@ import {
     GraduationCapIcon,
     NotepadTextIcon, UserRoundIcon, MonitorCogIcon, GavelIcon, StepBackIcon
 } from 'lucide-react';
-import { useMemo } from 'react';
 import AppLogo from './app-logo';
 
 const roleBasedNav: Record<string, { main: NavItem[]; groups?: NavGroup[]; footer: NavItem[] }> = {
@@ -80,8 +77,12 @@ const roleBasedNav: Record<string, { main: NavItem[]; groups?: NavGroup[]; foote
     hte: {
         main: [
             { title: 'Dashboard', href: '/hte/dashboard', icon: ChartNoAxesColumnIcon },
-            { title: 'Form', href: '/form', icon: NotepadTextIcon },
-            { title: 'Profile', href: '/hte/profile', icon: UserRoundIcon }
+            { title: 'Assessment Form', href: '/form', icon: NotepadTextIcon },
+            { title: 'Add Internship', href: '/hte/add-internship', icon: PlusIcon },
+            { title: 'Student Endorsements', href: '/hte/endorsement-table', icon: Check },
+            { title: 'Placed Students', href: '/hte/placed-students', icon: UsersIcon },
+            { title: 'Profile', href: '/hte/profile', icon: UserRoundIcon },
+            { title: 'Reports', href: '/hte/report', icon: PrinterIcon },
         ],
         footer: [
             { title: 'About', href: '/about', icon: InfoIcon },
@@ -123,23 +124,8 @@ export function AppSidebar() {
     const role = auth.role ?? 'guest';
     const baseNav = roleBasedNav[role] ?? roleBasedNav['guest'];
 
-    // Memoize the navigation to prevent infinite re-renders
-    const nav = useMemo(() => {
-        // For HTE users, show Dashboard and Profile if they already have an HTE
-        if (role === 'hte' && auth.user.hte) {
-            return {
-                ...baseNav,
-                main: [
-                    { title: 'Dashboard', href: '/hte/dashboard', icon: ClipboardIcon },
-                    { title: 'Add Internship', href: '/hte/add-internship', icon: PlusIcon },
-                    { title: 'Student Endorsements', href: '/hte/endorsement-table', icon: Check },
-                    { title: 'Placed Students', href: '/hte/placed-students', icon: UsersIcon },
-                    { title: 'Profile', href: '/hte/profile', icon: UserIcon }
-                ]
-            };
-        }
-        return baseNav;
-    }, [role, auth.user.hte, baseNav]);
+    // Use the base navigation without dynamic changes
+    const nav = baseNav;
 
     return (
         <Sidebar collapsible="icon" variant="inset">

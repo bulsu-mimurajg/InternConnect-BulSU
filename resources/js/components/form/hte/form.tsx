@@ -55,7 +55,11 @@ interface Question {
     is_active: boolean;
 }
 
-export default function HTEForm() {
+interface HTEFormProps {
+    isFormSubmitted?: boolean;
+}
+
+export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
     const { flash } = usePage<{ flash: { success?: string; error?: string; warning?: string } }>().props;
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -149,12 +153,12 @@ export default function HTEForm() {
         fetchCategories();
     }, [fetchCategories]);
 
-    // Check for success message on mount
+    // Check for success message on mount and form submission prop
     useEffect(() => {
-        if (flash?.success) {
+        if (flash?.success || isFormSubmitted) {
             setIsSubmitted(true);
         }
-    }, [flash?.success]);
+    }, [flash?.success, isFormSubmitted]);
 
     function onSubmit(values: FormData) {
         setIsSubmitting(true);
@@ -288,10 +292,10 @@ export default function HTEForm() {
                                 </p>
                                 <div className="pt-4">
                                     <Button 
-                                        onClick={() => router.visit('/hte/dashboard')}
+                                        onClick={() => router.visit('/hte/profile')}
                                         className="bg-blue-600 hover:bg-blue-700"
                                     >
-                                        Go to Dashboard
+                                        Go to Profile
                                     </Button>
                                 </div>
                             </div>

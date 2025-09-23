@@ -27,7 +27,7 @@ class HTEController extends Controller
     {
         $user = Auth::user();
         $existingHTE = $user->hte;
-        
+
         return response()->json([
             'hasExistingHTE' => $existingHTE !== null,
             'hte' => $existingHTE
@@ -35,16 +35,14 @@ class HTEController extends Controller
     }
 
     /**
-     * Show HTE form (only if user doesn't have an existing HTE)
+     * Show HTE form (always accessible, shows completion status if already submitted)
      */
     public function showForm()
     {
         $user = Auth::user();
-        
-        // If user has HTE record and has submitted the form, redirect to profile
-        if ($user->hte && $user->hte->is_submit) {
-            return redirect()->route('hte.profile');
-        }
+
+        // Check if user has already submitted the form
+        $isFormSubmitted = $user->hte && $user->hte->is_submit;
 
         // Check deadline status for HTE assessment form
         $deadlineActive = \App\Models\Deadline::isActiveForCategory('hte_assessment_form');
@@ -53,10 +51,11 @@ class HTEController extends Controller
             $deadlineInfo = \App\Models\Deadline::getActiveForCategory('hte_assessment_form');
         }
 
-        // Allow access to form if user has HTE record but hasn't submitted yet
+        // Always allow access to form, but show completion status
         return Inertia::render('hte/form', [
             'deadlineActive' => $deadlineActive,
             'deadlineInfo' => $deadlineInfo,
+            'isFormSubmitted' => $isFormSubmitted,
         ]);
     }
 
@@ -184,7 +183,7 @@ class HTEController extends Controller
                 $internship->subcategoryWeights()->delete();
                 Log::info('Deleted existing subcategory weights for internship:', ['internship_id' => $internship->id]);
             }
-            
+
             $weightsCreated = 0;
             if ($request->subcategoryWeights && is_array($request->subcategoryWeights)) {
                 foreach ($request->subcategoryWeights as $subcategoryId => $weight) {
@@ -242,7 +241,7 @@ class HTEController extends Controller
         }])
         ->where('category_name', '!=', 'Basic Information')
         ->get();
-        
+
         // Transform the data to ensure proper structure for frontend
         $transformedCategories = $categories->map(function($category) {
             return [
@@ -272,7 +271,7 @@ class HTEController extends Controller
                 })->toArray()
             ];
         });
-        
+
         // Debug: Log the structure of the first category
         if ($transformedCategories->count() > 0) {
             $firstCategory = $transformedCategories->first();
@@ -284,7 +283,7 @@ class HTEController extends Controller
                 'first_subcategory_name' => $firstCategory['subCategories'][0]['subcategory_name'] ?? 'N/A'
             ]);
         }
-        
+
         return response()->json($transformedCategories);
     }
 
@@ -295,7 +294,7 @@ class HTEController extends Controller
     {
         $user = Auth::user();
         $hte = $user->hte;
-        
+
         if (!$hte) {
             return redirect()->route('form');
         }
@@ -330,8 +329,8 @@ class HTEController extends Controller
         Log::info('HTE Profile Data:', [
             'hte_id' => $hteWithData->id,
             'internships_count' => $hteWithData->internships ? $hteWithData->internships->count() : 0,
-            'first_internship_subcategory_weights_count' => $hteWithData->internships && $hteWithData->internships->first() 
-                ? ($hteWithData->internships->first()->subcategory_weights ? $hteWithData->internships->first()->subcategory_weights->count() : 0) 
+            'first_internship_subcategory_weights_count' => $hteWithData->internships && $hteWithData->internships->first()
+                ? ($hteWithData->internships->first()->subcategory_weights ? $hteWithData->internships->first()->subcategory_weights->count() : 0)
                 : 0
         ]);
 
@@ -348,7 +347,7 @@ class HTEController extends Controller
     {
         $user = Auth::user();
         $hte = $user->hte;
-        
+
         if (!$hte) {
             return redirect()->route('form');
         }
@@ -382,7 +381,7 @@ class HTEController extends Controller
         $totalInternships = $dashboardData->internships->count();
         $activeInternships = $dashboardData->internships->where('is_active', true)->count();
         $totalSlots = $dashboardData->internships->sum('slot_count');
-        
+
         // Get internship slots breakdown for detailed view
         $internshipSlots = $dashboardData->internships->map(function($internship) {
             return [
@@ -418,7 +417,7 @@ class HTEController extends Controller
     {
         $user = Auth::user();
         $hte = $user->hte;
-        
+
         if (!$hte) {
             return redirect()->route('form');
         }
@@ -478,7 +477,7 @@ class HTEController extends Controller
     {
         $user = Auth::user();
         $hte = $user->hte;
-        
+
         if (!$hte) {
             return redirect()->back()->withErrors(['error' => 'You must submit an HTE form first.']);
         }
@@ -539,7 +538,7 @@ class HTEController extends Controller
     {
         $user = Auth::user();
         $hte = $user->hte;
-        
+
         if (!$hte) {
             return redirect()->route('form');
         }
@@ -629,7 +628,7 @@ class HTEController extends Controller
     {
         $user = Auth::user();
         $hte = $user->hte;
-        
+
         if (!$hte) {
             return redirect()->back()->withErrors(['error' => 'You must submit an HTE form first.']);
         }
@@ -731,7 +730,7 @@ class HTEController extends Controller
     {
         $user = Auth::user();
         $hte = $user->hte;
-        
+
         if (!$hte) {
             return redirect()->back()->withErrors(['error' => 'You must submit an HTE form first.']);
         }
@@ -776,7 +775,7 @@ class HTEController extends Controller
     {
         $user = Auth::user();
         $hte = $user->hte;
-        
+
         if (!$hte) {
             return redirect()->route('form');
         }
@@ -788,7 +787,7 @@ class HTEController extends Controller
 
         // Get HTE's internships
         $internships = $hte->internships()->active()->get();
-        
+
         // Get endorsed students for this HTE's internships
         // Only show students who haven't been approved/rejected by HTE yet
         $endorsements = Endorsement::with(['student', 'internship'])
@@ -850,7 +849,7 @@ class HTEController extends Controller
     {
         $user = Auth::user();
         $hte = $user->hte;
-        
+
         if (!$hte) {
             return response()->json(['error' => 'HTE not found'], 404);
         }
@@ -921,7 +920,7 @@ class HTEController extends Controller
     {
         $user = Auth::user();
         $hte = $user->hte;
-        
+
         if (!$hte) {
             return redirect()->back()->withErrors(['error' => 'HTE not found']);
         }
@@ -996,7 +995,7 @@ class HTEController extends Controller
     {
         $user = Auth::user();
         $hte = $user->hte;
-        
+
         if (!$hte) {
             return redirect()->back()->withErrors(['error' => 'HTE not found']);
         }
@@ -1082,7 +1081,7 @@ class HTEController extends Controller
             $placementCount = StudentPlacement::where('internship_id', $internship->id)
                 ->where('status', 'approved')
                 ->count();
-            
+
             return [
                 'id' => $internship->id,
                 'position_title' => $internship->position_title,
@@ -1102,5 +1101,10 @@ class HTEController extends Controller
             ],
             'hteId' => $hte->id,
         ]);
+    }
+
+    public function report()
+    {
+        return Inertia::render('hte/report');
     }
 }
