@@ -1,61 +1,59 @@
 import { PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 
 interface PieChartProps {
-    data: Array<{
-        name: string;
-        value: number;
-        color?: string;
-    }>;
-    height?: number;
-    title?: string;
-    showLegend?: boolean;
+  data: any[];
+  dataKey: string;
+  nameKey: string;
+  colors?: string[];
+  height?: number;
+  showTooltip?: boolean;
+  showLegend?: boolean;
 }
 
-const COLORS = ['#2563eb', '#dc2626', '#059669', '#d97706', '#7c3aed', '#db2777', '#0891b2', '#65a30d'];
+const DEFAULT_COLORS = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4'];
 
 export default function PieChart({ 
-    data, 
-    height = 300, 
-    title, 
-    showLegend = true 
+  data, 
+  dataKey, 
+  nameKey, 
+  colors = DEFAULT_COLORS, 
+  height = 300,
+  showTooltip = true,
+  showLegend = true
 }: PieChartProps) {
-    const dataWithColors = data.map((item, index) => ({
-        ...item,
-        color: item.color || COLORS[index % COLORS.length]
-    }));
-
-    return (
-        <div className="w-full">
-            {title && (
-                <h3 className="text-lg font-semibold mb-4 text-center">{title}</h3>
-            )}
-            <ResponsiveContainer width="100%" height={height}>
-                <RechartsPieChart>
-                    <Pie
-                        data={dataWithColors}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                    >
-                        {dataWithColors.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                    </Pie>
-                    <Tooltip 
-                        contentStyle={{
-                            backgroundColor: 'white',
-                            border: '1px solid #e5e7eb',
-                            borderRadius: '8px',
-                            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-                        }}
-                    />
-                    {showLegend && <Legend />}
-                </RechartsPieChart>
-            </ResponsiveContainer>
-        </div>
-    );
+  return (
+    <ResponsiveContainer width="100%" height={height}>
+      <RechartsPieChart>
+        <Pie
+          data={data}
+          cx="50%"
+          cy="50%"
+          labelLine={false}
+          label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
+          outerRadius={80}
+          fill="#8884d8"
+          dataKey={dataKey}
+        >
+          {data.map((entry, index) => (
+            <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+          ))}
+        </Pie>
+        {showTooltip && (
+          <Tooltip 
+            contentStyle={{
+              backgroundColor: 'hsl(var(--background))',
+              border: '1px solid hsl(var(--border))',
+              borderRadius: '6px',
+              fontSize: '12px'
+            }}
+          />
+        )}
+        {showLegend && (
+          <Legend 
+            wrapperStyle={{ fontSize: '12px' }}
+          />
+        )}
+      </RechartsPieChart>
+    </ResponsiveContainer>
+  );
 }

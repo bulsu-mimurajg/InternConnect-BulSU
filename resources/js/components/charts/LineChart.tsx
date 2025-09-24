@@ -1,61 +1,56 @@
-import { LineChart as RechartsLineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { LineChart as RechartsLineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface LineChartProps {
-    data: Array<{
-        [key: string]: string | number;
-    }>;
-    dataKeys: Array<{
-        key: string;
-        color: string;
-        name: string;
-    }>;
-    xAxisKey: string;
-    height?: number;
-    title?: string;
+  data: any[];
+  dataKey: string;
+  xAxisKey: string;
+  color?: string;
+  height?: number;
+  showGrid?: boolean;
+  showTooltip?: boolean;
 }
 
-export default function LineChart({
-    data,
-    dataKeys,
-    xAxisKey,
-    height = 300,
-    title
+export default function LineChart({ 
+  data, 
+  dataKey, 
+  xAxisKey, 
+  color = '#3b82f6', 
+  height = 300,
+  showGrid = true,
+  showTooltip = true
 }: LineChartProps) {
-    return (
-        <div className="w-full">
-            {title && (
-                <h3 className="text-lg font-semibold mb-4 text-center">{title}</h3>
-            )}
-            <ResponsiveContainer width="100%" height={height}>
-                <RechartsLineChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis
-                        dataKey={xAxisKey}
-                        tick={{ fontSize: 12 }}
-                    />
-                    <YAxis tick={{ fontSize: 12 }} />
-                    <Tooltip
-                        contentStyle={{
-                            backgroundColor: 'white',
-                            border: '1px solid #e5e7eb',
-                            borderRadius: '8px',
-                            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-                        }}
-                    />
-                    <Legend />
-                    {dataKeys.map((dataKey) => (
-                        <Line
-                            key={dataKey.key}
-                            type="monotone"
-                            dataKey={dataKey.key}
-                            stroke={dataKey.color}
-                            strokeWidth={2}
-                            name={dataKey.name}
-                            dot={{ r: 4 }}
-                        />
-                    ))}
-                </RechartsLineChart>
-            </ResponsiveContainer>
-        </div>
-    );
+  return (
+    <ResponsiveContainer width="100%" height={height}>
+      <RechartsLineChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+        {showGrid && <CartesianGrid strokeDasharray="3 3" className="opacity-30" />}
+        <XAxis 
+          dataKey={xAxisKey} 
+          className="text-xs fill-muted-foreground"
+          tick={{ fontSize: 12 }}
+        />
+        <YAxis 
+          className="text-xs fill-muted-foreground"
+          tick={{ fontSize: 12 }}
+        />
+        {showTooltip && (
+          <Tooltip 
+            contentStyle={{
+              backgroundColor: 'hsl(var(--background))',
+              border: '1px solid hsl(var(--border))',
+              borderRadius: '6px',
+              fontSize: '12px'
+            }}
+          />
+        )}
+        <Line 
+          type="monotone" 
+          dataKey={dataKey} 
+          stroke={color} 
+          strokeWidth={2}
+          dot={{ fill: color, strokeWidth: 2, r: 4 }}
+          activeDot={{ r: 6, stroke: color, strokeWidth: 2 }}
+        />
+      </RechartsLineChart>
+    </ResponsiveContainer>
+  );
 }

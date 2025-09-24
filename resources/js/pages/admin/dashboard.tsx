@@ -1,6 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { LineChart, BarChart, PieChart, AreaChart } from '@/components/charts';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/react';
@@ -12,7 +13,11 @@ import {
     BarChart3Icon,
     UserCheckIcon,
     TargetIcon,
-    ActivityIcon
+    ActivityIcon,
+    TrendingUpIcon,
+    TrendingDownIcon,
+    PieChartIcon,
+    LineChartIcon
 } from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -33,7 +38,6 @@ interface DashboardStats {
     pendingPlacements: number;
     completionRate: number;
     placementRate: number;
-    hteParticipationRate: number;
 }
 
 interface RecentActivity {
@@ -88,6 +92,12 @@ interface AdminDashboardProps {
     placementOverview: PlacementOverview;
     sectionStats: SectionStats[];
     hteStats: HTEStats[];
+    placementAnalytics: any;
+    studentAnalytics: any;
+    hteAnalytics: any;
+    sectionAnalytics: any;
+    assessmentTrends: any[];
+    placementTrends: any[];
 }
 
 export default function AdminDashboard({ 
@@ -95,7 +105,13 @@ export default function AdminDashboard({
     recentActivity, 
     placementOverview, 
     sectionStats, 
-    hteStats 
+    hteStats,
+    placementAnalytics,
+    studentAnalytics,
+    hteAnalytics,
+    sectionAnalytics,
+    assessmentTrends,
+    placementTrends
 }: AdminDashboardProps) {
     const getActivityIcon = (type: string) => {
         switch (type) {
@@ -123,6 +139,48 @@ export default function AdminDashboard({
         }
     };
 
+    // Prepare data for charts
+    const placementStatusData = Object.entries(placementOverview.byStatus).map(([status, count]) => ({
+        name: status.charAt(0).toUpperCase() + status.slice(1),
+        value: count,
+        count: count
+    }));
+
+    const sectionPerformanceData = sectionAnalytics.map((section: any) => ({
+        section: section.section,
+        completionRate: section.completionRate,
+        placementRate: section.placementRate,
+        totalStudents: section.totalStudents
+    }));
+
+    const topCompaniesData = placementAnalytics.companyPlacements.slice(0, 8).map((company: any) => ({
+        company: company.company.length > 15 ? company.company.substring(0, 15) + '...' : company.company,
+        successRate: company.successRate,
+        filledSlots: company.filledSlots,
+        totalSlots: company.totalSlots
+    }));
+
+    const assessmentTrendData = assessmentTrends.map(trend => ({
+        date: new Date(trend.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        completionRate: trend.completionRate,
+        completed: trend.completed,
+        total: trend.total
+    }));
+
+    const placementTrendData = placementTrends.map(trend => ({
+        date: new Date(trend.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        approved: trend.approved,
+        pending: trend.pending,
+        rejected: trend.rejected,
+        approvalRate: trend.approvalRate
+    }));
+
+    const categoryScoresData = studentAnalytics.categoryScores.map((category: any) => ({
+        category: category.category,
+        avgScore: category.avgScore,
+        totalAssessments: category.totalAssessments
+    }));
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Admin Dashboard" />
@@ -130,14 +188,18 @@ export default function AdminDashboard({
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-3xl font-bold tracking-tight">Admin Dashboard</h1>
+                        <h1 className="text-3xl font-bold tracking-tight">Analytics Dashboard</h1>
                         <p className="text-muted-foreground">
-                            Dashboard of the SIP
+                            Comprehensive insights and trends for the SIP system
                         </p>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                        <TrendingUpIcon className="h-5 w-5 text-green-500" />
+                        <span className="text-sm text-muted-foreground">Live Data</span>
                     </div>
                 </div>
 
-                {/* Main Statistics */}
+                {/* Key Metrics Cards */}
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -146,9 +208,10 @@ export default function AdminDashboard({
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{stats.totalStudents}</div>
-                            <p className="text-xs text-muted-foreground">
-                                {stats.completedAssessments} completed assessments
-                            </p>
+                            <div className="flex items-center space-x-1 text-xs text-muted-foreground">
+                                <TrendingUpIcon className="h-3 w-3 text-green-500" />
+                                <span>{stats.completionRate}% completion rate</span>
+                            </div>
                         </CardContent>
                     </Card>
 
@@ -159,9 +222,10 @@ export default function AdminDashboard({
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{stats.placedStudents}</div>
-                            <p className="text-xs text-muted-foreground">
-                                {stats.placementRate}% placement rate
-                            </p>
+                            <div className="flex items-center space-x-1 text-xs text-muted-foreground">
+                                <TrendingUpIcon className="h-3 w-3 text-green-500" />
+                                <span>{stats.placementRate}% placement rate</span>
+                            </div>
                         </CardContent>
                     </Card>
 
@@ -172,97 +236,184 @@ export default function AdminDashboard({
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{stats.activeHTEs}</div>
-                            <p className="text-xs text-muted-foreground">
-                                {stats.hteParticipationRate}% participation rate
-                            </p>
+                            <div className="flex items-center space-x-1 text-xs text-muted-foreground">
+                                <span>{stats.totalHTEs} total registered</span>
+                            </div>
                         </CardContent>
                     </Card>
 
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Total Slots</CardTitle>
+                            <CardTitle className="text-sm font-medium">Available Slots</CardTitle>
                             <BriefcaseIcon className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{stats.totalSlots}</div>
-                            <p className="text-xs text-muted-foreground">
-                                {stats.totalInternships} internships available
-                            </p>
-                        </CardContent>
-                    </Card>
-                </div>
-
-                {/* Progress Cards */}
-                <div className="grid gap-4 md:grid-cols-3">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-sm font-medium">Assessment Completion</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-2">
-                                <div className="flex justify-between text-sm">
-                                    <span>Completion Rate</span>
-                                    <span>{stats.completionRate}%</span>
-                                </div>
-                                <Progress value={stats.completionRate} className="h-2" />
-                                <p className="text-xs text-muted-foreground">
-                                    {stats.completedAssessments} of {stats.totalStudents} students
-                                </p>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-sm font-medium">Placement Progress</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-2">
-                                <div className="flex justify-between text-sm">
-                                    <span>Placement Rate</span>
-                                    <span>{stats.placementRate}%</span>
-                                </div>
-                                <Progress value={stats.placementRate} className="h-2" />
-                                <p className="text-xs text-muted-foreground">
-                                    {stats.placedStudents} of {stats.completedAssessments} assessed students
-                                </p>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-sm font-medium">HTE Participation</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-2">
-                                <div className="flex justify-between text-sm">
-                                    <span>Participation Rate</span>
-                                    <span>{stats.hteParticipationRate}%</span>
-                                </div>
-                                <Progress value={stats.hteParticipationRate} className="h-2" />
-                                <p className="text-xs text-muted-foreground">
-                                    {stats.activeHTEs} of {stats.totalHTEs} registered HTEs
-                                </p>
+                            <div className="flex items-center space-x-1 text-xs text-muted-foreground">
+                                <span>{stats.totalInternships} internships</span>
                             </div>
                         </CardContent>
                     </Card>
                 </div>
 
-                {/* Main Content Grid */}
+                {/* Main Analytics Grid */}
                 <div className="grid gap-6 lg:grid-cols-2">
-                    {/* Recent Activity */}
+                    {/* Assessment Completion Trends */}
                     <Card>
                         <CardHeader>
-                            <CardTitle>Recent Activity</CardTitle>
+                            <CardTitle className="flex items-center space-x-2">
+                                <LineChartIcon className="h-5 w-5" />
+                                <span>Assessment Completion Trends</span>
+                            </CardTitle>
                             <CardDescription>
-                                Latest registrations and placements
+                                Daily assessment completion rates over the last 30 days
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <AreaChart 
+                                data={assessmentTrendData}
+                                dataKey="completionRate"
+                                xAxisKey="date"
+                                color="#3b82f6"
+                                height={250}
+                            />
+                        </CardContent>
+                    </Card>
+
+                    {/* Placement Status Distribution */}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center space-x-2">
+                                <PieChartIcon className="h-5 w-5" />
+                                <span>Placement Status Distribution</span>
+                            </CardTitle>
+                            <CardDescription>
+                                Current distribution of student placements by status
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <PieChart 
+                                data={placementStatusData}
+                                dataKey="value"
+                                nameKey="name"
+                                height={250}
+                                colors={['#10b981', '#f59e0b', '#ef4444']}
+                            />
+                        </CardContent>
+                    </Card>
+                </div>
+
+                {/* Section Performance & Company Performance */}
+                <div className="grid gap-6 lg:grid-cols-2">
+                    {/* Section Performance Comparison */}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center space-x-2">
+                                <BarChart3Icon className="h-5 w-5" />
+                                <span>Section Performance</span>
+                            </CardTitle>
+                            <CardDescription>
+                                Completion and placement rates by section
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <BarChart 
+                                data={sectionPerformanceData}
+                                dataKey="completionRate"
+                                xAxisKey="section"
+                                color="#8b5cf6"
+                                height={300}
+                            />
+                        </CardContent>
+                    </Card>
+
+                    {/* Top Performing Companies */}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center space-x-2">
+                                <TrendingUpIcon className="h-5 w-5" />
+                                <span>Top Performing Companies</span>
+                            </CardTitle>
+                            <CardDescription>
+                                Companies with highest placement success rates
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <BarChart 
+                                data={topCompaniesData}
+                                dataKey="successRate"
+                                xAxisKey="company"
+                                color="#10b981"
+                                height={300}
+                            />
+                        </CardContent>
+                    </Card>
+                </div>
+
+                {/* Placement Trends & Category Performance */}
+                <div className="grid gap-6 lg:grid-cols-2">
+                    {/* Placement Trends */}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center space-x-2">
+                                <LineChartIcon className="h-5 w-5" />
+                                <span>Placement Trends</span>
+                            </CardTitle>
+                            <CardDescription>
+                                Daily placement approvals over the last 30 days
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <LineChart 
+                                data={placementTrendData}
+                                dataKey="approved"
+                                xAxisKey="date"
+                                color="#10b981"
+                                height={250}
+                            />
+                        </CardContent>
+                    </Card>
+
+                    {/* Assessment Category Performance */}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center space-x-2">
+                                <BarChart3Icon className="h-5 w-5" />
+                                <span>Category Performance</span>
+                            </CardTitle>
+                            <CardDescription>
+                                Average scores by assessment category
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <BarChart 
+                                data={categoryScoresData}
+                                dataKey="avgScore"
+                                xAxisKey="category"
+                                color="#f59e0b"
+                                height={250}
+                            />
+                        </CardContent>
+                    </Card>
+                </div>
+
+                {/* Recent Activity & Quick Actions */}
+                <div className="grid gap-6 lg:grid-cols-3">
+                    {/* Recent Activity */}
+                    <Card className="lg:col-span-2">
+                        <CardHeader>
+                            <CardTitle className="flex items-center space-x-2">
+                                <ActivityIcon className="h-5 w-5" />
+                                <span>Recent Activity</span>
+                            </CardTitle>
+                            <CardDescription>
+                                Latest system activities and updates
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-4">
                                 {recentActivity.length > 0 ? (
-                                    recentActivity.map((activity) => (
+                                    recentActivity.slice(0, 6).map((activity) => (
                                         <div key={`${activity.type}-${activity.id}`} className="flex items-center space-x-4">
                                             {getActivityIcon(activity.type)}
                                             <div className="flex-1 space-y-1">
@@ -282,179 +433,63 @@ export default function AdminDashboard({
                         </CardContent>
                     </Card>
 
-                    {/* Section Statistics */}
+                    {/* Quick Actions */}
                     <Card>
                         <CardHeader>
-                            <CardTitle>Section Performance</CardTitle>
+                            <CardTitle>Quick Actions</CardTitle>
                             <CardDescription>
-                                Assessment and placement rates by section
+                                Common administrative tasks
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <div className="space-y-4">
-                                {sectionStats.length > 0 ? (
-                                    sectionStats.map((section) => (
-                                        <div key={section.section} className="space-y-2">
-                                            <div className="flex justify-between items-center">
-                                                <span className="text-sm font-medium">{section.section}</span>
-                                                <Badge variant="outline">
-                                                    {section.totalStudents} students
-                                                </Badge>
-                                            </div>
-                                            <div className="space-y-1">
-                                                <div className="flex justify-between text-xs">
-                                                    <span>Assessment: {section.completionRate}%</span>
-                                                    <span>Placement: {section.placementRate}%</span>
-                                                </div>
-                                                <div className="flex space-x-1">
-                                                    <Progress value={section.completionRate} className="h-1 flex-1" />
-                                                    <Progress value={section.placementRate} className="h-1 flex-1" />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))
-                                ) : (
-                                    <p className="text-sm text-muted-foreground">No section data available</p>
-                                )}
+                            <div className="space-y-3">
+                                <Link
+                                    href="/student/list"
+                                    className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                                >
+                                    <UsersIcon className="h-5 w-5" />
+                                    <div>
+                                        <p className="text-sm font-medium">Manage Students</p>
+                                        <p className="text-xs text-muted-foreground">View and edit records</p>
+                                    </div>
+                                </Link>
+
+                                <Link
+                                    href="/student/matched"
+                                    className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                                >
+                                    <TargetIcon className="h-5 w-5" />
+                                    <div>
+                                        <p className="text-sm font-medium">View Matches</p>
+                                        <p className="text-xs text-muted-foreground">Review matches</p>
+                                    </div>
+                                </Link>
+
+                                <Link
+                                    href="/hte"
+                                    className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                                >
+                                    <BuildingIcon className="h-5 w-5" />
+                                    <div>
+                                        <p className="text-sm font-medium">Manage HTEs</p>
+                                        <p className="text-xs text-muted-foreground">HTE information</p>
+                                    </div>
+                                </Link>
+
+                                <Link
+                                    href="/report"
+                                    className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                                >
+                                    <BarChart3Icon className="h-5 w-5" />
+                                    <div>
+                                        <p className="text-sm font-medium">Generate Reports</p>
+                                        <p className="text-xs text-muted-foreground">Create reports</p>
+                                    </div>
+                                </Link>
                             </div>
                         </CardContent>
                     </Card>
                 </div>
-
-                {/* Bottom Grid */}
-                <div className="grid gap-6 lg:grid-cols-2">
-                    {/* Top HTEs */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Top HTEs by Slots</CardTitle>
-                            <CardDescription>
-                                Host Training Establishments with most available slots
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-4">
-                                {hteStats.length > 0 ? (
-                                    hteStats.map((hte) => (
-                                        <div key={hte.id} className="flex items-center justify-between">
-                                            <div className="space-y-1">
-                                                <p className="text-sm font-medium">{hte.company_name}</p>
-                                                <p className="text-xs text-muted-foreground">
-                                                    {hte.contact_person} • {hte.activeInternships} active internships
-                                                </p>
-                                            </div>
-                                            <div className="text-right">
-                                                <p className="text-sm font-medium">{hte.totalSlots} slots</p>
-                                                <Badge variant={hte.is_submit ? "default" : "secondary"}>
-                                                    {hte.is_submit ? "Active" : "Pending"}
-                                                </Badge>
-                                            </div>
-                                        </div>
-                                    ))
-                                ) : (
-                                    <p className="text-sm text-muted-foreground">No HTE data available</p>
-                                )}
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    {/* Placement Overview */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Placement Overview</CardTitle>
-                            <CardDescription>
-                                Distribution of placements by status
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-4">
-                                {Object.entries(placementOverview.byStatus).map(([status, count]) => (
-                                    <div key={status} className="flex items-center justify-between">
-                                        <div className="flex items-center space-x-2">
-                                            <div className={`h-2 w-2 rounded-full ${
-                                                status === 'approved' ? 'bg-green-500' :
-                                                status === 'pending' ? 'bg-yellow-500' :
-                                                status === 'rejected' ? 'bg-red-500' : 'bg-gray-500'
-                                            }`} />
-                                            <span className="text-sm font-medium capitalize">{status}</span>
-                                        </div>
-                                        <span className="text-sm text-muted-foreground">{count}</span>
-                                    </div>
-                                ))}
-                                
-                                {placementOverview.byCompany.length > 0 && (
-                                    <div className="pt-4 border-t">
-                                        <p className="text-sm font-medium mb-2">Top Companies</p>
-                                        <div className="space-y-2">
-                                            {placementOverview.byCompany.slice(0, 3).map((company) => (
-                                                <div key={company.company} className="flex justify-between text-xs">
-                                                    <span>{company.company}</span>
-                                                    <span>{company.count} placements</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
-
-                {/* Quick Actions */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Quick Actions</CardTitle>
-                        <CardDescription>
-                            Common administrative tasks
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="grid gap-4 md:grid-cols-4">
-                            <Link
-                                href="/student/list"
-                                className="flex items-center space-x-2 p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                            >
-                                <UsersIcon className="h-5 w-5" />
-                                <div>
-                                    <p className="text-sm font-medium">Manage Students</p>
-                                    <p className="text-xs text-muted-foreground">View and edit student records</p>
-                                </div>
-                            </Link>
-
-                            <Link
-                                href="/student/matched"
-                                className="flex items-center space-x-2 p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                            >
-                                <TargetIcon className="h-5 w-5" />
-                                <div>
-                                    <p className="text-sm font-medium">View Matches</p>
-                                    <p className="text-xs text-muted-foreground">Review student-internship matches</p>
-                                </div>
-                            </Link>
-
-                            <Link
-                                href="/hte"
-                                className="flex items-center space-x-2 p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                            >
-                                <BuildingIcon className="h-5 w-5" />
-                                <div>
-                                    <p className="text-sm font-medium">Manage HTEs</p>
-                                    <p className="text-xs text-muted-foreground">View HTE information</p>
-                                </div>
-                            </Link>
-
-                            <Link
-                                href="/report"
-                                className="flex items-center space-x-2 p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                            >
-                                <BarChart3Icon className="h-5 w-5" />
-                                <div>
-                                    <p className="text-sm font-medium">Generate Reports</p>
-                                    <p className="text-xs text-muted-foreground">Create system reports</p>
-                                </div>
-                            </Link>
-                        </div>
-                    </CardContent>
-                </Card>
             </div>
         </AppLayout>
     );

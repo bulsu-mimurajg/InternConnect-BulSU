@@ -51,12 +51,26 @@ class AdminController extends Controller
         // Get HTE statistics
         $hteStats = $this->getHTEStats();
 
+        // Get analytics data for charts
+        $placementAnalytics = $this->getPlacementAnalytics();
+        $studentAnalytics = $this->getStudentAnalytics();
+        $hteAnalytics = $this->getHTEAnalytics();
+        $sectionAnalytics = $this->getSectionAnalytics();
+        $assessmentTrends = $this->getAssessmentTrends();
+        $placementTrends = $this->getPlacementTrends();
+
         return Inertia::render('admin/dashboard', [
             'stats' => $stats,
             'recentActivity' => $recentActivity,
             'placementOverview' => $placementOverview,
             'sectionStats' => $sectionStats,
             'hteStats' => $hteStats,
+            'placementAnalytics' => $placementAnalytics,
+            'studentAnalytics' => $studentAnalytics,
+            'hteAnalytics' => $hteAnalytics,
+            'sectionAnalytics' => $sectionAnalytics,
+            'assessmentTrends' => $assessmentTrends,
+            'placementTrends' => $placementTrends,
         ]);
     }
 
