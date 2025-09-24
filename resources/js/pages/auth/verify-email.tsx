@@ -45,37 +45,36 @@ export default function VerifyEmail({ token, email }: VerifyEmailProps) {
         return (
             <>
                 <Head title="Email Verified" />
-                <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-                    <div className="max-w-md w-full space-y-8">
-                        <Card>
-                            <CardHeader className="text-center">
-                                <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
-                                    <CheckCircle className="h-6 w-6 text-green-600" />
-                                </div>
-                                <CardTitle className="text-2xl font-bold text-gray-900">
-                                    Email Verified!
+                <div className="min-h-screen flex items-center justify-center bg-background p-4">
+                    <Card className="w-full max-w-md">
+                        <CardHeader className="text-center space-y-4">
+                            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100">
+                                <CheckCircle className="h-6 w-6 text-green-600" />
+                            </div>
+                            <div className="space-y-2">
+                                <CardTitle className="text-xl font-semibold">
+                                    Email Verified
                                 </CardTitle>
-                                <CardDescription className="text-gray-600">
-                                    Your account has been successfully created and is pending adviser approval.
+                                <CardDescription>
+                                    Your account is pending adviser approval
                                 </CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                <Alert>
-                                    <Mail className="h-4 w-4" />
-                                    <AlertDescription>
-                                        You will receive an email notification once your account is approved by an adviser.
-                                        You can then log in to access the system.
-                                    </AlertDescription>
-                                </Alert>
-                                <Button 
-                                    onClick={() => window.location.href = route('login')}
-                                    className="w-full"
-                                >
-                                    Go to Login
-                                </Button>
-                            </CardContent>
-                        </Card>
-                    </div>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <Alert>
+                                <Mail className="h-4 w-4" />
+                                <AlertDescription className="text-sm">
+                                    You'll receive an email notification once approved. You can then log in to access the system.
+                                </AlertDescription>
+                            </Alert>
+                            <Button 
+                                onClick={() => window.location.href = route('login')}
+                                className="w-full"
+                            >
+                                Go to Login
+                            </Button>
+                        </CardContent>
+                    </Card>
                 </div>
             </>
         );
@@ -84,54 +83,54 @@ export default function VerifyEmail({ token, email }: VerifyEmailProps) {
     return (
         <>
             <Head title="Verify Email" />
-            <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-                <div className="max-w-md w-full space-y-8">
-                    <Card>
-                        <CardHeader className="text-center">
-                            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 mb-4">
-                                <Mail className="h-6 w-6 text-blue-600" />
-                            </div>
-                            <CardTitle className="text-2xl font-bold text-gray-900">
+            <div className="min-h-screen flex items-center justify-center bg-background p-4">
+                <Card className="w-full max-w-md">
+                    <CardHeader className="text-center space-y-4">
+                        <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-primary/10">
+                            <Mail className="h-6 w-6 text-primary" />
+                        </div>
+                        <div className="space-y-2">
+                            <CardTitle className="text-xl font-semibold">
                                 Verify Your Email
                             </CardTitle>
-                            <CardDescription className="text-gray-600">
-                                Please verify your email address to complete your registration.
+                            <CardDescription>
+                                Complete your registration by verifying your email address
                             </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="text-center">
-                                <p className="text-sm text-gray-600 mb-4">
-                                    We've sent a verification link to:
-                                </p>
-                                <p className="font-medium text-gray-900">{email}</p>
-                            </div>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="text-center space-y-2">
+                            <p className="text-sm text-muted-foreground">
+                                Verification link sent to:
+                            </p>
+                            <p className="font-medium text-foreground">{email}</p>
+                        </div>
 
-                            {error && (
-                                <Alert variant="destructive">
-                                    <AlertCircle className="h-4 w-4" />
-                                    <AlertDescription>{error}</AlertDescription>
-                                </Alert>
-                            )}
+                        {error && (
+                            <Alert variant="destructive">
+                                <AlertCircle className="h-4 w-4" />
+                                <AlertDescription className="text-sm">{error}</AlertDescription>
+                            </Alert>
+                        )}
 
-                            <Button 
-                                onClick={handleVerification}
-                                disabled={isVerifying || processing}
-                                className="w-full"
-                            >
-                                {isVerifying || processing ? 'Verifying...' : 'Verify My Email'}
-                            </Button>
+                        <Button 
+                            onClick={handleVerification}
+                            disabled={isVerifying || processing}
+                            className="w-full"
+                        >
+                            {isVerifying || processing ? 'Verifying...' : 'Verify Email'}
+                        </Button>
 
-                            <div className="text-center">
-                                <p className="text-xs text-gray-500">
-                                    Didn't receive the email? Check your spam folder or{' '}
-                                    <a href={route('register')} className="text-blue-600 hover:text-blue-500">
-                                        try registering again
-                                    </a>
-                                </p>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
+                        <div className="text-center">
+                            <p className="text-xs text-muted-foreground">
+                                Didn't receive the email? Check your spam folder or{' '}
+                                <a href={route('register')} className="text-primary hover:text-primary/80 underline">
+                                    try registering again
+                                </a>
+                            </p>
+                        </div>
+                    </CardContent>
+                </Card>
             </div>
         </>
     );
