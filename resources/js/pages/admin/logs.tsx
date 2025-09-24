@@ -1,17 +1,20 @@
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/react';
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ChevronDownIcon, ChevronRightIcon, ActivityIcon, UserIcon, ClockIcon } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ChevronDownIcon, ChevronRightIcon, ActivityIcon, UserIcon, ClockIcon, LogInIcon, LogOutIcon, FilterIcon, XIcon } from 'lucide-react';
 
 interface Activity {
     id: number;
     description: string;
     causer_name: string;
     causer_email: string | null;
+    causer_role: string;
     subject_type: string | null;
     subject_id: number | null;
     properties: Record<string, any>;
@@ -30,6 +33,13 @@ interface ActivitiesData {
 
 interface LogsProps {
     activities: ActivitiesData;
+    filters: {
+        type?: string;
+        user?: string;
+        role?: string;
+        date_from?: string;
+        date_to?: string;
+    };
 }
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -39,8 +49,16 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-export default function Logs({ activities }: LogsProps) {
+export default function Logs({ activities, filters }: LogsProps) {
     const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
+    const [showFilters, setShowFilters] = useState<boolean>(false);
+    const [filterValues, setFilterValues] = useState({
+        type: filters.type || 'all',
+        user: filters.user || '',
+        role: filters.role || 'all',
+        date_from: filters.date_from || '',
+        date_to: filters.date_to || '',
+    });
 
     const toggleRow = (activityId: number) => {
         const newExpandedRows = new Set(expandedRows);
@@ -53,6 +71,8 @@ export default function Logs({ activities }: LogsProps) {
     };
 
     const getActivityBadge = (description: string) => {
+        if (description.includes('logged in')) return { variant: 'default' as const, text: 'Login' };
+        if (description.includes('logged out')) return { variant: 'outline' as const, text: 'Logout' };
         if (description.includes('created')) return { variant: 'default' as const, text: 'Created' };
         if (description.includes('updated')) return { variant: 'secondary' as const, text: 'Updated' };
         if (description.includes('archived')) return { variant: 'outline' as const, text: 'Archived' };
@@ -60,6 +80,44 @@ export default function Logs({ activities }: LogsProps) {
         if (description.includes('deleted')) return { variant: 'destructive' as const, text: 'Deleted' };
         return { variant: 'secondary' as const, text: 'Action' };
     };
+
+    const getActivityIcon = (description: string) => {
+        if (description.includes('logged in')) return LogInIcon;
+        if (description.includes('logged out')) return LogOutIcon;
+        return ActivityIcon;
+    };
+
+    const handleFilterChange = (key: string, value: string) => {
+        setFilterValues(prev => ({ ...prev, [key]: value }));
+    };
+
+    const applyFilters = () => {
+        const params = new URLSearchParams();
+        Object.entries(filterValues).forEach(([key, value]) => {
+            if (value && value !== 'all') params.append(key, value);
+        });
+        
+        const url = params.toString() ? `/admin/logs?${params.toString()}` : '/admin/logs';
+        window.location.href = url;
+    };
+
+    const clearFilters = () => {
+        setFilterValues({
+            type: 'all',
+            user: '',
+            role: 'all',
+            date_from: '',
+            date_to: '',
+        });
+        window.location.href = '/admin/logs';
+    };
+
+    const hasActiveFilters = Object.entries(filterValues).some(([key, value]) => {
+        if (key === 'type' || key === 'role') {
+            return value !== '' && value !== 'all';
+        }
+        return value !== '';
+    });
 
     const formatPropertyValue = (value: any): string => {
         if (value === null || value === undefined) return 'N/A';
@@ -144,10 +202,110 @@ export default function Logs({ activities }: LogsProps) {
                             Track and monitor all system activities and user actions
                         </p>
                     </div>
-                    <Badge variant="secondary" className="text-sm">
-                        {activities.total} total
-                    </Badge>
+                    <div className="flex items-center gap-3">
+                        <Badge variant="secondary" className="text-sm">
+                            {activities.total} total
+                        </Badge>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setShowFilters(!showFilters)}
+                            className="flex items-center gap-2"
+                        >
+                            <FilterIcon className="h-4 w-4" />
+                            Filters
+                            {hasActiveFilters && (
+                                <Badge variant="destructive" className="ml-1 h-4 w-4 p-0 text-xs">
+                                    !
+                                </Badge>
+                            )}
+                        </Button>
+                    </div>
                 </div>
+
+                {showFilters && (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-lg">Filter Logs</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium">Action</label>
+                                    <Select value={filterValues.type || undefined} onValueChange={(value) => handleFilterChange('type', value)}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="All actions" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">All actions</SelectItem>
+                                            <SelectItem value="login">Login</SelectItem>
+                                            <SelectItem value="logout">Logout</SelectItem>
+                                            <SelectItem value="created">Created</SelectItem>
+                                            <SelectItem value="updated">Updated</SelectItem>
+                                            <SelectItem value="archived">Archived</SelectItem>
+                                            <SelectItem value="deleted">Deleted</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium">User</label>
+                                    <Input
+                                        placeholder="Search by username or email"
+                                        value={filterValues.user}
+                                        onChange={(e) => handleFilterChange('user', e.target.value)}
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium">Role</label>
+                                    <Select value={filterValues.role || undefined} onValueChange={(value) => handleFilterChange('role', value)}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="All roles" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">All roles</SelectItem>
+                                            <SelectItem value="admin">Admin</SelectItem>
+                                            <SelectItem value="student">Student</SelectItem>
+                                            <SelectItem value="hte">HTE</SelectItem>
+                                            <SelectItem value="adviser">Adviser</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium">From Date</label>
+                                    <Input
+                                        type="date"
+                                        value={filterValues.date_from}
+                                        onChange={(e) => handleFilterChange('date_from', e.target.value)}
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium">To Date</label>
+                                    <Input
+                                        type="date"
+                                        value={filterValues.date_to}
+                                        onChange={(e) => handleFilterChange('date_to', e.target.value)}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                                <Button onClick={applyFilters} size="sm">
+                                    Apply Filters
+                                </Button>
+                                {hasActiveFilters && (
+                                    <Button variant="outline" onClick={clearFilters} size="sm" className="flex items-center gap-2">
+                                        <XIcon className="h-4 w-4" />
+                                        Clear All
+                                    </Button>
+                                )}
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
 
                 <Card>
                     <CardContent className="p-0">
@@ -162,7 +320,7 @@ export default function Logs({ activities }: LogsProps) {
                                             User
                                         </th>
                                         <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                                            Subject
+                                            Role
                                         </th>
                                         <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                                             Time
@@ -172,13 +330,13 @@ export default function Logs({ activities }: LogsProps) {
                                 <tbody className="divide-y">
                                     {activities.data.map((activity) => {
                                         const badge = getActivityBadge(activity.description);
+                                        const ActivityIcon = getActivityIcon(activity.description);
                                         const hasDetails = Object.keys(activity.properties).length > 0;
                                         const isExpanded = expandedRows.has(activity.id);
                                         
                                         return (
-                                            <>
+                                            <React.Fragment key={activity.id}>
                                                 <tr 
-                                                    key={activity.id} 
                                                     className={`transition-colors ${
                                                         hasDetails ? 'cursor-pointer hover:bg-muted/50' : ''
                                                     }`}
@@ -193,6 +351,7 @@ export default function Logs({ activities }: LogsProps) {
                                                                     <ChevronRightIcon className="h-4 w-4 text-muted-foreground" />
                                                                 )
                                                             )}
+                                                            <ActivityIcon className="h-4 w-4 text-muted-foreground" />
                                                             <Badge variant={badge.variant} className="text-xs">
                                                                 {badge.text}
                                                             </Badge>
@@ -220,16 +379,16 @@ export default function Logs({ activities }: LogsProps) {
                                                         </div>
                                                     </td>
                                                     <td className="p-4">
-                                                        {activity.subject_type && activity.subject_id ? (
-                                                            <div className="text-sm">
-                                                                <div className="font-medium">
-                                                                    {activity.subject_type.replace('App\\Models\\', '')}
-                                                                </div>
-                                                                <div className="text-xs text-muted-foreground">ID: {activity.subject_id}</div>
+                                                        <div className="text-sm">
+                                                            <div className="font-medium">
+                                                                {activity.causer_role}
                                                             </div>
-                                                        ) : (
-                                                            <span className="text-muted-foreground">-</span>
-                                                        )}
+                                                            {activity.subject_type && activity.subject_id && (
+                                                                <div className="text-xs text-muted-foreground">
+                                                                    {activity.subject_type.replace('App\\Models\\', '')} ID: {activity.subject_id}
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                     </td>
                                                     <td className="p-4">
                                                         <div className="flex items-center gap-2">
@@ -248,7 +407,7 @@ export default function Logs({ activities }: LogsProps) {
                                                         </td>
                                                     </tr>
                                                 )}
-                                            </>
+                                            </React.Fragment>
                                         );
                                     })}
                                 </tbody>
@@ -261,7 +420,7 @@ export default function Logs({ activities }: LogsProps) {
                     <div className="flex justify-center items-center gap-2">
                         {activities.current_page > 1 && (
                             <Button variant="outline" size="sm" asChild>
-                                <Link href={`/admin/logs?page=${activities.current_page - 1}`}>
+                                <Link href={`/admin/logs?page=${activities.current_page - 1}${hasActiveFilters ? `&${new URLSearchParams(filterValues).toString()}` : ''}`}>
                                     Previous
                                 </Link>
                             </Button>
@@ -271,7 +430,7 @@ export default function Logs({ activities }: LogsProps) {
                         </span>
                         {activities.current_page < activities.last_page && (
                             <Button variant="outline" size="sm" asChild>
-                                <Link href={`/admin/logs?page=${activities.current_page + 1}`}>
+                                <Link href={`/admin/logs?page=${activities.current_page + 1}${hasActiveFilters ? `&${new URLSearchParams(filterValues).toString()}` : ''}`}>
                                     Next
                                 </Link>
                             </Button>

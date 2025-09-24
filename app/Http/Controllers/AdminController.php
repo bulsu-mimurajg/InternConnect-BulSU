@@ -304,17 +304,66 @@ class AdminController extends Controller
     /**
      * Display activity logs page
      */
-    public function logs(): Response
+    public function logs(Request $request): Response
     {
-        $activities = Activity::with(['causer', 'subject'])
-            ->latest()
+        $query = Activity::with(['causer', 'subject']);
+
+        // Apply filters
+        if ($request->filled('type')) {
+            $type = $request->type;
+            if ($type === 'login') {
+                $query->where('description', 'like', '%logged in%');
+            } elseif ($type === 'logout') {
+                $query->where('description', 'like', '%logged out%');
+            } elseif ($type === 'created') {
+                $query->where('description', 'like', '%created%');
+            } elseif ($type === 'updated') {
+                $query->where('description', 'like', '%updated%');
+            } elseif ($type === 'archived') {
+                $query->where('description', 'like', '%archived%');
+            } elseif ($type === 'deleted') {
+                $query->where('description', 'like', '%deleted%');
+            }
+        }
+
+        if ($request->filled('user')) {
+            $query->whereHas('causer', function ($q) use ($request) {
+                $q->where('username', 'like', "%{$request->user}%")
+                  ->orWhere('email', 'like', "%{$request->user}%");
+            });
+        }
+
+        if ($request->filled('role')) {
+            $query->whereHas('causer.roles', function ($q) use ($request) {
+                $q->where('name', $request->role);
+            });
+        }
+
+        if ($request->filled('date_from')) {
+            $query->whereDate('created_at', '>=', $request->date_from);
+        }
+
+        if ($request->filled('date_to')) {
+            $query->whereDate('created_at', '<=', $request->date_to);
+        }
+
+        $activities = $query->latest()
             ->paginate(20)
             ->through(function ($activity) {
+                // Get user role from properties or causer
+                $userRole = 'System';
+                if ($activity->causer) {
+                    $userRole = $activity->causer->getRoleNames()->first() ?? 'No Role';
+                } elseif (isset($activity->properties['role'])) {
+                    $userRole = $activity->properties['role'];
+                }
+
                 return [
                     'id' => $activity->id,
                     'description' => $activity->description,
                     'causer_name' => $activity->causer ? $activity->causer->username : 'System',
                     'causer_email' => $activity->causer ? $activity->causer->email : null,
+                    'causer_role' => $userRole,
                     'subject_type' => $activity->subject_type,
                     'subject_id' => $activity->subject_id,
                     'properties' => $activity->properties,
@@ -325,6 +374,7 @@ class AdminController extends Controller
 
         return Inertia::render('admin/logs', [
             'activities' => $activities,
+            'filters' => $request->only(['type', 'user', 'role', 'date_from', 'date_to']),
         ]);
     }
 
