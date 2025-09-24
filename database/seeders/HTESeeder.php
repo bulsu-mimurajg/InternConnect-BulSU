@@ -70,6 +70,7 @@ class HTESeeder extends Seeder
                 'cperson_position' => 'HR Manager',
                 'cperson_contactnum' => '+1-555-0101',
                 'is_active' => true,
+                'is_submit' => true,
             ],
             [
                 'user_id' => User::where('username', 'hte_company2')->first()->id,
@@ -81,6 +82,7 @@ class HTESeeder extends Seeder
                 'cperson_position' => 'Talent Acquisition Specialist',
                 'cperson_contactnum' => '+1-555-0102',
                 'is_active' => true,
+                'is_submit' => true,
             ],
             [
                 'user_id' => User::where('username', 'hte_company3')->first()->id,
@@ -92,6 +94,7 @@ class HTESeeder extends Seeder
                 'cperson_position' => 'Recruitment Coordinator',
                 'cperson_contactnum' => '+1-555-0103',
                 'is_active' => true,
+                'is_submit' => true,
             ],
             [
                 'user_id' => User::where('username', 'hte_company4')->first()->id,
@@ -103,6 +106,7 @@ class HTESeeder extends Seeder
                 'cperson_position' => 'HR Director',
                 'cperson_contactnum' => '+1-555-0104',
                 'is_active' => true,
+                'is_submit' => true,
             ],
             [
                 'user_id' => User::where('username', 'hte_company5')->first()->id,
@@ -114,6 +118,7 @@ class HTESeeder extends Seeder
                 'cperson_position' => 'Talent Manager',
                 'cperson_contactnum' => '+1-555-0105',
                 'is_active' => true,
+                'is_submit' => true,
             ],
         ];
 

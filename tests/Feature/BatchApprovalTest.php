@@ -47,7 +47,8 @@ class BatchApprovalTest extends TestCase
             'email' => 'test@company.com',
             'phone' => '1234567890',
             'address' => 'Test Address',
-            'status' => 'active'
+            'status' => 'active',
+            'is_submit' => true
         ]);
 
         // Create internships with limited slots
@@ -221,7 +222,8 @@ class BatchApprovalTest extends TestCase
             'email' => 'test@company.com',
             'phone' => '1234567890',
             'address' => 'Test Address',
-            'status' => 'active'
+            'status' => 'active',
+            'is_submit' => true
         ]);
 
         // Create internships

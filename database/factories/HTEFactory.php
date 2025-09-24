@@ -35,6 +35,7 @@ class HTEFactory extends Factory
             'cperson_position' => fake()->randomElement(['HR Manager', 'Talent Manager', 'Recruitment Specialist', 'HR Director', 'Talent Acquisition']),
             'cperson_contactnum' => fake()->phoneNumber(),
             'is_active' => true,
+            'is_submit' => true,
         ];
     }
 
@@ -46,5 +47,26 @@ class HTEFactory extends Factory
         return $this->state(fn (array $attributes) => [
             'is_active' => false,
         ]);
+    }
+
+    /**
+     * Indicate that the HTE has not submitted their form.
+     */
+    public function notSubmitted(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'is_submit' => false,
+        ]);
+    }
+
+    /**
+     * Configure the model factory.
+     */
+    public function configure(): static
+    {
+        return $this->afterCreating(function (HTE $hte) {
+            // Ensure the associated user has verified status
+            $hte->user->update(['status' => 'verified']);
+        });
     }
 }

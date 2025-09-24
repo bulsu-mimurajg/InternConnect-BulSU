@@ -335,9 +335,16 @@ class HTEController extends Controller
                 : 0
         ]);
 
+        // Check if HTE has complete data (submitted form OR has internships with subcategory weights)
+        $hasCompleteData = $hte->is_submit || 
+            ($hteWithData->internships->count() > 0 && 
+             $hteWithData->internships->every(function($internship) {
+                 return $internship->subcategoryWeights->count() > 0;
+             }));
+
         return Inertia::render('hte/profile', [
             'hte' => $hteWithData,
-            'showSubmissionPrompt' => !$hte->is_submit
+            'showSubmissionPrompt' => !$hasCompleteData
         ]);
     }
 
@@ -394,6 +401,13 @@ class HTEController extends Controller
             ];
         });
 
+        // Check if HTE has complete data (submitted form OR has internships with subcategory weights)
+        $hasCompleteData = $hte->is_submit || 
+            ($dashboardData->internships->count() > 0 && 
+             $dashboardData->internships->every(function($internship) {
+                 return $internship->subcategoryWeights->count() > 0;
+             }));
+
         return Inertia::render('hte/dashboard', [
             'hte' => $dashboardData,
             'stats' => [
@@ -407,7 +421,7 @@ class HTEController extends Controller
                 'phone' => $dashboardData->cperson_contactnum,
                 'address' => $dashboardData->company_address,
             ],
-            'showSubmissionPrompt' => !$hte->is_submit
+            'showSubmissionPrompt' => !$hasCompleteData
         ]);
     }
 
