@@ -6,14 +6,9 @@ import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { 
     StudentPerformanceChart,
-    StudentInternshipOpportunities,
-    StudentQuickActions
+    StudentInternshipOpportunities
 } from '@/components/dashboard';
 import { 
-    User, 
-    BookOpen, 
-    TrendingUp,
-    Briefcase,
     Target,
     AlertCircle,
 } from 'lucide-react';
@@ -143,85 +138,23 @@ export default function StudentDashboard({
                             Student Number: {student.student_number} • Section: {student.section || 'Not specified'}
                         </p>
                     </div>
-                    <div className="flex gap-2">
-                        <Button asChild variant="outline">
-                            <Link href="/matched">
-                                <Target className="h-4 w-4 mr-2" />
-                                View Matches
-                            </Link>
-                        </Button>
-                        <Button asChild variant="outline">
-                            <Link href="/student-profile">
-                                <User className="h-4 w-4 mr-2" />
-                                View Profile
-                            </Link>
-                        </Button>
-                    </div>
                 </div>
 
-                {/* Performance Overview */}
-                {performance && (
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                        <Card>
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium">Overall Average</CardTitle>
-                                <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                            </CardHeader>
-                            <CardContent>
-                                <div className={`text-2xl font-bold ${
-                                    performance.overall_average >= 4 ? 'text-green-600' : 
-                                    performance.overall_average >= 3 ? 'text-yellow-600' : 'text-red-600'
-                                }`}>
-                                    {performance.overall_average}
-                                </div>
-                                <p className="text-xs text-muted-foreground">
-                                    Based on {performance.total_questions} questions
-                                </p>
-                            </CardContent>
-                        </Card>
-
-                        <Card>
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium">Categories</CardTitle>
-                                <BookOpen className="h-4 w-4 text-muted-foreground" />
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-2xl font-bold">{performance.category_scores.length}</div>
-                                <p className="text-xs text-muted-foreground">
-                                    Skill categories assessed
-                                </p>
-                            </CardContent>
-                        </Card>
-
-                        <Card>
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium">Possible Internships</CardTitle>
-                                <Briefcase className="h-4 w-4 text-muted-foreground" />
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-2xl font-bold">{possibleInternships.length}</div>
-                                <p className="text-xs text-muted-foreground">
-                                    Top matches
-                                </p>
-                            </CardContent>
-                        </Card>
-
-                        <Card>
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium">Match Status</CardTitle>
-                                <Target className="h-4 w-4 text-muted-foreground" />
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-2xl font-bold">
-                                    {currentMatch ? 'Matched' : 'Pending'}
-                                </div>
-                                <p className="text-xs text-muted-foreground">
-                                    {currentMatch ? 'Internship assigned' : 'Waiting for placement'}
-                                </p>
-                            </CardContent>
-                        </Card>
-                    </div>
-                )}
+                {/* Match Status */}
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Match Status</CardTitle>
+                        <Target className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">
+                            {currentMatch ? 'Matched' : 'Pending'}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                            {currentMatch ? 'Internship assigned' : 'Waiting for placement'}
+                        </p>
+                    </CardContent>
+                </Card>
 
                 {/* Performance Chart Component */}
                 {performance && (
@@ -232,18 +165,14 @@ export default function StudentDashboard({
                     />
                 )}
 
-                {/* Possible Internships Component */}
-                <StudentInternshipOpportunities 
-                    internships={possibleInternships}
-                    currentMatch={currentMatch}
-                />
+                {/* Possible Internships Component - Only show if not already matched */}
+                {!currentMatch && (
+                    <StudentInternshipOpportunities 
+                        internships={possibleInternships}
+                        currentMatch={currentMatch}
+                    />
+                )}
 
-                {/* Quick Actions Component */}
-                <StudentQuickActions 
-                    hasSubmitted={hasSubmitted}
-                    performance={performance}
-                    currentMatch={currentMatch}
-                />
             </div>
         </AppLayout>
     );

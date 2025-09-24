@@ -1,23 +1,20 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { LineChart, BarChart, PieChart, AreaChart } from '@/components/charts';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/react';
-import { 
-    UsersIcon, 
-    CheckCircleIcon, 
-    BriefcaseIcon, 
-    BuildingIcon, 
+import {
+    UsersIcon,
+    CheckCircleIcon,
+    BriefcaseIcon,
+    BuildingIcon,
     BarChart3Icon,
     UserCheckIcon,
     TargetIcon,
     ActivityIcon,
     TrendingUpIcon,
-    TrendingDownIcon,
     PieChartIcon,
-    LineChartIcon
+    LineChartIcon, GraduationCapIcon, BriefcaseBusinessIcon
 } from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -100,11 +97,11 @@ interface AdminDashboardProps {
     placementTrends: any[];
 }
 
-export default function AdminDashboard({ 
-    stats, 
-    recentActivity, 
-    placementOverview, 
-    sectionStats, 
+export default function AdminDashboard({
+    stats,
+    recentActivity,
+    placementOverview,
+    sectionStats,
     hteStats,
     placementAnalytics,
     studentAnalytics,
@@ -204,7 +201,7 @@ export default function AdminDashboard({
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium">Total Students</CardTitle>
-                            <UsersIcon className="h-4 w-4 text-muted-foreground" />
+                            <GraduationCapIcon className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{stats.totalStudents}</div>
@@ -232,7 +229,7 @@ export default function AdminDashboard({
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium">Active HTEs</CardTitle>
-                            <BuildingIcon className="h-4 w-4 text-muted-foreground" />
+                            <BriefcaseBusinessIcon className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{stats.activeHTEs}</div>
@@ -270,7 +267,7 @@ export default function AdminDashboard({
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <AreaChart 
+                            <AreaChart
                                 data={assessmentTrendData}
                                 dataKey="completionRate"
                                 xAxisKey="date"
@@ -292,7 +289,7 @@ export default function AdminDashboard({
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <PieChart 
+                            <PieChart
                                 data={placementStatusData}
                                 dataKey="value"
                                 nameKey="name"
@@ -317,7 +314,7 @@ export default function AdminDashboard({
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <BarChart 
+                            <BarChart
                                 data={sectionPerformanceData}
                                 dataKey="completionRate"
                                 xAxisKey="section"
@@ -339,7 +336,7 @@ export default function AdminDashboard({
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <BarChart 
+                            <BarChart
                                 data={topCompaniesData}
                                 dataKey="successRate"
                                 xAxisKey="company"
@@ -364,7 +361,7 @@ export default function AdminDashboard({
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <LineChart 
+                            <LineChart
                                 data={placementTrendData}
                                 dataKey="approved"
                                 xAxisKey="date"
@@ -386,7 +383,7 @@ export default function AdminDashboard({
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <BarChart 
+                            <BarChart
                                 data={categoryScoresData}
                                 dataKey="avgScore"
                                 xAxisKey="category"

@@ -489,11 +489,46 @@ class AssessmentController extends Controller
             // Get possible internships with compatibility scores (if student has submitted assessment)
             $possibleInternships = collect();
             if ($hasSubmitted) {
+                // Debug: Check if student has scores
+                $studentScores = $student->scores()->count();
+                $activeInternships = \App\Models\Internship::where('is_active', true)->where('slot_count', '>', 0)->count();
+                
+                \Log::info('Student assessment debug', [
+                    'student_id' => $student->id,
+                    'has_submitted' => $hasSubmitted,
+                    'student_scores_count' => $studentScores,
+                    'active_internships_count' => $activeInternships
+                ]);
+                
                 $matchingService = new MatchingService();
                 // Calculate and store all compatibility scores for this student
                 $matchingService->calculateAndStoreCompatibilityScores($student);
                 // Get top 5 for dashboard display
                 $possibleInternships = $matchingService->getTopCompatibleInternships($student, 5);
+                
+                // Fallback: If no matches found, show active internships
+                if ($possibleInternships->isEmpty()) {
+                    \Log::info('No matches found, showing fallback internships');
+                    $fallbackInternships = \App\Models\Internship::with(['hte:id,company_name'])
+                        ->where('is_active', true)
+                        ->where('slot_count', '>', 0)
+                        ->take(5)
+                        ->get()
+                        ->map(function ($internship) {
+                            return [
+                                'internship' => $internship,
+                                'compatibility_score' => 50, // Default compatibility score
+                                'rank' => 1,
+                            ];
+                        });
+                    $possibleInternships = $fallbackInternships;
+                }
+                
+                // Debug logging
+                \Log::info('Possible internships for student ' . $student->id, [
+                    'count' => $possibleInternships->count(),
+                    'data' => $possibleInternships->toArray()
+                ]);
             }
 
             // Get student's current placement status (if any)
@@ -547,7 +582,7 @@ class AssessmentController extends Controller
                         'is_active' => $internship->is_active,
                         'compatibility_score' => $item['compatibility_score'],
                     ];
-                }),
+                })->toArray(),
                 'current_match' => $currentPlacement ? [
                     'id' => $currentPlacement->id,
                     'internship' => [

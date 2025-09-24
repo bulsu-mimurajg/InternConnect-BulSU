@@ -39,7 +39,10 @@ export function StudentInternshipOpportunities({
     internships,
     currentMatch
 }: StudentInternshipOpportunitiesProps) {
-    if (internships.length === 0) {
+    // Ensure internships is always an array
+    const internshipsArray = Array.isArray(internships) ? internships : [];
+    
+    if (internshipsArray.length === 0) {
         return (
             <Card>
                 <CardHeader>
@@ -68,13 +71,22 @@ export function StudentInternshipOpportunities({
                         <Briefcase className="h-5 w-5" />
                         Possible Internships
                         <Badge variant="secondary" className="ml-2">
-                            Your Top Matches
+                            {internshipsArray.some(internship => internship.compatibility_score === 50) 
+                                ? 'Available Opportunities' 
+                                : 'Your Top Matches'}
                         </Badge>
                     </CardTitle>
             </CardHeader>
             <CardContent>
+                {internshipsArray.some(internship => internship.compatibility_score === 50) && (
+                    <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-950 rounded-lg">
+                        <p className="text-sm text-blue-700 dark:text-blue-300">
+                            <strong>Note:</strong> Showing available internship opportunities. Complete your assessment to see personalized matches based on your skills.
+                        </p>
+                    </div>
+                )}
                 <div className="space-y-4">
-                    {internships.map((internship) => (
+                    {internshipsArray.map((internship) => (
                         <div
                             key={internship.id}
                             className="p-4 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group"

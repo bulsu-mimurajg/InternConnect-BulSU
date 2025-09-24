@@ -184,9 +184,6 @@ export default function StudentForm() {
                                     <div className="space-y-6">
                                         <h2 className="text-xl font-semibold">Review Your Answers</h2>
                                         <Summary />
-                                        <Button type="submit" disabled={isSubmitting}>
-                                            {isSubmitting ? 'Submitting...' : 'Submit'}
-                                        </Button>
                                     </div>
                                 )}
                             </form>
@@ -202,9 +199,15 @@ export default function StudentForm() {
                             <Button onClick={prev} disabled={currentStep === 0}>
                                 Previous
                             </Button>
-                            <Button onClick={next} disabled={currentStep === steps.length - 1}>
-                                Next
-                            </Button>
+                            {currentStep === steps.length - 1 ? (
+                                <Button type="submit" disabled={isSubmitting} onClick={form.handleSubmit(onSubmit)}>
+                                    {isSubmitting ? 'Submitting...' : 'Submit'}
+                                </Button>
+                            ) : (
+                                <Button onClick={next}>
+                                    Next
+                                </Button>
+                            )}
                         </div>
                     </div>
                 </div>

@@ -190,10 +190,31 @@ class MatchingService
      */
     public function getTopCompatibleInternships(Student $student, int $limit = 5): Collection
     {
-        return StudentMatch::where('student_id', $student->id)
+        $matches = StudentMatch::where('student_id', $student->id)
             ->with(['internship.hte:id,company_name', 'internship.subcategoryWeights.subcategory'])
             ->orderBy('rank')
-            ->get()
+            ->get();
+            
+        // Debug logging
+        \Log::info('StudentMatch query results', [
+            'student_id' => $student->id,
+            'total_matches' => $matches->count(),
+            'matches_data' => $matches->map(function($match) {
+                $availableSlots = $match->internship->slot_count - 
+                    $match->internship->studentPlacements()->where('status', 'approved')->count();
+                return [
+                    'internship_id' => $match->internship->id,
+                    'position_title' => $match->internship->position_title,
+                    'company_name' => $match->internship->hte->company_name,
+                    'slot_count' => $match->internship->slot_count,
+                    'available_slots' => $availableSlots,
+                    'compatibility_score' => $match->compatibility_score,
+                    'rank' => $match->rank
+                ];
+            })->toArray()
+        ]);
+        
+        return $matches
             ->filter(function ($match) {
                 // Filter out internships with no available slots
                 $availableSlots = $match->internship->slot_count - 
