@@ -6,7 +6,7 @@ export default function FormSubmitted() {
     const steps = [
         {
             id: 'Step 1',
-            name: 'Personal Information',
+            name: 'Additional Information',
         },
         {
             id: 'Step 2',
@@ -44,7 +44,7 @@ export default function FormSubmitted() {
                             </div>
                             <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">Assessment Submitted Successfully!</h2>
                             <p className="text-gray-600 dark:text-gray-400">
-                                Thank you for completing your assessment. Your responses have been recorded and will be used for internship matching.
+                                Your response have been recorded and will be used for internship matching.<br />
                             </p>
                         </div>
                         <Button onClick={handleViewProfile} className="bg-blue-600 hover:bg-blue-700">
