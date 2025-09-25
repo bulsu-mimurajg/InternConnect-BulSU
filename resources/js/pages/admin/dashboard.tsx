@@ -1,5 +1,6 @@
+import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { LineChart, BarChart, PieChart, AreaChart } from '@/components/charts';
+import { BarChart, PieChart, AreaChart } from '@/components/charts';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/react';
@@ -83,34 +84,65 @@ interface HTEStats {
     created_at: string;
 }
 
+interface SectionAnalytics {
+    section: string;
+    totalStudents: number;
+    completedAssessments: number;
+    placedStudents: number;
+    completionRate: number;
+    placementRate: number;
+}
+
+interface AssessmentTrend {
+    date: string;
+    completionRate: number;
+    completed: number;
+    total: number;
+}
+
+interface PlacementStatusData {
+    name: string;
+    value: number;
+    count: number;
+}
+
+interface SectionPerformanceData {
+    section: string;
+    completionRate: number;
+    placementRate: number;
+    totalStudents: number;
+}
+
+interface AssessmentTrendData {
+    date: string;
+    completionRate: number;
+    completed: number;
+    total: number;
+}
+
+type ActivityType = 'student_registration' | 'hte_registration' | 'placement';
+
+type ChartColors = [string, string, string];
+
 interface AdminDashboardProps {
     stats: DashboardStats;
     recentActivity: RecentActivity[];
     placementOverview: PlacementOverview;
     sectionStats: SectionStats[];
     hteStats: HTEStats[];
-    placementAnalytics: any;
-    studentAnalytics: any;
-    hteAnalytics: any;
-    sectionAnalytics: any;
-    assessmentTrends: any[];
-    placementTrends: any[];
+    sectionAnalytics: SectionAnalytics[];
+    assessmentTrends: AssessmentTrend[];
 }
 
 export default function AdminDashboard({
     stats,
     recentActivity,
     placementOverview,
-    sectionStats,
     hteStats,
-    placementAnalytics,
-    studentAnalytics,
-    hteAnalytics,
     sectionAnalytics,
-    assessmentTrends,
-    placementTrends
+    assessmentTrends
 }: AdminDashboardProps) {
-    const getActivityIcon = (type: string) => {
+    const getActivityIcon = (type: ActivityType): React.ReactElement => {
         switch (type) {
             case 'student_registration':
                 return <UsersIcon className="h-4 w-4 text-blue-500" />;
@@ -123,7 +155,7 @@ export default function AdminDashboard({
         }
     };
 
-    const getActivityDescription = (activity: RecentActivity) => {
+    const getActivityDescription = (activity: RecentActivity): string => {
         switch (activity.type) {
             case 'student_registration':
                 return `${activity.name} (${activity.student_number}) from ${activity.section} registered`;
@@ -137,45 +169,24 @@ export default function AdminDashboard({
     };
 
     // Prepare data for charts
-    const placementStatusData = Object.entries(placementOverview.byStatus).map(([status, count]) => ({
+    const placementStatusData: PlacementStatusData[] = Object.entries(placementOverview.byStatus).map(([status, count]) => ({
         name: status.charAt(0).toUpperCase() + status.slice(1),
         value: count,
         count: count
     }));
 
-    const sectionPerformanceData = sectionAnalytics.map((section: any) => ({
+    const sectionPerformanceData: SectionPerformanceData[] = sectionAnalytics.map((section: SectionAnalytics) => ({
         section: section.section,
         completionRate: section.completionRate,
         placementRate: section.placementRate,
         totalStudents: section.totalStudents
     }));
 
-    const topCompaniesData = placementAnalytics.companyPlacements.slice(0, 8).map((company: any) => ({
-        company: company.company.length > 15 ? company.company.substring(0, 15) + '...' : company.company,
-        successRate: company.successRate,
-        filledSlots: company.filledSlots,
-        totalSlots: company.totalSlots
-    }));
-
-    const assessmentTrendData = assessmentTrends.map(trend => ({
+    const assessmentTrendData: AssessmentTrendData[] = assessmentTrends.map((trend: AssessmentTrend) => ({
         date: new Date(trend.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
         completionRate: trend.completionRate,
         completed: trend.completed,
         total: trend.total
-    }));
-
-    const placementTrendData = placementTrends.map(trend => ({
-        date: new Date(trend.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-        approved: trend.approved,
-        pending: trend.pending,
-        rejected: trend.rejected,
-        approvalRate: trend.approvalRate
-    }));
-
-    const categoryScoresData = studentAnalytics.categoryScores.map((category: any) => ({
-        category: category.category,
-        avgScore: category.avgScore,
-        totalAssessments: category.totalAssessments
     }));
 
     return (
@@ -192,7 +203,7 @@ export default function AdminDashboard({
                     </div>
                     <div className="flex items-center space-x-2">
                         <TrendingUpIcon className="h-5 w-5 text-green-500" />
-                        <span className="text-sm text-muted-foreground">Live Data</span>
+                        <span className="text-sm text-muted-foreground">Current Data</span>
                     </div>
                 </div>
 
@@ -294,13 +305,13 @@ export default function AdminDashboard({
                                 dataKey="value"
                                 nameKey="name"
                                 height={250}
-                                colors={['#10b981', '#f59e0b', '#ef4444']}
+                                colors={['#10b981', '#f59e0b', '#ef4444'] as ChartColors}
                             />
                         </CardContent>
                     </Card>
                 </div>
 
-                {/* Section Performance & Company Performance */}
+                {/* Section Performance & HTE Overview */}
                 <div className="grid gap-6 lg:grid-cols-2">
                     {/* Section Performance Comparison */}
                     <Card>
@@ -324,72 +335,38 @@ export default function AdminDashboard({
                         </CardContent>
                     </Card>
 
-                    {/* Top Performing Companies */}
+                    {/* HTE Overview */}
                     <Card>
                         <CardHeader>
                             <CardTitle className="flex items-center space-x-2">
-                                <TrendingUpIcon className="h-5 w-5" />
-                                <span>Top Performing Companies</span>
+                                <BuildingIcon className="h-5 w-5" />
+                                <span>HTE Overview</span>
                             </CardTitle>
                             <CardDescription>
-                                Companies with highest placement success rates
+                                Host Training Establishments and their offerings
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <BarChart
-                                data={topCompaniesData}
-                                dataKey="successRate"
-                                xAxisKey="company"
-                                color="#10b981"
-                                height={300}
-                            />
-                        </CardContent>
-                    </Card>
-                </div>
-
-                {/* Placement Trends & Category Performance */}
-                <div className="grid gap-6 lg:grid-cols-2">
-                    {/* Placement Trends */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center space-x-2">
-                                <LineChartIcon className="h-5 w-5" />
-                                <span>Placement Trends</span>
-                            </CardTitle>
-                            <CardDescription>
-                                Daily placement approvals over the last 30 days
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <LineChart
-                                data={placementTrendData}
-                                dataKey="approved"
-                                xAxisKey="date"
-                                color="#10b981"
-                                height={250}
-                            />
-                        </CardContent>
-                    </Card>
-
-                    {/* Assessment Category Performance */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center space-x-2">
-                                <BarChart3Icon className="h-5 w-5" />
-                                <span>Category Performance</span>
-                            </CardTitle>
-                            <CardDescription>
-                                Average scores by assessment category
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <BarChart
-                                data={categoryScoresData}
-                                dataKey="avgScore"
-                                xAxisKey="category"
-                                color="#f59e0b"
-                                height={250}
-                            />
+                            <div className="space-y-4">
+                                {hteStats.length > 0 ? (
+                                    hteStats.slice(0, 5).map((hte) => (
+                                        <div key={hte.id} className="flex items-center justify-between p-3 border rounded-lg">
+                                            <div className="flex-1">
+                                                <p className="font-medium text-sm">{hte.company_name}</p>
+                                                <p className="text-xs text-muted-foreground">{hte.contact_person}</p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-sm font-medium">{hte.activeInternships}</p>
+                                                <p className="text-xs text-muted-foreground">active internships</p>
+                                            </div>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <p className="text-sm text-muted-foreground text-center py-4">
+                                        No HTE data available
+                                    </p>
+                                )}
+                            </div>
                         </CardContent>
                     </Card>
                 </div>
