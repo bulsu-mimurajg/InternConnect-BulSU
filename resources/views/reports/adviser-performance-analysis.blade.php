@@ -95,6 +95,9 @@
                 <th>Rank</th>
                 <th>Name</th>
                 <th>Username</th>
+                @if($sectionName === 'All Sections')
+                <th>Section</th>
+                @endif
                 <th>Score</th>
                 <th>Percentage</th>
                 <th>Submitted At</th>
@@ -107,6 +110,9 @@
                     <td>{{ $student['rank'] }}</td>
                     <td>{{ $student['name'] }}</td>
                     <td>{{ $student['username'] }}</td>
+                    @if($sectionName === 'All Sections')
+                    <td>{{ $student['section'] ?? 'N/A' }}</td>
+                    @endif
                     <td>{{ $student['score'] }}</td>
                     <td>{{ $student['percentage'] }}%</td>
                     <td>{{ $student['submittedAt'] ?? 'N/A' }}</td>

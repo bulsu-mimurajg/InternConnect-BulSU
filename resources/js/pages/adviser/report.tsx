@@ -8,9 +8,7 @@ import { Head } from '@inertiajs/react';
 import { useState } from 'react';
 import {
     FileTextIcon,
-    DownloadIcon,
-    UsersIcon,
-    BarChart3Icon
+    DownloadIcon
 } from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -120,10 +118,11 @@ export default function AdviserReport({
                                 Section: {adviserSection}
                             </p>
                         </div>
-                        {currentSectionId && (
+                        {adviserSections.length > 0 && (
                             <SectionSwitcher 
                                 sections={adviserSections}
                                 currentSectionId={currentSectionId}
+                                showAllSections={true}
                                 className="ml-4"
                             />
                         )}
@@ -219,79 +218,6 @@ export default function AdviserReport({
                     </CardContent>
                 </Card>
 
-                {/* Quick Actions */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Quick Actions</CardTitle>
-                        <CardDescription>
-                            Common report generation tasks
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                            <Button 
-                                variant="outline" 
-                                className="h-auto p-4 flex-col gap-2"
-                                onClick={() => {
-                                    setSelectedReportType('student-list');
-                                    setSelectedFormat('excel');
-                                }}
-                            >
-                                <UsersIcon className="h-6 w-6" />
-                                <span>Student List</span>
-                                <span className="text-xs text-muted-foreground">
-                                    Export student roster to Excel
-                                </span>
-                            </Button>
-
-                            <Button 
-                                variant="outline" 
-                                className="h-auto p-4 flex-col gap-2"
-                                onClick={() => {
-                                    setSelectedReportType('assessment-summary');
-                                    setSelectedFormat('pdf');
-                                }}
-                            >
-                                <BarChart3Icon className="h-6 w-6" />
-                                <span>Assessment Summary</span>
-                                <span className="text-xs text-muted-foreground">
-                                    Generate assessment overview PDF
-                                </span>
-                            </Button>
-
-                            <Button 
-                                variant="outline" 
-                                className="h-auto p-4 flex-col gap-2"
-                                onClick={() => {
-                                    setSelectedReportType('endorsed-students');
-                                    setSelectedFormat('pdf');
-                                }}
-                            >
-                                <FileTextIcon className="h-6 w-6" />
-                                <span>Endorsed Students</span>
-                                <span className="text-xs text-muted-foreground">
-                                    View endorsed students report
-                                </span>
-                            </Button>
-
-                            <Button 
-                                variant="outline" 
-                                className="h-auto p-4 flex-col gap-2"
-                                onClick={() => {
-                                    setSelectedReportType('placed-students');
-                                    setSelectedFormat('pdf');
-                                }}
-                            >
-                                <DownloadIcon className="h-6 w-6" />
-                                <span>Placed Students</span>
-                                <span className="text-xs text-muted-foreground">
-                                    View placed students report
-                                </span>
-                            </Button>
-
-                        </div>
-                    </CardContent>
-                </Card>
             </div>
         </AppLayout>
     );

@@ -145,19 +145,15 @@ export default function AdviserStudents({ students, adviserSection, adviserSecti
                                 Section: {adviserSection} • {students.length} students
                             </p>
                         </div>
-                        {currentSectionId && (
+                        {adviserSections.length > 0 && (
                             <SectionSwitcher 
                                 sections={adviserSections}
                                 currentSectionId={currentSectionId}
+                                showAllSections={true}
                                 className="ml-4"
                             />
                         )}
                     </div>
-                    <Button asChild>
-                        <Link href={route('student-verification')}>
-                            Verify Students
-                        </Link>
-                    </Button>
                 </div>
 
                 {/* Filters */}

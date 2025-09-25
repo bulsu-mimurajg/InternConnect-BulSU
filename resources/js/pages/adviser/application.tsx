@@ -239,10 +239,11 @@ export default function Application({ pendingStudents, verifiedStudents, adviser
                                     Manage student applications for your section
                                 </CardDescription>
                             </div>
-                            {currentSectionId && (
+                            {adviserSections.length > 0 && (
                                 <SectionSwitcher 
                                     sections={adviserSections}
                                     currentSectionId={currentSectionId}
+                                    showAllSections={true}
                                 />
                             )}
                         </div>
@@ -280,29 +281,34 @@ export default function Application({ pendingStudents, verifiedStudents, adviser
                             </div>
                         ) : (
                             <div className="space-y-4">
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                    {pendingStudents.map((student) => (
-                                        <div
-                                            key={student.id}
-                                            className="flex items-center space-x-3 p-3 border rounded-lg"
-                                        >
-                                            <Checkbox
-                                                checked={selectedStudents.includes(student.id)}
-                                                onCheckedChange={(checked) =>
-                                                    handleSelectStudent(student.id, checked as boolean)
-                                                }
-                                            />
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-sm font-medium truncate">
-                                                    {student.username}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {pendingStudents.map((student) => (
+                                    <div
+                                        key={student.id}
+                                        className="flex items-center space-x-3 p-3 border rounded-lg"
+                                    >
+                                        <Checkbox
+                                            checked={selectedStudents.includes(student.id)}
+                                            onCheckedChange={(checked) =>
+                                                handleSelectStudent(student.id, checked as boolean)
+                                            }
+                                        />
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-medium truncate">
+                                                {student.username}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground truncate">
+                                                {student.email}
+                                            </p>
+                                            {currentSectionId === null && student.academe_accounts && student.academe_accounts.length > 0 && (
+                                                <p className="text-xs text-blue-600 truncate">
+                                                    {student.academe_accounts[0].section.section_name}
                                                 </p>
-                                                <p className="text-xs text-muted-foreground truncate">
-                                                    {student.email}
-                                                </p>
-                                            </div>
+                                            )}
                                         </div>
-                                    ))}
-                                </div>
+                                    </div>
+                                ))}
+                            </div>
 
                                 {selectedStudents.length > 0 && (
                                     <div className="pt-4 border-t space-y-4">
@@ -371,44 +377,49 @@ export default function Application({ pendingStudents, verifiedStudents, adviser
                             </div>
                         ) : (
                             <div className="space-y-4">
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                    {verifiedStudents.map((student) => (
-                                        <div
-                                            key={student.id}
-                                            className="flex items-center space-x-3 p-3 border rounded-lg"
-                                        >
-                                            <Checkbox
-                                                checked={selectedVerifiedStudents.includes(student.id)}
-                                                onCheckedChange={(checked) =>
-                                                    handleSelectVerifiedStudent(student.id, checked as boolean)
-                                                }
-                                            />
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center justify-between mb-2">
-                                                    <p className="text-sm font-medium truncate">
-                                                        {student.username}
-                                                    </p>
-                                                    <Badge variant="secondary" className="text-xs">
-                                                        Verified
-                                                    </Badge>
-                                                </div>
-                                                <p className="text-xs text-muted-foreground truncate mb-2">
-                                                    {student.email}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {verifiedStudents.map((student) => (
+                                    <div
+                                        key={student.id}
+                                        className="flex items-center space-x-3 p-3 border rounded-lg"
+                                    >
+                                        <Checkbox
+                                            checked={selectedVerifiedStudents.includes(student.id)}
+                                            onCheckedChange={(checked) =>
+                                                handleSelectVerifiedStudent(student.id, checked as boolean)
+                                            }
+                                        />
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <p className="text-sm font-medium truncate">
+                                                    {student.username}
                                                 </p>
-                                                {student.student && (
-                                                    <div className="space-y-1">
-                                                        <p className="text-xs">
-                                                            <span className="font-medium">Name:</span> {student.student.first_name} {student.student.last_name}
-                                                        </p>
-                                                        <p className="text-xs">
-                                                            <span className="font-medium">Assessment:</span> {student.student.is_submit ? 'Completed' : 'Pending'}
-                                                        </p>
-                                                    </div>
-                                                )}
+                                                <Badge variant="secondary" className="text-xs">
+                                                    Verified
+                                                </Badge>
                                             </div>
+                                            <p className="text-xs text-muted-foreground truncate mb-2">
+                                                {student.email}
+                                            </p>
+                                            {currentSectionId === null && student.academe_accounts && student.academe_accounts.length > 0 && (
+                                                <p className="text-xs text-blue-600 truncate mb-2">
+                                                    {student.academe_accounts[0].section.section_name}
+                                                </p>
+                                            )}
+                                            {student.student && (
+                                                <div className="space-y-1">
+                                                    <p className="text-xs">
+                                                        <span className="font-medium">Name:</span> {student.student.first_name} {student.student.last_name}
+                                                    </p>
+                                                    <p className="text-xs">
+                                                        <span className="font-medium">Assessment:</span> {student.student.is_submit ? 'Completed' : 'Pending'}
+                                                    </p>
+                                                </div>
+                                            )}
                                         </div>
-                                    ))}
-                                </div>
+                                    </div>
+                                ))}
+                            </div>
 
                                 {selectedVerifiedStudents.length > 0 && (
                                     <div className="flex items-center gap-2 pt-4 border-t">

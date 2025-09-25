@@ -53,22 +53,22 @@ class AdviserController extends Controller
 
         // Get current section from session or default to first section
         $currentSectionId = $this->getCurrentSectionId($request, $adviserSections);
-        $currentSection = $adviserSections->where('section_id', $currentSectionId)->first();
+        $currentSection = $currentSectionId ? $adviserSections->where('section_id', $currentSectionId)->first() : null;
 
         // Get comprehensive statistics
-        $stats = $this->getDashboardStats($currentSectionId);
+        $stats = $this->getDashboardStats($currentSectionId, $adviserSections);
         
         // Get recent assessment submissions
-        $recentAssessments = $this->getRecentAssessments($currentSectionId);
+        $recentAssessments = $this->getRecentAssessments($currentSectionId, $adviserSections);
         
         // Get placement overview
-        $placementOverview = $this->getPlacementOverview($currentSectionId);
+        $placementOverview = $this->getPlacementOverview($currentSectionId, $adviserSections);
 
         return Inertia::render('adviser/dashboard', [
             'stats' => $stats,
             'recentAssessments' => $recentAssessments,
             'placementOverview' => $placementOverview,
-            'adviserSection' => $currentSection->section_name ?? null,
+            'adviserSection' => $currentSectionId === null ? 'All Sections' : ($currentSection->section_name ?? null),
             'adviserSections' => $adviserSections->map(function ($section) {
                 return [
                     'section_id' => $section->section_id,
@@ -82,50 +82,114 @@ class AdviserController extends Controller
     /**
      * Get dashboard statistics for the adviser's section.
      */
-    private function getDashboardStats($sectionId): array
+    private function getDashboardStats($sectionId, $adviserSections): array
     {
-        // Total students in section
-        $totalStudents = User::whereHas('roles', function ($query) {
-                $query->where('name', 'student');
-            })
-            ->whereHas('academeAccounts', function ($query) use ($sectionId) {
-                $query->where('section_id', $sectionId);
-            })
-            ->where('status', '!=', 'archived')
-            ->count();
+        // If sectionId is null, aggregate data from all sections
+        if ($sectionId === null) {
+            $sectionIds = $adviserSections->pluck('section_id')->toArray();
+            
+            // Total students across all sections
+            $totalStudents = User::whereHas('roles', function ($query) {
+                    $query->where('name', 'student');
+                })
+                ->whereHas('academeAccounts', function ($query) use ($sectionIds) {
+                    $query->whereIn('section_id', $sectionIds);
+                })
+                ->where('status', '!=', 'archived')
+                ->count();
 
-        // Students who have completed assessment
-        $completedAssessments = User::whereHas('roles', function ($query) {
-                $query->where('name', 'student');
-            })
-            ->whereHas('academeAccounts', function ($query) use ($sectionId) {
-                $query->where('section_id', $sectionId);
-            })
-            ->whereHas('student', function ($query) {
-                $query->where('is_submit', true);
-            })
-            ->where('status', '!=', 'archived')
-            ->count();
+            // Students who have completed assessment across all sections
+            $completedAssessments = User::whereHas('roles', function ($query) {
+                    $query->where('name', 'student');
+                })
+                ->whereHas('academeAccounts', function ($query) use ($sectionIds) {
+                    $query->whereIn('section_id', $sectionIds);
+                })
+                ->whereHas('student', function ($query) {
+                    $query->where('is_submit', true);
+                })
+                ->where('status', '!=', 'archived')
+                ->count();
 
-        // Students who have been placed (placeholder for now)
-        $placedStudents = 0; // Will be implemented when student matches are added
+            // Students who have been placed across all sections
+            $placedStudents = User::whereHas('roles', function ($query) {
+                    $query->where('name', 'student');
+                })
+                ->whereHas('academeAccounts', function ($query) use ($sectionIds) {
+                    $query->whereIn('section_id', $sectionIds);
+                })
+                ->whereHas('student.placements', function ($query) {
+                    $query->where('status', 'approved');
+                })
+                ->where('status', '!=', 'archived')
+                ->count();
 
-        // Pending students (not yet verified)
-        $pendingStudents = User::whereHas('roles', function ($query) {
-                $query->where('name', 'student');
-            })
-            ->whereHas('academeAccounts', function ($query) use ($sectionId) {
-                $query->where('section_id', $sectionId);
-            })
-            ->whereDoesntHave('student')
-            ->where('status', '!=', 'archived')
-            ->count();
+            // Pending students across all sections
+            $pendingStudents = User::whereHas('roles', function ($query) {
+                    $query->where('name', 'student');
+                })
+                ->whereHas('academeAccounts', function ($query) use ($sectionIds) {
+                    $query->whereIn('section_id', $sectionIds);
+                })
+                ->whereDoesntHave('student')
+                ->where('status', '!=', 'archived')
+                ->count();
 
-        // Average assessment score for the section
-        $averageScore = StudentScore::whereHas('student.user.academeAccounts', function ($query) use ($sectionId) {
-                $query->where('section_id', $sectionId);
-            })
-            ->avg('score') ?? 0;
+            // Average assessment score across all sections
+            $averageScore = StudentScore::whereHas('student.user.academeAccounts', function ($query) use ($sectionIds) {
+                    $query->whereIn('section_id', $sectionIds);
+                })
+                ->avg('score') ?? 0;
+        } else {
+            // Single section logic (existing code)
+            $totalStudents = User::whereHas('roles', function ($query) {
+                    $query->where('name', 'student');
+                })
+                ->whereHas('academeAccounts', function ($query) use ($sectionId) {
+                    $query->where('section_id', $sectionId);
+                })
+                ->where('status', '!=', 'archived')
+                ->count();
+
+            $completedAssessments = User::whereHas('roles', function ($query) {
+                    $query->where('name', 'student');
+                })
+                ->whereHas('academeAccounts', function ($query) use ($sectionId) {
+                    $query->where('section_id', $sectionId);
+                })
+                ->whereHas('student', function ($query) {
+                    $query->where('is_submit', true);
+                })
+                ->where('status', '!=', 'archived')
+                ->count();
+
+            $placedStudents = User::whereHas('roles', function ($query) {
+                    $query->where('name', 'student');
+                })
+                ->whereHas('academeAccounts', function ($query) use ($sectionId) {
+                    $query->where('section_id', $sectionId);
+                })
+                ->whereHas('student.placements', function ($query) {
+                    $query->where('status', 'approved');
+                })
+                ->where('status', '!=', 'archived')
+                ->count();
+
+            $pendingStudents = User::whereHas('roles', function ($query) {
+                    $query->where('name', 'student');
+                })
+                ->whereHas('academeAccounts', function ($query) use ($sectionId) {
+                    $query->where('section_id', $sectionId);
+                })
+                ->whereDoesntHave('student')
+                ->where('status', '!=', 'archived')
+                ->count();
+
+            $averageScore = StudentScore::whereHas('student.user.academeAccounts', function ($query) use ($sectionId) {
+                    $query->where('section_id', $sectionId);
+                })
+                ->avg('score') ?? 0;
+        }
 
         return [
             'totalStudents' => $totalStudents,
@@ -141,20 +205,30 @@ class AdviserController extends Controller
     /**
      * Get recent assessment submissions for the adviser's section.
      */
-    private function getRecentAssessments($sectionId): array
+    private function getRecentAssessments($sectionId, $adviserSections): array
     {
-        return User::whereHas('roles', function ($query) {
+        $query = User::whereHas('roles', function ($query) {
                 $query->where('name', 'student');
-            })
-            ->whereHas('academeAccounts', function ($query) use ($sectionId) {
-                $query->where('section_id', $sectionId);
             })
             ->whereHas('student', function ($query) {
                 $query->where('is_submit', true);
             })
             ->where('status', '!=', 'archived')
-            ->with(['student.scores.subcategory.category'])
-            ->get()
+            ->with(['student.scores.subcategory.category', 'academeAccounts.section']);
+
+        // If sectionId is null, get from all sections
+        if ($sectionId === null) {
+            $sectionIds = $adviserSections->pluck('section_id')->toArray();
+            $query->whereHas('academeAccounts', function ($query) use ($sectionIds) {
+                $query->whereIn('section_id', $sectionIds);
+            });
+        } else {
+            $query->whereHas('academeAccounts', function ($query) use ($sectionId) {
+                $query->where('section_id', $sectionId);
+            });
+        }
+
+        return $query->get()
             ->map(function ($user) {
                 $student = $user->student;
                 $totalScore = $student->scores->sum('score');
@@ -165,6 +239,7 @@ class AdviserController extends Controller
                     'id' => $user->id,
                     'username' => $user->username,
                     'name' => $student->first_name . ' ' . $student->last_name,
+                    'section' => $user->academeAccounts->first()->section->section_name ?? 'Unknown',
                     'totalScore' => $totalScore,
                     'percentage' => $percentage,
                     'submittedAt' => $student->updated_at->format('M d, Y'),
@@ -186,14 +261,95 @@ class AdviserController extends Controller
     /**
      * Get placement overview for the adviser's section.
      */
-    private function getPlacementOverview($sectionId): array
+    private function getPlacementOverview($sectionId, $adviserSections): array
     {
-        // Placeholder for placement data - will be implemented when student matches are added
+        $query = User::whereHas('roles', function ($query) {
+                $query->where('name', 'student');
+            })
+            ->whereHas('student', function ($query) {
+                $query->where('is_submit', true);
+            })
+            ->where('status', '!=', 'archived')
+            ->with(['student.placements.internship.hte', 'academeAccounts.section']);
+
+        // If sectionId is null, get from all sections
+        if ($sectionId === null) {
+            $sectionIds = $adviserSections->pluck('section_id')->toArray();
+            $query->whereHas('academeAccounts', function ($query) use ($sectionIds) {
+                $query->whereIn('section_id', $sectionIds);
+            });
+        } else {
+            $query->whereHas('academeAccounts', function ($query) use ($sectionId) {
+                $query->where('section_id', $sectionId);
+            });
+        }
+
+        $students = $query->get();
+
+        $studentsWithPlacements = [];
+        $placementsByCompany = [];
+        $totalPlaced = 0;
+        $totalUnplaced = 0;
+
+        foreach ($students as $user) {
+            $student = $user->student;
+            $placements = $student->placements;
+            
+            // Check if student has any approved placements
+            $approvedPlacements = $placements->where('status', 'approved');
+            $isPlaced = $approvedPlacements->isNotEmpty();
+            
+            if ($isPlaced) {
+                $totalPlaced++;
+                
+                // Get the best placement (highest compatibility score)
+                $topMatch = $approvedPlacements->sortByDesc('compatibility_score')->first();
+                
+                $studentsWithPlacements[] = [
+                    'id' => $student->id,
+                    'username' => $user->username,
+                    'name' => $student->first_name . ' ' . $student->last_name,
+                    'section' => $user->academeAccounts->first()->section->section_name ?? 'Unknown',
+                    'isPlaced' => true,
+                    'topMatch' => [
+                        'position' => $topMatch->internship->position ?? 'N/A',
+                        'company' => $topMatch->internship->hte->company_name ?? 'N/A',
+                        'compatibilityScore' => round($topMatch->compatibility_score, 1),
+                        'rank' => 1, // This could be calculated based on score ranking
+                    ],
+                ];
+                
+                // Track placements by company
+                $companyName = $topMatch->internship->hte->company_name ?? 'Unknown Company';
+                if (isset($placementsByCompany[$companyName])) {
+                    $placementsByCompany[$companyName]['count']++;
+                    $placementsByCompany[$companyName]['students'][] = $student->first_name . ' ' . $student->last_name;
+                } else {
+                    $placementsByCompany[$companyName] = [
+                        'company' => $companyName,
+                        'count' => 1,
+                        'students' => [$student->first_name . ' ' . $student->last_name],
+                    ];
+                }
+            } else {
+                $totalUnplaced++;
+                
+                $studentsWithPlacements[] = [
+                    'id' => $student->id,
+                    'username' => $user->username,
+                    'name' => $student->first_name . ' ' . $student->last_name,
+                    'section' => $user->academeAccounts->first()->section->section_name ?? 'Unknown',
+                    'isPlaced' => false,
+                    'topMatch' => null,
+                ];
+            }
+        }
+
         return [
-            'studentsWithPlacements' => [],
-            'placementsByCompany' => [],
-            'totalPlaced' => 0,
-            'totalUnplaced' => 0,
+            'studentsWithPlacements' => $studentsWithPlacements,
+            'placementsByCompany' => array_values($placementsByCompany),
+            'totalPlaced' => $totalPlaced,
+            'totalUnplaced' => $totalUnplaced,
         ];
     }
 
@@ -232,51 +388,84 @@ class AdviserController extends Controller
 
         // Get current section from session or default to first section
         $currentSectionId = $this->getCurrentSectionId($request, $adviserSections);
-        $currentSection = $adviserSections->where('section_id', $currentSectionId)->first();
+        $currentSection = $currentSectionId ? $adviserSections->where('section_id', $currentSectionId)->first() : null;
 
-        // Get pending students (users with student role in the same section who don't have a student record)
-        $pendingStudents = User::whereHas('roles', function ($query) {
+        // Build query for pending students
+        $pendingQuery = User::whereHas('roles', function ($query) {
                 $query->where('name', 'student');
-            })
-            ->whereHas('academeAccounts', function ($query) use ($currentSectionId) {
-                $query->where('section_id', $currentSectionId);
             })
             ->whereDoesntHave('student')
             ->where('status', '!=', 'archived')
-            ->with(['academeAccounts.section'])
-            ->get()
-            ->map(function ($user) {
-                return [
-                    'id' => $user->id,
-                    'username' => $user->username,
-                    'email' => $user->email,
-                    'section' => [
-                        'section_id' => $user->academeAccounts->first()->section->section_id,
-                        'section_name' => $user->academeAccounts->first()->section->section_name,
-                    ],
-                ];
-            });
+            ->with(['academeAccounts.section']);
 
-        // Get verified students (users with student role in the same section who have a student record)
-        $verifiedStudents = User::whereHas('roles', function ($query) {
+        // Build query for verified students
+        $verifiedQuery = User::whereHas('roles', function ($query) {
                 $query->where('name', 'student');
-            })
-            ->whereHas('academeAccounts', function ($query) use ($currentSectionId) {
-                $query->where('section_id', $currentSectionId);
             })
             ->whereHas('student')
             ->where('status', '!=', 'archived')
-            ->with(['academeAccounts.section', 'student'])
-            ->get()
+            ->with(['academeAccounts.section', 'student']);
+
+        // Apply section filter
+        if ($currentSectionId === null) {
+            // All sections
+            $sectionIds = $adviserSections->pluck('section_id')->toArray();
+            $pendingQuery->whereHas('academeAccounts', function ($query) use ($sectionIds) {
+                $query->whereIn('section_id', $sectionIds);
+            });
+            $verifiedQuery->whereHas('academeAccounts', function ($query) use ($sectionIds) {
+                $query->whereIn('section_id', $sectionIds);
+            });
+        } else {
+            // Single section
+            $pendingQuery->whereHas('academeAccounts', function ($query) use ($currentSectionId) {
+                $query->where('section_id', $currentSectionId);
+            });
+            $verifiedQuery->whereHas('academeAccounts', function ($query) use ($currentSectionId) {
+                $query->where('section_id', $currentSectionId);
+            });
+        }
+
+        // Get pending students
+        $pendingStudents = $pendingQuery->get()
             ->map(function ($user) {
                 return [
                     'id' => $user->id,
                     'username' => $user->username,
                     'email' => $user->email,
-                    'section' => [
-                        'section_id' => $user->academeAccounts->first()->section->section_id,
-                        'section_name' => $user->academeAccounts->first()->section->section_name,
-                    ],
+                    'academe_accounts' => $user->academeAccounts->map(function ($account) {
+                        return [
+                            'section' => [
+                                'section_id' => $account->section->section_id,
+                                'section_name' => $account->section->section_name,
+                            ]
+                        ];
+                    })->toArray(),
+                ];
+            });
+
+        // Get verified students
+        $verifiedStudents = $verifiedQuery->get()
+            ->map(function ($user) {
+                return [
+                    'id' => $user->id,
+                    'username' => $user->username,
+                    'email' => $user->email,
+                    'academe_accounts' => $user->academeAccounts->map(function ($account) {
+                        return [
+                            'section' => [
+                                'section_id' => $account->section->section_id,
+                                'section_name' => $account->section->section_name,
+                            ]
+                        ];
+                    })->toArray(),
+                    'student' => $user->student ? [
+                        'id' => $user->student->id,
+                        'student_number' => $user->student->student_number,
+                        'first_name' => $user->student->first_name,
+                        'last_name' => $user->student->last_name,
+                        'is_submit' => $user->student->is_submit,
+                    ] : null,
                 ];
             });
 
@@ -290,7 +479,7 @@ class AdviserController extends Controller
         return Inertia::render('adviser/application', [
             'pendingStudents' => $pendingStudents,
             'verifiedStudents' => $verifiedStudents,
-            'adviserSection' => $currentSection->section_name ?? null,
+            'adviserSection' => $currentSectionId === null ? 'All Sections' : ($currentSection->section_name ?? null),
             'adviserSections' => $adviserSections->map(function ($section) {
                 return [
                     'section_id' => $section->section_id,
@@ -552,21 +741,34 @@ class AdviserController extends Controller
 
         // Get current section from session or default to first section
         $currentSectionId = $this->getCurrentSectionId($request, $adviserSections);
-        $currentSection = $adviserSections->where('section_id', $currentSectionId)->first();
+        $currentSection = $currentSectionId ? $adviserSections->where('section_id', $currentSectionId)->first() : null;
 
-        // Get all students in the section with their details
-        $students = User::whereHas('roles', function ($query) {
+        // Build query for students
+        $query = User::whereHas('roles', function ($query) {
                 $query->where('name', 'student');
-            })
-            ->whereHas('academeAccounts', function ($query) use ($currentSectionId) {
-                $query->where('section_id', $currentSectionId);
             })
             ->where('status', '!=', 'archived')
             ->with([
                 'academeAccounts.section',
                 'student.scores.subcategory.category'
-            ])
-            ->get()
+            ]);
+
+        // Apply section filter
+        if ($currentSectionId === null) {
+            // All sections
+            $sectionIds = $adviserSections->pluck('section_id')->toArray();
+            $query->whereHas('academeAccounts', function ($query) use ($sectionIds) {
+                $query->whereIn('section_id', $sectionIds);
+            });
+        } else {
+            // Single section
+            $query->whereHas('academeAccounts', function ($query) use ($currentSectionId) {
+                $query->where('section_id', $currentSectionId);
+            });
+        }
+
+        // Get all students with their details
+        $students = $query->get()
             ->map(function ($user) {
                 $student = $user->student;
                 $hasAssessment = $student && $student->is_submit;
@@ -621,7 +823,7 @@ class AdviserController extends Controller
 
         return Inertia::render('adviser/students', [
             'students' => $students,
-            'adviserSection' => $currentSection->section_name ?? null,
+            'adviserSection' => $currentSectionId === null ? 'All Sections' : ($currentSection->section_name ?? null),
             'adviserSections' => $adviserSections->map(function ($section) {
                 return [
                     'section_id' => $section->section_id,
@@ -635,10 +837,15 @@ class AdviserController extends Controller
     /**
      * Get the current section ID from session or default to first available section.
      */
-    private function getCurrentSectionId(Request $request, $adviserSections): int
+    private function getCurrentSectionId(Request $request, $adviserSections): int|null
     {
         // Try to get from session first
         $sessionSectionId = $request->session()->get('adviser_current_section_id');
+        
+        // Handle "All Sections" option (null value)
+        if ($sessionSectionId === 'all' || $sessionSectionId === null) {
+            return null;
+        }
         
         if ($sessionSectionId && $adviserSections->contains('section_id', $sessionSectionId)) {
             return $sessionSectionId;
@@ -661,6 +868,12 @@ class AdviserController extends Controller
         
         if (!$adviserRecord) {
             return redirect()->back()->withErrors(['error' => 'Adviser record not found.']);
+        }
+
+        // Handle "All Sections" option
+        if ($sectionId === 'all') {
+            $request->session()->put('adviser_current_section_id', 'all');
+            return redirect()->back()->with('success', 'Switched to All Sections view.');
         }
 
         // Verify the adviser has access to this section
@@ -707,10 +920,10 @@ class AdviserController extends Controller
 
         // Get current section from session or default to first section
         $currentSectionId = $this->getCurrentSectionId($request, $adviserSections);
-        $currentSection = $adviserSections->where('section_id', $currentSectionId)->first();
+        $currentSection = $currentSectionId ? $adviserSections->where('section_id', $currentSectionId)->first() : null;
 
         return Inertia::render('adviser/report', [
-            'adviserSection' => $currentSection->section_name ?? null,
+            'adviserSection' => $currentSectionId === null ? 'All Sections' : ($currentSection->section_name ?? null),
             'adviserSections' => $adviserSections->map(function ($section) {
                 return [
                     'section_id' => $section->section_id,
@@ -733,16 +946,27 @@ class AdviserController extends Controller
             abort(403, 'Adviser record not found.');
         }
 
-        // Get current section from session
-        $currentSectionId = $request->session()->get('adviser_current_section_id');
-        if (!$currentSectionId) {
-            $currentSectionId = $adviserRecord->sections->first()->section_id;
+        // Get all sections assigned to this adviser
+        $adviserSections = $adviserRecord->sections;
+        
+        if ($adviserSections->isEmpty()) {
+            abort(403, 'No sections assigned to this adviser.');
         }
 
-        // Verify the adviser has access to this section
-        $hasAccess = $adviserRecord->sections->contains('section_id', $currentSectionId);
-        if (!$hasAccess) {
-            abort(403, 'You do not have access to this section.');
+        // Get current section from session
+        $currentSectionId = $request->session()->get('adviser_current_section_id');
+        
+        // Handle "All Sections" mode
+        if ($currentSectionId === 'all' || $currentSectionId === null) {
+            $currentSectionId = null; // Set to null for "All Sections"
+            $sectionName = 'All Sections';
+        } else {
+            // Verify the adviser has access to this section
+            $hasAccess = $adviserRecord->sections->contains('section_id', $currentSectionId);
+            if (!$hasAccess) {
+                abort(403, 'You do not have access to this section.');
+            }
+            $sectionName = \App\Models\Section::find($currentSectionId)->section_name ?? 'Unknown Section';
         }
 
         // Validate report type
@@ -752,8 +976,7 @@ class AdviserController extends Controller
         }
 
         // Get report data based on type
-        $reportData = $this->getReportDataForType($currentSectionId, $reportType);
-        $sectionName = \App\Models\Section::find($currentSectionId)->section_name ?? 'Unknown Section';
+        $reportData = $this->getReportDataForType($currentSectionId, $reportType, $adviserSections);
 
         // Generate HTML content for PDF
         $html = view("reports.adviser-{$reportType}", array_merge($reportData, [
@@ -781,16 +1004,27 @@ class AdviserController extends Controller
             abort(403, 'Adviser record not found.');
         }
 
-        // Get current section from session
-        $currentSectionId = $request->session()->get('adviser_current_section_id');
-        if (!$currentSectionId) {
-            $currentSectionId = $adviserRecord->sections->first()->section_id;
+        // Get all sections assigned to this adviser
+        $adviserSections = $adviserRecord->sections;
+        
+        if ($adviserSections->isEmpty()) {
+            abort(403, 'No sections assigned to this adviser.');
         }
 
-        // Verify the adviser has access to this section
-        $hasAccess = $adviserRecord->sections->contains('section_id', $currentSectionId);
-        if (!$hasAccess) {
-            abort(403, 'You do not have access to this section.');
+        // Get current section from session
+        $currentSectionId = $request->session()->get('adviser_current_section_id');
+        
+        // Handle "All Sections" mode
+        if ($currentSectionId === 'all' || $currentSectionId === null) {
+            $currentSectionId = null; // Set to null for "All Sections"
+            $sectionName = 'All Sections';
+        } else {
+            // Verify the adviser has access to this section
+            $hasAccess = $adviserRecord->sections->contains('section_id', $currentSectionId);
+            if (!$hasAccess) {
+                abort(403, 'You do not have access to this section.');
+            }
+            $sectionName = \App\Models\Section::find($currentSectionId)->section_name ?? 'Unknown Section';
         }
 
         // Validate report type
@@ -799,8 +1033,7 @@ class AdviserController extends Controller
             abort(404, 'Invalid report type.');
         }
 
-        $sectionName = \App\Models\Section::find($currentSectionId)->section_name ?? 'Unknown Section';
-        $csvContent = $this->generateCSVContent($currentSectionId, $reportType, $sectionName);
+        $csvContent = $this->generateCSVContent($currentSectionId, $reportType, $sectionName, $adviserSections);
 
         return response($csvContent, 200, [
             'Content-Type' => 'text/csv',
@@ -817,55 +1050,67 @@ class AdviserController extends Controller
     }
 
     /**
+     * Apply section filter to a query based on current section selection
+     */
+    private function applySectionFilter($query, $sectionId, $adviserSections, $relation = 'academeAccounts')
+    {
+        if ($sectionId === null) {
+            // All sections mode
+            $sectionIds = $adviserSections->pluck('section_id')->toArray();
+            $query->whereHas($relation, function ($q) use ($sectionIds) {
+                $q->whereIn('section_id', $sectionIds);
+            });
+        } else {
+            // Single section mode
+            $query->whereHas($relation, function ($q) use ($sectionId) {
+                $q->where('section_id', $sectionId);
+            });
+        }
+        return $query;
+    }
+
+    /**
      * Get overview statistics for reports.
      */
-    private function getOverviewStats($sectionId): array
+    private function getOverviewStats($sectionId, $adviserSections): array
     {
-        $totalStudents = User::whereHas('roles', function ($query) {
+        $totalStudents = $this->applySectionFilter(
+            User::whereHas('roles', function ($query) {
                 $query->where('name', 'student');
-            })
-            ->whereHas('academeAccounts', function ($query) use ($sectionId) {
-                $query->where('section_id', $sectionId);
-            })
-            ->where('status', '!=', 'archived')
-            ->count();
+            })->where('status', '!=', 'archived'),
+            $sectionId, $adviserSections
+        )->count();
 
-        $completedAssessments = User::whereHas('roles', function ($query) {
+        $completedAssessments = $this->applySectionFilter(
+            User::whereHas('roles', function ($query) {
                 $query->where('name', 'student');
-            })
-            ->whereHas('academeAccounts', function ($query) use ($sectionId) {
-                $query->where('section_id', $sectionId);
-            })
-            ->whereHas('student', function ($query) {
+            })->whereHas('student', function ($query) {
                 $query->where('is_submit', true);
-            })
-            ->where('status', '!=', 'archived')
-            ->count();
+            })->where('status', '!=', 'archived'),
+            $sectionId, $adviserSections
+        )->count();
 
-        $pendingStudents = User::whereHas('roles', function ($query) {
+        $pendingStudents = $this->applySectionFilter(
+            User::whereHas('roles', function ($query) {
                 $query->where('name', 'student');
-            })
-            ->whereHas('academeAccounts', function ($query) use ($sectionId) {
-                $query->where('section_id', $sectionId);
-            })
-            ->whereDoesntHave('student')
-            ->where('status', '!=', 'archived')
-            ->count();
+            })->whereDoesntHave('student')->where('status', '!=', 'archived'),
+            $sectionId, $adviserSections
+        )->count();
 
-        $averageScore = StudentScore::whereHas('student.user.academeAccounts', function ($query) use ($sectionId) {
-                $query->where('section_id', $sectionId);
-            })
-            ->avg('score') ?? 0;
+        $averageScore = $this->applySectionFilter(
+            StudentScore::query(),
+            $sectionId, $adviserSections, 'student.user.academeAccounts'
+        )->avg('score') ?? 0;
 
-        $highestScore = StudentScore::whereHas('student.user.academeAccounts', function ($query) use ($sectionId) {
-                $query->where('section_id', $sectionId);
-            })
-            ->max('score') ?? 0;
+        $highestScore = $this->applySectionFilter(
+            StudentScore::query(),
+            $sectionId, $adviserSections, 'student.user.academeAccounts'
+        )->max('score') ?? 0;
 
-        $lowestScore = StudentScore::whereHas('student.user.academeAccounts', function ($query) use ($sectionId) {
-                $query->where('section_id', $sectionId);
-            })
-            ->min('score') ?? 0;
+        $lowestScore = $this->applySectionFilter(
+            StudentScore::query(),
+            $sectionId, $adviserSections, 'student.user.academeAccounts'
+        )->min('score') ?? 0;
 
         return [
             'totalStudents' => $totalStudents,
@@ -882,20 +1127,21 @@ class AdviserController extends Controller
     /**
      * Get assessment analytics data.
      */
-    private function getAssessmentAnalytics($sectionId): array
+    private function getAssessmentAnalytics($sectionId, $adviserSections): array
     {
-        $students = User::whereHas('roles', function ($query) {
+        $query = User::whereHas('roles', function ($query) {
                 $query->where('name', 'student');
-            })
-            ->whereHas('academeAccounts', function ($query) use ($sectionId) {
-                $query->where('section_id', $sectionId);
             })
             ->whereHas('student', function ($query) {
                 $query->where('is_submit', true);
             })
             ->where('status', '!=', 'archived')
-            ->with(['student.scores'])
-            ->get();
+            ->with(['student.scores']);
+
+        // Apply section filter
+        $this->applySectionFilter($query, $sectionId, $adviserSections);
+
+        $students = $query->get();
 
         $scoreDistribution = [
             'excellent' => 0, // 90-100%
@@ -939,13 +1185,14 @@ class AdviserController extends Controller
     /**
      * Get category breakdown data.
      */
-    private function getCategoryBreakdown($sectionId): array
+    private function getCategoryBreakdown($sectionId, $adviserSections): array
     {
-        $categoryScores = StudentScore::whereHas('student.user.academeAccounts', function ($query) use ($sectionId) {
-                $query->where('section_id', $sectionId);
-            })
-            ->with(['subcategory.category'])
-            ->get()
+        $query = StudentScore::with(['subcategory.category']);
+        
+        // Apply section filter
+        $this->applySectionFilter($query, $sectionId, $adviserSections, 'student.user.academeAccounts');
+        
+        $categoryScores = $query->get()
             ->groupBy('subcategory.category.category_name')
             ->map(function ($scores, $categoryName) {
                 return [
@@ -965,17 +1212,18 @@ class AdviserController extends Controller
     /**
      * Get student progress data.
      */
-    private function getStudentProgress($sectionId): array
+    private function getStudentProgress($sectionId, $adviserSections): array
     {
-        return User::whereHas('roles', function ($query) {
+        $query = User::whereHas('roles', function ($query) {
                 $query->where('name', 'student');
             })
-            ->whereHas('academeAccounts', function ($query) use ($sectionId) {
-                $query->where('section_id', $sectionId);
-            })
             ->where('status', '!=', 'archived')
-            ->with(['student.scores.subcategory.category'])
-            ->get()
+            ->with(['student.scores.subcategory.category', 'academeAccounts.section']);
+
+        // Apply section filter
+        $this->applySectionFilter($query, $sectionId, $adviserSections);
+
+        return $query->get()
             ->map(function ($user) {
                 $student = $user->student;
                 $hasAssessment = $student && $student->is_submit;
@@ -988,7 +1236,9 @@ class AdviserController extends Controller
                     return [
                         'id' => $user->id,
                         'username' => $user->username,
+                        'email' => $user->email,
                         'name' => $student->first_name . ' ' . $student->last_name,
+                        'section' => $user->academeAccounts->first()->section->section_name ?? 'Unknown',
                         'status' => $user->status,
                         'hasAssessment' => true,
                         'score' => $totalScore,
@@ -1000,7 +1250,9 @@ class AdviserController extends Controller
                     return [
                         'id' => $user->id,
                         'username' => $user->username,
+                        'email' => $user->email,
                         'name' => $student ? ($student->first_name . ' ' . $student->last_name) : 'Pending',
+                        'section' => $user->academeAccounts->first()->section->section_name ?? 'Unknown',
                         'status' => $user->status,
                         'hasAssessment' => false,
                         'score' => 0,
@@ -1022,7 +1274,7 @@ class AdviserController extends Controller
     /**
      * Get monthly trends data.
      */
-    private function getMonthlyTrends($sectionId): array
+    private function getMonthlyTrends($sectionId, $adviserSections): array
     {
         // Get assessment submissions by month for the last 6 months
         $months = [];
@@ -1032,19 +1284,20 @@ class AdviserController extends Controller
             $date = now()->subMonths($i);
             $monthName = $date->format('M Y');
             
-            $count = User::whereHas('roles', function ($query) {
+            $query = User::whereHas('roles', function ($query) {
                     $query->where('name', 'student');
-                })
-                ->whereHas('academeAccounts', function ($query) use ($sectionId) {
-                    $query->where('section_id', $sectionId);
                 })
                 ->whereHas('student', function ($query) use ($date) {
                     $query->where('is_submit', true)
                           ->whereMonth('updated_at', $date->month)
                           ->whereYear('updated_at', $date->year);
                 })
-                ->where('status', '!=', 'archived')
-                ->count();
+                ->where('status', '!=', 'archived');
+
+            // Apply section filter
+            $this->applySectionFilter($query, $sectionId, $adviserSections);
+            
+            $count = $query->count();
             
             $months[] = $monthName;
             $submissions[] = $count;
@@ -1094,16 +1347,16 @@ class AdviserController extends Controller
     /**
      * Get student list data for reports.
      */
-    private function getStudentListData($sectionId, $dateFilter)
+    private function getStudentListData($sectionId, $dateFilter, $adviserSections)
     {
         $query = User::whereHas('roles', function ($query) {
                 $query->where('name', 'student');
             })
-            ->whereHas('academeAccounts', function ($query) use ($sectionId) {
-                $query->where('section_id', $sectionId);
-            })
             ->where('status', '!=', 'archived')
             ->with(['academeAccounts.section', 'student.scores.subcategory.category']);
+
+        // Apply section filter
+        $this->applySectionFilter($query, $sectionId, $adviserSections);
 
         if ($dateFilter) {
             $query->whereHas('student', function ($query) use ($dateFilter) {
@@ -1132,39 +1385,39 @@ class AdviserController extends Controller
     /**
      * Get report data based on report type
      */
-    private function getReportDataForType($sectionId, $reportType): array
+    private function getReportDataForType($sectionId, $reportType, $adviserSections): array
     {
         switch ($reportType) {
             case 'student-list':
                 return [
-                    'overviewStats' => $this->getOverviewStats($sectionId),
-                    'studentProgress' => $this->getStudentProgress($sectionId),
+                    'overviewStats' => $this->getOverviewStats($sectionId, $adviserSections),
+                    'studentProgress' => $this->getStudentProgress($sectionId, $adviserSections),
                 ];
             case 'assessment-summary':
                 return [
-                    'overviewStats' => $this->getOverviewStats($sectionId),
-                    'assessmentAnalytics' => $this->getAssessmentAnalytics($sectionId),
+                    'overviewStats' => $this->getOverviewStats($sectionId, $adviserSections),
+                    'assessmentAnalytics' => $this->getAssessmentAnalytics($sectionId, $adviserSections),
                 ];
             case 'performance-analysis':
                 return [
-                    'categoryBreakdown' => $this->getCategoryBreakdown($sectionId),
-                    'topPerformers' => array_slice($this->getStudentProgress($sectionId), 0, 10),
-                    'assessmentAnalytics' => $this->getAssessmentAnalytics($sectionId),
+                    'categoryBreakdown' => $this->getCategoryBreakdown($sectionId, $adviserSections),
+                    'topPerformers' => array_slice($this->getStudentProgress($sectionId, $adviserSections), 0, 10),
+                    'assessmentAnalytics' => $this->getAssessmentAnalytics($sectionId, $adviserSections),
                 ];
             case 'progress-report':
                 return [
-                    'studentProgress' => $this->getStudentProgress($sectionId),
-                    'overviewStats' => $this->getOverviewStats($sectionId),
+                    'studentProgress' => $this->getStudentProgress($sectionId, $adviserSections),
+                    'overviewStats' => $this->getOverviewStats($sectionId, $adviserSections),
                 ];
             case 'endorsed-students':
                 return [
-                    'endorsedStudents' => $this->getEndorsedStudents($sectionId),
-                    'overviewStats' => $this->getOverviewStats($sectionId),
+                    'endorsedStudents' => $this->getEndorsedStudents($sectionId, $adviserSections),
+                    'overviewStats' => $this->getOverviewStats($sectionId, $adviserSections),
                 ];
             case 'placed-students':
                 return [
-                    'placedStudents' => $this->getPlacedStudents($sectionId),
-                    'overviewStats' => $this->getOverviewStats($sectionId),
+                    'placedStudents' => $this->getPlacedStudents($sectionId, $adviserSections),
+                    'overviewStats' => $this->getOverviewStats($sectionId, $adviserSections),
                 ];
             default:
                 return [];
@@ -1174,14 +1427,14 @@ class AdviserController extends Controller
     /**
      * Generate CSV content based on report type
      */
-    private function generateCSVContent($sectionId, $reportType, $sectionName): string
+    private function generateCSVContent($sectionId, $reportType, $sectionName, $adviserSections): string
     {
         $csvContent = ucwords(str_replace('-', ' ', $reportType)) . " Report - {$sectionName}\n";
         $csvContent .= "Generated: " . now()->format('F d, Y \a\t h:i A') . "\n\n";
 
         switch ($reportType) {
             case 'student-list':
-                return $this->generateStudentListCSV($sectionId, $csvContent);
+                return $this->generateStudentListCSV($sectionId, $csvContent, $adviserSections);
             case 'assessment-summary':
                 return $this->generateAssessmentSummaryCSV($sectionId, $csvContent);
             case 'performance-analysis':
@@ -1200,9 +1453,9 @@ class AdviserController extends Controller
     /**
      * Generate Student List CSV
      */
-    private function generateStudentListCSV($sectionId, $csvContent): string
+    private function generateStudentListCSV($sectionId, $csvContent, $adviserSections): string
     {
-        $studentData = $this->getStudentListData($sectionId, null);
+        $studentData = $this->getStudentListData($sectionId, null, $adviserSections);
         
         $csvContent .= "Student Information\n";
         $csvContent .= "Username,Email,Name,Status,Section,Has Assessment,Assessment Score,Assessment Percentage,Submitted At\n";
@@ -1320,13 +1573,14 @@ class AdviserController extends Controller
     /**
      * Get endorsed students for the adviser's section
      */
-    private function getEndorsedStudents($sectionId): array
+    private function getEndorsedStudents($sectionId, $adviserSections): array
     {
-        return \App\Models\Endorsement::whereHas('student.user.academeAccounts', function ($query) use ($sectionId) {
-                $query->where('section_id', $sectionId);
-            })
-            ->with(['student.user', 'internship.hte'])
-            ->get()
+        $query = \App\Models\Endorsement::with(['student.user', 'internship.hte']);
+        
+        // Apply section filter
+        $this->applySectionFilter($query, $sectionId, $adviserSections, 'student.user.academeAccounts');
+        
+        return $query->get()
             ->map(function ($endorsement) {
                 return [
                     'id' => $endorsement->id,
@@ -1362,13 +1616,14 @@ class AdviserController extends Controller
     /**
      * Get placed students for the adviser's section
      */
-    private function getPlacedStudents($sectionId): array
+    private function getPlacedStudents($sectionId, $adviserSections): array
     {
-        return \App\Models\StudentPlacement::whereHas('student.user.academeAccounts', function ($query) use ($sectionId) {
-                $query->where('section_id', $sectionId);
-            })
-            ->with(['student.user', 'internship.hte'])
-            ->get()
+        $query = \App\Models\StudentPlacement::with(['student.user', 'internship.hte']);
+        
+        // Apply section filter
+        $this->applySectionFilter($query, $sectionId, $adviserSections, 'student.user.academeAccounts');
+        
+        return $query->get()
             ->map(function ($placement) {
                 return [
                     'id' => $placement->id,

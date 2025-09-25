@@ -11,9 +11,7 @@ import {
     CheckCircleIcon,
     BriefcaseIcon,
     ClockIcon,
-    TrendingUpIcon,
     BarChart3Icon,
-    UserCheckIcon,
     BuildingIcon
 } from 'lucide-react';
 
@@ -29,7 +27,6 @@ interface DashboardStats {
     completedAssessments: number;
     placedStudents: number;
     pendingStudents: number;
-    averageScore: number;
     completionRate: number;
     placementRate: number;
 }
@@ -38,6 +35,7 @@ interface RecentAssessment {
     id: number;
     username: string;
     name: string;
+    section?: string;
     totalScore: number;
     percentage: number;
     submittedAt: string;
@@ -52,6 +50,7 @@ interface PlacementOverview {
         id: number;
         username: string;
         name: string;
+        section?: string;
         isPlaced: boolean;
         topMatch?: {
             position: string;
@@ -83,7 +82,7 @@ interface Props {
     currentSectionId: number | null;
 }
 
-export default function AdviserDashboard({ stats, recentAssessments, adviserSection, adviserSections, currentSectionId }: Props) {
+export default function AdviserDashboard({ stats, recentAssessments, placementOverview, adviserSection, adviserSections, currentSectionId }: Props) {
     if (!adviserSection) {
         return (
             <AppLayout breadcrumbs={breadcrumbs}>
@@ -118,19 +117,15 @@ export default function AdviserDashboard({ stats, recentAssessments, adviserSect
                                 Section: {adviserSection}
                             </p>
                         </div>
-                        {currentSectionId && (
+                        {adviserSections.length > 0 && (
                             <SectionSwitcher 
                                 sections={adviserSections}
                                 currentSectionId={currentSectionId}
+                                showAllSections={true}
                                 className="ml-4"
                             />
                         )}
                     </div>
-                    <Button asChild>
-                        <Link href={route('student-verification')}>
-                            Verify Students
-                        </Link>
-                    </Button>
                 </div>
 
                 {/* Notification Banner */}
@@ -158,7 +153,7 @@ export default function AdviserDashboard({ stats, recentAssessments, adviserSect
                 )}
 
                 {/* Statistics Cards */}
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium">Total Students</CardTitle>
@@ -207,28 +202,23 @@ export default function AdviserDashboard({ stats, recentAssessments, adviserSect
                             <BriefcaseIcon className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">{stats.placedStudents}</div>
+                            <div className="text-2xl font-bold">{placementOverview.totalPlaced}</div>
                             <div className="flex items-center space-x-2">
-                                <Progress value={stats.placementRate} className="h-2 flex-1" />
+                                <Progress 
+                                    value={placementOverview.totalPlaced + placementOverview.totalUnplaced > 0 
+                                        ? (placementOverview.totalPlaced / (placementOverview.totalPlaced + placementOverview.totalUnplaced)) * 100 
+                                        : 0} 
+                                    className="h-2 flex-1" 
+                                />
                                 <span className="text-xs text-muted-foreground">
-                                    {stats.placementRate}%
+                                    {placementOverview.totalPlaced + placementOverview.totalUnplaced > 0 
+                                        ? Math.round((placementOverview.totalPlaced / (placementOverview.totalPlaced + placementOverview.totalUnplaced)) * 100)
+                                        : 0}%
                                 </span>
                             </div>
                         </CardContent>
                     </Card>
 
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Average Score</CardTitle>
-                            <TrendingUpIcon className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{stats.averageScore}</div>
-                            <p className="text-xs text-muted-foreground">
-                                Section average
-                            </p>
-                        </CardContent>
-                    </Card>
                 </div>
 
                 {/* Main Content Grid */}
@@ -264,6 +254,9 @@ export default function AdviserDashboard({ stats, recentAssessments, adviserSect
                                                 </div>
                                                 <p className="text-xs text-muted-foreground mb-2">
                                                     {assessment.username} • {assessment.submittedAt}
+                                                    {currentSectionId === null && assessment.section && (
+                                                        <span className="text-blue-600"> • {assessment.section}</span>
+                                                    )}
                                                 </p>
                                                 <div className="flex flex-wrap gap-1">
                                                     {assessment.categories.slice(0, 3).map((category, index) => (
@@ -297,58 +290,80 @@ export default function AdviserDashboard({ stats, recentAssessments, adviserSect
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <div className="text-center py-8 text-muted-foreground">
-                                <BuildingIcon className="h-12 w-12 mx-auto mb-3 text-muted-foreground/50" />
-                                <p className="text-sm">
-                                    Placement tracking will be available once student matching is implemented.
-                                </p>
-                            </div>
+                            {placementOverview.studentsWithPlacements.length === 0 ? (
+                                <div className="text-center py-8 text-muted-foreground">
+                                    <BuildingIcon className="h-12 w-12 mx-auto mb-3 text-muted-foreground/50" />
+                                    <p className="text-sm">
+                                        No placement data available yet.
+                                    </p>
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    {/* Placement Summary */}
+                                    <div className="grid grid-cols-2 gap-4 mb-4">
+                                        <div className="text-center p-3 bg-green-50 rounded-lg">
+                                            <div className="text-2xl font-bold text-green-600">
+                                                {placementOverview.totalPlaced}
+                                            </div>
+                                            <div className="text-sm text-green-700">Placed Students</div>
+                                        </div>
+                                        <div className="text-center p-3 bg-amber-50 rounded-lg">
+                                            <div className="text-2xl font-bold text-amber-600">
+                                                {placementOverview.totalUnplaced}
+                                            </div>
+                                            <div className="text-sm text-amber-700">Unplaced Students</div>
+                                        </div>
+                                    </div>
+
+                                    {/* Students with Placements */}
+                                    <div className="space-y-3">
+                                        <h4 className="font-medium text-sm text-muted-foreground">Recent Placements</h4>
+                                        {placementOverview.studentsWithPlacements
+                                            .filter(student => student.isPlaced && student.topMatch)
+                                            .slice(0, 5)
+                                            .map((student) => (
+                                                <div key={student.id} className="flex items-center justify-between p-3 border rounded-lg">
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-sm font-medium truncate">
+                                                            {student.name}
+                                                        </p>
+                                                        <p className="text-xs text-muted-foreground">
+                                                            {student.topMatch?.position} at {student.topMatch?.company}
+                                                            {currentSectionId === null && student.section && (
+                                                                <span className="text-blue-600"> • {student.section}</span>
+                                                            )}
+                                                        </p>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <div className="text-sm font-medium">
+                                                            {student.topMatch?.compatibilityScore}%
+                                                        </div>
+                                                        <div className="text-xs text-muted-foreground">
+                                                            Match Score
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                    </div>
+
+                                    {/* Company Distribution */}
+                                    {placementOverview.placementsByCompany.length > 0 && (
+                                        <div className="space-y-3">
+                                            <h4 className="font-medium text-sm text-muted-foreground">Placements by Company</h4>
+                                            {placementOverview.placementsByCompany.slice(0, 3).map((company, index) => (
+                                                <div key={index} className="flex items-center justify-between p-2 bg-muted/50 rounded">
+                                                    <span className="text-sm font-medium">{company.company}</span>
+                                                    <span className="text-sm text-muted-foreground">{company.count} students</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
                 </div>
 
-                {/* Quick Actions */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Quick Actions</CardTitle>
-                        <CardDescription>
-                            Common tasks and shortcuts
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="grid gap-4 md:grid-cols-3">
-                            <Button asChild variant="outline" className="h-auto p-4 flex-col gap-2">
-                                <Link href={route('adviser.student-list')}>
-                                    <UserCheckIcon className="h-6 w-6" />
-                                    <span>View Students</span>
-                                    <span className="text-xs text-muted-foreground">
-                                        View all students and their details
-                                    </span>
-                                </Link>
-                            </Button>
-
-                            <Button asChild variant="outline" className="h-auto p-4 flex-col gap-2">
-                                <Link href={route('student-verification')}>
-                                    <BarChart3Icon className="h-6 w-6" />
-                                    <span>Verify Students</span>
-                                    <span className="text-xs text-muted-foreground">
-                                        Approve or reject student requests
-                                    </span>
-                                </Link>
-                            </Button>
-
-                            <Button asChild variant="outline" className="h-auto p-4 flex-col gap-2">
-                                <Link href={route('adviser.student-list')}>
-                                    <BriefcaseIcon className="h-6 w-6" />
-                                    <span>Track Placements</span>
-                                    <span className="text-xs text-muted-foreground">
-                                        Monitor student placement status
-                                    </span>
-                                </Link>
-                            </Button>
-                        </div>
-                    </CardContent>
-                </Card>
             </div>
         </AppLayout>
     );

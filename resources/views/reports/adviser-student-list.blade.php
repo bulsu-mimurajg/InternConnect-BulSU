@@ -120,6 +120,9 @@
                 <th>Name</th>
                 <th>Username</th>
                 <th>Email</th>
+                @if($sectionName === 'All Sections')
+                <th>Section</th>
+                @endif
                 <th>Status</th>
                 <th>Assessment</th>
                 <th>Score</th>
@@ -134,6 +137,9 @@
                 <td>{{ $student['name'] }}</td>
                 <td>{{ $student['username'] }}</td>
                 <td>{{ $student['email'] ?? 'N/A' }}</td>
+                @if($sectionName === 'All Sections')
+                <td>{{ $student['section'] ?? 'N/A' }}</td>
+                @endif
                 <td>{{ ucfirst($student['status']) }}</td>
                 <td>{{ $student['hasAssessment'] ? 'Completed' : 'Pending' }}</td>
                 <td>{{ $student['hasAssessment'] ? $student['score'] : 'N/A' }}</td>
