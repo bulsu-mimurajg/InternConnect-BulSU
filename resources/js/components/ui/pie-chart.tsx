@@ -45,10 +45,10 @@ export function PieChart({
         if (active && payload && payload.length) {
             const data = payload[0].payload;
             return (
-                <div className="bg-white p-3 border rounded-lg shadow-lg">
-                    <p className="font-medium">{data.name}</p>
-                    <p className="text-sm text-gray-600">Weight: {data.value}%</p>
-                    <p className="text-xs text-gray-500">
+                <div className="bg-card border border-border p-4 rounded-xl shadow-lg backdrop-blur-sm">
+                    <p className="font-semibold text-foreground">{data.name}</p>
+                    <p className="text-sm text-muted-foreground">Weight: {data.value}%</p>
+                    <p className="text-xs text-muted-foreground">
                         {((data.value / totalWeight) * 100).toFixed(1)}% of total
                     </p>
                 </div>
@@ -58,35 +58,57 @@ export function PieChart({
     };
 
     return (
-        <div className="w-full h-80">
+        <div className="w-full h-full bg-card/30 rounded-xl p-8 border border-border/50 flex flex-col">
             {title && (
-                <h3 className="text-lg font-semibold mb-4 text-center">{title}</h3>
+                <div className="text-center mb-8 flex-shrink-0">
+                    <h3 className="text-xl font-semibold text-foreground">{title}</h3>
+                    <p className="text-sm text-muted-foreground mt-2">Total Weight: {totalWeight}%</p>
+                </div>
             )}
-            <ResponsiveContainer width="100%" height="100%">
-                <RechartsPieChart>
-                    <Pie
-                        data={data}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={showLabels ? ({ name, value }) => `${name}: ${value}%` : undefined}
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                        onClick={handleSliceClick}
-                        style={{ cursor: onSliceClick ? 'pointer' : 'default' }}
-                    >
-                        {data.map((entry, index) => (
-                            <Cell 
-                                key={`cell-${index}`} 
-                                fill={entry.color || COLORS[index % COLORS.length]} 
+            <div className="flex-1 min-h-[350px]">
+                <ResponsiveContainer width="100%" height="100%">
+                    <RechartsPieChart>
+                        <Pie
+                            data={data}
+                            cx="50%"
+                            cy="50%"
+                            labelLine={false}
+                            label={showLabels ? ({ name, value }) => `${name}: ${value}%` : undefined}
+                            outerRadius={120}
+                            innerRadius={30}
+                            fill="#8884d8"
+                            dataKey="value"
+                            onClick={handleSliceClick}
+                            style={{ cursor: onSliceClick ? 'pointer' : 'default' }}
+                            stroke="hsl(var(--background))"
+                            strokeWidth={2}
+                        >
+                            {data.map((entry, index) => (
+                                <Cell 
+                                    key={`cell-${index}`} 
+                                    fill={entry.color || COLORS[index % COLORS.length]} 
+                                    stroke="hsl(var(--background))"
+                                    strokeWidth={2}
+                                />
+                            ))}
+                        </Pie>
+                        {showTooltip && <Tooltip content={<CustomTooltip />} />}
+                        {showLegend && (
+                            <Legend 
+                                wrapperStyle={{ 
+                                    paddingTop: '24px',
+                                    fontSize: '14px',
+                                    textAlign: 'center'
+                                }}
+                                iconType="circle"
+                                layout="horizontal"
+                                align="center"
+                                verticalAlign="bottom"
                             />
-                        ))}
-                    </Pie>
-                    {showTooltip && <Tooltip content={<CustomTooltip />} />}
-                    {showLegend && <Legend />}
-                </RechartsPieChart>
-            </ResponsiveContainer>
+                        )}
+                    </RechartsPieChart>
+                </ResponsiveContainer>
+            </div>
         </div>
     );
 }

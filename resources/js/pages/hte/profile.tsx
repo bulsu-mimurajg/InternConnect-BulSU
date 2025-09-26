@@ -14,11 +14,17 @@ import {
     CheckCircle, 
     XCircle, 
     PlusIcon,
-    ArrowLeftIcon,
     EditIcon
 } from 'lucide-react';
 import { useState, useMemo, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { SubmissionPrompt } from '@/components/hte/submission-prompt';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { SaveIcon, XIcon } from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -67,6 +73,19 @@ interface HTEProfileProps {
     [key: string]: unknown;
 }
 
+// Form validation schema for company information
+const CompanyInfoSchema = z.object({
+    company_name: z.string().min(1, 'Company name is required'),
+    company_address: z.string().min(1, 'Company address is required'),
+    company_email: z.string().email('Invalid email address'),
+    cperson_fname: z.string().min(1, 'Contact person first name is required'),
+    cperson_lname: z.string().min(1, 'Contact person last name is required'),
+    cperson_position: z.string().min(1, 'Contact person position is required'),
+    cperson_contactnum: z.string().min(1, 'Contact number is required'),
+});
+
+type CompanyInfoFormData = z.infer<typeof CompanyInfoSchema>;
+
 export default function HTEProfilePage() {
     const { hte, showSubmissionPrompt } = usePage<HTEProfileProps>().props;
     
@@ -81,6 +100,22 @@ export default function HTEProfilePage() {
     const [internshipToToggle, setInternshipToToggle] = useState<number | null>(null);
     const [showSuccessMessage, setShowSuccessMessage] = useState<boolean>(false);
     const [isToggling, setIsToggling] = useState<boolean>(false);
+    const [isEditingCompany, setIsEditingCompany] = useState<boolean>(false);
+    const [isSavingCompany, setIsSavingCompany] = useState<boolean>(false);
+
+    // Form for company information editing
+    const companyForm = useForm<CompanyInfoFormData>({
+        resolver: zodResolver(CompanyInfoSchema),
+        defaultValues: {
+            company_name: hte?.company_name || '',
+            company_address: hte?.company_address || '',
+            company_email: hte?.company_email || '',
+            cperson_fname: hte?.cperson_fname || '',
+            cperson_lname: hte?.cperson_lname || '',
+            cperson_position: hte?.cperson_position || '',
+            cperson_contactnum: hte?.cperson_contactnum || '',
+        },
+    });
 
     // Auto-hide success message after 5 seconds
     useEffect(() => {
@@ -163,6 +198,47 @@ export default function HTEProfilePage() {
         setInternshipToToggle(null);
     };
 
+    // Handle company information editing
+    const handleEditCompany = () => {
+        setIsEditingCompany(true);
+        // Reset form to current values
+        companyForm.reset({
+            company_name: hte?.company_name || '',
+            company_address: hte?.company_address || '',
+            company_email: hte?.company_email || '',
+            cperson_fname: hte?.cperson_fname || '',
+            cperson_lname: hte?.cperson_lname || '',
+            cperson_position: hte?.cperson_position || '',
+            cperson_contactnum: hte?.cperson_contactnum || '',
+        });
+    };
+
+    const handleCancelEditCompany = () => {
+        setIsEditingCompany(false);
+        companyForm.reset();
+    };
+
+    const handleSaveCompanyInfo = (data: CompanyInfoFormData) => {
+        setIsSavingCompany(true);
+        router.patch('/hte/update-company-info', data, {
+            onSuccess: () => {
+                setIsEditingCompany(false);
+                setIsSavingCompany(false);
+                setShowSuccessMessage(true);
+            },
+            onError: (errors) => {
+                setIsSavingCompany(false);
+                // Handle validation errors
+                Object.entries(errors).forEach(([key, value]) => {
+                    companyForm.setError(key as keyof CompanyInfoFormData, {
+                        type: 'manual',
+                        message: value as string,
+                    });
+                });
+            },
+        });
+    };
+
     // Extract duration, start date, and end date from placement description
     const extractDuration = (description: string) => {
         const match = description.match(/Duration: ([^-]+)/);
@@ -214,7 +290,7 @@ export default function HTEProfilePage() {
                     <div className="fixed top-4 right-4 z-50 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded shadow-lg">
                         <div className="flex items-center gap-2">
                             <CheckCircle className="h-5 w-5" />
-                            <span className="font-medium">Internship status updated successfully!</span>
+                            <span className="font-medium">Information updated successfully!</span>
                         </div>
                     </div>
                 )}
@@ -229,19 +305,6 @@ export default function HTEProfilePage() {
                     </div>
                     
                     <div className="flex items-center gap-3">
-                        <Badge variant={hte.is_active ? "default" : "secondary"}>
-                            {hte.is_active ? (
-                                <>
-                                    <CheckCircle className="h-4 w-4 mr-1" />
-                                    Active
-                                </>
-                            ) : (
-                                <>
-                                    <XCircle className="h-4 w-4 mr-1" />
-                                    Inactive
-                                </>
-                            )}
-                        </Badge>
                         <Link href="/hte/add-internship">
                             <Button className="gap-2">
                                 <PlusIcon className="h-4 w-4" />
@@ -260,55 +323,252 @@ export default function HTEProfilePage() {
                     buttonHref="/form"
                 />
 
-                <div className="grid gap-6 md:grid-cols-3">
-                    {/* Main Content */}
-                    <div className="md:col-span-2 space-y-6">
-                        {/* Company Information */}
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <Building2 className="h-5 w-5" />
-                                    Company Information
-                                </CardTitle>
-                                <CardDescription>Basic company details and contact information</CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-6">
+                    {/* Company Information & Overview Section */}
+                    <div className="grid gap-6 lg:grid-cols-3">
+                        {/* Company Information - Takes 2 columns */}
+                        <Card className="lg:col-span-2 h-full flex flex-col">
+                            <CardHeader className="pb-4">
+                                <div className="flex items-center justify-between">
                                     <div>
-                                        <label className="text-sm font-medium text-muted-foreground">Company Name</label>
-                                        <p className="text-lg font-semibold">{hte.company_name}</p>
+                                        <CardTitle className="flex items-center gap-2">
+                                            <Building2 className="h-5 w-5" />
+                                            Company Information
+                                        </CardTitle>
+                                        <CardDescription>Basic company details and contact information</CardDescription>
                                     </div>
-                                    <div>
-                                        <label className="text-sm font-medium text-muted-foreground">Status</label>
-                                        <Badge variant={hte.is_active ? "default" : "secondary"} className="text-sm">
-                                            {hte.is_active ? "Active" : "Inactive"}
-                                        </Badge>
-                                    </div>
-                                    <div>
-                                        <label className="text-sm font-medium text-muted-foreground">Address</label>
-                                        <p className="text-sm text-gray-700">{hte.company_address}</p>
-                                    </div>
-                                    <div>
-                                        <label className="text-sm font-medium text-muted-foreground">Email</label>
-                                        <p className="text-sm text-blue-600">{hte.company_email}</p>
-                                    </div>
-                                    <div>
-                                        <label className="text-sm font-medium text-muted-foreground">Contact Person</label>
-                                        <p className="font-semibold">{hte.cperson_fname} {hte.cperson_lname}</p>
-                                        <p className="text-sm text-gray-600">{hte.cperson_position}</p>
-                                    </div>
-                                    <div>
-                                        <label className="text-sm font-medium text-muted-foreground">Contact Number</label>
-                                        <p className="text-sm text-gray-600">{hte.cperson_contactnum}</p>
-                                    </div>
+                                    {!isEditingCompany && (
+                                        <Button 
+                                            variant="outline" 
+                                            size="sm" 
+                                            onClick={handleEditCompany}
+                                            className="gap-2"
+                                        >
+                                            <EditIcon className="h-4 w-4" />
+                                            Edit
+                                        </Button>
+                                    )}
                                 </div>
+                            </CardHeader>
+                            <CardContent className="space-y-6 flex-1">
+                                {isEditingCompany ? (
+                                    <Form {...companyForm}>
+                                        <form onSubmit={companyForm.handleSubmit(handleSaveCompanyInfo)} className="space-y-6">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                <FormField
+                                                    control={companyForm.control}
+                                                    name="company_name"
+                                                    render={({ field }) => (
+                                                        <FormItem>
+                                                            <FormLabel>Company Name</FormLabel>
+                                                            <FormControl>
+                                                                <Input {...field} />
+                                                            </FormControl>
+                                                            <FormMessage />
+                                                        </FormItem>
+                                                    )}
+                                                />
+                                                <FormField
+                                                    control={companyForm.control}
+                                                    name="company_email"
+                                                    render={({ field }) => (
+                                                        <FormItem>
+                                                            <FormLabel>Email</FormLabel>
+                                                            <FormControl>
+                                                                <Input {...field} type="email" />
+                                                            </FormControl>
+                                                            <FormMessage />
+                                                        </FormItem>
+                                                    )}
+                                                />
+                                                <FormField
+                                                    control={companyForm.control}
+                                                    name="company_address"
+                                                    render={({ field }) => (
+                                                        <FormItem className="md:col-span-2">
+                                                            <FormLabel>Address</FormLabel>
+                                                            <FormControl>
+                                                                <Textarea {...field} rows={3} />
+                                                            </FormControl>
+                                                            <FormMessage />
+                                                        </FormItem>
+                                                    )}
+                                                />
+                                                <FormField
+                                                    control={companyForm.control}
+                                                    name="cperson_fname"
+                                                    render={({ field }) => (
+                                                        <FormItem>
+                                                            <FormLabel>Contact Person First Name</FormLabel>
+                                                            <FormControl>
+                                                                <Input {...field} />
+                                                            </FormControl>
+                                                            <FormMessage />
+                                                        </FormItem>
+                                                    )}
+                                                />
+                                                <FormField
+                                                    control={companyForm.control}
+                                                    name="cperson_lname"
+                                                    render={({ field }) => (
+                                                        <FormItem>
+                                                            <FormLabel>Contact Person Last Name</FormLabel>
+                                                            <FormControl>
+                                                                <Input {...field} />
+                                                            </FormControl>
+                                                            <FormMessage />
+                                                        </FormItem>
+                                                    )}
+                                                />
+                                                <FormField
+                                                    control={companyForm.control}
+                                                    name="cperson_position"
+                                                    render={({ field }) => (
+                                                        <FormItem>
+                                                            <FormLabel>Position</FormLabel>
+                                                            <FormControl>
+                                                                <Input {...field} />
+                                                            </FormControl>
+                                                            <FormMessage />
+                                                        </FormItem>
+                                                    )}
+                                                />
+                                                <FormField
+                                                    control={companyForm.control}
+                                                    name="cperson_contactnum"
+                                                    render={({ field }) => (
+                                                        <FormItem>
+                                                            <FormLabel>Contact Number</FormLabel>
+                                                            <FormControl>
+                                                                <Input {...field} />
+                                                            </FormControl>
+                                                            <FormMessage />
+                                                        </FormItem>
+                                                    )}
+                                                />
+                                            </div>
+                                            <div className="flex justify-end gap-3 pt-4 border-t border-border">
+                                                <Button 
+                                                    type="button" 
+                                                    variant="outline" 
+                                                    onClick={handleCancelEditCompany}
+                                                    disabled={isSavingCompany}
+                                                >
+                                                    <XIcon className="h-4 w-4 mr-2" />
+                                                    Cancel
+                                                </Button>
+                                                <Button 
+                                                    type="submit" 
+                                                    disabled={isSavingCompany}
+                                                >
+                                                    <SaveIcon className="h-4 w-4 mr-2" />
+                                                    {isSavingCompany ? 'Saving...' : 'Save Changes'}
+                                                </Button>
+                                            </div>
+                                        </form>
+                                    </Form>
+                                ) : (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                        <div className="space-y-3">
+                                            <label className="text-base font-medium text-muted-foreground">Company Name</label>
+                                            <p className="text-lg font-semibold text-foreground">{hte.company_name}</p>
+                                        </div>
+                                        <div className="space-y-3">
+                                            <label className="text-base font-medium text-muted-foreground">Email</label>
+                                            <p className="text-lg text-primary font-medium">{hte.company_email}</p>
+                                        </div>
+                                        <div className="space-y-3 md:col-span-2">
+                                            <label className="text-base font-medium text-muted-foreground">Address</label>
+                                            <div className="text-lg text-foreground leading-relaxed space-y-1">
+                                                {hte.company_address.split(',').map((part, index) => (
+                                                    <p key={index} className="text-lg">{part.trim()}</p>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <div className="space-y-3">
+                                            <label className="text-base font-medium text-muted-foreground">Contact Person</label>
+                                            <div className="space-y-2">
+                                                <p className="text-lg font-semibold text-foreground">{hte.cperson_fname} {hte.cperson_lname}</p>
+                                                <p className="text-base text-muted-foreground">{hte.cperson_position}</p>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-3">
+                                            <label className="text-base font-medium text-muted-foreground">Contact Number</label>
+                                            <p className="text-lg text-foreground font-medium">{hte.cperson_contactnum}</p>
+                                        </div>
+                                    </div>
+                                )}
                             </CardContent>
                         </Card>
 
-                        {/* Internships Section with Dropdowns */}
+                        {/* Overview & Statistics - Takes 1 column with equal height cards */}
+                        <div className="space-y-6 h-full flex flex-col">
+                            {/* Company Overview */}
+                            <Card className="flex-1 flex flex-col">
+                                <CardHeader className="pb-3">
+                                    <CardTitle className="flex items-center gap-2 text-base">
+                                        <Building2 className="h-4 w-4" />
+                                        Company Overview
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-4 flex-1 flex flex-col justify-center">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-sm font-medium">Status</span>
+                                        <Badge variant={hte.is_active ? "default" : "secondary"}>
+                                            {hte.is_active ? "Active" : "Inactive"}
+                                        </Badge>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-sm font-medium">Partner Since</span>
+                                        <span className="text-sm text-muted-foreground">
+                                            {new Date(hte.created_at).toLocaleDateString('en-US', { 
+                                                year: 'numeric', 
+                                                month: 'long' 
+                                            })}
+                                        </span>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            {/* Internship Statistics */}
+                            <Card className="flex-1 flex flex-col">
+                                <CardHeader className="pb-3">
+                                    <CardTitle className="flex items-center gap-2 text-base">
+                                        <Target className="h-4 w-4" />
+                                        Internship Statistics
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-4 flex-1 flex flex-col justify-center">
+                                    <div className="space-y-3">
+                                        <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                                            <span className="text-sm font-medium">Total Internships</span>
+                                            <span className="text-lg font-bold text-primary">
+                                                {hte.internships?.length || 0}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                                            <span className="text-sm font-medium">Active Positions</span>
+                                            <span className="text-lg font-bold text-green-600">
+                                                {hte.internships?.filter(i => i.is_active).length || 0}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                                            <span className="text-sm font-medium">Total Slots</span>
+                                            <span className="text-lg font-bold text-blue-600">
+                                                {hte.internships?.reduce((sum, i) => sum + i.slot_count, 0) || 0}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </div>
+                    </div>
+
+                    {/* Internships Section with Dropdowns - Full Width */}
+                    <div className="w-full">
                         {hte.internships && hte.internships.length > 0 ? (
                             <div className="space-y-6">
-                                <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
                                     <h2 className="text-2xl font-bold">Internship Opportunities</h2>
                                     <p className="text-muted-foreground">
                                         {filteredInternships.length} position{filteredInternships.length !== 1 ? 's' : ''} available
@@ -316,39 +576,31 @@ export default function HTEProfilePage() {
                                 </div>
 
                                 {/* Dropdowns */}
-                                <div className="flex gap-4 items-center">
-                                    <div className="space-y-2">
+                                <div className="flex gap-4 items-end">
+                                    <div className="space-y-2 flex-shrink-0">
                                         <label className="text-sm font-medium text-muted-foreground">Status Filter</label>
                                         <Select value={selectedStatus} onValueChange={handleStatusChange}>
                                             <SelectTrigger className="w-48">
                                                 <SelectValue placeholder="Select Status" />
                                             </SelectTrigger>
-                                                                                                    <SelectContent>
-                                                            <SelectItem value="all">All Statuses ({hte.internships?.length || 0})</SelectItem>
-                                                            <SelectItem value="active">Active Only ({hte.internships?.filter(i => i.is_active).length || 0})</SelectItem>
-                                                            <SelectItem value="inactive">Inactive Only ({hte.internships?.filter(i => !i.is_active).length || 0})</SelectItem>
-                                                        </SelectContent>
+                                            <SelectContent>
+                                                <SelectItem value="all">All Statuses ({hte.internships?.length || 0})</SelectItem>
+                                                <SelectItem value="active">Active Only ({hte.internships?.filter(i => i.is_active).length || 0})</SelectItem>
+                                                <SelectItem value="inactive">Inactive Only ({hte.internships?.filter(i => !i.is_active).length || 0})</SelectItem>
+                                            </SelectContent>
                                         </Select>
                                     </div>
 
-                                    <div className="space-y-2">
+                                    <div className="space-y-2 flex-1">
                                         <label className="text-sm font-medium text-muted-foreground">Select Internship</label>
                                         <Select value={selectedInternshipId} onValueChange={setSelectedInternshipId}>
-                                            <SelectTrigger className="w-64">
+                                            <SelectTrigger className="w-full">
                                                 <SelectValue placeholder="Select an internship" />
                                             </SelectTrigger>
                                             <SelectContent>
                                                 {filteredInternships.map((internship) => (
                                                     <SelectItem key={internship.id} value={internship.id.toString()}>
-                                                        <div className="flex items-center justify-between w-full">
-                                                            <span>{internship.position_title} - {internship.department}</span>
-                                                            <Badge 
-                                                                variant={internship.is_active ? "default" : "secondary"} 
-                                                                className="ml-2 text-xs"
-                                                            >
-                                                                {internship.is_active ? "Active" : "Inactive"}
-                                                            </Badge>
-                                                        </div>
+                                                        <span>{internship.position_title} - {internship.department}</span>
                                                     </SelectItem>
                                                 ))}
                                             </SelectContent>
@@ -367,15 +619,15 @@ export default function HTEProfilePage() {
                                                         {selectedInternship.department} • {selectedInternship.slot_count} slot{selectedInternship.slot_count !== 1 ? 's' : ''}
                                                     </CardDescription>
                                                 </div>
-                                                <Badge variant={selectedInternship.is_active ? "default" : "secondary"}>
+                                                <Badge variant={selectedInternship.is_active ? "default" : "secondary"} className="px-4 py-2 text-sm font-semibold">
                                                     {selectedInternship.is_active ? (
                                                         <>
-                                                            <CheckCircle className="h-4 w-4 mr-1" />
+                                                            <CheckCircle className="h-6 w-6 mr-2" />
                                                             Active
                                                         </>
                                                     ) : (
                                                         <>
-                                                            <XCircle className="h-4 w-4 mr-1" />
+                                                            <XCircle className="h-6 w-6 mr-2" />
                                                             Inactive
                                                         </>
                                                     )}
@@ -384,44 +636,44 @@ export default function HTEProfilePage() {
                                         </CardHeader>
                                         <CardContent className="space-y-6">
                                             {/* Position Details Section */}
-                                            <div className="border-2 border-gray-300 rounded-lg">
-                                                <div className="bg-gray-100 px-4 py-2 border-b-2 border-gray-300">
-                                                    <h3 className="font-semibold text-lg">Position Details</h3>
+                                            <div className="border border-border rounded-lg bg-card">
+                                                <div className="bg-muted/50 px-4 py-3 border-b border-border">
+                                                    <h3 className="font-semibold text-lg text-foreground">Position Details</h3>
                                                 </div>
-                                                <div className="p-4">
-                                                    <div className="grid grid-cols-2 gap-6">
-                                                        <div className="space-y-3">
+                                                <div className="p-6">
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                        <div className="space-y-4">
                                                             <div>
                                                                 <label className="text-sm font-medium text-muted-foreground">Position Title</label>
-                                                                <p className="text-lg font-semibold">{selectedInternship.position_title}</p>
+                                                                <p className="text-lg font-semibold text-foreground">{selectedInternship.position_title}</p>
                                                             </div>
                                                             <div>
                                                                 <label className="text-sm font-medium text-muted-foreground">Department</label>
-                                                                <p className="text-lg font-semibold">{selectedInternship.department}</p>
+                                                                <p className="text-lg font-semibold text-foreground">{selectedInternship.department}</p>
                                                             </div>
                                                             <div>
                                                                 <label className="text-sm font-medium text-muted-foreground">Available Slots</label>
-                                                                <p className="text-lg font-semibold flex items-center gap-2">
+                                                                <p className="text-lg font-semibold flex items-center gap-2 text-foreground">
                                                                     <Users className="h-4 w-4" />
                                                                     {selectedInternship.slot_count} slot{selectedInternship.slot_count !== 1 ? 's' : ''}
                                                                 </p>
                                                             </div>
                                                         </div>
-                                                        <div className="space-y-3">
+                                                        <div className="space-y-4">
                                                             <div>
                                                                 <label className="text-sm font-medium text-muted-foreground">Duration</label>
-                                                                <p className="text-lg font-semibold">{extractDuration(selectedInternship.placement_description)}</p>
+                                                                <p className="text-lg font-semibold text-foreground">{extractDuration(selectedInternship.placement_description)}</p>
                                                             </div>
                                                             <div>
                                                                 <label className="text-sm font-medium text-muted-foreground">Start Date</label>
-                                                                <p className="text-lg font-semibold flex items-center gap-2">
+                                                                <p className="text-lg font-semibold flex items-center gap-2 text-foreground">
                                                                     <Calendar className="h-4 w-4" />
                                                                     {extractStartDate(selectedInternship.placement_description)}
                                                                 </p>
                                                             </div>
                                                             <div>
                                                                 <label className="text-sm font-medium text-muted-foreground">End Date</label>
-                                                                <p className="text-lg font-semibold flex items-center gap-2">
+                                                                <p className="text-lg font-semibold flex items-center gap-2 text-foreground">
                                                                     <Calendar className="h-4 w-4" />
                                                                     {extractEndDate(selectedInternship.placement_description)}
                                                                 </p>
@@ -430,20 +682,20 @@ export default function HTEProfilePage() {
                                                     </div>
                                                     
                                                     {selectedInternship.placement_description && (
-                                                        <div className="mt-4 pt-4 border-t border-gray-200">
+                                                        <div className="mt-6 pt-4 border-t border-border">
                                                             <label className="text-sm font-medium text-muted-foreground">Description</label>
-                                                            <p className="text-base text-gray-700 mt-1">{selectedInternship.placement_description}</p>
+                                                            <p className="text-base text-foreground mt-2 leading-relaxed">{selectedInternship.placement_description}</p>
                                                         </div>
                                                     )}
                                                 </div>
                                             </div>
 
                                             {/* Assessment Criteria and Weights Section */}
-                                            <div className="border-2 border-gray-300 rounded-lg">
-                                                <div className="bg-gray-100 px-4 py-2 border-b-2 border-gray-300">
-                                                    <h3 className="font-semibold text-lg">Assessment Criteria and Weights</h3>
+                                            <div className="border border-border rounded-lg bg-card">
+                                                <div className="bg-muted/50 px-4 py-3 border-b border-border">
+                                                    <h3 className="font-semibold text-lg text-foreground">Assessment Criteria</h3>
                                                 </div>
-                                                <div className="p-4">
+                                                <div className="p-6">
                                                     {(() => {
                                                         const weightsByCategory = getWeightsByCategory(selectedInternship);
                                                         return Object.entries(weightsByCategory).length > 0 ? (
@@ -463,48 +715,71 @@ export default function HTEProfilePage() {
                                                                     // Calculate category total weight
                                                                     const categoryTotal = weights.reduce((sum: number, w) => sum + w.weight, 0);
                                                                     
-                                                                    // Prepare data for pie chart
-                                                                    const pieData = weights.map((weight) => ({
+                                                                    // Prepare data for pie chart with consistent colors
+                                                                    const colors = [
+                                                                        'hsl(220, 70%, 50%)', // Blue
+                                                                        'hsl(120, 70%, 50%)', // Green
+                                                                        'hsl(30, 70%, 50%)',  // Orange
+                                                                        'hsl(280, 70%, 50%)', // Purple
+                                                                        'hsl(0, 70%, 50%)',   // Red
+                                                                        'hsl(60, 70%, 50%)'   // Yellow
+                                                                    ];
+                                                                    
+                                                                    const pieData = weights.map((weight, index) => ({
                                                                         name: weight.subcategory.subcategory_name,
                                                                         value: weight.weight,
-                                                                        color: `hsl(${Math.random() * 360}, 70%, 50%)`
+                                                                        color: colors[index % colors.length]
                                                                     }));
                                                                     
                                                                     return (
-                                                                        <div key={categoryName} className="border-2 border-gray-300 rounded-lg">
-                                                                            <div className="bg-blue-50 px-4 py-2 border-b-2 border-gray-300">
-                                                                                <h4 className="font-semibold text-lg text-blue-800">{categoryName}</h4>
+                                                                        <div key={categoryName} className="border border-border rounded-lg bg-card">
+                                                                            <div className="bg-primary/5 px-4 py-3 border-b border-border">
+                                                                                <h4 className="font-semibold text-lg text-foreground">{categoryName}</h4>
+                                                                                <p className="text-sm text-muted-foreground">Total Weight: {categoryTotal}%</p>
                                                                             </div>
-                                                                            <div className="p-4">
-                                                                                <div className="grid grid-cols-2 gap-6">
+                                                                            <div className="p-8">
+                                                                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                                                                                     {/* Weight Distribution */}
-                                                                                    <div>
-                                                                                        <h5 className="font-medium text-gray-700 mb-3">Weight Distribution</h5>
-                                                                                        <div className="space-y-2">
-                                                                                            {weights.map((weight) => (
-                                                                                                <div key={weight.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
-                                                                                                    <span className="font-medium text-sm">{weight.subcategory.subcategory_name}</span>
-                                                                                                    <Badge variant="outline" className="font-mono text-xs">
+                                                                                    <div className="lg:col-span-1 space-y-6">
+                                                                                        <div className="text-center lg:text-left">
+                                                                                            <h5 className="font-semibold text-lg text-foreground mb-2">Weight Distribution</h5>
+                                                                                            <p className="text-sm text-muted-foreground">Breakdown of assessment criteria weights</p>
+                                                                                        </div>
+                                                                                        <div className="space-y-4">
+                                                                                            {weights.map((weight, index) => (
+                                                                                                <div key={weight.id} className="flex items-center justify-between p-4 bg-muted/20 rounded-xl border border-border/50 hover:bg-muted/30 transition-colors">
+                                                                                                    <div className="flex items-center gap-4">
+                                                                                                        <div 
+                                                                                                            className="w-4 h-4 rounded-full shadow-sm" 
+                                                                                                            style={{ backgroundColor: colors[index % colors.length] }}
+                                                                                                        />
+                                                                                                        <span className="font-medium text-sm text-foreground">
+                                                                                                            {weight.subcategory.subcategory_name}
+                                                                                                        </span>
+                                                                                                    </div>
+                                                                                                    <Badge variant="outline" className="font-mono text-sm px-3 py-1">
                                                                                                         {weight.weight}%
                                                                                                     </Badge>
                                                                                                 </div>
                                                                                             ))}
-                                                                                            <div className="flex items-center justify-between p-2 bg-blue-100 rounded-lg border border-blue-200">
-                                                                                                <span className="font-semibold text-blue-800">Total</span>
-                                                                                                <Badge variant="default" className="font-mono text-xs bg-blue-600">
+                                                                                            <div className="flex items-center justify-between p-4 bg-primary/10 rounded-xl border border-primary/30 mt-6">
+                                                                                                <span className="font-semibold text-primary text-base">Total Weight</span>
+                                                                                                <Badge variant="default" className="font-mono text-sm px-3 py-1">
                                                                                                     {categoryTotal}%
                                                                                                 </Badge>
                                                                                             </div>
                                                                                         </div>
                                                                                     </div>
                                                                                     
-                                                                                    {/* Pie Chart */}
-                                                                                    <div className="flex items-center justify-center">
-                                                                                        <PieChart 
-                                                                                            data={pieData}
-                                                                                            title={`${categoryName} Weights`}
-                                                                                            totalWeight={categoryTotal}
-                                                                                        />
+                                                                                    {/* Pie Chart - Takes up 2/3 of the space */}
+                                                                                    <div className="lg:col-span-2 flex flex-col items-center justify-center">
+                                                                                        <div className="w-full h-full min-h-[400px]">
+                                                                                            <PieChart 
+                                                                                                data={pieData}
+                                                                                                title={`${categoryName} Weights`}
+                                                                                                totalWeight={categoryTotal}
+                                                                                            />
+                                                                                        </div>
                                                                                     </div>
                                                                                 </div>
                                                                             </div>
@@ -513,7 +788,8 @@ export default function HTEProfilePage() {
                                                                 })}
                                                             </div>
                                                         ) : (
-                                                            <div className="text-center py-8 text-muted-foreground">
+                                                            <div className="text-center py-12 text-muted-foreground">
+                                                                <Target className="h-12 w-12 mx-auto mb-4 opacity-50" />
                                                                 <p className="text-sm">No assessment criteria configured for this internship.</p>
                                                             </div>
                                                         );
@@ -522,7 +798,7 @@ export default function HTEProfilePage() {
                                             </div>
 
                                             {/* Action Buttons */}
-                                            <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+                                            <div className="flex justify-end gap-3 pt-4 border-t border-border">
                                                 <Link href={`/hte/edit-internship/${selectedInternship.id}`}>
                                                     <Button variant="outline" size="sm" className="gap-2">
                                                         <EditIcon className="h-4 w-4" />
@@ -587,84 +863,6 @@ export default function HTEProfilePage() {
                                 </CardContent>
                             </Card>
                         )}
-                    </div>
-
-                    {/* Sidebar */}
-                    <div className="space-y-6">
-                        {/* Company Status */}
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Company Status</CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                <div className="flex items-center justify-between">
-                                    <span className="text-sm font-medium">Status</span>
-                                    <Badge variant={hte.is_active ? "default" : "secondary"}>
-                                        {hte.is_active ? "Active" : "Inactive"}
-                                    </Badge>
-                                </div>
-                                <div className="flex items-center justify-between">
-                                    <span className="text-sm font-medium">Member Since</span>
-                                    <span className="text-sm text-gray-600">
-                                        {new Date(hte.created_at).toLocaleDateString('en-US', { 
-                                            year: 'numeric', 
-                                            month: 'long' 
-                                        })}
-                                    </span>
-                                </div>
-                            </CardContent>
-                        </Card>
-
-                        {/* Quick Stats */}
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <Target className="h-5 w-5" />
-                                    Quick Stats
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                <div className="text-center">
-                                    <div className="text-2xl font-bold text-primary">
-                                        {hte.internships?.length || 0}
-                                    </div>
-                                    <p className="text-sm text-muted-foreground">Total Internships</p>
-                                </div>
-                                <div className="text-center">
-                                    <div className="text-2xl font-bold text-green-600">
-                                        {hte.internships?.filter(i => i.is_active).length || 0}
-                                    </div>
-                                    <p className="text-sm text-muted-foreground">Active Positions</p>
-                                </div>
-                                <div className="text-center">
-                                    <div className="text-2xl font-bold text-blue-600">
-                                        {hte.internships?.reduce((sum, i) => sum + i.slot_count, 0) || 0}
-                                    </div>
-                                    <p className="text-sm text-muted-foreground">Total Slots</p>
-                                </div>
-                            </CardContent>
-                        </Card>
-
-                        {/* Quick Actions */}
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Quick Actions</CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-3">
-                                <Link href="/hte/add-internship" className="w-full">
-                                    <Button className="w-full gap-2">
-                                        <PlusIcon className="h-4 w-4" />
-                                        Add Internship
-                                    </Button>
-                                </Link>
-                                <Link href="/hte/dashboard" className="w-full">
-                                    <Button variant="ghost" className="w-full gap-2">
-                                        <ArrowLeftIcon className="h-4 w-4" />
-                                        Back to Dashboard
-                                    </Button>
-                                </Link>
-                            </CardContent>
-                        </Card>
                     </div>
                 </div>
             </div>

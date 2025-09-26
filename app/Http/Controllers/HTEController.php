@@ -637,6 +637,48 @@ class HTEController extends Controller
     }
 
     /**
+     * Update HTE company information
+     */
+    public function updateCompanyInfo(Request $request): RedirectResponse
+    {
+        $user = Auth::user();
+        $hte = $user->hte;
+
+        if (!$hte) {
+            return redirect()->back()->withErrors(['error' => 'You must submit an HTE form first.']);
+        }
+
+        // Validate the request
+        $request->validate([
+            'company_name' => 'required|string|max:255',
+            'company_address' => 'required|string|max:500',
+            'company_email' => 'required|email|max:255',
+            'cperson_fname' => 'required|string|max:100',
+            'cperson_lname' => 'required|string|max:100',
+            'cperson_position' => 'required|string|max:100',
+            'cperson_contactnum' => 'required|string|max:20',
+        ]);
+
+        try {
+            // Update HTE company information
+            $hte->update([
+                'company_name' => $request->company_name,
+                'company_address' => $request->company_address,
+                'company_email' => $request->company_email,
+                'cperson_fname' => $request->cperson_fname,
+                'cperson_lname' => $request->cperson_lname,
+                'cperson_position' => $request->cperson_position,
+                'cperson_contactnum' => $request->cperson_contactnum,
+            ]);
+
+            return redirect()->back()->with('success', 'Company information updated successfully!');
+        } catch (\Exception $e) {
+            Log::error('Error updating HTE company info: ' . $e->getMessage());
+            return redirect()->back()->withErrors(['error' => 'Failed to update company information. Please try again.']);
+        }
+    }
+
+    /**
      * Update existing internship
      */
     public function updateInternship(Request $request, $id): RedirectResponse

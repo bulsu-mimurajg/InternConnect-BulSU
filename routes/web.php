@@ -141,6 +141,7 @@ Route::middleware(['auth', 'verified', 'role:hte'])->group(function () {
     Route::post('hte/submit', [App\Http\Controllers\HTEController::class, 'submit'])->name('hte.submit');
     Route::get('hte/categories', [App\Http\Controllers\HTEController::class, 'getCategoriesForCriteria'])->name('hte.categories');
     Route::get('hte/profile', [App\Http\Controllers\HTEController::class, 'profile'])->name('hte.profile');
+    Route::patch('hte/update-company-info', [App\Http\Controllers\HTEController::class, 'updateCompanyInfo'])->name('hte.update-company-info');
     Route::get('hte/dashboard', [App\Http\Controllers\HTEController::class, 'dashboard'])->name('hte.dashboard');
     Route::get('hte/check-existing', [App\Http\Controllers\HTEController::class, 'checkExistingHTE'])->name('hte.check-existing');
 
