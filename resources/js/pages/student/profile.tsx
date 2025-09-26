@@ -47,7 +47,6 @@ interface Student {
     phone: string | null;
     section: string | null;
     specialization: string | null;
-    address: string | null;
     birth_date: string | null;
     is_submit: boolean;
 }
@@ -176,10 +175,6 @@ export default function Profile({ student, categories, additional_info = [], has
                             <label className="text-sm font-medium text-muted-foreground">Phone</label>
                             <p className="text-lg">{student.phone || 'Not provided'}</p>
                         </div>
-                    </div>
-                    <div>
-                        <label className="text-sm font-medium text-muted-foreground">Address</label>
-                        <p className="text-lg">{student.address || 'Not provided'}</p>
                     </div>
                 </CardContent>
             </Card>

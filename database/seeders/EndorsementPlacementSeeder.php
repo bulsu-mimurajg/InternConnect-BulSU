@@ -94,7 +94,6 @@ class EndorsementPlacementSeeder extends Seeder
                     'middle_name' => "Middle{$studentNumber}",
                     'phone' => "0912345678{$studentNumber}",
                     'specialization' => "Computer Science",
-                    'address' => "Sample Address {$studentNumber}",
                     'birth_date' => now()->subYears(20)->format('Y-m-d'),
                     'section_id' => $sections->random()->section_id,
                     'is_submit' => true,
@@ -157,26 +156,34 @@ class EndorsementPlacementSeeder extends Seeder
                     ]
                 );
 
-                // Create endorsement (these will be NOT placed, so HTE can review them)
-                $endorsement = Endorsement::firstOrCreate(
-                    [
-                        'student_id' => $student->id,
-                        'internship_id' => $internship->id
-                    ],
-                    [
-                        'status' => 'endorsed',
-                        'compatibility_score' => $studentMatch->compatibility_score,
-                        'notes' => "Excellent candidate for {$internship->position_title} position",
-                        'endorsement_date' => now()->subDays(rand(1, 10))
-                    ]
-                );
+                // Only endorse half of the students (create endorsement records for half)
+                $shouldEndorse = $studentIndex <= ($totalEndorsementsNeeded / 2);
+                
+                if ($shouldEndorse) {
+                    // Create endorsement (these will be NOT placed, so HTE can review them)
+                    $endorsement = Endorsement::firstOrCreate(
+                        [
+                            'student_id' => $student->id,
+                            'internship_id' => $internship->id
+                        ],
+                        [
+                            'status' => 'endorsed',
+                            'compatibility_score' => $studentMatch->compatibility_score,
+                            'notes' => "Excellent candidate for {$internship->position_title} position",
+                            'endorsement_date' => now()->subDays(rand(1, 10))
+                        ]
+                    );
 
-                // Update student match endorsement status
-                $studentMatch->update(['endorsement_status' => 'endorsed']);
-                $endorsementCount++;
+                    // Update student match endorsement status
+                    $studentMatch->update(['endorsement_status' => 'endorsed']);
+                    $endorsementCount++;
 
-                $statusText = $endorsement->wasRecentlyCreated ? 'endorsement' : 'existing endorsement';
-                $this->command->info("  ✓ Created {$statusText} for {$student->first_name} {$student->last_name} -> {$internship->hte->company_name} ({$internship->position_title})");
+                    $statusText = $endorsement->wasRecentlyCreated ? 'endorsement' : 'existing endorsement';
+                    $this->command->info("  ✓ Created {$statusText} for {$student->first_name} {$student->last_name} -> {$internship->hte->company_name} ({$internship->position_title})");
+                } else {
+                    // Keep as matched (pending endorsement) - no endorsement record created
+                    $this->command->info("  ✓ Created match (pending endorsement) for {$student->first_name} {$student->last_name} -> {$internship->hte->company_name} ({$internship->position_title})");
+                }
             }
         }
 

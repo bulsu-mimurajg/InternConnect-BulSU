@@ -39,7 +39,6 @@ class StudentSeeder extends Seeder
                 'phone' => '09123456789',
                 'section_name' => 'BSIT-4A',
                 'specialization' => 'Programming',
-                'address' => '123 Main St, Quezon City',
                 'birth_date' => '2000-01-15',
             ],
             [
@@ -50,7 +49,6 @@ class StudentSeeder extends Seeder
                 'phone' => '09123456790',
                 'section_name' => 'BSIT-4B',
                 'specialization' => 'Networking',
-                'address' => '456 Oak Ave, Manila',
                 'birth_date' => '2000-03-20',
             ],
             [
@@ -61,7 +59,6 @@ class StudentSeeder extends Seeder
                 'phone' => '09123456791',
                 'section_name' => 'BSIT-4C',
                 'specialization' => 'Database',
-                'address' => '789 Pine Rd, Makati',
                 'birth_date' => '2000-05-10',
             ],
             [
@@ -72,7 +69,6 @@ class StudentSeeder extends Seeder
                 'phone' => '09123456792',
                 'section_name' => 'BSIT-4A',
                 'specialization' => 'Web Development',
-                'address' => '321 Elm St, Taguig',
                 'birth_date' => '2000-07-25',
                 'username' => 'stud',
                 'password' => 'password',
@@ -122,7 +118,6 @@ class StudentSeeder extends Seeder
                 'phone' => $studentData['phone'],
                 'section_id' => $section->section_id,
                 'specialization' => $studentData['specialization'],
-                'address' => $studentData['address'],
                 'birth_date' => $studentData['birth_date'],
                 'is_submit' => false,
                 'is_placed' => false,

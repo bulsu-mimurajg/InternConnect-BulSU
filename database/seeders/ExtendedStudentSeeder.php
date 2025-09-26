@@ -39,7 +39,6 @@ class ExtendedStudentSeeder extends Seeder
                 'phone' => '09123456792',
                 'section_name' => 'BSIT-4A',
                 'specialization' => 'Web Development',
-                'address' => '321 Elm St, Taguig',
                 'birth_date' => '2000-11-25',
             ],
             [
@@ -50,7 +49,6 @@ class ExtendedStudentSeeder extends Seeder
                 'phone' => '09123456793',
                 'section_name' => 'BSIT-4B',
                 'specialization' => 'Mobile Development',
-                'address' => '654 Maple St, Pasig',
                 'birth_date' => '2000-07-05',
             ],
             [
@@ -61,7 +59,6 @@ class ExtendedStudentSeeder extends Seeder
                 'phone' => '09123456794',
                 'section_name' => 'BSIT-4C',
                 'specialization' => 'Data Science',
-                'address' => '987 Cedar Ave, Mandaluyong',
                 'birth_date' => '2000-09-12',
             ],
             [
@@ -72,7 +69,6 @@ class ExtendedStudentSeeder extends Seeder
                 'phone' => '09123456795',
                 'section_name' => 'BSIT-4A',
                 'specialization' => 'Cybersecurity',
-                'address' => '147 Birch Rd, San Juan',
                 'birth_date' => '2000-12-03',
             ],
             [
@@ -83,7 +79,6 @@ class ExtendedStudentSeeder extends Seeder
                 'phone' => '09123456796',
                 'section_name' => 'BSIT-4B',
                 'specialization' => 'Artificial Intelligence',
-                'address' => '258 Willow St, Marikina',
                 'birth_date' => '2000-04-18',
             ],
         ];
@@ -127,7 +122,6 @@ class ExtendedStudentSeeder extends Seeder
                 'phone' => $studentData['phone'],
                 'section_id' => $section->section_id,
                 'specialization' => $studentData['specialization'],
-                'address' => $studentData['address'],
                 'birth_date' => $studentData['birth_date'],
                 'is_submit' => false,
                 'is_placed' => false,
