@@ -129,6 +129,26 @@ class HTESeeder extends Seeder
             );
         }
 
+        // Create HTE record for 'maria' user (created in DatabaseSeeder)
+        $mariaUser = User::where('username', 'maria')->first();
+        if ($mariaUser) {
+            HTE::firstOrCreate(
+                ['user_id' => $mariaUser->id],
+                [
+                    'user_id' => $mariaUser->id,
+                    'company_name' => 'MariaTech Solutions',
+                    'company_address' => '888 Innovation Plaza, Tech Hub District, Manila 1000',
+                    'company_email' => 'maria@mariatech.com',
+                    'cperson_fname' => 'Maria',
+                    'cperson_lname' => 'Santos',
+                    'cperson_position' => 'HR Director',
+                    'cperson_contactnum' => '+63-917-123-4567',
+                    'is_active' => true,
+                    'is_submit' => true,
+                ]
+            );
+        }
+
         // Create additional random HTE records using factory
         HTE::factory(10)->create();
     }

@@ -108,6 +108,32 @@ class InternshipSeeder extends Seeder
                 'slot_count' => 2,
                 'is_active' => true,
             ],
+
+            // MariaTech Solutions internships
+            [
+                'hte_id' => $htes->where('company_name', 'MariaTech Solutions')->first()->id,
+                'position_title' => 'Full-Stack Development Intern',
+                'department' => 'Information Technology',
+                'placement_description' => 'Work on both frontend and backend development using modern frameworks like React, Laravel, and Node.js. You will participate in the complete software development lifecycle and work on real client projects.',
+                'slot_count' => 4,
+                'is_active' => true,
+            ],
+            [
+                'hte_id' => $htes->where('company_name', 'MariaTech Solutions')->first()->id,
+                'position_title' => 'UI/UX Design Intern',
+                'department' => 'Design',
+                'placement_description' => 'Create user-friendly interfaces and experiences for web and mobile applications. You will work with our design team using tools like Figma, Adobe XD, and conduct user research.',
+                'slot_count' => 2,
+                'is_active' => true,
+            ],
+            [
+                'hte_id' => $htes->where('company_name', 'MariaTech Solutions')->first()->id,
+                'position_title' => 'DevOps Intern',
+                'department' => 'Information Technology',
+                'placement_description' => 'Learn cloud infrastructure, CI/CD pipelines, and deployment automation. You will work with AWS, Docker, and Kubernetes to support our development and deployment processes.',
+                'slot_count' => 2,
+                'is_active' => true,
+            ],
         ];
 
         foreach ($internshipData as $data) {

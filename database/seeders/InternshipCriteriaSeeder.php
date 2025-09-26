@@ -169,6 +169,67 @@ class InternshipCriteriaSeeder extends Seeder
                     'Communication Skills' => 15,
                     'Adaptability and Learning' => 15,
                 ]
+            ],
+            
+            'Full-Stack Development Intern' => [
+                'Language Proficiency' => [
+                    'JavaScript' => 25,
+                    'Python' => 20,
+                    'Java' => 15,
+                    'HTML/CSS' => 15,
+                    'SQL' => 10,
+                    'C++' => 5,
+                ],
+                'Technical Skill' => [
+                    'System and Software Development' => 30,
+                    'Web Development' => 25,
+                    'Database Management' => 15,
+                ],
+                'Soft Skill' => [
+                    'Problem-Solving and Analytical Skills' => 20,
+                    'Communication Skills' => 15,
+                    'Time Management' => 10,
+                    'Adaptability and Learning' => 10,
+                ]
+            ],
+            
+            'UI/UX Design Intern' => [
+                'Language Proficiency' => [
+                    'HTML/CSS' => 25,
+                    'JavaScript' => 20,
+                    'Python' => 5,
+                ],
+                'Technical Skill' => [
+                    'Web Development' => 30,
+                    'System and Software Development' => 15,
+                ],
+                'Soft Skill' => [
+                    'Communication Skills' => 25,
+                    'Problem-Solving and Analytical Skills' => 20,
+                    'Time Management' => 10,
+                    'Adaptability and Learning' => 10,
+                ]
+            ],
+            
+            'DevOps Intern' => [
+                'Language Proficiency' => [
+                    'Python' => 30,
+                    'JavaScript' => 20,
+                    'SQL' => 15,
+                    'Java' => 10,
+                    'C++' => 5,
+                ],
+                'Technical Skill' => [
+                    'System and Software Development' => 35,
+                    'Web Development' => 15,
+                    'Database Management' => 10,
+                ],
+                'Soft Skill' => [
+                    'Problem-Solving and Analytical Skills' => 25,
+                    'Communication Skills' => 15,
+                    'Adaptability and Learning' => 15,
+                    'Time Management' => 10,
+                ]
             ]
         ];
 
