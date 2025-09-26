@@ -50,6 +50,14 @@ Route::middleware(['auth', 'verified', 'role:admin'])->group(function () {
     Route::patch('adviser/{adviser}/archive', [AdminController::class, 'archiveAdviser'])->name('admin.adviser.archive');
     Route::patch('adviser/{adviser}/unarchive', [AdminController::class, 'unarchiveAdviser'])->name('admin.adviser.unarchive');
 
+    // Section Management routes
+    Route::get('admin/section', [AdminController::class, 'sectionManagement'])->name('admin.section');
+    Route::get('admin/section/archived', [AdminController::class, 'archivedSectionManagement'])->name('admin.section.archived');
+    Route::post('admin/section', [AdminController::class, 'storeSection'])->name('admin.section.store');
+    Route::put('admin/section/{section}', [AdminController::class, 'updateSection'])->name('admin.section.update');
+    Route::patch('admin/section/{section}/archive', [AdminController::class, 'archiveSection'])->name('admin.section.archive');
+    Route::patch('admin/section/{section}/restore', [AdminController::class, 'restoreSection'])->name('admin.section.restore');
+
     // Events Management routes
     Route::get('admin/events', [AdminController::class, 'eventsManagement'])->name('admin.events');
     Route::post('admin/deadlines', [AdminController::class, 'storeDeadline'])->name('admin.deadlines.store');

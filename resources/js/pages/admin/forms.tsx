@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { FileTextIcon, PlusIcon, EditIcon, ArchiveIcon, RotateCcwIcon, SearchIcon, FilterIcon, ArrowUpDownIcon, ChevronDown, ChevronUp } from 'lucide-react';
+import { FileTextIcon, PlusIcon, EditIcon, ArchiveIcon, RotateCcwIcon, SearchIcon, FilterIcon, ArrowUpDownIcon, ChevronDown, ChevronUp, Archive, Eye } from 'lucide-react';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type Question, type Category, type SubCategory } from '@/types';
 
@@ -243,7 +243,17 @@ export default function FormsPage({ questions, categories, subcategories, filter
                             variant="outline"
                             onClick={() => setShowArchived(!showArchived)}
                         >
-                            {showArchived ? 'Show Active' : 'Show Archived'}
+                            {showArchived ? (
+                                <>
+                                    <Eye className="h-4 w-4" />
+                                    Show Active
+                                </>
+                            ) : (
+                                <>
+                                    <Archive className="h-4 w-4" />
+                                    Show Archived
+                                </>
+                            )}
                         </Button>
                         <Button
                             onClick={() => setShowForm(true)}

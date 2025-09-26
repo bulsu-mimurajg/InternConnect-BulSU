@@ -14,7 +14,7 @@ import {
     ChartNoAxesColumnIcon,
     BriefcaseBusinessIcon,
     GraduationCapIcon,
-    NotepadTextIcon, UserRoundIcon, MonitorCogIcon, GavelIcon, StepBackIcon
+    NotepadTextIcon, UserRoundIcon, MonitorCogIcon, GavelIcon, StepBackIcon, SquareLibraryIcon
 } from 'lucide-react';
 import AppLogo from './app-logo';
 
@@ -33,6 +33,11 @@ const roleBasedNav: Record<string, { main: NavItem[]; groups?: NavGroup[]; foote
             {
                 title: 'Student Management',
                 items: [
+                    {
+                        title: 'Section',
+                        href: '/admin/section',
+                        icon: SquareLibraryIcon,
+                    },
                     {
                         title: 'Student',
                         href: '/student',

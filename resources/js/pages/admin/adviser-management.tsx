@@ -24,7 +24,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, MoreHorizontal, Edit, Archive, Eye, ArchiveRestore, Filter, ArrowUpDown, Search } from 'lucide-react';
+import { Plus, MoreHorizontal, Edit, Archive, Eye, ArchiveRestore, Filter, ArrowUpDown, Search, GavelIcon } from 'lucide-react';
 import { type BreadcrumbItem } from '@/types';
 
 interface Adviser {
@@ -274,12 +274,12 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
                         >
                             {showArchivedAdvisers ? (
                                 <>
-                                    <Eye className="mr-2 h-4 w-4" />
+                                    <Eye className="h-4 w-4" />
                                     Show Active
                                 </>
                             ) : (
                                 <>
-                                    <Archive className="mr-2 h-4 w-4" />
+                                    <Archive className="h-4 w-4" />
                                     Show Archived
                                 </>
                             )}
@@ -543,7 +543,10 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
                 {/* Advisers Table */}
                 <Card>
                     <CardHeader>
-                        <CardTitle>Advisers</CardTitle>
+                        <CardTitle className="flex items-center gap-2">
+                            <GavelIcon className="h-5 w-5"/>
+                            Advisers
+                        </CardTitle>
                         <CardDescription>
                             {showArchivedAdvisers 
                                 ? 'Archived adviser accounts' 
@@ -552,69 +555,94 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <div className="overflow-x-auto">
-                            <table className="w-full">
-                                <thead>
-                                    <tr className="border-b">
-                                        <th className="text-left py-3 px-4 font-semibold text-sm">Username</th>
-                                        <th className="text-left py-3 px-4 font-semibold text-sm">Email</th>
-                                        <th className="text-left py-3 px-4 font-semibold text-sm">Name</th>
-                                        <th className="text-left py-3 px-4 font-semibold text-sm">Sections</th>
-                                        <th className="text-left py-3 px-4 font-semibold text-sm">Status</th>
-                                        <th className="text-left py-3 px-4 font-semibold text-sm">Created</th>
-                                        <th className="text-right py-3 px-4 font-semibold text-sm">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {filteredAdvisers.map((adviser) => (
-                                        <tr key={adviser.id} className={`border-b hover:bg-muted/50 transition-colors ${adviser.status === 'archived' ? 'opacity-75' : ''}`}>
-                                            <td className="py-3 px-4 font-medium">
-                                                {adviser.username}
-                                            </td>
-                                            <td className="py-3 px-4 text-sm text-muted-foreground">{adviser.email}</td>
-                                            <td className="py-3 px-4">{adviser.full_name}</td>
-                                            <td className="py-3 px-4 text-sm text-muted-foreground">{adviser.section_names}</td>
-                                            <td className="py-3 px-4">{getStatusBadge(adviser.status)}</td>
-                                            <td className="py-3 px-4 text-sm text-muted-foreground">
-                                                {new Date(adviser.created_at).toLocaleDateString()}
-                                            </td>
-                                            <td className="py-3 px-4 text-right">
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                                            <MoreHorizontal className="h-4 w-4" />
-                                                        </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end">
-                                                        <DropdownMenuItem onClick={() => handleEdit(adviser)}>
-                                                            <Edit className="mr-2 h-4 w-4" />
-                                                            Edit
-                                                        </DropdownMenuItem>
-                                                        {adviser.status === 'archived' ? (
-                                                            <DropdownMenuItem
-                                                                onClick={() => handleUnarchive(adviser)}
-                                                                className="text-green-600 focus:text-green-600"
-                                                            >
-                                                                <ArchiveRestore className="mr-2 h-4 w-4" />
-                                                                Unarchive
-                                                            </DropdownMenuItem>
-                                                        ) : (
-                                                            <DropdownMenuItem
-                                                                onClick={() => handleArchive(adviser)}
-                                                                className="text-destructive focus:text-destructive"
-                                                            >
-                                                                <Archive className="mr-2 h-4 w-4" />
-                                                                Archive
-                                                            </DropdownMenuItem>
-                                                        )}
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
-                                            </td>
+                        {filteredAdvisers.length === 0 ? (
+                            <div className="py-12 text-center">
+                                <div className="flex flex-col items-center space-y-4">
+                                    <Archive className="h-12 w-12 text-muted-foreground" />
+                                    <div className="space-y-2">
+                                        <h3 className="text-lg font-medium">
+                                            {showArchivedAdvisers ? 'No archived advisers found' : 'No advisers found'}
+                                        </h3>
+                                        <p className="text-muted-foreground">
+                                            {showArchivedAdvisers 
+                                                ? 'No adviser accounts have been archived yet.' 
+                                                : 'Get started by creating your first adviser account.'
+                                            }
+                                        </p>
+                                    </div>
+                                    {!showArchivedAdvisers && (
+                                        <Button onClick={() => setIsCreateDialogOpen(true)}>
+                                            <Plus className="h-4 w-4 mr-2" />
+                                            Add Adviser
+                                        </Button>
+                                    )}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full">
+                                    <thead>
+                                        <tr className="border-b">
+                                            <th className="text-left py-3 px-4 font-semibold text-sm">Username</th>
+                                            <th className="text-left py-3 px-4 font-semibold text-sm">Email</th>
+                                            <th className="text-left py-3 px-4 font-semibold text-sm">Name</th>
+                                            <th className="text-left py-3 px-4 font-semibold text-sm">Sections</th>
+                                            <th className="text-left py-3 px-4 font-semibold text-sm">Status</th>
+                                            <th className="text-left py-3 px-4 font-semibold text-sm">Created</th>
+                                            <th className="text-right py-3 px-4 font-semibold text-sm">Actions</th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
+                                    </thead>
+                                    <tbody>
+                                        {filteredAdvisers.map((adviser) => (
+                                            <tr key={adviser.id} className={`border-b hover:bg-muted/50 transition-colors ${adviser.status === 'archived' ? 'opacity-75' : ''}`}>
+                                                <td className="py-3 px-4 font-medium">
+                                                    {adviser.username}
+                                                </td>
+                                                <td className="py-3 px-4 text-sm text-muted-foreground">{adviser.email}</td>
+                                                <td className="py-3 px-4">{adviser.full_name}</td>
+                                                <td className="py-3 px-4 text-sm text-muted-foreground">{adviser.section_names}</td>
+                                                <td className="py-3 px-4">{getStatusBadge(adviser.status)}</td>
+                                                <td className="py-3 px-4 text-sm text-muted-foreground">
+                                                    {new Date(adviser.created_at).toLocaleDateString()}
+                                                </td>
+                                                <td className="py-3 px-4 text-right">
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                                                <MoreHorizontal className="h-4 w-4" />
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                            <DropdownMenuItem onClick={() => handleEdit(adviser)}>
+                                                                <Edit className="mr-2 h-4 w-4" />
+                                                                Edit
+                                                            </DropdownMenuItem>
+                                                            {adviser.status === 'archived' ? (
+                                                                <DropdownMenuItem
+                                                                    onClick={() => handleUnarchive(adviser)}
+                                                                    className="text-green-600 focus:text-green-600"
+                                                                >
+                                                                    <ArchiveRestore className="mr-2 h-4 w-4" />
+                                                                    Unarchive
+                                                                </DropdownMenuItem>
+                                                            ) : (
+                                                                <DropdownMenuItem
+                                                                    onClick={() => handleArchive(adviser)}
+                                                                    className="text-destructive focus:text-destructive"
+                                                                >
+                                                                    <Archive className="mr-2 h-4 w-4" />
+                                                                    Archive
+                                                                </DropdownMenuItem>
+                                                            )}
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
 

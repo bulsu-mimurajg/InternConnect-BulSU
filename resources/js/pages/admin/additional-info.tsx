@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { PlusIcon, EditIcon, ArchiveIcon, RotateCcwIcon } from 'lucide-react';
+import { PlusIcon, EditIcon, ArchiveIcon, RotateCcwIcon, Eye, Archive } from 'lucide-react';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 
@@ -140,7 +140,17 @@ export default function AdditionalInfoPage({ additionalInfos }: AdditionalInfoPa
                             variant="outline"
                             onClick={() => setShowArchived(!showArchived)}
                         >
-                            {showArchived ? 'Show Active' : 'Show Archived'}
+                            {showArchived ? (
+                                <>
+                                    <Eye className="h-4 w-4" />
+                                    Show Active
+                                </>
+                            ) : (
+                                <>
+                                    <Archive className="h-4 w-4" />
+                                    Show Archived
+                                </>
+                            )}
                         </Button>
                         <Button
                             onClick={() => setShowForm(true)}

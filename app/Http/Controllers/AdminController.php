@@ -1583,6 +1583,208 @@ class AdminController extends Controller
     }
 
     /**
+     * Display Section management page
+     */
+    public function sectionManagement(): Response
+    {
+        $sections = Section::withCount(['students', 'advisers'])
+            ->where('status', 'active')
+            ->orderBy('section_name')
+            ->get()
+            ->map(function ($section) {
+                return [
+                    'section_id' => $section->section_id,
+                    'section_name' => $section->section_name,
+                    'status' => $section->status,
+                    'student_count' => $section->students_count,
+                    'adviser_count' => $section->advisers_count,
+                    'created_at' => $section->created_at->format('M d, Y'),
+                    'updated_at' => $section->updated_at->format('M d, Y'),
+                ];
+            });
+
+        return Inertia::render('admin/section', [
+            'sections' => $sections,
+            'showArchived' => false,
+        ]);
+    }
+
+    /**
+     * Display Archived Sections management page
+     */
+    public function archivedSectionManagement(): Response
+    {
+        $sections = Section::withCount(['students', 'advisers'])
+            ->where('status', 'archived')
+            ->orderBy('section_name')
+            ->get()
+            ->map(function ($section) {
+                return [
+                    'section_id' => $section->section_id,
+                    'section_name' => $section->section_name,
+                    'status' => $section->status,
+                    'student_count' => $section->students_count,
+                    'adviser_count' => $section->advisers_count,
+                    'created_at' => $section->created_at->format('M d, Y'),
+                    'updated_at' => $section->updated_at->format('M d, Y'),
+                ];
+            });
+
+        return Inertia::render('admin/section', [
+            'sections' => $sections,
+            'showArchived' => true,
+        ]);
+    }
+
+    /**
+     * Store a new Section
+     */
+    public function storeSection(Request $request)
+    {
+        $request->validate([
+            'section_name' => 'required|string|max:100|unique:sections,section_name',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $section = Section::create([
+                'section_name' => $request->section_name,
+                'status' => 'active',
+            ]);
+
+            DB::commit();
+
+            // Log the activity
+            activity()
+                ->causedBy(Auth::user())
+                ->performedOn($section)
+                ->withProperties([
+                    'section_id' => $section->section_id,
+                    'section_name' => $section->section_name,
+                ])
+                ->log('created section');
+
+            return redirect()->route('admin.section')->with('success', 'Section created successfully.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Section creation failed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'request_data' => $request->all(),
+            ]);
+
+            return redirect()->back()->withErrors(['error' => 'Failed to create section: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Update Section
+     */
+    public function updateSection(Request $request, Section $section)
+    {
+        $request->validate([
+            'section_name' => [
+                'required',
+                'string',
+                'max:100',
+                Rule::unique('sections', 'section_name')->ignore($section->section_id, 'section_id'),
+            ],
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            // Capture old values before update
+            $oldValues = [
+                'section_name' => $section->section_name,
+            ];
+
+            $section->update([
+                'section_name' => $request->section_name,
+            ]);
+
+            DB::commit();
+
+            // Log the activity
+            activity()
+                ->causedBy(Auth::user())
+                ->performedOn($section)
+                ->withProperties([
+                    'section_id' => $section->section_id,
+                    'old_values' => $oldValues,
+                    'new_values' => [
+                        'section_name' => $section->section_name,
+                    ],
+                ])
+                ->log('updated section');
+
+            return redirect()->route('admin.section')->with('success', 'Section updated successfully.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()->withErrors(['error' => 'Failed to update section. Please try again.']);
+        }
+    }
+
+    /**
+     * Archive Section
+     */
+    public function archiveSection(Section $section)
+    {
+        try {
+            DB::beginTransaction();
+
+            $section->update(['status' => 'archived']);
+
+            DB::commit();
+
+            // Log the activity
+            activity()
+                ->causedBy(Auth::user())
+                ->performedOn($section)
+                ->withProperties([
+                    'section_id' => $section->section_id,
+                    'section_name' => $section->section_name,
+                ])
+                ->log('archived section');
+
+            return redirect()->route('admin.section')->with('success', 'Section archived successfully.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()->withErrors(['error' => 'Failed to archive section. Please try again.']);
+        }
+    }
+
+    /**
+     * Restore Section
+     */
+    public function restoreSection(Section $section)
+    {
+        try {
+            DB::beginTransaction();
+
+            $section->update(['status' => 'active']);
+
+            DB::commit();
+
+            // Log the activity
+            activity()
+                ->causedBy(Auth::user())
+                ->performedOn($section)
+                ->withProperties([
+                    'section_id' => $section->section_id,
+                    'section_name' => $section->section_name,
+                ])
+                ->log('restored section');
+
+            return redirect()->route('admin.section.archived')->with('success', 'Section restored successfully.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()->withErrors(['error' => 'Failed to restore section. Please try again.']);
+        }
+    }
+
+    /**
      * Display Events management page
      */
     public function eventsManagement(): Response

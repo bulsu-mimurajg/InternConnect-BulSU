@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, MoreHorizontal, Edit, Archive, Eye, ArchiveRestore, Filter, ChevronDown, ChevronUp, ArrowUpDown, Search } from 'lucide-react';
+import { Plus, MoreHorizontal, Edit, Archive, Eye, ArchiveRestore, Filter, ChevronDown, ChevronUp, ArrowUpDown, Search, BriefcaseBusinessIcon } from 'lucide-react';
 import { type BreadcrumbItem } from '@/types';
 
 interface HTE {
@@ -260,12 +260,12 @@ export default function HTEManagement({ htes, showArchived = false, filters = {}
                         >
                             {showArchivedHTEs ? (
                                 <>
-                                    <Eye className="mr-2 h-4 w-4" />
+                                    <Eye className="h-4 w-4" />
                                     Show Active
                                 </>
                             ) : (
                                 <>
-                                    <Archive className="mr-2 h-4 w-4" />
+                                    <Archive className="h-4 w-4" />
                                     Show Archived
                                 </>
                             )}
@@ -462,7 +462,10 @@ export default function HTEManagement({ htes, showArchived = false, filters = {}
                 {/* HTEs Table */}
                 <Card>
                     <CardHeader>
-                        <CardTitle>Host Training Establishments</CardTitle>
+                    <CardTitle className="flex items-center gap-2">
+                            <BriefcaseBusinessIcon className="h-5 w-5"/>
+                            Host Training Establishments
+                            </CardTitle>
                         <CardDescription>
                             {showArchivedHTEs 
                                 ? 'Archived HTE accounts' 
@@ -471,79 +474,104 @@ export default function HTEManagement({ htes, showArchived = false, filters = {}
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <div className="overflow-x-auto">
-                            <table className="w-full">
-                                <thead>
-                                    <tr className="border-b">
-                                        <th className="text-left py-3 px-4 font-semibold text-sm">Username</th>
-                                        <th className="text-left py-3 px-4 font-semibold text-sm">Email</th>
-                                        <th className="text-left py-3 px-4 font-semibold text-sm">Status</th>
-                                        <th className="text-left py-3 px-4 font-semibold text-sm">Company</th>
-                                        <th className="text-left py-3 px-4 font-semibold text-sm">Contact Person</th>
-                                        <th className="text-left py-3 px-4 font-semibold text-sm">Form Status</th>
-                                        <th className="text-left py-3 px-4 font-semibold text-sm">Created</th>
-                                        <th className="text-right py-3 px-4 font-semibold text-sm">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {filteredHTEs.map((hte) => (
-                                        <tr key={hte.id} className={`border-b hover:bg-muted/50 transition-colors ${hte.status === 'archived' ? 'opacity-75' : ''}`}>
-                                            <td className="py-3 px-4 font-medium">
-                                                {hte.username}
-                                            </td>
-                                            <td className="py-3 px-4 text-sm text-muted-foreground">{hte.email}</td>
-                                            <td className="py-3 px-4">{getStatusBadge(hte.status)}</td>
-                                            <td className="py-3 px-4 text-sm text-muted-foreground">
-                                                {hte.company_name || 'Not provided'}
-                                            </td>
-                                            <td className="py-3 px-4 text-sm text-muted-foreground">
-                                                {hte.contact_person || 'Not provided'}
-                                            </td>
-                                            <td className="py-3 px-4">
-                                                <Badge variant={hte.is_submit ? "default" : "outline"}>
-                                                    {hte.is_submit ? 'Submitted' : 'Not Submitted'}
-                                                </Badge>
-                                            </td>
-                                            <td className="py-3 px-4 text-sm text-muted-foreground">
-                                                {new Date(hte.created_at).toLocaleDateString()}
-                                            </td>
-                                            <td className="py-3 px-4 text-right">
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                                            <MoreHorizontal className="h-4 w-4" />
-                                                        </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end">
-                                                        <DropdownMenuItem onClick={() => handleEdit(hte)}>
-                                                            <Edit className="mr-2 h-4 w-4" />
-                                                            Edit
-                                                        </DropdownMenuItem>
-                                                        {hte.status === 'archived' ? (
-                                                            <DropdownMenuItem 
-                                                                onClick={() => handleUnarchive(hte)}
-                                                                className="text-green-600 focus:text-green-600"
-                                                            >
-                                                                <ArchiveRestore className="mr-2 h-4 w-4" />
-                                                                Unarchive
-                                                            </DropdownMenuItem>
-                                                        ) : (
-                                                            <DropdownMenuItem 
-                                                                onClick={() => handleArchive(hte)}
-                                                                className="text-destructive focus:text-destructive"
-                                                            >
-                                                                <Archive className="mr-2 h-4 w-4" />
-                                                                Archive
-                                                            </DropdownMenuItem>
-                                                        )}
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
-                                            </td>
+                        {filteredHTEs.length === 0 ? (
+                            <div className="py-12 text-center">
+                                <div className="flex flex-col items-center space-y-4">
+                                    <Archive className="h-12 w-12 text-muted-foreground" />
+                                    <div className="space-y-2">
+                                        <h3 className="text-lg font-medium">
+                                            {showArchivedHTEs ? 'No archived HTEs found' : 'No HTEs found'}
+                                        </h3>
+                                        <p className="text-muted-foreground">
+                                            {showArchivedHTEs 
+                                                ? 'No HTE accounts have been archived yet.' 
+                                                : 'Get started by creating your first HTE account.'
+                                            }
+                                        </p>
+                                    </div>
+                                    {!showArchivedHTEs && (
+                                        <Button onClick={() => setIsCreateDialogOpen(true)}>
+                                            <Plus className="h-4 w-4 mr-2" />
+                                            Add HTE
+                                        </Button>
+                                    )}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full">
+                                    <thead>
+                                        <tr className="border-b">
+                                            <th className="text-left py-3 px-4 font-semibold text-sm">Username</th>
+                                            <th className="text-left py-3 px-4 font-semibold text-sm">Email</th>
+                                            <th className="text-left py-3 px-4 font-semibold text-sm">Status</th>
+                                            <th className="text-left py-3 px-4 font-semibold text-sm">Company</th>
+                                            <th className="text-left py-3 px-4 font-semibold text-sm">Contact Person</th>
+                                            <th className="text-left py-3 px-4 font-semibold text-sm">Form Status</th>
+                                            <th className="text-left py-3 px-4 font-semibold text-sm">Created</th>
+                                            <th className="text-right py-3 px-4 font-semibold text-sm">Actions</th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
+                                    </thead>
+                                    <tbody>
+                                        {filteredHTEs.map((hte) => (
+                                            <tr key={hte.id} className={`border-b hover:bg-muted/50 transition-colors ${hte.status === 'archived' ? 'opacity-75' : ''}`}>
+                                                <td className="py-3 px-4 font-medium">
+                                                    {hte.username}
+                                                </td>
+                                                <td className="py-3 px-4 text-sm text-muted-foreground">{hte.email}</td>
+                                                <td className="py-3 px-4">{getStatusBadge(hte.status)}</td>
+                                                <td className="py-3 px-4 text-sm text-muted-foreground">
+                                                    {hte.company_name || 'Not provided'}
+                                                </td>
+                                                <td className="py-3 px-4 text-sm text-muted-foreground">
+                                                    {hte.contact_person || 'Not provided'}
+                                                </td>
+                                                <td className="py-3 px-4">
+                                                    <Badge variant={hte.is_submit ? "default" : "outline"}>
+                                                        {hte.is_submit ? 'Submitted' : 'Not Submitted'}
+                                                    </Badge>
+                                                </td>
+                                                <td className="py-3 px-4 text-sm text-muted-foreground">
+                                                    {new Date(hte.created_at).toLocaleDateString()}
+                                                </td>
+                                                <td className="py-3 px-4 text-right">
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                                                <MoreHorizontal className="h-4 w-4" />
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                            <DropdownMenuItem onClick={() => handleEdit(hte)}>
+                                                                <Edit className="mr-2 h-4 w-4" />
+                                                                Edit
+                                                            </DropdownMenuItem>
+                                                            {hte.status === 'archived' ? (
+                                                                <DropdownMenuItem 
+                                                                    onClick={() => handleUnarchive(hte)}
+                                                                    className="text-green-600 focus:text-green-600"
+                                                                >
+                                                                    <ArchiveRestore className="mr-2 h-4 w-4" />
+                                                                    Unarchive
+                                                                </DropdownMenuItem>
+                                                            ) : (
+                                                                <DropdownMenuItem 
+                                                                    onClick={() => handleArchive(hte)}
+                                                                    className="text-destructive focus:text-destructive"
+                                                                >
+                                                                    <Archive className="mr-2 h-4 w-4" />
+                                                                    Archive
+                                                                </DropdownMenuItem>
+                                                            )}
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
 
