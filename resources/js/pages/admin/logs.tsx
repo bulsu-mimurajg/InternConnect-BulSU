@@ -1,10 +1,10 @@
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import React, { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ChevronDownIcon, ChevronRightIcon, ActivityIcon, UserIcon, ClockIcon, LogInIcon, LogOutIcon, FilterIcon, XIcon } from 'lucide-react';
@@ -88,17 +88,21 @@ export default function Logs({ activities, filters }: LogsProps) {
     };
 
     const handleFilterChange = (key: string, value: string) => {
-        setFilterValues(prev => ({ ...prev, [key]: value }));
-    };
+        const newFilters = { ...filterValues, [key]: value };
+        setFilterValues(newFilters);
 
-    const applyFilters = () => {
+        // Apply filters immediately
         const params = new URLSearchParams();
-        Object.entries(filterValues).forEach(([key, value]) => {
-            if (value && value !== 'all') params.append(key, value);
+        Object.entries(newFilters).forEach(([filterKey, filterValue]) => {
+            if (filterValue && filterValue !== 'all') {
+                params.append(filterKey, filterValue);
+            }
         });
-        
-        const url = params.toString() ? `/admin/logs?${params.toString()}` : '/admin/logs';
-        window.location.href = url;
+
+        router.get('/admin/logs', params.toString() ? Object.fromEntries(params) : {}, {
+            preserveState: true,
+            replace: true
+        });
     };
 
     const clearFilters = () => {
@@ -109,7 +113,10 @@ export default function Logs({ activities, filters }: LogsProps) {
             date_from: '',
             date_to: '',
         });
-        window.location.href = '/admin/logs';
+        router.get('/admin/logs', {}, {
+            preserveState: true,
+            replace: true
+        });
     };
 
     const hasActiveFilters = Object.entries(filterValues).some(([key, value]) => {
@@ -203,22 +210,14 @@ export default function Logs({ activities, filters }: LogsProps) {
                         </p>
                     </div>
                     <div className="flex items-center gap-3">
-                        <Badge variant="secondary" className="text-sm">
-                            {activities.total} total
-                        </Badge>
                         <Button
                             variant="outline"
-                            size="sm"
+                            size="default"
                             onClick={() => setShowFilters(!showFilters)}
                             className="flex items-center gap-2"
                         >
                             <FilterIcon className="h-4 w-4" />
                             Filters
-                            {hasActiveFilters && (
-                                <Badge variant="destructive" className="ml-1 h-4 w-4 p-0 text-xs">
-                                    !
-                                </Badge>
-                            )}
                         </Button>
                     </div>
                 </div>
@@ -226,7 +225,21 @@ export default function Logs({ activities, filters }: LogsProps) {
                 {showFilters && (
                     <Card>
                         <CardHeader>
-                            <CardTitle className="text-lg">Filter Logs</CardTitle>
+                            <div className="flex items-center justify-between">
+                                <CardTitle className="flex items-center gap-2">
+                                    <FilterIcon className="h-5 w-5" />
+                                    Filters & Search
+                                </CardTitle>
+                                {hasActiveFilters && (
+                                    <Button variant="outline" onClick={clearFilters} size="sm" className="flex items-center gap-2">
+                                        <XIcon className="h-4 w-4" />
+                                        Clear All
+                                    </Button>
+                                )}
+                            </div>
+                            <CardDescription>
+                                Filter logs by action type, user, role, or date range
+                            </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -290,18 +303,6 @@ export default function Logs({ activities, filters }: LogsProps) {
                                         onChange={(e) => handleFilterChange('date_to', e.target.value)}
                                     />
                                 </div>
-                            </div>
-
-                            <div className="flex items-center gap-2">
-                                <Button onClick={applyFilters} size="sm">
-                                    Apply Filters
-                                </Button>
-                                {hasActiveFilters && (
-                                    <Button variant="outline" onClick={clearFilters} size="sm" className="flex items-center gap-2">
-                                        <XIcon className="h-4 w-4" />
-                                        Clear All
-                                    </Button>
-                                )}
                             </div>
                         </CardContent>
                     </Card>

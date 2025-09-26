@@ -4,6 +4,7 @@ import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 import {
     Dialog,
@@ -22,7 +23,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, MoreHorizontal, Edit, Archive, Eye, ArchiveRestore } from 'lucide-react';
+import { Plus, MoreHorizontal, Edit, Archive, Eye, ArchiveRestore, Filter, ChevronDown, ChevronUp, ArrowUpDown, Search } from 'lucide-react';
 import { type BreadcrumbItem } from '@/types';
 
 interface HTE {
@@ -46,6 +47,11 @@ interface HTE {
 interface Props {
     htes: HTE[];
     showArchived?: boolean;
+    filters?: {
+        search?: string;
+        status?: string;
+        submission?: string;
+    };
 }
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -55,11 +61,17 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-export default function HTEManagement({ htes, showArchived = false }: Props) {
+export default function HTEManagement({ htes, showArchived = false, filters = {} }: Props) {
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [selectedHTE, setSelectedHTE] = useState<HTE | null>(null);
     const [showArchivedHTEs, setShowArchivedHTEs] = useState(showArchived);
+    const [showFilters, setShowFilters] = useState(false);
+    const [localFilters, setLocalFilters] = useState({
+        search: filters.search || '',
+        status: filters.status || 'all',
+        submission: filters.submission || 'all',
+    });
 
     const createForm = useForm({
         email: '',
@@ -163,6 +175,50 @@ export default function HTEManagement({ htes, showArchived = false }: Props) {
         router.visit(route(routeName));
     };
 
+    const handleFilterChange = (filterType: 'search' | 'status' | 'submission', value: string) => {
+        const newFilters = { ...localFilters, [filterType]: value };
+        setLocalFilters(newFilters);
+
+        // Apply filters immediately
+        const params = new URLSearchParams();
+        if (newFilters.search) {
+            params.append('search', newFilters.search);
+        }
+        if (newFilters.status && newFilters.status !== 'all') {
+            params.append('status', newFilters.status);
+        }
+        if (newFilters.submission && newFilters.submission !== 'all') {
+            params.append('submission', newFilters.submission);
+        }
+
+        const routeName = showArchivedHTEs ? 'admin.hte.archived' : 'admin.hte';
+        router.get(route(routeName), params.toString() ? Object.fromEntries(params) : {}, {
+            preserveState: true,
+            replace: true
+        });
+    };
+
+    const clearFilters = () => {
+        setLocalFilters({ search: '', status: 'all', submission: 'all' });
+        const routeName = showArchivedHTEs ? 'admin.hte.archived' : 'admin.hte';
+        router.get(route(routeName), {}, {
+            preserveState: true,
+            replace: true
+        });
+    };
+
+    const filteredHTEs = htes.filter(hte => {
+        const matchesSearch = hte.username.toLowerCase().includes(localFilters.search.toLowerCase()) ||
+                            hte.email.toLowerCase().includes(localFilters.search.toLowerCase()) ||
+                            (hte.company_name && hte.company_name.toLowerCase().includes(localFilters.search.toLowerCase())) ||
+                            (hte.contact_person && hte.contact_person.toLowerCase().includes(localFilters.search.toLowerCase()));
+        const matchesStatus = localFilters.status === 'all' || hte.status === localFilters.status;
+        const matchesSubmission = localFilters.submission === 'all' || 
+                                (localFilters.submission === 'submitted' && hte.is_submit) ||
+                                (localFilters.submission === 'not_submitted' && !hte.is_submit);
+        return matchesSearch && matchesStatus && matchesSubmission;
+    });
+
     const getStatusBadge = (status: string) => {
         switch (status) {
             case 'verified':
@@ -190,6 +246,14 @@ export default function HTEManagement({ htes, showArchived = false }: Props) {
                         </p>
                     </div>
                     <div className="flex gap-2">
+                        <Button 
+                            variant="outline" 
+                            size="default"
+                            onClick={() => setShowFilters(!showFilters)}
+                        >
+                            <Filter className="h-4 w-4" />
+                            Filters
+                        </Button>
                         <Button 
                             variant="outline" 
                             onClick={toggleArchivedView}
@@ -305,6 +369,96 @@ export default function HTEManagement({ htes, showArchived = false }: Props) {
                             </div>
                 </div>
 
+                {/* Filters Section */}
+                {showFilters && (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <Filter className="h-5 w-5" />
+                                Filters & Search
+                            </CardTitle>
+                            <CardDescription>
+                                Filter HTEs by status, submission status, or search by username, email, company name, or contact person
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                {/* Search Filter */}
+                                <div className="space-y-2">
+                                    <Label htmlFor="search-filter">Search</Label>
+                                    <div className="relative">
+                                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                        <Input
+                                            id="search-filter"
+                                            placeholder="Search HTEs..."
+                                            value={localFilters.search}
+                                            onChange={(e) => handleFilterChange('search', e.target.value)}
+                                            className="pl-10"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Status Filter */}
+                                <div className="space-y-2">
+                                    <Label htmlFor="status-filter">Status</Label>
+                                    <Select
+                                        value={localFilters.status}
+                                        onValueChange={(value) => handleFilterChange('status', value)}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="All Status" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">All Status</SelectItem>
+                                            <SelectItem value="verified">Verified</SelectItem>
+                                            <SelectItem value="unverified">Unverified</SelectItem>
+                                            <SelectItem value="archived">Archived</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                {/* Submission Filter */}
+                                <div className="space-y-2">
+                                    <Label htmlFor="submission-filter">Form Status</Label>
+                                    <Select
+                                        value={localFilters.submission}
+                                        onValueChange={(value) => handleFilterChange('submission', value)}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="All Submission Status" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">All Submission Status</SelectItem>
+                                            <SelectItem value="submitted">Submitted</SelectItem>
+                                            <SelectItem value="not_submitted">Not Submitted</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                {/* Clear Filters */}
+                                <div className="space-y-2">
+                                    <Label>&nbsp;</Label>
+                                    <Button
+                                        variant="outline"
+                                        onClick={clearFilters}
+                                        className="w-full"
+                                    >
+                                        <ArrowUpDown className="h-4 w-4 mr-2" />
+                                        Clear Filters
+                                    </Button>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
+
+                {/* Results Summary */}
+                <div className="flex items-center justify-between">
+                    <p className="text-sm text-muted-foreground">
+                        Showing {filteredHTEs.length} of {htes.length} HTE{htes.length !== 1 ? 's' : ''}
+                    </p>
+                </div>
+
                 {/* HTEs Table */}
                 <Card>
                     <CardHeader>
@@ -332,7 +486,7 @@ export default function HTEManagement({ htes, showArchived = false }: Props) {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {htes.map((hte) => (
+                                    {filteredHTEs.map((hte) => (
                                         <tr key={hte.id} className={`border-b hover:bg-muted/50 transition-colors ${hte.status === 'archived' ? 'opacity-75' : ''}`}>
                                             <td className="py-3 px-4 font-medium">
                                                 {hte.username}

@@ -4,6 +4,7 @@ import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 import {
     Dialog,
@@ -23,7 +24,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, MoreHorizontal, Edit, Archive, Eye, ArchiveRestore } from 'lucide-react';
+import { Plus, MoreHorizontal, Edit, Archive, Eye, ArchiveRestore, Filter, ArrowUpDown, Search } from 'lucide-react';
 import { type BreadcrumbItem } from '@/types';
 
 interface Adviser {
@@ -54,6 +55,11 @@ interface Props {
     advisers: Adviser[];
     sections: Section[];
     showArchived?: boolean;
+    filters?: {
+        search?: string;
+        status?: string;
+        section?: string;
+    };
 }
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -63,11 +69,17 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-export default function AdviserManagement({ advisers, sections, showArchived = false }: Props) {
+export default function AdviserManagement({ advisers, sections, showArchived = false, filters = {} }: Props) {
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [selectedAdviser, setSelectedAdviser] = useState<Adviser | null>(null);
     const [showArchivedAdvisers, setShowArchivedAdvisers] = useState(showArchived);
+    const [showFilters, setShowFilters] = useState(false);
+    const [localFilters, setLocalFilters] = useState({
+        search: filters.search || '',
+        status: filters.status || 'all',
+        section: filters.section || 'all',
+    });
 
     const createForm = useForm({
         email: '',
@@ -179,6 +191,48 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
         }
     };
 
+    const handleFilterChange = (filterType: 'search' | 'status' | 'section', value: string) => {
+        const newFilters = { ...localFilters, [filterType]: value };
+        setLocalFilters(newFilters);
+
+        // Apply filters immediately
+        const params = new URLSearchParams();
+        if (newFilters.search) {
+            params.append('search', newFilters.search);
+        }
+        if (newFilters.status && newFilters.status !== 'all') {
+            params.append('status', newFilters.status);
+        }
+        if (newFilters.section && newFilters.section !== 'all') {
+            params.append('section', newFilters.section);
+        }
+
+        const routeName = showArchivedAdvisers ? 'admin.adviser.archived' : 'admin.adviser';
+        router.get(route(routeName), params.toString() ? Object.fromEntries(params) : {}, {
+            preserveState: true,
+            replace: true
+        });
+    };
+
+    const clearFilters = () => {
+        setLocalFilters({ search: '', status: 'all', section: 'all' });
+        const routeName = showArchivedAdvisers ? 'admin.adviser.archived' : 'admin.adviser';
+        router.get(route(routeName), {}, {
+            preserveState: true,
+            replace: true
+        });
+    };
+
+    const filteredAdvisers = advisers.filter(adviser => {
+        const matchesSearch = adviser.username.toLowerCase().includes(localFilters.search.toLowerCase()) ||
+                            adviser.email.toLowerCase().includes(localFilters.search.toLowerCase()) ||
+                            adviser.full_name.toLowerCase().includes(localFilters.search.toLowerCase());
+        const matchesStatus = localFilters.status === 'all' || adviser.status === localFilters.status;
+        const matchesSection = localFilters.section === 'all' || 
+                              adviser.sections.some(s => s.section_name === localFilters.section);
+        return matchesSearch && matchesStatus && matchesSection;
+    });
+
     const getStatusBadge = (status: string) => {
         switch (status) {
             case 'verified':
@@ -206,6 +260,14 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
                         </p>
                     </div>
                     <div className="flex gap-2">
+                        <Button 
+                            variant="outline" 
+                            size="default"
+                            onClick={() => setShowFilters(!showFilters)}
+                        >
+                            <Filter className="h-4 w-4" />
+                            Filters
+                        </Button>
                         <Button
                             variant="outline"
                             onClick={toggleArchivedView}
@@ -385,6 +447,99 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
                             </div>
                 </div>
 
+                {/* Filters Section */}
+                {showFilters && (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <Filter className="h-5 w-5" />
+                                Filters & Search
+                            </CardTitle>
+                            <CardDescription>
+                                Filter advisers by status, section, or search by username, email, or name
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                {/* Search Filter */}
+                                <div className="space-y-2">
+                                    <Label htmlFor="search-filter">Search</Label>
+                                    <div className="relative">
+                                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                        <Input
+                                            id="search-filter"
+                                            placeholder="Search advisers..."
+                                            value={localFilters.search}
+                                            onChange={(e) => handleFilterChange('search', e.target.value)}
+                                            className="pl-10"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Status Filter */}
+                                <div className="space-y-2">
+                                    <Label htmlFor="status-filter">Status</Label>
+                                    <Select
+                                        value={localFilters.status}
+                                        onValueChange={(value) => handleFilterChange('status', value)}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="All Status" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">All Status</SelectItem>
+                                            <SelectItem value="verified">Verified</SelectItem>
+                                            <SelectItem value="unverified">Unverified</SelectItem>
+                                            <SelectItem value="archived">Archived</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                {/* Section Filter */}
+                                <div className="space-y-2">
+                                    <Label htmlFor="section-filter">Section</Label>
+                                    <Select
+                                        value={localFilters.section}
+                                        onValueChange={(value) => handleFilterChange('section', value)}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="All Sections" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">All Sections</SelectItem>
+                                            {sections.map((section) => (
+                                                <SelectItem key={section.section_id} value={section.section_name}>
+                                                    {section.section_name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                {/* Clear Filters */}
+                                <div className="space-y-2">
+                                    <Label>&nbsp;</Label>
+                                    <Button
+                                        variant="outline"
+                                        onClick={clearFilters}
+                                        className="w-full"
+                                    >
+                                        <ArrowUpDown className="h-4 w-4 mr-2" />
+                                        Clear Filters
+                                    </Button>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
+
+                {/* Results Summary */}
+                <div className="flex items-center justify-between">
+                    <p className="text-sm text-muted-foreground">
+                        Showing {filteredAdvisers.length} of {advisers.length} adviser{advisers.length !== 1 ? 's' : ''}
+                    </p>
+                </div>
+
                 {/* Advisers Table */}
                 <Card>
                     <CardHeader>
@@ -411,7 +566,7 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {advisers.map((adviser) => (
+                                    {filteredAdvisers.map((adviser) => (
                                         <tr key={adviser.id} className={`border-b hover:bg-muted/50 transition-colors ${adviser.status === 'archived' ? 'opacity-75' : ''}`}>
                                             <td className="py-3 px-4 font-medium">
                                                 {adviser.username}

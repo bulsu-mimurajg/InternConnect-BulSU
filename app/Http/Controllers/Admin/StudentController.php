@@ -23,9 +23,14 @@ class StudentController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $students = Student::with('section')
+        // Get filter parameters
+        $search = $request->get('search', '');
+        $sectionFilter = $request->get('section', 'all');
+        $statusFilter = $request->get('status', 'all');
+        // Build students query with filters
+        $studentsQuery = Student::with('section')
             ->select([
                 'id',
                 'student_number',
@@ -35,9 +40,35 @@ class StudentController extends Controller
                 'section_id',
                 'specialization',
                 'is_active'
-            ])
-            ->where('is_active', true)
-            ->orderBy('last_name')
+            ]);
+
+        // Apply status filter
+        if ($statusFilter === 'active') {
+            $studentsQuery->where('is_active', true);
+        } elseif ($statusFilter === 'inactive') {
+            $studentsQuery->where('is_active', false);
+        } else {
+            // For 'all' or other values, show both active and inactive
+            // We'll handle this in the filtering logic below
+        }
+
+        // Apply section filter
+        if ($sectionFilter && $sectionFilter !== 'all') {
+            $studentsQuery->whereHas('section', function($q) use ($sectionFilter) {
+                $q->where('section_name', $sectionFilter);
+            });
+        }
+
+        // Apply search filter
+        if ($search) {
+            $studentsQuery->where(function ($q) use ($search) {
+                $q->where('first_name', 'like', "%{$search}%")
+                  ->orWhere('last_name', 'like', "%{$search}%")
+                  ->orWhere('student_number', 'like', "%{$search}%");
+            });
+        }
+
+        $students = $studentsQuery->orderBy('last_name')
             ->orderBy('first_name')
             ->get();
 
@@ -130,11 +161,29 @@ class StudentController extends Controller
             ];
         });
 
+        // Get all sections for filter options
+        $sectionOptions = \App\Models\Section::select('section_name')
+            ->withCount('students')
+            ->orderBy('section_name')
+            ->get()
+            ->map(function ($section) {
+                return [
+                    'name' => $section->section_name,
+                    'total_students' => $section->students_count
+                ];
+            });
+
         return Inertia::render('admin/student/list', [
             'students' => $transformedStudents,
             'unverifiedUsers' => $transformedUnverifiedUsers,
             'archivedStudents' => $transformedArchivedStudents,
-            'archivedUnverifiedUsers' => $transformedArchivedUnverifiedUsers
+            'archivedUnverifiedUsers' => $transformedArchivedUnverifiedUsers,
+            'section_options' => $sectionOptions,
+            'filters' => [
+                'search' => $search,
+                'section' => $sectionFilter,
+                'status' => $statusFilter,
+            ]
         ]);
     }
 

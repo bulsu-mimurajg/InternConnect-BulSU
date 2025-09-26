@@ -3,7 +3,10 @@ import AdminLayout from '@/layouts/admin/layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { UsersIcon, UserCheckIcon, ArchiveIcon, RotateCcwIcon, EditIcon, UserXIcon } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { UsersIcon, UserCheckIcon, ArchiveIcon, RotateCcwIcon, EditIcon, UserXIcon, Filter, ArrowUpDown, Search } from 'lucide-react';
 import { useState } from 'react';
 import type { BreadcrumbItem } from '@/types';
 
@@ -34,16 +37,38 @@ interface UnverifiedUser {
     created_at: string;
 }
 
+interface SectionOption {
+    name: string;
+    total_students: number;
+}
+
 interface Props {
     students: Student[];
     unverifiedUsers?: UnverifiedUser[];
     archivedStudents?: Student[];
     archivedUnverifiedUsers?: UnverifiedUser[];
+    section_options?: SectionOption[];
+    filters?: {
+        search?: string;
+        section?: string;
+        status?: string;
+    };
 }
 
-export default function StudentList({ students, unverifiedUsers = [], archivedStudents = [], archivedUnverifiedUsers = [] }: Props) {
+export default function StudentList({ students, unverifiedUsers = [], archivedStudents = [], archivedUnverifiedUsers = [], section_options = [], filters = {} }: Props) {
     const [showUnverified, setShowUnverified] = useState(false);
     const [showArchived, setShowArchived] = useState(false);
+    const [showFilters, setShowFilters] = useState(false);
+    const [localFilters, setLocalFilters] = useState({
+        search: filters.search || '',
+        section: filters.section || 'all',
+        status: filters.status || 'all',
+    });
+
+    // Use section options from backend
+    const availableSections = section_options.length > 0 
+        ? section_options.map(s => s.name)
+        : [];
     const handleEdit = (studentId: number | string) => {
         router.get(`/student/${studentId}/edit`);
     };
@@ -86,6 +111,71 @@ export default function StudentList({ students, unverifiedUsers = [], archivedSt
         }
     };
 
+    const handleFilterChange = (filterType: 'search' | 'section' | 'status', value: string) => {
+        const newFilters = { ...localFilters, [filterType]: value };
+        setLocalFilters(newFilters);
+
+        // Apply filters immediately
+        const params: Record<string, string> = {};
+        if (newFilters.search) {
+            params.search = newFilters.search;
+        }
+        if (newFilters.section && newFilters.section !== 'all') {
+            params.section = newFilters.section;
+        }
+        if (newFilters.status && newFilters.status !== 'all') {
+            params.status = newFilters.status;
+        }
+
+        router.get('/student/list', params, {
+            preserveState: true,
+            replace: true
+        });
+    };
+
+    const clearFilters = () => {
+        setLocalFilters({ search: '', section: 'all', status: 'all' });
+        router.get('/student/list', {}, {
+            preserveState: true,
+            replace: true
+        });
+    };
+
+    const filteredStudents = students.filter(student => {
+        const matchesSearch = student.first_name.toLowerCase().includes(localFilters.search.toLowerCase()) ||
+                            student.last_name.toLowerCase().includes(localFilters.search.toLowerCase()) ||
+                            student.student_number.toLowerCase().includes(localFilters.search.toLowerCase());
+        const matchesSection = localFilters.section === 'all' || student.section === localFilters.section;
+        const matchesStatus = localFilters.status === 'all' || 
+                             (localFilters.status === 'active' && student.is_active) ||
+                             (localFilters.status === 'inactive' && !student.is_active);
+        return matchesSearch && matchesSection && matchesStatus;
+    });
+
+    const filteredUnverifiedUsers = unverifiedUsers.filter(user => {
+        const matchesSearch = user.username.toLowerCase().includes(localFilters.search.toLowerCase()) ||
+                            user.email.toLowerCase().includes(localFilters.search.toLowerCase());
+        const matchesSection = localFilters.section === 'all' || user.section === localFilters.section;
+        const matchesStatus = localFilters.status === 'all' || user.status === localFilters.status;
+        return matchesSearch && matchesSection && matchesStatus;
+    });
+
+    const filteredArchivedStudents = archivedStudents.filter(student => {
+        const matchesSearch = student.first_name.toLowerCase().includes(localFilters.search.toLowerCase()) ||
+                            student.last_name.toLowerCase().includes(localFilters.search.toLowerCase()) ||
+                            student.student_number.toLowerCase().includes(localFilters.search.toLowerCase());
+        const matchesSection = localFilters.section === 'all' || student.section === localFilters.section;
+        return matchesSearch && matchesSection;
+    });
+
+    const filteredArchivedUnverifiedUsers = archivedUnverifiedUsers.filter(user => {
+        const matchesSearch = user.username.toLowerCase().includes(localFilters.search.toLowerCase()) ||
+                            user.email.toLowerCase().includes(localFilters.search.toLowerCase());
+        const matchesSection = localFilters.section === 'all' || user.section === localFilters.section;
+        const matchesStatus = localFilters.status === 'all' || user.status === localFilters.status;
+        return matchesSearch && matchesSection && matchesStatus;
+    });
+
     return (
         <AdminLayout breadcrumbs={breadcrumbs}>
             <Head title="Student List" />
@@ -111,21 +201,127 @@ export default function StudentList({ students, unverifiedUsers = [], archivedSt
                         </p>
                     </div>
                     <div className="flex gap-2">
+                        <Button 
+                            variant="outline" 
+                            size="default"
+                            onClick={() => setShowFilters(!showFilters)}
+                        >
+                            <Filter className="h-4 w-4" />
+                            Filters
+                        </Button>
                         <Button
                             variant="outline"
                             onClick={handleShowUnverified}
                         >
-                            <UserXIcon className="h-4 w-4 mr-2" />
+                            <UserXIcon className="h-4 w-4" />
                             {showUnverified ? 'Active Students' : 'Pending'}
                         </Button>
                         <Button
                             variant="outline"
                             onClick={handleShowArchived}
                         >
-                            <ArchiveIcon className="h-4 w-4 mr-2" />
+                            <ArchiveIcon className="h-4 w-4" />
                             {showArchived ? 'Active Students' : 'Archived'}
                         </Button>
                     </div>
+                </div>
+
+                {/* Filters Section */}
+                {showFilters && (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <Filter className="h-5 w-5" />
+                                Filters & Search
+                            </CardTitle>
+                            <CardDescription>
+                                Filter students by section, status, or search by name or student number
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                {/* Search Filter */}
+                                <div className="space-y-2">
+                                    <Label htmlFor="search-filter">Search</Label>
+                                    <div className="relative">
+                                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                        <Input
+                                            id="search-filter"
+                                            placeholder="Search students..."
+                                            value={localFilters.search}
+                                            onChange={(e) => handleFilterChange('search', e.target.value)}
+                                            className="pl-10"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Section Filter */}
+                                <div className="space-y-2">
+                                    <Label htmlFor="section-filter">Section</Label>
+                                    <Select
+                                        value={localFilters.section}
+                                        onValueChange={(value) => handleFilterChange('section', value)}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="All Sections" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">All Sections</SelectItem>
+                                            {section_options.map((section) => (
+                                                <SelectItem key={section.name} value={section.name}>
+                                                    {section.name} ({section.total_students})
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                {/* Status Filter */}
+                                <div className="space-y-2">
+                                    <Label htmlFor="status-filter">Status</Label>
+                                    <Select
+                                        value={localFilters.status}
+                                        onValueChange={(value) => handleFilterChange('status', value)}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="All Status" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">All Status</SelectItem>
+                                            <SelectItem value="active">Active</SelectItem>
+                                            <SelectItem value="inactive">Inactive</SelectItem>
+                                            <SelectItem value="unverified">Unverified</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                {/* Clear Filters */}
+                                <div className="space-y-2">
+                                    <Label>&nbsp;</Label>
+                                    <Button
+                                        variant="outline"
+                                        onClick={clearFilters}
+                                        className="w-full"
+                                    >
+                                        <ArrowUpDown className="h-4 w-4 mr-2" />
+                                        Clear Filters
+                                    </Button>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
+
+                {/* Results Summary */}
+                <div className="flex items-center justify-between">
+                    <p className="text-sm text-muted-foreground">
+                        {showArchived 
+                            ? `Showing ${filteredArchivedStudents.length} archived students`
+                            : showUnverified 
+                                ? `Showing ${filteredUnverifiedUsers.length} unverified users`
+                                : `Showing ${filteredStudents.length} students`
+                        }
+                    </p>
                 </div>
 
                 {/* Archived Students */}
@@ -142,11 +338,16 @@ export default function StudentList({ students, unverifiedUsers = [], archivedSt
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
-                                {archivedStudents.length === 0 ? (
+                                {filteredArchivedStudents.length === 0 ? (
                                     <div className="text-center py-8">
                                         <ArchiveIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                                         <h3 className="text-lg font-medium mb-2">No archived students found</h3>
-                                        <p className="text-muted-foreground">No students have been archived yet.</p>
+                                        <p className="text-muted-foreground">
+                                            {localFilters.search || localFilters.section !== 'all' || localFilters.status !== 'all'
+                                                ? 'Try adjusting your search or filter criteria.'
+                                                : 'No students have been archived yet.'
+                                            }
+                                        </p>
                                     </div>
                                 ) : (
                                     <div className="overflow-x-auto">
@@ -161,7 +362,7 @@ export default function StudentList({ students, unverifiedUsers = [], archivedSt
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {archivedStudents.map((stud) => (
+                                                {filteredArchivedStudents.map((stud) => (
                                                     <tr key={stud.id} className="border-b hover:bg-muted/50 transition-colors">
                                                         <td className="p-3">
                                                             <div>
@@ -215,11 +416,16 @@ export default function StudentList({ students, unverifiedUsers = [], archivedSt
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
-                                {archivedUnverifiedUsers.length === 0 ? (
+                                {filteredArchivedUnverifiedUsers.length === 0 ? (
                                     <div className="text-center py-8">
                                         <UserXIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                                         <h3 className="text-lg font-medium mb-2">No archived unverified users found</h3>
-                                        <p className="text-muted-foreground">No unverified users have been archived yet.</p>
+                                        <p className="text-muted-foreground">
+                                            {localFilters.search || localFilters.section !== 'all' || localFilters.status !== 'all'
+                                                ? 'Try adjusting your search or filter criteria.'
+                                                : 'No unverified users have been archived yet.'
+                                            }
+                                        </p>
                                     </div>
                                 ) : (
                                     <div className="overflow-x-auto">
@@ -235,7 +441,7 @@ export default function StudentList({ students, unverifiedUsers = [], archivedSt
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {archivedUnverifiedUsers.map((user) => (
+                                                {filteredArchivedUnverifiedUsers.map((user) => (
                                                     <tr key={user.id} className="border-b hover:bg-muted/50 transition-colors">
                                                         <td className="p-3">
                                                             <div className="font-medium">
@@ -291,11 +497,16 @@ export default function StudentList({ students, unverifiedUsers = [], archivedSt
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            {unverifiedUsers.length === 0 ? (
+                            {filteredUnverifiedUsers.length === 0 ? (
                                 <div className="text-center py-8">
                                     <UserCheckIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                                     <h3 className="text-lg font-medium mb-2">No pending verifications found</h3>
-                                    <p className="text-muted-foreground">All student applications have been processed.</p>
+                                    <p className="text-muted-foreground">
+                                        {localFilters.search || localFilters.section !== 'all' || localFilters.status !== 'all'
+                                            ? 'Try adjusting your search or filter criteria.'
+                                            : 'All student applications have been processed.'
+                                        }
+                                    </p>
                                 </div>
                             ) : (
                                 <div className="overflow-x-auto">
@@ -311,7 +522,7 @@ export default function StudentList({ students, unverifiedUsers = [], archivedSt
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {unverifiedUsers.map((user) => (
+                                            {filteredUnverifiedUsers.map((user) => (
                                                 <tr key={user.id} className="border-b hover:bg-muted/50 transition-colors">
                                                     <td className="p-3">
                                                         <div className="font-medium">
@@ -376,11 +587,16 @@ export default function StudentList({ students, unverifiedUsers = [], archivedSt
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            {students.length === 0 ? (
+                            {filteredStudents.length === 0 ? (
                                 <div className="text-center py-8">
                                     <UsersIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                                     <h3 className="text-lg font-medium mb-2">No students found</h3>
-                                    <p className="text-muted-foreground">No verified students are available yet.</p>
+                                    <p className="text-muted-foreground">
+                                        {localFilters.search || localFilters.section !== 'all' || localFilters.status !== 'all'
+                                            ? 'Try adjusting your search or filter criteria.'
+                                            : 'No verified students are available yet.'
+                                        }
+                                    </p>
                                 </div>
                             ) : (
                                 <div className="overflow-x-auto">
@@ -395,7 +611,7 @@ export default function StudentList({ students, unverifiedUsers = [], archivedSt
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {students.map((stud) => (
+                                            {filteredStudents.map((stud) => (
                                                 <tr key={stud.id} className="border-b hover:bg-muted/50 transition-colors">
                                                     <td className="p-3">
                                                         <div>

@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { FileTextIcon, PlusIcon, EditIcon, ArchiveIcon, RotateCcwIcon, SearchIcon, FilterIcon, ArrowUpDownIcon } from 'lucide-react';
+import { FileTextIcon, PlusIcon, EditIcon, ArchiveIcon, RotateCcwIcon, SearchIcon, FilterIcon, ArrowUpDownIcon, ChevronDown, ChevronUp } from 'lucide-react';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type Question, type Category, type SubCategory } from '@/types';
 
@@ -35,6 +35,7 @@ export default function FormsPage({ questions, categories, subcategories, filter
     const [selectedCategory, setSelectedCategory] = useState<string>('');
     const [availableSubcategories, setAvailableSubcategories] = useState<SubCategory[]>([]);
     const [showArchived, setShowArchived] = useState(false);
+    const [showFilters, setShowFilters] = useState(false);
     const [searchTerm, setSearchTerm] = useState(filters.search);
     const [filterCategory, setFilterCategory] = useState(filters.category_id);
     const [filterSubcategory, setFilterSubcategory] = useState(filters.subcategory_id);
@@ -230,6 +231,14 @@ export default function FormsPage({ questions, categories, subcategories, filter
                         </p>
                     </div>
                     <div className="flex gap-2">
+                        <Button 
+                            variant="outline" 
+                            size="default"
+                            onClick={() => setShowFilters(!showFilters)}
+                        >
+                            <FilterIcon className="h-4 w-4" />
+                            Filters
+                        </Button>
                         <Button
                             variant="outline"
                             onClick={() => setShowArchived(!showArchived)}
@@ -247,86 +256,87 @@ export default function FormsPage({ questions, categories, subcategories, filter
                 </div>
 
                 {/* Filters and Search */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <FilterIcon className="h-5 w-5" />
-                            Filters & Search
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {/* Search */}
-                            <div className="space-y-2">
-                                <Label htmlFor="search">Search Questions</Label>
-                                <div className="relative">
-                                    <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                    <Input
-                                        id="search"
-                                        placeholder="Search questions..."
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                        className="pl-10"
-                                    />
+                {showFilters && (
+                    <Card>
+                        <CardHeader>
+                            <div className="flex items-center justify-between">
+                                <CardTitle className="flex items-center gap-2">
+                                    <FilterIcon className="h-5 w-5" />
+                                    Filters & Search
+                                </CardTitle>
+                                <Button
+                                    variant="outline"
+                                    onClick={clearFilters}
+                                    className="flex items-center gap-2"
+                                >
+                                    <ArrowUpDownIcon className="h-4 w-4" />
+                                    Clear Filters
+                                </Button>
+                            </div>
+                            <CardDescription>
+                                Filter questions by category, subcategory, or search by question text
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {/* Search */}
+                                <div className="space-y-2">
+                                    <Label htmlFor="search">Search Questions</Label>
+                                    <div className="relative">
+                                        <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                        <Input
+                                            id="search"
+                                            placeholder="Search questions..."
+                                            value={searchTerm}
+                                            onChange={(e) => setSearchTerm(e.target.value)}
+                                            className="pl-10"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Category Filter */}
+                                <div className="space-y-2">
+                                    <Label htmlFor="filter-category">Category</Label>
+                                    <Select value={filterCategory || "all"} onValueChange={(value) => setFilterCategory(value === "all" ? "" : value)}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="All Categories" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">All Categories</SelectItem>
+                                            {categories.map((category) => (
+                                                <SelectItem key={category.id} value={category.id.toString()}>
+                                                    {category.category_name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                {/* Subcategory Filter */}
+                                <div className="space-y-2">
+                                    <Label htmlFor="filter-subcategory">Subcategory</Label>
+                                    <Select
+                                        value={filterSubcategory || "all"}
+                                        onValueChange={(value) => setFilterSubcategory(value === "all" ? "" : value)}
+                                        disabled={!filterCategory}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="All Subcategories" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">All Subcategories</SelectItem>
+                                            {getFilteredSubcategories().map((subcategory) => (
+                                                <SelectItem key={subcategory.id} value={subcategory.id.toString()}>
+                                                    {subcategory.subcategory_name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                             </div>
-
-                            {/* Category Filter */}
-                            <div className="space-y-2">
-                                <Label htmlFor="filter-category">Category</Label>
-                                <Select value={filterCategory || "all"} onValueChange={(value) => setFilterCategory(value === "all" ? "" : value)}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="All Categories" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">All Categories</SelectItem>
-                                        {categories.map((category) => (
-                                            <SelectItem key={category.id} value={category.id.toString()}>
-                                                {category.category_name}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            {/* Subcategory Filter */}
-                            <div className="space-y-2">
-                                <Label htmlFor="filter-subcategory">Subcategory</Label>
-                                <Select
-                                    value={filterSubcategory || "all"}
-                                    onValueChange={(value) => setFilterSubcategory(value === "all" ? "" : value)}
-                                    disabled={!filterCategory}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="All Subcategories" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">All Subcategories</SelectItem>
-                                        {getFilteredSubcategories().map((subcategory) => (
-                                            <SelectItem key={subcategory.id} value={subcategory.id.toString()}>
-                                                {subcategory.subcategory_name}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-
-                        </div>
-
-                        {/* Clear Filters Button */}
-                        <div className="flex justify-end mt-4">
-                            <Button
-                                variant="outline"
-                                onClick={clearFilters}
-                                className="flex items-center gap-2"
-                            >
-                                <ArrowUpDownIcon className="h-4 w-4" />
-                                Clear Filters
-                            </Button>
-                        </div>
-                    </CardContent>
-                </Card>
+                        </CardContent>
+                    </Card>
+                )}
 
                 {/* Add/Edit Form */}
                 {showForm && (

@@ -22,7 +22,9 @@ import {
     GraduationCap,
     Star,
     ArrowUpDownIcon,
-    FileTextIcon
+    FileTextIcon,
+    ChevronDown,
+    ChevronUp
 } from 'lucide-react';
 import type { BreadcrumbItem } from '@/types';
 
@@ -85,6 +87,7 @@ interface Props {
 }
 
 export default function StudentPlaced({ placedStudents = [], filters }: Props) {
+    const [showFilters, setShowFilters] = useState(false);
     const [localFilters, setLocalFilters] = useState({
         section: filters.currentSection || 'all',
         internship: filters.currentInternship || 'all',
@@ -160,26 +163,37 @@ export default function StudentPlaced({ placedStudents = [], filters }: Props) {
             
             <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
                 {/* Header */}
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                     <div>
                         <h1 className="text-3xl font-bold tracking-tight">Placed Students</h1>
                         <p className="text-muted-foreground">
                             View and manage student internship placements and their approval status
                         </p>
                     </div>
+                    <div className="flex gap-2">
+                            <Button 
+                                variant="outline" 
+                                size="default"
+                                onClick={() => setShowFilters(!showFilters)}
+                            >
+                                <FilterIcon className="h-4 w-4" />
+                                Filters
+                            </Button>
+                    </div>
                 </div>
 
                 {/* Filters Section */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <FilterIcon className="h-5 w-5" />
-                            Filters & Search
-                        </CardTitle>
-                        <CardDescription>
-                            Filter placed students by section, internship, or search by name
-                        </CardDescription>
-                    </CardHeader>
+                {showFilters && (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <FilterIcon className="h-5 w-5" />
+                                Filters & Search
+                            </CardTitle>
+                            <CardDescription>
+                                Filter placed students by section, internship, or search by name
+                            </CardDescription>
+                        </CardHeader>
                     <CardContent>
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                             {/* Section Filter */}
@@ -267,6 +281,7 @@ export default function StudentPlaced({ placedStudents = [], filters }: Props) {
                         </div>
                     </CardContent>
                 </Card>
+                )}
 
                 {/* Summary Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
