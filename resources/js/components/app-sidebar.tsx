@@ -41,7 +41,7 @@ const roleBasedNav: Record<string, { main: NavItem[]; groups?: NavGroup[]; foote
                             { title: 'List', href: '/student/list' },
                             { title: 'Match', href: '/student/matched' },
                             { title: 'Endorsed', href: '/student/endorsed' },
-                            { title: 'Place', href: '/student/placed' },
+                            { title: 'Placed', href: '/student/placed' },
                         ],
                     },
                     {
@@ -75,14 +75,35 @@ const roleBasedNav: Record<string, { main: NavItem[]; groups?: NavGroup[]; foote
         ],
     },
     hte: {
-        main: [
-            { title: 'Dashboard', href: '/hte/dashboard', icon: ChartNoAxesColumnIcon },
-            { title: 'Assessment Form', href: '/form', icon: NotepadTextIcon },
-            { title: 'Add Internship', href: '/hte/add-internship', icon: PlusIcon },
-            { title: 'Student Endorsements', href: '/hte/endorsement-table', icon: Check },
-            { title: 'Placed Students', href: '/hte/placed-students', icon: UsersIcon },
-            { title: 'Profile', href: '/hte/profile', icon: UserRoundIcon },
-            { title: 'Reports', href: '/hte/report', icon: PrinterIcon },
+        main: [],
+        groups: [
+            {
+                title: 'Overview & Analytics',
+                items: [
+                    { title: 'Dashboard', href: '/hte/dashboard', icon: ChartNoAxesColumnIcon },
+                    { title: 'Reports', href: '/hte/report', icon: PrinterIcon },
+                ]
+            },
+            {
+                title: 'Internship Management',
+                items: [
+                    { title: 'Assessment Form', href: '/form', icon: NotepadTextIcon },
+                    { title: 'Add Internship', href: '/hte/add-internship', icon: PlusIcon },
+                ]
+            },
+            {
+                title: 'Student Management',
+                items: [
+                    { title: 'Student Endorsements', href: '/hte/endorsement-table', icon: Check },
+                    { title: 'Placed Students', href: '/hte/placed-students', icon: UsersIcon },
+                ]
+            },
+            {
+                title: 'Profile',
+                items: [
+                    { title: 'Profile', href: '/hte/profile', icon: UserRoundIcon },
+                ]
+            },
         ],
         footer: [
             { title: 'About', href: '/about', icon: InfoIcon },
