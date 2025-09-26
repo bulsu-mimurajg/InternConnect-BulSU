@@ -70,6 +70,11 @@ interface HTEProfileProps {
         }>;
     };
     showSubmissionPrompt: boolean;
+    studentAssessmentDeadlineActive: boolean;
+    studentAssessmentDeadline?: {
+        title: string;
+        end_date: string;
+    };
     [key: string]: unknown;
 }
 
@@ -87,7 +92,7 @@ const CompanyInfoSchema = z.object({
 type CompanyInfoFormData = z.infer<typeof CompanyInfoSchema>;
 
 export default function HTEProfilePage() {
-    const { hte, showSubmissionPrompt } = usePage<HTEProfileProps>().props;
+    const { hte, showSubmissionPrompt, studentAssessmentDeadlineActive, studentAssessmentDeadline } = usePage<HTEProfileProps>().props;
     
     // Get internship ID from URL parameters
     const urlParams = new URLSearchParams(window.location.search);
@@ -322,6 +327,7 @@ export default function HTEProfilePage() {
                     buttonText="Complete Form"
                     buttonHref="/form"
                 />
+
 
                 <div className="space-y-6">
                     {/* Company Information & Overview Section */}
@@ -798,34 +804,58 @@ export default function HTEProfilePage() {
                                             </div>
 
                                             {/* Action Buttons */}
-                                            <div className="flex justify-end gap-3 pt-4 border-t border-border">
-                                                <Link href={`/hte/edit-internship/${selectedInternship.id}`}>
-                                                    <Button variant="outline" size="sm" className="gap-2">
-                                                        <EditIcon className="h-4 w-4" />
-                                                        Edit Internship
-                                                    </Button>
-                                                </Link>
-                                                {selectedInternship.is_active ? (
-                                                    <Button 
-                                                        variant="destructive" 
-                                                        size="sm" 
-                                                        className="gap-2"
-                                                        onClick={() => handleToggleStatus(selectedInternship.id)}
-                                                        disabled={isToggling}
-                                                    >
-                                                        {isToggling ? 'Updating...' : 'Deactivate'}
-                                                    </Button>
-                                                ) : (
-                                                    <Button 
-                                                        variant="default" 
-                                                        size="sm" 
-                                                        className="gap-2"
-                                                        onClick={() => handleToggleStatus(selectedInternship.id)}
-                                                        disabled={isToggling}
-                                                    >
-                                                        {isToggling ? 'Updating...' : 'Activate'}
-                                                    </Button>
+                                            <div className="pt-4 border-t border-border">
+                                                {/* Student Assessment Deadline Warning */}
+                                                {studentAssessmentDeadlineActive && (
+                                                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
+                                                        <div className="flex items-start gap-3">
+                                                            <div className="flex-shrink-0">
+                                                                <Calendar className="h-4 w-4 text-amber-600 mt-0.5" />
+                                                            </div>
+                                                            <div className="flex-1">
+                                                                <h4 className="text-sm font-medium text-amber-800">
+                                                                    Student Assessment Period Active
+                                                                </h4>
+                                                                <p className="text-xs text-amber-700 mt-1">
+                                                                    {studentAssessmentDeadline?.title} is currently active (ends {studentAssessmentDeadline?.end_date}). 
+                                                                    <br />You cannot activate or deactivate internships during this period.
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                 )}
+                                                
+                                                <div className="flex justify-end gap-3">
+                                                    <Link href={`/hte/edit-internship/${selectedInternship.id}`}>
+                                                        <Button variant="outline" size="sm" className="gap-2">
+                                                            <EditIcon className="h-4 w-4" />
+                                                            Edit Internship
+                                                        </Button>
+                                                    </Link>
+                                                    {selectedInternship.is_active ? (
+                                                        <Button 
+                                                            variant="destructive" 
+                                                            size="sm" 
+                                                            className="gap-2"
+                                                            onClick={() => handleToggleStatus(selectedInternship.id)}
+                                                            disabled={isToggling || studentAssessmentDeadlineActive}
+                                                            title={studentAssessmentDeadlineActive ? 'Cannot deactivate during student assessment period' : ''}
+                                                        >
+                                                            {isToggling ? 'Updating...' : 'Deactivate'}
+                                                        </Button>
+                                                    ) : (
+                                                        <Button 
+                                                            variant="default" 
+                                                            size="sm" 
+                                                            className="gap-2"
+                                                            onClick={() => handleToggleStatus(selectedInternship.id)}
+                                                            disabled={isToggling || studentAssessmentDeadlineActive}
+                                                            title={studentAssessmentDeadlineActive ? 'Cannot activate during student assessment period' : ''}
+                                                        >
+                                                            {isToggling ? 'Updating...' : 'Activate'}
+                                                        </Button>
+                                                    )}
+                                                </div>
                                             </div>
                                         </CardContent>
                                     </Card>

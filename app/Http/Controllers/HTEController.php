@@ -342,9 +342,22 @@ class HTEController extends Controller
                  return $internship->subcategoryWeights->count() > 0;
              }));
 
+        // Check if there's an active student assessment deadline
+        $studentAssessmentDeadlineActive = \App\Models\Deadline::isActiveForCategory('student_assessment_form');
+        $studentAssessmentDeadline = null;
+        
+        if ($studentAssessmentDeadlineActive) {
+            $studentAssessmentDeadline = \App\Models\Deadline::getActiveForCategory('student_assessment_form');
+        }
+
         return Inertia::render('hte/profile', [
             'hte' => $hteWithData,
-            'showSubmissionPrompt' => !$hasCompleteData
+            'showSubmissionPrompt' => !$hasCompleteData,
+            'studentAssessmentDeadlineActive' => $studentAssessmentDeadlineActive,
+            'studentAssessmentDeadline' => $studentAssessmentDeadline ? [
+                'title' => $studentAssessmentDeadline->title,
+                'end_date' => $studentAssessmentDeadline->end_date->format('M d, Y H:i'),
+            ] : null
         ]);
     }
 
@@ -795,6 +808,14 @@ class HTEController extends Controller
         // Check if HTE has submitted the assessment form
         if (!$hte->is_submit) {
             return redirect()->back()->withErrors(['error' => 'Please complete the assessment form first before managing internships.']);
+        }
+
+        // Check if there's an active student assessment deadline
+        if (\App\Models\Deadline::isActiveForCategory('student_assessment_form')) {
+            $deadline = \App\Models\Deadline::getActiveForCategory('student_assessment_form');
+            return redirect()->back()->withErrors([
+                'error' => "Cannot modify internship status during active student assessment period. Assessment period ends on " . $deadline->end_date->format('M d, Y H:i') . "."
+            ]);
         }
 
         try {
