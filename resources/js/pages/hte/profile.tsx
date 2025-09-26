@@ -22,10 +22,6 @@ import { SubmissionPrompt } from '@/components/hte/submission-prompt';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
-        title: 'Dashboard',
-        href: '/hte/dashboard',
-    },
-    {
         title: 'HTE Profile',
         href: '/hte/profile',
     },
@@ -122,7 +118,7 @@ export default function HTEProfilePage() {
         return (
             <AppLayout breadcrumbs={breadcrumbs}>
                 <Head title="HTE Profile" />
-                <div className="flex h-full flex-1 flex-col gap-6 rounded-xl p-4 overflow-x-auto">
+                <div className="flex h-full flex-1 flex-col gap-6 rounded-xl p-6">
                     <div className="text-center py-8 text-muted-foreground">
                         <p>HTE profile not found.</p>
                     </div>
@@ -212,7 +208,7 @@ export default function HTEProfilePage() {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="HTE Profile" />
             
-            <div className="flex h-full flex-1 flex-col gap-6 rounded-xl p-4 overflow-x-auto">
+            <div className="flex h-full flex-1 flex-col gap-6 rounded-xl p-6">
                 {/* Success Message */}
                 {showSuccessMessage && (
                     <div className="fixed top-4 right-4 z-50 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded shadow-lg">
@@ -226,14 +222,6 @@ export default function HTEProfilePage() {
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div className="space-y-2">
-                        <div className="flex items-center gap-3">
-                            <Link href="/hte/dashboard">
-                                <Button variant="ghost" size="sm" className="gap-2">
-                                    <ArrowLeftIcon className="h-4 w-4" />
-                                    Back to Dashboard
-                                </Button>
-                            </Link>
-                        </div>
                         <h1 className="text-3xl font-bold tracking-tight">{hte.company_name}</h1>
                         <p className="text-muted-foreground">
                             Company Profile & Internship Management

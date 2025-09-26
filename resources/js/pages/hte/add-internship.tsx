@@ -18,7 +18,7 @@ export default function AddInternshipPage() {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Add Internship" />
-            <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4 overflow-x-auto">
+            <div className="flex h-full flex-1 flex-col gap-6 rounded-xl p-6">
                 <div className="space-y-2">
                     <h1 className="text-3xl font-bold tracking-tight">Add New Internship</h1>
                     <p className="text-muted-foreground">

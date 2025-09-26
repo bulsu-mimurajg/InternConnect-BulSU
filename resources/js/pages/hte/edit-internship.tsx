@@ -52,7 +52,7 @@ export default function EditInternshipPage() {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Edit Internship" />
-            <div className="space-y-6">
+            <div className="flex h-full flex-1 flex-col gap-6 rounded-xl p-6">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900">Edit Internship</h1>
                     <p className="text-gray-600">Update your internship details and criteria weights</p>

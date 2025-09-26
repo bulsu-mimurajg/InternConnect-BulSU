@@ -1004,6 +1004,214 @@ class HTEController extends Controller
     }
 
     /**
+     * Batch approve multiple endorsed students
+     */
+    public function batchApproveEndorsements(Request $request)
+    {
+        $user = Auth::user();
+        $hte = $user->hte;
+
+        if (!$hte) {
+            return response()->json(['error' => 'HTE not found'], 404);
+        }
+
+        $request->validate([
+            'endorsement_ids' => 'required|array',
+            'endorsement_ids.*' => 'integer|exists:endorsements,id'
+        ]);
+
+        $endorsementIds = $request->input('endorsement_ids');
+        $successCount = 0;
+        $errorCount = 0;
+        $errors = [];
+
+        foreach ($endorsementIds as $endorsementId) {
+            try {
+                // Get the endorsement
+                $endorsement = Endorsement::with(['student', 'internship'])
+                    ->where('id', $endorsementId)
+                    ->whereIn('internship_id', $hte->internships()->pluck('id'))
+                    ->first();
+
+                if (!$endorsement) {
+                    $errors[] = "Endorsement ID {$endorsementId} not found or access denied";
+                    $errorCount++;
+                    continue;
+                }
+
+                // Check if student already has a placement
+                $existingPlacement = StudentPlacement::where('student_id', $endorsement->student_id)->first();
+                if ($existingPlacement) {
+                    $errors[] = "Student {$endorsement->student->first_name} {$endorsement->student->last_name} already has a placement";
+                    $errorCount++;
+                    continue;
+                }
+
+                // Check if internship has available slots
+                $currentApprovedPlacements = StudentPlacement::where('internship_id', $endorsement->internship_id)
+                    ->where('status', 'approved')
+                    ->count();
+
+                if ($currentApprovedPlacements >= $endorsement->internship->slot_count) {
+                    $errors[] = "No available slots for {$endorsement->internship->position_title} at {$endorsement->internship->hte->company_name}";
+                    $errorCount++;
+                    continue;
+                }
+
+                // Create placement record
+                StudentPlacement::create([
+                    'student_id' => $endorsement->student_id,
+                    'internship_id' => $endorsement->internship_id,
+                    'status' => 'approved',
+                    'compatibility_score' => $endorsement->compatibility_score,
+                    'placement_date' => now(),
+                ]);
+
+                // Update student status
+                $endorsement->student->update(['is_placed' => true]);
+
+                // Update the corresponding student_match record placement status to 'approved'
+                StudentMatch::where('student_id', $endorsement->student_id)
+                    ->where('internship_id', $endorsement->internship_id)
+                    ->update(['placement_status' => 'approved']);
+
+                $successCount++;
+
+            } catch (\Exception $e) {
+                Log::error('HTE Batch Endorsement Approval Error:', [
+                    'error' => $e->getMessage(),
+                    'endorsement_id' => $endorsementId,
+                    'hte_id' => $hte->id,
+                    'trace' => $e->getTraceAsString()
+                ]);
+                $errors[] = "Error processing endorsement ID {$endorsementId}: " . $e->getMessage();
+                $errorCount++;
+            }
+        }
+
+        $message = "Batch approval completed: {$successCount} approved, {$errorCount} failed";
+        if (!empty($errors)) {
+            $message .= ". Errors: " . implode('; ', array_slice($errors, 0, 3));
+            if (count($errors) > 3) {
+                $message .= " and " . (count($errors) - 3) . " more";
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => $message,
+            'total_processed' => count($endorsementIds),
+            'success_count' => $successCount,
+            'error_count' => $errorCount,
+            'errors' => $errors
+        ]);
+    }
+
+    /**
+     * Batch reject multiple endorsed students
+     */
+    public function batchRejectEndorsements(Request $request)
+    {
+        $user = Auth::user();
+        $hte = $user->hte;
+
+        if (!$hte) {
+            return response()->json(['error' => 'HTE not found'], 404);
+        }
+
+        $request->validate([
+            'endorsement_ids' => 'required|array',
+            'endorsement_ids.*' => 'integer|exists:endorsements,id'
+        ]);
+
+        $endorsementIds = $request->input('endorsement_ids');
+        $successCount = 0;
+        $errorCount = 0;
+        $errors = [];
+        $fallbackCount = 0;
+
+        foreach ($endorsementIds as $endorsementId) {
+            try {
+                // Get the endorsement
+                $endorsement = Endorsement::with(['student', 'internship'])
+                    ->where('id', $endorsementId)
+                    ->whereIn('internship_id', $hte->internships()->pluck('id'))
+                    ->first();
+
+                if (!$endorsement) {
+                    $errors[] = "Endorsement ID {$endorsementId} not found or access denied";
+                    $errorCount++;
+                    continue;
+                }
+
+                // Update endorsement status to rejected
+                $endorsement->update(['status' => 'rejected']);
+
+                // Update the corresponding student_match record placement status to 'rejected'
+                StudentMatch::where('student_id', $endorsement->student_id)
+                    ->where('internship_id', $endorsement->internship_id)
+                    ->update(['placement_status' => 'rejected']);
+
+                // Find the student's next highest compatibility HTE
+                $nextMatch = StudentMatch::with(['internship.hte'])
+                    ->where('student_id', $endorsement->student_id)
+                    ->where('endorsement_status', 'pending')
+                    ->orderBy('compatibility_score', 'desc')
+                    ->first();
+
+                if ($nextMatch) {
+                    // Update the next match's endorsement status to 'endorsed'
+                    StudentMatch::where('student_id', $endorsement->student_id)
+                        ->where('internship_id', $nextMatch->internship_id)
+                        ->update(['endorsement_status' => 'endorsed']);
+
+                    // Create new endorsement for the next highest compatibility HTE
+                    Endorsement::create([
+                        'student_id' => $endorsement->student_id,
+                        'internship_id' => $nextMatch->internship_id,
+                        'status' => 'endorsed',
+                        'compatibility_score' => $nextMatch->compatibility_score,
+                        'endorsement_date' => now(),
+                    ]);
+
+                    $fallbackCount++;
+                }
+
+                $successCount++;
+
+            } catch (\Exception $e) {
+                Log::error('HTE Batch Endorsement Rejection Error:', [
+                    'error' => $e->getMessage(),
+                    'endorsement_id' => $endorsementId,
+                    'hte_id' => $hte->id,
+                    'trace' => $e->getTraceAsString()
+                ]);
+                $errors[] = "Error processing endorsement ID {$endorsementId}: " . $e->getMessage();
+                $errorCount++;
+            }
+        }
+
+        $message = "Batch rejection completed: {$successCount} rejected";
+        if ($fallbackCount > 0) {
+            $message .= ", {$fallbackCount} moved to fallback matches";
+        }
+        if ($errorCount > 0) {
+            $message .= ", {$errorCount} failed";
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => $message,
+            'total_processed' => count($endorsementIds),
+            'success_count' => $successCount,
+            'error_count' => $errorCount,
+            'fallback_count' => $fallbackCount,
+            'errors' => $errors
+        ]);
+    }
+
+
+    /**
      * Show placed students for this HTE
      */
     public function showPlacedStudents(Request $request)

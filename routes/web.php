@@ -172,8 +172,10 @@ Route::middleware(['auth', 'verified', 'role:hte'])->group(function () {
 
     // HTE Endorsement routes
     Route::get('hte/endorsement-table', [App\Http\Controllers\HTEController::class, 'showEndorsementTable'])->name('hte.endorsement-table');
-    Route::post('hte/approve-endorsement/{endorsementId}', [App\Http\Controllers\HTEController::class, 'approveEndorsement'])->name('hte.approve-endorsement');
-    Route::post('hte/reject-endorsement/{endorsementId}', [App\Http\Controllers\HTEController::class, 'rejectEndorsement'])->name('hte.reject-endorsement');
+        Route::post('hte/approve-endorsement/{endorsementId}', [App\Http\Controllers\HTEController::class, 'approveEndorsement'])->name('hte.approve-endorsement');
+        Route::post('hte/reject-endorsement/{endorsementId}', [App\Http\Controllers\HTEController::class, 'rejectEndorsement'])->name('hte.reject-endorsement');
+        Route::post('hte/batch-approve-endorsements', [App\Http\Controllers\HTEController::class, 'batchApproveEndorsements'])->name('hte.batch-approve-endorsements');
+        Route::post('hte/batch-reject-endorsements', [App\Http\Controllers\HTEController::class, 'batchRejectEndorsements'])->name('hte.batch-reject-endorsements');
 
     // HTE Placed Students routes
     Route::get('hte/placed-students', [App\Http\Controllers\HTEController::class, 'showPlacedStudents'])->name('hte.placed-students');

@@ -1,9 +1,7 @@
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, usePage } from '@inertiajs/react';
-import { Badge } from '@/components/ui/badge';
 import { 
-    Building2Icon, 
     UsersIcon, 
     BriefcaseIcon, 
     TrendingUpIcon
@@ -12,8 +10,7 @@ import {
     StatsCard, 
     CompanyInfoCard, 
     InternshipsListCard, 
-    CategoryWeightsCard, 
-    QuickActionsCard 
+    CategoryWeightsCard 
 } from '@/components/dashboard';
 import { SubmissionPrompt } from '@/components/hte/submission-prompt';
 
@@ -84,7 +81,7 @@ export default function HTEDashboardPage() {
         return (
             <AppLayout breadcrumbs={breadcrumbs}>
                 <Head title="HTE Dashboard" />
-                <div className="flex h-full flex-1 flex-col gap-6 rounded-xl p-4 overflow-x-auto">
+                <div className="flex h-full flex-1 flex-col gap-6 rounded-xl p-6">
                     <div className="text-center py-8 text-muted-foreground">
                         <p>HTE dashboard not found.</p>
                     </div>
@@ -96,7 +93,7 @@ export default function HTEDashboardPage() {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="HTE Dashboard" />
-            <div className="flex h-full flex-1 flex-col gap-6 rounded-xl p-4 overflow-x-auto">
+                <div className="flex h-full flex-1 flex-col gap-6 rounded-xl p-6">
                 <div className="space-y-2">
                     <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
                     <p className="text-muted-foreground">
@@ -114,7 +111,7 @@ export default function HTEDashboardPage() {
                 />
 
                 {/* Stats Cards */}
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     <StatsCard
                         title="Total Internships"
                         value={stats.totalInternships}
@@ -134,16 +131,6 @@ export default function HTEDashboardPage() {
                         icon={UsersIcon}
                         internshipSlots={stats.internshipSlots}
                     />
-                    <StatsCard
-                        title="Status"
-                        value={
-                            <Badge variant={hte.is_active ? "default" : "secondary"}>
-                                {hte.is_active ? "Active" : "Inactive"}
-                            </Badge>
-                        }
-                        description="Company status"
-                        icon={Building2Icon}
-                    />
                 </div>
 
                 {/* Company Information */}
@@ -162,9 +149,6 @@ export default function HTEDashboardPage() {
 
                 {/* Category Weights Overview */}
                 <CategoryWeightsCard internships={hte.internships} />
-
-                {/* Quick Actions */}
-                <QuickActionsCard />
             </div>
         </AppLayout>
     );
