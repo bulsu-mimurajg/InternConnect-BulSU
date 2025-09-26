@@ -1,7 +1,10 @@
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/react';
+import { Head, usePage, Link } from '@inertiajs/react';
 import AddInternshipForm from '@/components/form/hte/add-internship-form';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { AlertCircle } from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -14,7 +17,41 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
+interface Props {
+    showSubmissionPrompt: boolean;
+    [key: string]: unknown;
+}
+
 export default function AddInternshipPage() {
+    const { showSubmissionPrompt } = usePage<Props>().props;
+    
+    // Show assessment prompt if not submitted
+    if (showSubmissionPrompt) {
+        return (
+            <AppLayout breadcrumbs={breadcrumbs}>
+                <Head title="Add Internship" />
+                <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
+                    <Card>
+                        <CardContent className="p-6">
+                            <div className="text-center">
+                                <AlertCircle className="mx-auto h-12 w-12 text-yellow-500 mb-4" />
+                                <h2 className="text-xl font-semibold mb-2">Assessment Not Submitted</h2>
+                                <p className="text-muted-foreground mb-4">
+                                    You need to complete your assessment form to add internship opportunities.
+                                </p>
+                                <Button asChild>
+                                    <Link href="/form">
+                                        Take Assessment
+                                    </Link>
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            </AppLayout>
+        );
+    }
+    
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Add Internship" />

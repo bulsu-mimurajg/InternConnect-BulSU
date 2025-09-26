@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Head, router } from '@inertiajs/react';
+import { Head, router, Link } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,7 +17,8 @@ import {
     Building2,
     Briefcase,
     GraduationCap,
-    Star
+    Star,
+    AlertCircle
 } from 'lucide-react';
 
 interface PlacedStudent {
@@ -67,6 +68,7 @@ interface Props {
         search: string | null;
     };
     hteId: number;
+    showSubmissionPrompt: boolean;
 }
 
 export default function PlacedStudents({ 
@@ -74,7 +76,8 @@ export default function PlacedStudents({
     section_options = [], 
     internship_options = [], 
     filters,
-    hteId 
+    hteId,
+    showSubmissionPrompt
 }: Props) {
     const [localFilters, setLocalFilters] = useState({
         section: filters.section || 'all',
@@ -144,6 +147,33 @@ export default function PlacedStudents({
                 return <ClockIcon className="h-4 w-4" />;
         }
     };
+
+    // Show assessment prompt if not submitted
+    if (showSubmissionPrompt) {
+        return (
+            <AppLayout>
+                <Head title="Placed Students" />
+                <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
+                    <Card>
+                        <CardContent className="p-6">
+                            <div className="text-center">
+                                <AlertCircle className="mx-auto h-12 w-12 text-yellow-500 mb-4" />
+                                <h2 className="text-xl font-semibold mb-2">Assessment Not Submitted</h2>
+                                <p className="text-muted-foreground mb-4">
+                                    You need to complete your assessment form to view placed students.
+                                </p>
+                                <Button asChild>
+                                    <Link href="/form">
+                                        Take Assessment
+                                    </Link>
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            </AppLayout>
+        );
+    }
 
     return (
         <AppLayout>
@@ -249,123 +279,177 @@ export default function PlacedStudents({
                 </div>
 
                 {/* Placed Students Table */}
-                {placed_students.length === 0 ? (
-                    <Card>
-                        <CardContent className="text-center py-12">
-                            <UserIcon className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                                No Placed Students
-                            </h3>
-                            <p className="text-gray-600 dark:text-gray-400">
-                                No students have been placed in your internships yet.
-                            </p>
-                        </CardContent>
-                    </Card>
-                ) : (
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Placed Students</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="overflow-x-auto">
-                                <table className="w-full">
-                                    <thead>
-                                        <tr className="border-b border-gray-200">
-                                            <th className="text-left py-3 px-4 font-semibold text-sm">Student</th>
-                                            <th className="text-left py-3 px-4 font-semibold text-sm">Student Number</th>
-                                            <th className="text-left py-3 px-4 font-semibold text-sm">Section</th>
-                                            <th className="text-left py-3 px-4 font-semibold text-sm">Specialization</th>
-                                            <th className="text-left py-3 px-4 font-semibold text-sm">Position</th>
-                                            <th className="text-left py-3 px-4 font-semibold text-sm">Department</th>
-                                            <th className="text-left py-3 px-4 font-semibold text-sm">Compatibility</th>
-                                            <th className="text-left py-3 px-4 font-semibold text-sm">Status</th>
-                                            <th className="text-left py-3 px-4 font-semibold text-sm">Placed Date</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {placed_students.map((placement) => (
-                                            <tr key={placement.id} className="border-b border-gray-100">
-                                                <td className="py-3 px-4">
-                                                    <div className="flex items-center gap-2">
-                                                        <UserIcon className="h-4 w-4 text-muted-foreground" />
-                                                        <div>
-                                                            <div className="font-medium">
-                                                                {placement.student.first_name} {placement.student.last_name}
-                                                            </div>
-                                                            {placement.student.middle_name && (
-                                                                <div className="text-sm text-muted-foreground">
-                                                                    {placement.student.middle_name}
-                                                                </div>
-                                                            )}
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Placed Students</CardTitle>
+                        <CardDescription>
+                            {placed_students.length} student{placed_students.length !== 1 ? 's' : ''} placed in your internships
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        {placed_students.length === 0 ? (
+                            <div className="text-center py-8">
+                                <UserIcon className="mx-auto h-12 w-12 text-gray-400" />
+                                <h3 className="mt-2 text-sm font-medium text-gray-900">No Placed Students</h3>
+                                <p className="mt-1 text-sm text-gray-500">
+                                    No students have been placed in your internships yet.
+                                </p>
+                            </div>
+                        ) : (
+                            <>
+                                {/* Mobile/Tablet Card View */}
+                                <div className="block lg:hidden space-y-4">
+                                    {placed_students.map((placement) => (
+                                        <Card key={placement.id} className="p-4">
+                                            <div className="flex items-start justify-between mb-3">
+                                                <div className="flex items-center gap-3">
+                                                    <UserIcon className="h-5 w-5 text-muted-foreground" />
+                                                    <div>
+                                                        <div className="font-medium text-base">
+                                                            {placement.student.first_name} {placement.student.middle_name} {placement.student.last_name}
+                                                        </div>
+                                                        <div className="text-sm text-muted-foreground">
+                                                            {placement.student.student_number}
                                                         </div>
                                                     </div>
-                                                </td>
-                                                <td className="py-3 px-4">
-                                                    <div className="flex items-center gap-2">
-                                                        <GraduationCap className="h-4 w-4 text-muted-foreground" />
-                                                        <span className="font-mono text-sm">
-                                                            {placement.student.student_number}
-                                                        </span>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <Star className="h-4 w-4 text-yellow-500 fill-current" />
+                                                    <span className="font-medium text-lg">{placement.compatibility_score}%</span>
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 gap-3 mb-4">
+                                                <div className="flex items-center gap-2">
+                                                    <Briefcase className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                                    <div>
+                                                        <div className="font-medium text-sm">{placement.internship.position_title}</div>
+                                                        <div className="text-xs text-muted-foreground">{placement.internship.department}</div>
                                                     </div>
-                                                </td>
-                                                <td className="py-3 px-4">
-                                                    <Badge variant="secondary">
-                                                        {placement.student.section}
-                                                    </Badge>
-                                                </td>
-                                                <td className="py-3 px-4">
-                                                    <span className="text-sm">
-                                                        {placement.student.specialization || 'N/A'}
-                                                    </span>
-                                                </td>
-                                                <td className="py-3 px-4">
-                                                    <div className="flex items-center gap-2">
-                                                        <Briefcase className="h-4 w-4 text-muted-foreground" />
-                                                        <span className="font-medium">
-                                                            {placement.internship.position_title}
-                                                        </span>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <Building2 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                                    <span className="text-sm">{placement.internship.hte.company_name}</span>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <GraduationCap className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                                    <div>
+                                                        <span className="text-sm">{placement.student.section}</span>
+                                                        {placement.student.specialization && (
+                                                            <span className="text-xs text-muted-foreground ml-2">
+                                                                • {placement.student.specialization}
+                                                            </span>
+                                                        )}
                                                     </div>
-                                                </td>
-                                                <td className="py-3 px-4">
-                                                    <div className="flex items-center gap-2">
-                                                        <Building2 className="h-4 w-4 text-muted-foreground" />
-                                                        <span className="text-sm">
-                                                            {placement.internship.department}
-                                                        </span>
-                                                    </div>
-                                                </td>
-                                                <td className="py-3 px-4">
-                                                    <div className="flex items-center gap-1">
-                                                        <Star className="h-4 w-4 text-yellow-500" />
-                                                        <span className="font-medium">
-                                                            {placement.compatibility_score}%
-                                                        </span>
-                                                    </div>
-                                                </td>
-                                                <td className="py-3 px-4">
+                                                </div>
+                                            </div>
+
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
                                                     <Badge className={getStatusColor(placement.status)}>
                                                         <div className="flex items-center gap-1">
                                                             {getStatusIcon(placement.status)}
                                                             {placement.status.charAt(0).toUpperCase() + placement.status.slice(1)}
                                                         </div>
                                                     </Badge>
-                                                </td>
-                                                <td className="py-3 px-4">
-                                                    <span className="text-sm text-muted-foreground">
+                                                    <span className="text-xs text-muted-foreground">
                                                         {placement.placement_date 
                                                             ? new Date(placement.placement_date).toLocaleDateString()
                                                             : new Date(placement.created_at).toLocaleDateString()
                                                         }
                                                     </span>
+                                                </div>
+                                            </div>
+                                        </Card>
+                                    ))}
+                                </div>
+
+                                {/* Desktop Table View */}
+                                <div className="hidden lg:block overflow-x-auto">
+                                    <table className="w-full min-w-[800px]">
+                                        <thead>
+                                            <tr className="border-b border-gray-200">
+                                                <th className="text-left py-3 px-2 font-semibold text-sm w-48">Student</th>
+                                                <th className="text-left py-3 px-2 font-semibold text-sm hidden xl:table-cell w-32">Student Number</th>
+                                                <th className="text-left py-3 px-2 font-semibold text-sm hidden lg:table-cell w-24">Section</th>
+                                                <th className="text-left py-3 px-2 font-semibold text-sm hidden xl:table-cell w-32">Specialization</th>
+                                                <th className="text-left py-3 px-2 font-semibold text-sm w-48">Position</th>
+                                                <th className="text-left py-3 px-2 font-semibold text-sm hidden lg:table-cell w-32">Department</th>
+                                                <th className="text-left py-3 px-2 font-semibold text-sm w-24">Score</th>
+                                                <th className="text-left py-3 px-2 font-semibold text-sm w-24">Status</th>
+                                                <th className="text-left py-3 px-2 font-semibold text-sm hidden xl:table-cell w-20">Date</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {placed_students.map((placement) => (
+                                            <tr key={placement.id} className="border-b border-gray-100 hover:bg-muted/50 transition-colors">
+                                                <td className="py-3 px-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <UserIcon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                                        <div className="min-w-0">
+                                                            <div className="font-medium text-sm truncate">
+                                                                {placement.student.first_name} {placement.student.middle_name} {placement.student.last_name}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="py-3 px-2 font-mono text-xs hidden xl:table-cell">
+                                                    <span className="truncate block">{placement.student.student_number}</span>
+                                                </td>
+                                                <td className="py-3 px-2 hidden lg:table-cell">
+                                                    <Badge variant="secondary" className="text-xs">
+                                                        {placement.student.section}
+                                                    </Badge>
+                                                </td>
+                                                <td className="py-3 px-2 hidden xl:table-cell">
+                                                    <span className="text-xs truncate block">{placement.student.specialization || 'N/A'}</span>
+                                                </td>
+                                                <td className="py-3 px-2">
+                                                    <div className="min-w-0">
+                                                        <div className="flex items-center gap-1">
+                                                            <Briefcase className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                                                            <span className="font-medium text-xs truncate block">{placement.internship.position_title}</span>
+                                                        </div>
+                                                        <div className="text-xs text-muted-foreground truncate">
+                                                            {placement.internship.hte.company_name}
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="py-3 px-2 hidden lg:table-cell">
+                                                    <div className="flex items-center gap-1">
+                                                        <Building2 className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                                                        <span className="text-xs truncate block">{placement.internship.department}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="py-3 px-2">
+                                                    <div className="flex items-center gap-1">
+                                                        <Star className="h-3 w-3 text-yellow-500 fill-current flex-shrink-0" />
+                                                        <span className="font-medium text-xs">{placement.compatibility_score}%</span>
+                                                    </div>
+                                                </td>
+                                                <td className="py-3 px-2">
+                                                    <Badge className={`text-xs ${getStatusColor(placement.status)}`}>
+                                                        <div className="flex items-center gap-1">
+                                                            {getStatusIcon(placement.status)}
+                                                            <span className="hidden xl:inline">{placement.status.charAt(0).toUpperCase() + placement.status.slice(1)}</span>
+                                                        </div>
+                                                    </Badge>
+                                                </td>
+                                                <td className="py-3 px-2 text-xs text-muted-foreground hidden xl:table-cell">
+                                                    {placement.placement_date 
+                                                        ? new Date(placement.placement_date).toLocaleDateString()
+                                                        : new Date(placement.created_at).toLocaleDateString()
+                                                    }
                                                 </td>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </CardContent>
-                    </Card>
-                )}
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </>
+                        )}
+                    </CardContent>
+                </Card>
             </div>
         </AppLayout>
     );

@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/react';
+import { Head, usePage, Link } from '@inertiajs/react';
 import { useState } from 'react';
 import {
     FileTextIcon,
@@ -13,7 +13,8 @@ import {
     TargetIcon,
     ClipboardListIcon,
     TrendingUpIcon,
-    BriefcaseIcon
+    BriefcaseIcon,
+    AlertCircle
 } from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -33,13 +34,41 @@ interface Internship {
 
 interface Props {
     internships: Internship[];
+    showSubmissionPrompt: boolean;
 }
 
-export default function HteReport({ internships }: Props) {
+export default function HteReport({ internships, showSubmissionPrompt }: Props) {
     const [selectedReportType, setSelectedReportType] = useState<string>('');
     const [selectedFormat, setSelectedFormat] = useState<string>('pdf');
     const [selectedInternship, setSelectedInternship] = useState<string>('');
     const [isGenerating, setIsGenerating] = useState<boolean>(false);
+
+    // Show assessment prompt if not submitted
+    if (showSubmissionPrompt) {
+        return (
+            <AppLayout breadcrumbs={breadcrumbs}>
+                <Head title="Generate Reports" />
+                <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
+                    <Card>
+                        <CardContent className="p-6">
+                            <div className="text-center">
+                                <AlertCircle className="mx-auto h-12 w-12 text-yellow-500 mb-4" />
+                                <h2 className="text-xl font-semibold mb-2">Assessment Not Submitted</h2>
+                                <p className="text-muted-foreground mb-4">
+                                    You need to complete your assessment form to access reports.
+                                </p>
+                                <Button asChild>
+                                    <Link href="/form">
+                                        Take Assessment
+                                    </Link>
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            </AppLayout>
+        );
+    }
 
     // HTE-specific report types (only those with templates)
     const reportTypes = [

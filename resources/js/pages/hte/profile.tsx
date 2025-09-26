@@ -14,7 +14,8 @@ import {
     CheckCircle, 
     XCircle, 
     PlusIcon,
-    EditIcon
+    EditIcon,
+    AlertCircle
 } from 'lucide-react';
 import { useState, useMemo, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
@@ -153,6 +154,13 @@ export default function HTEProfilePage() {
         return filteredInternships.find(internship => internship.id.toString() === selectedInternshipId) || null;
     }, [filteredInternships, selectedInternshipId]);
 
+    // Auto-select first internship on initial load
+    useEffect(() => {
+        if (hte?.internships && hte.internships.length > 0 && !selectedInternshipId && !internshipIdFromUrl) {
+            setSelectedInternshipId(hte.internships[0].id.toString());
+        }
+    }, [hte?.internships, selectedInternshipId, internshipIdFromUrl]);
+
     // Add defensive programming to handle missing data
     if (!hte) {
         return (
@@ -167,11 +175,45 @@ export default function HTEProfilePage() {
         );
     }
 
+    // Show assessment prompt if not submitted
+    if (showSubmissionPrompt) {
+        return (
+            <AppLayout breadcrumbs={breadcrumbs}>
+                <Head title="HTE Profile" />
+                <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
+                    <Card>
+                        <CardContent className="p-6">
+                            <div className="text-center">
+                                <AlertCircle className="mx-auto h-12 w-12 text-yellow-500 mb-4" />
+                                <h2 className="text-xl font-semibold mb-2">Assessment Not Submitted</h2>
+                                <p className="text-muted-foreground mb-4">
+                                    You need to complete your assessment form to access your company profile.
+                                </p>
+                                <Button asChild>
+                                    <Link href="/form">
+                                        Take Assessment
+                                    </Link>
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            </AppLayout>
+        );
+    }
+
     // Update selected internship when status changes
     const handleStatusChange = (value: string) => {
         setSelectedStatus(value);
         setSelectedInternshipId(''); // Reset internship selection
     };
+
+    // Auto-select first internship when filtered internships change
+    useEffect(() => {
+        if (filteredInternships.length > 0 && !selectedInternshipId) {
+            setSelectedInternshipId(filteredInternships[0].id.toString());
+        }
+    }, [filteredInternships, selectedInternshipId]);
 
     // Handle internship status toggle
     const handleToggleStatus = (internshipId: number) => {
@@ -303,7 +345,7 @@ export default function HTEProfilePage() {
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div className="space-y-2">
-                        <h1 className="text-3xl font-bold tracking-tight">{hte.company_name}</h1>
+                        <h1 className="text-3xl font-bold tracking-tight">{hte.company_name || 'Company Profile'}</h1>
                         <p className="text-muted-foreground">
                             Company Profile & Internship Management
                         </p>
@@ -318,16 +360,6 @@ export default function HTEProfilePage() {
                         </Link>
                     </div>
                 </div>
-
-                {/* Submission Prompt */}
-                <SubmissionPrompt 
-                    showPrompt={showSubmissionPrompt}
-                    title="Complete Your Assessment Form"
-                    description="Please complete the assessment form first to access all features and manage your internships effectively."
-                    buttonText="Complete Form"
-                    buttonHref="/form"
-                />
-
 
                 <div className="space-y-6">
                     {/* Company Information & Overview Section */}
@@ -477,30 +509,36 @@ export default function HTEProfilePage() {
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                         <div className="space-y-3">
                                             <label className="text-base font-medium text-muted-foreground">Company Name</label>
-                                            <p className="text-lg font-semibold text-foreground">{hte.company_name}</p>
+                                            <p className="text-lg font-semibold text-foreground">{hte.company_name || 'Not provided'}</p>
                                         </div>
                                         <div className="space-y-3">
                                             <label className="text-base font-medium text-muted-foreground">Email</label>
-                                            <p className="text-lg text-primary font-medium">{hte.company_email}</p>
+                                            <p className="text-lg text-primary font-medium">{hte.company_email || 'Not provided'}</p>
                                         </div>
                                         <div className="space-y-3 md:col-span-2">
                                             <label className="text-base font-medium text-muted-foreground">Address</label>
                                             <div className="text-lg text-foreground leading-relaxed space-y-1">
-                                                {hte.company_address.split(',').map((part, index) => (
-                                                    <p key={index} className="text-lg">{part.trim()}</p>
-                                                ))}
+                                                {hte.company_address ? (
+                                                    hte.company_address.split(',').map((part, index) => (
+                                                        <p key={index} className="text-lg">{part.trim()}</p>
+                                                    ))
+                                                ) : (
+                                                    <p className="text-lg text-muted-foreground">Not provided</p>
+                                                )}
                                             </div>
                                         </div>
                                         <div className="space-y-3">
                                             <label className="text-base font-medium text-muted-foreground">Contact Person</label>
                                             <div className="space-y-2">
-                                                <p className="text-lg font-semibold text-foreground">{hte.cperson_fname} {hte.cperson_lname}</p>
-                                                <p className="text-base text-muted-foreground">{hte.cperson_position}</p>
+                                                <p className="text-lg font-semibold text-foreground">
+                                                    {hte.cperson_fname || 'Not provided'} {hte.cperson_lname || ''}
+                                                </p>
+                                                <p className="text-base text-muted-foreground">{hte.cperson_position || 'Not provided'}</p>
                                             </div>
                                         </div>
                                         <div className="space-y-3">
                                             <label className="text-base font-medium text-muted-foreground">Contact Number</label>
-                                            <p className="text-lg text-foreground font-medium">{hte.cperson_contactnum}</p>
+                                            <p className="text-lg text-foreground font-medium">{hte.cperson_contactnum || 'Not provided'}</p>
                                         </div>
                                     </div>
                                 )}
@@ -644,22 +682,22 @@ export default function HTEProfilePage() {
                                             {/* Position Details Section */}
                                             <div className="border border-border rounded-lg bg-card">
                                                 <div className="bg-muted/50 px-4 py-3 border-b border-border">
-                                                    <h3 className="font-semibold text-lg text-foreground">Position Details</h3>
+                                                    <h3 className="font-semibold text-base text-foreground">Position Details</h3>
                                                 </div>
                                                 <div className="p-6">
                                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                                         <div className="space-y-4">
                                                             <div>
                                                                 <label className="text-sm font-medium text-muted-foreground">Position Title</label>
-                                                                <p className="text-lg font-semibold text-foreground">{selectedInternship.position_title}</p>
+                                                                <p className="text-sm font-semibold text-foreground">{selectedInternship.position_title}</p>
                                                             </div>
                                                             <div>
                                                                 <label className="text-sm font-medium text-muted-foreground">Department</label>
-                                                                <p className="text-lg font-semibold text-foreground">{selectedInternship.department}</p>
+                                                                <p className="text-sm font-semibold text-foreground">{selectedInternship.department}</p>
                                                             </div>
                                                             <div>
                                                                 <label className="text-sm font-medium text-muted-foreground">Available Slots</label>
-                                                                <p className="text-lg font-semibold flex items-center gap-2 text-foreground">
+                                                                <p className="text-sm font-semibold flex items-center gap-2 text-foreground">
                                                                     <Users className="h-4 w-4" />
                                                                     {selectedInternship.slot_count} slot{selectedInternship.slot_count !== 1 ? 's' : ''}
                                                                 </p>
@@ -668,18 +706,18 @@ export default function HTEProfilePage() {
                                                         <div className="space-y-4">
                                                             <div>
                                                                 <label className="text-sm font-medium text-muted-foreground">Duration</label>
-                                                                <p className="text-lg font-semibold text-foreground">{extractDuration(selectedInternship.placement_description)}</p>
+                                                                <p className="text-sm font-semibold text-foreground">{extractDuration(selectedInternship.placement_description)}</p>
                                                             </div>
                                                             <div>
                                                                 <label className="text-sm font-medium text-muted-foreground">Start Date</label>
-                                                                <p className="text-lg font-semibold flex items-center gap-2 text-foreground">
+                                                                <p className="text-sm font-semibold flex items-center gap-2 text-foreground">
                                                                     <Calendar className="h-4 w-4" />
                                                                     {extractStartDate(selectedInternship.placement_description)}
                                                                 </p>
                                                             </div>
                                                             <div>
                                                                 <label className="text-sm font-medium text-muted-foreground">End Date</label>
-                                                                <p className="text-lg font-semibold flex items-center gap-2 text-foreground">
+                                                                <p className="text-sm font-semibold flex items-center gap-2 text-foreground">
                                                                     <Calendar className="h-4 w-4" />
                                                                     {extractEndDate(selectedInternship.placement_description)}
                                                                 </p>
@@ -690,7 +728,7 @@ export default function HTEProfilePage() {
                                                     {selectedInternship.placement_description && (
                                                         <div className="mt-6 pt-4 border-t border-border">
                                                             <label className="text-sm font-medium text-muted-foreground">Description</label>
-                                                            <p className="text-base text-foreground mt-2 leading-relaxed">{selectedInternship.placement_description}</p>
+                                                            <p className="text-sm text-foreground mt-2 leading-relaxed">{selectedInternship.placement_description}</p>
                                                         </div>
                                                     )}
                                                 </div>
@@ -699,7 +737,7 @@ export default function HTEProfilePage() {
                                             {/* Assessment Criteria and Weights Section */}
                                             <div className="border border-border rounded-lg bg-card">
                                                 <div className="bg-muted/50 px-4 py-3 border-b border-border">
-                                                    <h3 className="font-semibold text-lg text-foreground">Assessment Criteria</h3>
+                                                    <h3 className="font-semibold text-base text-foreground">Assessment Criteria</h3>
                                                 </div>
                                                 <div className="p-6">
                                                     {(() => {
@@ -740,35 +778,37 @@ export default function HTEProfilePage() {
                                                                     return (
                                                                         <div key={categoryName} className="border border-border rounded-lg bg-card">
                                                                             <div className="bg-primary/5 px-4 py-3 border-b border-border">
-                                                                                <h4 className="font-semibold text-lg text-foreground">{categoryName}</h4>
-                                                                                <p className="text-sm text-muted-foreground">Total Weight: {categoryTotal}%</p>
+                                                                                <h4 className="font-semibold text-base text-foreground">{categoryName}</h4>
+                                                                                <p className="text-sm text-muted-foreground">Total Weight:  {categoryTotal}%</p>
                                                                             </div>
                                                                             <div className="p-8">
                                                                                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                                                                                     {/* Weight Distribution */}
-                                                                                    <div className="lg:col-span-1 space-y-6">
-                                                                                        <div className="text-center lg:text-left">
-                                                                                            <h5 className="font-semibold text-lg text-foreground mb-2">Weight Distribution</h5>
+                                                                                    <div className="lg:col-span-1 flex flex-col h-full">
+                                                                                        <div className="text-center lg:text-left mb-6">
+                                                                                            <h5 className="font-semibold text-base text-foreground mb-2">Weight Distribution</h5>
                                                                                             <p className="text-sm text-muted-foreground">Breakdown of assessment criteria weights</p>
                                                                                         </div>
-                                                                                        <div className="space-y-4">
-                                                                                            {weights.map((weight, index) => (
-                                                                                                <div key={weight.id} className="flex items-center justify-between p-4 bg-muted/20 rounded-xl border border-border/50 hover:bg-muted/30 transition-colors">
-                                                                                                    <div className="flex items-center gap-4">
-                                                                                                        <div 
-                                                                                                            className="w-4 h-4 rounded-full shadow-sm" 
-                                                                                                            style={{ backgroundColor: colors[index % colors.length] }}
-                                                                                                        />
-                                                                                                        <span className="font-medium text-sm text-foreground">
-                                                                                                            {weight.subcategory.subcategory_name}
-                                                                                                        </span>
+                                                                                        <div className="flex flex-col h-full">
+                                                                                            <div className="space-y-4 flex-1">
+                                                                                                {weights.map((weight, index) => (
+                                                                                                    <div key={weight.id} className="flex items-center justify-between p-4 bg-muted/20 rounded-xl border border-border/50 hover:bg-muted/30 transition-colors">
+                                                                                                        <div className="flex items-center gap-4">
+                                                                                                            <div 
+                                                                                                                className="w-4 h-4 rounded-full shadow-sm" 
+                                                                                                                style={{ backgroundColor: colors[index % colors.length] }}
+                                                                                                            />
+                                                                                                            <span className="font-medium text-sm text-foreground">
+                                                                                                                {weight.subcategory.subcategory_name}
+                                                                                                            </span>
+                                                                                                        </div>
+                                                                                                        <Badge variant="outline" className="font-mono text-sm px-3 py-1">
+                                                                                                            {weight.weight}%
+                                                                                                        </Badge>
                                                                                                     </div>
-                                                                                                    <Badge variant="outline" className="font-mono text-sm px-3 py-1">
-                                                                                                        {weight.weight}%
-                                                                                                    </Badge>
-                                                                                                </div>
-                                                                                            ))}
-                                                                                            <div className="flex items-center justify-between p-4 bg-primary/10 rounded-xl border border-primary/30 mt-6">
+                                                                                                ))}
+                                                                                            </div>
+                                                                                            <div className="flex items-center justify-between p-4 bg-primary/10 rounded-xl border border-primary/30 mt-4">
                                                                                                 <span className="font-semibold text-primary text-base">Total Weight</span>
                                                                                                 <Badge variant="default" className="font-mono text-sm px-3 py-1">
                                                                                                     {categoryTotal}%

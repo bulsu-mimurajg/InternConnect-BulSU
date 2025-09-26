@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { Head, router, usePage } from '@inertiajs/react';
+import { Head, router, usePage, Link } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { CheckCircle, XCircle, User, GraduationCap, Star, Building2, Briefcase, Target, AlertTriangle, Info } from 'lucide-react';
+import { CheckCircle, XCircle, User, GraduationCap, Star, Building2, Briefcase, Target, AlertTriangle, Info, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Student {
@@ -41,9 +41,10 @@ interface Props {
     endorsements?: Endorsement[];
     internships?: Internship[];
     hteId: number;
+    showSubmissionPrompt: boolean;
 }
 
-export default function EndorsementTable({ endorsements = [], internships = [], hteId }: Props) {
+export default function EndorsementTable({ endorsements = [], internships = [], hteId, showSubmissionPrompt }: Props) {
     const [selectedInternship, setSelectedInternship] = useState<string>('all');
     const [loading, setLoading] = useState<Record<number, boolean>>({});
     const [selectedEndorsements, setSelectedEndorsements] = useState<Set<number>>(new Set());
@@ -225,6 +226,33 @@ export default function EndorsementTable({ endorsements = [], internships = [], 
             setBatchLoading(false);
         }
     };
+
+    // Show assessment prompt if not submitted
+    if (showSubmissionPrompt) {
+        return (
+            <AppLayout>
+                <Head title="Student Endorsements" />
+                <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
+                    <Card>
+                        <CardContent className="p-6">
+                            <div className="text-center">
+                                <AlertCircle className="mx-auto h-12 w-12 text-yellow-500 mb-4" />
+                                <h2 className="text-xl font-semibold mb-2">Assessment Not Submitted</h2>
+                                <p className="text-muted-foreground mb-4">
+                                    You need to complete your assessment form to view student endorsements.
+                                </p>
+                                <Button asChild>
+                                    <Link href="/form">
+                                        Take Assessment
+                                    </Link>
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            </AppLayout>
+        );
+    }
 
     return (
         <AppLayout>

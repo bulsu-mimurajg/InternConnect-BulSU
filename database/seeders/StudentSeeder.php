@@ -64,6 +64,19 @@ class StudentSeeder extends Seeder
                 'address' => '789 Pine Rd, Makati',
                 'birth_date' => '2000-05-10',
             ],
+            [
+                'student_number' => '2021-9999',
+                'first_name' => 'John',
+                'middle_name' => 'Michael',
+                'last_name' => 'Smith',
+                'phone' => '09123456792',
+                'section_name' => 'BSIT-4A',
+                'specialization' => 'Web Development',
+                'address' => '321 Elm St, Taguig',
+                'birth_date' => '2000-07-25',
+                'username' => 'stud',
+                'password' => 'password',
+            ],
         ];
 
         $createdCount = 0;
@@ -86,10 +99,13 @@ class StudentSeeder extends Seeder
             }
 
             // Create user account
+            $username = isset($studentData['username']) ? $studentData['username'] : strtolower(str_replace(' ', '.', $studentData['first_name'] . ' ' . $studentData['last_name']));
+            $password = isset($studentData['password']) ? $studentData['password'] : 'password123';
+            
             $user = User::create([
-                'username' => strtolower(str_replace(' ', '.', $studentData['first_name'] . ' ' . $studentData['last_name'])),
+                'username' => $username,
                 'email' => strtolower(str_replace(' ', '.', $studentData['first_name'] . ' ' . $studentData['last_name'])) . '@example.com',
-                'password' => Hash::make('password123'),
+                'password' => Hash::make($password),
                 'status' => 'verified',
             ]);
 

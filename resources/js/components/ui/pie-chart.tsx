@@ -73,7 +73,7 @@ export function PieChart({
                             cx="50%"
                             cy="50%"
                             labelLine={false}
-                            label={showLabels ? ({ name, value }) => `${name}: ${value}%` : undefined}
+                            label={showLabels ? ({ value }) => `${value}%` : undefined}
                             outerRadius={120}
                             innerRadius={30}
                             fill="#8884d8"

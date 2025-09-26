@@ -450,11 +450,6 @@ class HTEController extends Controller
             return redirect()->route('form');
         }
 
-        // Check if HTE has submitted the assessment form
-        if (!$hte->is_submit) {
-            return redirect()->route('form')->with('warning', 'Please complete the assessment form first before adding internships.');
-        }
-
         // Get categories for criteria selection
         $categories = Category::with(['subCategories.questions' => function($query) {
             $query->where('is_active', true);
@@ -494,7 +489,8 @@ class HTEController extends Controller
 
         return Inertia::render('hte/add-internship', [
             'hte' => $hte,
-            'categories' => $transformedCategories
+            'categories' => $transformedCategories,
+            'showSubmissionPrompt' => !$hte->is_submit,
         ]);
     }
 
@@ -858,11 +854,6 @@ class HTEController extends Controller
             return redirect()->route('form');
         }
 
-        // Check if HTE has submitted the assessment form
-        if (!$hte->is_submit) {
-            return redirect()->back()->withErrors(['error' => 'Please complete the assessment form first before managing endorsements.']);
-        }
-
         // Get HTE's internships
         $internships = $hte->internships()->active()->get();
 
@@ -917,6 +908,7 @@ class HTEController extends Controller
                 ];
             })->values()->toArray(),
             'hteId' => $hte->id,
+            'showSubmissionPrompt' => !$hte->is_submit,
         ]);
     }
 
@@ -1386,6 +1378,7 @@ class HTEController extends Controller
                 'search' => $searchQuery,
             ],
             'hteId' => $hte->id,
+            'showSubmissionPrompt' => !$hte->is_submit,
         ]);
     }
 
@@ -1396,11 +1389,6 @@ class HTEController extends Controller
 
         if (!$hte) {
             return redirect()->route('form');
-        }
-
-        // Check if HTE has submitted the assessment form
-        if (!$hte->is_submit) {
-            return redirect()->route('form')->with('warning', 'Please complete the assessment form first before accessing reports.');
         }
 
         // Get HTE's internships for report generation
@@ -1416,6 +1404,7 @@ class HTEController extends Controller
 
         return Inertia::render('hte/report', [
             'internships' => $internships,
+            'showSubmissionPrompt' => !$hte->is_submit,
         ]);
     }
 
