@@ -1,11 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import { Head, useForm, usePage, router } from '@inertiajs/react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { PlusIcon, EditIcon, ArchiveIcon, RotateCcwIcon, SearchIcon, FilterIcon, ArrowUpDownIcon } from 'lucide-react';
+import { PlusIcon, EditIcon, ArchiveIcon, RotateCcwIcon } from 'lucide-react';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 
@@ -26,16 +26,12 @@ interface AdditionalInfo {
 
 interface AdditionalInfoPageProps {
     additionalInfos: AdditionalInfo[];
-    filters: {
-        search: string;
-    };
 }
 
-export default function AdditionalInfoPage({ additionalInfos, filters }: AdditionalInfoPageProps) {
+export default function AdditionalInfoPage({ additionalInfos }: AdditionalInfoPageProps) {
     const [showForm, setShowForm] = useState(false);
     const [editingInfo, setEditingInfo] = useState<AdditionalInfo | null>(null);
     const [showArchived, setShowArchived] = useState(false);
-    const [searchTerm, setSearchTerm] = useState(filters.search);
     const { flash } = usePage().props as { flash?: { success?: string; error?: string } };
 
     const { data, setData, post, put, patch, processing, errors, reset } = useForm({
@@ -47,30 +43,6 @@ export default function AdditionalInfoPage({ additionalInfos, filters }: Additio
         showArchived ? !info.is_active : info.is_active
     );
 
-    // Apply filters and search
-    const applyFilters = useCallback(() => {
-        const params = new URLSearchParams();
-
-        if (searchTerm) params.set('search', searchTerm);
-
-        router.get('/forms/additional-info', Object.fromEntries(params), {
-            preserveState: true,
-            replace: true,
-        });
-    }, [searchTerm]);
-
-    // Handle search with debounce
-    useEffect(() => {
-        const timeoutId = setTimeout(() => {
-            applyFilters();
-        }, 500);
-        return () => clearTimeout(timeoutId);
-    }, [searchTerm, applyFilters]);
-
-    // Clear all filters
-    const clearFilters = () => {
-        setSearchTerm('');
-    };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -180,45 +152,6 @@ export default function AdditionalInfoPage({ additionalInfos, filters }: Additio
                     </div>
                 </div>
 
-                {/* Filters and Search */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <FilterIcon className="h-5 w-5" />
-                            Filters & Search
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {/* Search */}
-                            <div className="space-y-2">
-                                <Label htmlFor="search">Search Fields</Label>
-                                <div className="relative">
-                                    <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                    <Input
-                                        id="search"
-                                        placeholder="Search field names..."
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                        className="pl-10"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Clear Filters Button */}
-                        <div className="flex justify-end mt-4">
-                            <Button
-                                variant="outline"
-                                onClick={clearFilters}
-                                className="flex items-center gap-2"
-                            >
-                                <ArrowUpDownIcon className="h-4 w-4" />
-                                Clear Filters
-                            </Button>
-                        </div>
-                    </CardContent>
-                </Card>
 
                 {/* Add/Edit Form */}
                 {showForm && (
