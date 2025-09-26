@@ -118,7 +118,7 @@ export default function AdviserReport({
                                 Section: {adviserSection}
                             </p>
                         </div>
-                        {adviserSections.length > 0 && (
+                        {adviserSections.length > 1 && (
                             <SectionSwitcher 
                                 sections={adviserSections}
                                 currentSectionId={currentSectionId}

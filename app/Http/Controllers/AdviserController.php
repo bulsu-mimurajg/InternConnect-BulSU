@@ -68,7 +68,7 @@ class AdviserController extends Controller
             'stats' => $stats,
             'recentAssessments' => $recentAssessments,
             'placementOverview' => $placementOverview,
-            'adviserSection' => $currentSectionId === null ? 'All Sections' : ($currentSection->section_name ?? null),
+            'adviserSection' => $currentSection ? $currentSection->section_name : ($adviserSections->count() > 1 ? 'All Sections' : $adviserSections->first()->section_name),
             'adviserSections' => $adviserSections->map(function ($section) {
                 return [
                     'section_id' => $section->section_id,
@@ -479,7 +479,7 @@ class AdviserController extends Controller
         return Inertia::render('adviser/application', [
             'pendingStudents' => $pendingStudents,
             'verifiedStudents' => $verifiedStudents,
-            'adviserSection' => $currentSectionId === null ? 'All Sections' : ($currentSection->section_name ?? null),
+            'adviserSection' => $currentSection ? $currentSection->section_name : ($adviserSections->count() > 1 ? 'All Sections' : $adviserSections->first()->section_name),
             'adviserSections' => $adviserSections->map(function ($section) {
                 return [
                     'section_id' => $section->section_id,
@@ -823,7 +823,7 @@ class AdviserController extends Controller
 
         return Inertia::render('adviser/students', [
             'students' => $students,
-            'adviserSection' => $currentSectionId === null ? 'All Sections' : ($currentSection->section_name ?? null),
+            'adviserSection' => $currentSection ? $currentSection->section_name : ($adviserSections->count() > 1 ? 'All Sections' : $adviserSections->first()->section_name),
             'adviserSections' => $adviserSections->map(function ($section) {
                 return [
                     'section_id' => $section->section_id,
@@ -842,8 +842,8 @@ class AdviserController extends Controller
         // Try to get from session first
         $sessionSectionId = $request->session()->get('adviser_current_section_id');
         
-        // Handle "All Sections" option (null value)
-        if ($sessionSectionId === 'all' || $sessionSectionId === null) {
+        // Handle "All Sections" option (null value) - only if explicitly set
+        if ($sessionSectionId === 'all') {
             return null;
         }
         
@@ -851,11 +851,17 @@ class AdviserController extends Controller
             return $sessionSectionId;
         }
         
-        // Default to first section and store in session
-        $firstSectionId = $adviserSections->first()->section_id;
-        $request->session()->put('adviser_current_section_id', $firstSectionId);
-        
-        return $firstSectionId;
+        // Default behavior based on number of sections
+        if ($adviserSections->count() === 1) {
+            // Single section: default to that section
+            $firstSectionId = $adviserSections->first()->section_id;
+            $request->session()->put('adviser_current_section_id', $firstSectionId);
+            return $firstSectionId;
+        } else {
+            // Multiple sections: default to "All Sections"
+            $request->session()->put('adviser_current_section_id', 'all');
+            return null;
+        }
     }
 
     /**
@@ -923,7 +929,7 @@ class AdviserController extends Controller
         $currentSection = $currentSectionId ? $adviserSections->where('section_id', $currentSectionId)->first() : null;
 
         return Inertia::render('adviser/report', [
-            'adviserSection' => $currentSectionId === null ? 'All Sections' : ($currentSection->section_name ?? null),
+            'adviserSection' => $currentSection ? $currentSection->section_name : ($adviserSections->count() > 1 ? 'All Sections' : $adviserSections->first()->section_name),
             'adviserSections' => $adviserSections->map(function ($section) {
                 return [
                     'section_id' => $section->section_id,

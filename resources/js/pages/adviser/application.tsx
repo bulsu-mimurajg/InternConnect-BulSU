@@ -239,7 +239,7 @@ export default function Application({ pendingStudents, verifiedStudents, adviser
                                     Manage student applications for your section
                                 </CardDescription>
                             </div>
-                            {adviserSections.length > 0 && (
+                            {adviserSections.length > 1 && (
                                 <SectionSwitcher 
                                     sections={adviserSections}
                                     currentSectionId={currentSectionId}

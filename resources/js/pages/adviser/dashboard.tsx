@@ -117,7 +117,7 @@ export default function AdviserDashboard({ stats, recentAssessments, placementOv
                                 Section: {adviserSection}
                             </p>
                         </div>
-                        {adviserSections.length > 0 && (
+                        {adviserSections.length > 1 && (
                             <SectionSwitcher 
                                 sections={adviserSections}
                                 currentSectionId={currentSectionId}

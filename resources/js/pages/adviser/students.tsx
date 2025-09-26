@@ -145,7 +145,7 @@ export default function AdviserStudents({ students, adviserSection, adviserSecti
                                 Section: {adviserSection} • {students.length} students
                             </p>
                         </div>
-                        {adviserSections.length > 0 && (
+                        {adviserSections.length > 1 && (
                             <SectionSwitcher 
                                 sections={adviserSections}
                                 currentSectionId={currentSectionId}
