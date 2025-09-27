@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use App\Services\MatchingService;
+use App\Services\NotificationService;
 
 class StudentController extends Controller
 {
@@ -835,6 +836,21 @@ class StudentController extends Controller
                 'compatibility_score' => $validated['compatibility_score'],
                 'endorsement_date' => now(),
             ]);
+
+            // Send notification to HTE about the endorsement
+            $internship = Internship::with('hte.user')->find($validated['internship_id']);
+            if ($internship && $internship->hte) {
+                $notificationService = new NotificationService();
+                $studentName = $student->first_name . ' ' . $student->last_name;
+                $companyName = $internship->hte->company_name;
+                $notificationService->notifyHTEForEndorsement(
+                    $internship->hte->user_id,
+                    $studentName,
+                    $companyName,
+                    $student->id,
+                    $internship->id
+                );
+            }
 
             // Do not auto-fallback on admin endorsement. HTE rejection will drive fallback.
             

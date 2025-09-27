@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Head, router, usePage, Link } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
@@ -48,10 +48,41 @@ export default function EndorsementTable({ endorsements = [], internships = [], 
     const [selectedInternship, setSelectedInternship] = useState<string>('all');
     const [loading, setLoading] = useState<Record<number, boolean>>({});
     const [selectedEndorsements, setSelectedEndorsements] = useState<Set<number>>(new Set());
+    const [highlightedStudentId, setHighlightedStudentId] = useState<number | null>(null);
     const [batchLoading, setBatchLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [errorType, setErrorType] = useState<string | null>(null);
     const { flash } = usePage<{ flash: { success?: string; error?: string } }>().props;
+
+    // Handle student highlighting from notification clicks
+    useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const highlightStudent = urlParams.get('highlightStudent');
+        const highlightDuration = parseInt(urlParams.get('highlightDuration') || '3000');
+
+        console.log('URL params:', { highlightStudent, highlightDuration });
+        console.log('Current URL:', window.location.href);
+        console.log('Available endorsements:', endorsements.map(e => ({ id: e.student.id, name: `${e.student.first_name} ${e.student.last_name}` })));
+
+        if (highlightStudent) {
+            const studentId = parseInt(highlightStudent);
+            console.log('Setting highlighted student ID:', studentId, 'Type:', typeof studentId);
+            setHighlightedStudentId(studentId);
+
+            // Remove highlight after specified duration
+            const timer = setTimeout(() => {
+                console.log('Removing highlight for student ID:', studentId);
+                setHighlightedStudentId(null);
+                // Clean up URL parameters
+                const newUrl = new URL(window.location.href);
+                newUrl.searchParams.delete('highlightStudent');
+                newUrl.searchParams.delete('highlightDuration');
+                window.history.replaceState({}, '', newUrl.toString());
+            }, highlightDuration);
+
+            return () => clearTimeout(timer);
+        }
+    }, [endorsements]);
 
     // Filter endorsements based on selected internship
     const filteredEndorsements = selectedInternship === 'all' 
@@ -424,8 +455,23 @@ export default function EndorsementTable({ endorsements = [], internships = [], 
                             <>
                                 {/* Mobile/Tablet Card View */}
                                 <div className="block lg:hidden space-y-4">
-                                    {sortedEndorsements.map((endorsement) => (
-                                        <Card key={endorsement.id} className="p-4">
+                                    {sortedEndorsements.map((endorsement) => {
+                                        const isHighlighted = highlightedStudentId === endorsement.student.id;
+                                        console.log('Rendering mobile endorsement:', {
+                                            endorsementId: endorsement.id,
+                                            studentId: endorsement.student.id,
+                                            highlightedStudentId,
+                                            isHighlighted
+                                        });
+                                        return (
+                                        <Card 
+                                            key={endorsement.id} 
+                                            className={`p-4 transition-all duration-500 ${
+                                                isHighlighted
+                                                    ? 'ring-4 ring-blue-500 bg-blue-50 shadow-lg animate-pulse' 
+                                                    : ''
+                                            }`}
+                                        >
                                             <div className="flex items-start justify-between mb-3">
                                                 <div className="flex items-center gap-3">
                                                     <Checkbox
@@ -501,7 +547,8 @@ export default function EndorsementTable({ endorsements = [], internships = [], 
                                                 </div>
                                             </div>
                                         </Card>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
 
                                 {/* Desktop Table View */}
@@ -525,8 +572,23 @@ export default function EndorsementTable({ endorsements = [], internships = [], 
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {sortedEndorsements.map((endorsement) => (
-                                            <tr key={endorsement.id} className="border-b border-gray-100 hover:bg-muted/50 transition-colors">
+                                            {sortedEndorsements.map((endorsement) => {
+                                                const isHighlighted = highlightedStudentId === endorsement.student.id;
+                                                console.log('Rendering endorsement:', {
+                                                    endorsementId: endorsement.id,
+                                                    studentId: endorsement.student.id,
+                                                    highlightedStudentId,
+                                                    isHighlighted
+                                                });
+                                                return (
+                                            <tr 
+                                                key={endorsement.id} 
+                                                className={`border-b border-gray-100 hover:bg-muted/50 transition-all duration-500 ${
+                                                    isHighlighted
+                                                        ? 'bg-blue-50 ring-2 ring-blue-500 shadow-md animate-pulse' 
+                                                        : ''
+                                                }`}
+                                            >
                                                 <td className="py-3 px-2">
                                                     <Checkbox
                                                         checked={selectedEndorsements.has(endorsement.id)}
@@ -599,7 +661,8 @@ export default function EndorsementTable({ endorsements = [], internships = [], 
                                                     </div>
                                                 </td>
                                             </tr>
-                                            ))}
+                                                );
+                                            })}
                                         </tbody>
                                     </table>
                                 </div>

@@ -6,6 +6,8 @@ use App\Models\Student;
 use App\Models\StudentMatch;
 use App\Models\Endorsement;
 use App\Models\Deadline;
+use App\Models\Internship;
+use App\Services\NotificationService;
 use Illuminate\Support\Facades\Log;
 
 class AutomaticEndorsementService
@@ -126,5 +128,20 @@ class AutomaticEndorsementService
             'compatibility_score' => $match->compatibility_score,
             'endorsement_date' => now(),
         ]);
+
+        // Send notification to HTE about the endorsement
+        $internship = Internship::with('hte.user')->find($match->internship_id);
+        if ($internship && $internship->hte) {
+            $notificationService = new NotificationService();
+            $studentName = $student->first_name . ' ' . $student->last_name;
+            $companyName = $internship->hte->company_name;
+            $notificationService->notifyHTEForEndorsement(
+                $internship->hte->user_id,
+                $studentName,
+                $companyName,
+                $student->id,
+                $internship->id
+            );
+        }
     }
 }

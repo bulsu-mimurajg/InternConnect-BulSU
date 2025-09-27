@@ -128,29 +128,6 @@ export default function AdviserDashboard({ stats, recentAssessments, placementOv
                     </div>
                 </div>
 
-                {/* Notification Banner */}
-                {stats.pendingStudents > 0 && (
-                    <Card className="border-amber-200 bg-amber-50">
-                        <CardContent className="pt-6">
-                            <div className="flex items-center gap-3">
-                                <ClockIcon className="h-5 w-5 text-amber-600" />
-                                <div className="flex-1">
-                                    <p className="font-medium text-amber-800">
-                                        You have {stats.pendingStudents} student{stats.pendingStudents > 1 ? 's' : ''} waiting for verification
-                                    </p>
-                                    <p className="text-sm text-amber-700">
-                                        Review and approve student requests to grant them access to the system
-                                    </p>
-                                </div>
-                                <Button asChild size="sm" className="bg-amber-600 hover:bg-amber-700">
-                                    <Link href={route('student-verification')}>
-                                        Review Applications
-                                    </Link>
-                                </Button>
-                            </div>
-                        </CardContent>
-                    </Card>
-                )}
 
                 {/* Statistics Cards */}
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

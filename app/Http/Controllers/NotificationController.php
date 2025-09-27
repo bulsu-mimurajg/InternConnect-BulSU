@@ -62,6 +62,20 @@ class NotificationController extends Controller
     }
 
     /**
+     * Mark a notification as unread
+     */
+    public function markAsUnread(Notification $notification): \Illuminate\Http\JsonResponse
+    {
+        if ($notification->user_id !== Auth::id()) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $notification->update(['is_read' => false]);
+
+        return response()->json(['success' => true]);
+    }
+
+    /**
      * Get notifications for AJAX (for dropdown)
      */
     public function getNotifications(): \Illuminate\Http\JsonResponse

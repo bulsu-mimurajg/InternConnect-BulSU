@@ -193,4 +193,80 @@ class NotificationService
             }
         }
     }
+
+    /**
+     * Notify advisers when someone registers for a section and needs approval
+     */
+    public function notifyAdviserForSectionRegistration(int $adviserId, int $studentCount): void
+    {
+        Notification::createNotification(
+            $adviserId,
+            'student_verification_pending',
+            'New Student Registration',
+            "You have {$studentCount} new student(s) registered for your section who need approval.",
+            ['adviser_id' => $adviserId, 'student_count' => $studentCount]
+        );
+    }
+
+    /**
+     * Notify HTE when SIP endorses something
+     */
+    public function notifyHTEForEndorsement(int $hteId, string $studentName, string $companyName, int $studentId = null, int $internshipId = null): void
+    {
+        Notification::createNotification(
+            $hteId,
+            'hte_endorsement',
+            'New Student Endorsement',
+            "Student {$studentName} has been endorsed for internship at {$companyName}.",
+            [
+                'hte_id' => $hteId, 
+                'student_name' => $studentName, 
+                'company_name' => $companyName,
+                'student_id' => $studentId,
+                'internship_id' => $internshipId
+            ]
+        );
+    }
+
+    /**
+     * Notify HTE when assessment deadline is approaching
+     */
+    public function notifyHTEForApproachingDeadline(int $hteId, string $deadlineTitle, string $deadlineDate): void
+    {
+        Notification::createNotification(
+            $hteId,
+            'hte_assessment_pending',
+            'Assessment Deadline Approaching',
+            "Your HTE assessment deadline '{$deadlineTitle}' is approaching. Due: {$deadlineDate}",
+            ['hte_id' => $hteId, 'deadline_title' => $deadlineTitle, 'deadline_date' => $deadlineDate]
+        );
+    }
+
+    /**
+     * Notify student when assessment deadline is approaching
+     */
+    public function notifyStudentForApproachingDeadline(int $studentId, string $deadlineTitle, string $deadlineDate): void
+    {
+        Notification::createNotification(
+            $studentId,
+            'student_assessment_pending',
+            'Assessment Deadline Approaching',
+            "Your student assessment deadline '{$deadlineTitle}' is approaching. Due: {$deadlineDate}",
+            ['student_id' => $studentId, 'deadline_title' => $deadlineTitle, 'deadline_date' => $deadlineDate]
+        );
+    }
+
+    /**
+     * Notify student when they have been placed
+     */
+    public function notifyStudentForPlacement(int $studentId, string $companyName, string $position): void
+    {
+        Notification::createNotification(
+            $studentId,
+            'student_placement',
+            'Congratulations! You\'ve Been Placed',
+            "You have been successfully placed at {$companyName} for the position of {$position}.",
+            ['student_id' => $studentId, 'company_name' => $companyName, 'position' => $position]
+        );
+    }
 }

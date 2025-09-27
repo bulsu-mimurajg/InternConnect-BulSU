@@ -17,6 +17,7 @@ use App\Models\StudentMatch;
 use App\Models\StudentPlacement;
 use App\Models\Student;
 use App\Models\Endorsement;
+use App\Services\NotificationService;
 use Inertia\Inertia;
 
 class HTEController extends Controller
@@ -1037,6 +1038,22 @@ class HTEController extends Controller
                     'endorsement_date' => now(),
                 ]);
 
+                // Send notification to the new HTE about the endorsement
+                $student = Student::find($endorsement->student_id);
+                $internship = Internship::with('hte.user')->find($nextMatch->internship_id);
+                if ($student && $internship && $internship->hte) {
+                    $notificationService = new NotificationService();
+                    $studentName = $student->first_name . ' ' . $student->last_name;
+                    $companyName = $internship->hte->company_name;
+                    $notificationService->notifyHTEForEndorsement(
+                        $internship->hte->user_id,
+                        $studentName,
+                        $companyName,
+                        $student->id,
+                        $internship->id
+                    );
+                }
+
                 Log::info('Student moved to next highest compatibility HTE:', [
                     'student_id' => $endorsement->student_id,
                     'old_internship_id' => $endorsement->internship_id,
@@ -1228,6 +1245,22 @@ class HTEController extends Controller
                         'compatibility_score' => $nextMatch->compatibility_score,
                         'endorsement_date' => now(),
                     ]);
+
+                    // Send notification to the new HTE about the endorsement
+                    $student = Student::find($endorsement->student_id);
+                    $internship = Internship::with('hte.user')->find($nextMatch->internship_id);
+                    if ($student && $internship && $internship->hte) {
+                        $notificationService = new NotificationService();
+                        $studentName = $student->first_name . ' ' . $student->last_name;
+                        $companyName = $internship->hte->company_name;
+                        $notificationService->notifyHTEForEndorsement(
+                            $internship->hte->user_id,
+                            $studentName,
+                            $companyName,
+                            $student->id,
+                            $internship->id
+                        );
+                    }
 
                     $fallbackCount++;
                 }
