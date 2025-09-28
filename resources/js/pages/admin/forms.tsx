@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Head, useForm, usePage, router } from '@inertiajs/react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,6 +7,9 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Pagination } from '@/components/ui/pagination';
+import { usePagination } from '@/hooks/usePagination';
+import { getRowNumber } from '@/lib/pagination-utils';
 import { FileTextIcon, PlusIcon, EditIcon, ArchiveIcon, RotateCcwIcon, SearchIcon, FilterIcon, ArrowUpDownIcon, ChevronDown, ChevronUp, Archive, Eye } from 'lucide-react';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type Question, type Category, type SubCategory } from '@/types';
@@ -53,32 +56,38 @@ export default function FormsPage({ questions, categories, subcategories, filter
         showArchived ? !question.is_active : question.is_active
     );
 
-    // Apply filters and search
-    const applyFilters = useCallback(() => {
-        const params = new URLSearchParams();
-
-        if (searchTerm) params.set('search', searchTerm);
-        if (filterCategory) params.set('category_id', filterCategory);
-        if (filterSubcategory) params.set('subcategory_id', filterSubcategory);
-
-        router.get('/forms/assessment', Object.fromEntries(params), {
-            preserveState: true,
-            replace: true,
+    // Apply additional filters (search, category, subcategory)
+    const applyAdditionalFilters = useCallback(() => {
+        return filteredQuestions.filter(question => {
+            const matchesSearch = !searchTerm || 
+                question.question.toLowerCase().includes(searchTerm.toLowerCase());
+            const matchesCategory = !filterCategory || 
+                question.subcategory.category.id.toString() === filterCategory;
+            const matchesSubcategory = !filterSubcategory || 
+                question.subcategory.id.toString() === filterSubcategory;
+            
+            return matchesSearch && matchesCategory && matchesSubcategory;
         });
-    }, [searchTerm, filterCategory, filterSubcategory]);
+    }, [filteredQuestions, searchTerm, filterCategory, filterSubcategory]);
 
-    // Handle search with debounce
-    useEffect(() => {
-        const timeoutId = setTimeout(() => {
-            applyFilters();
-        }, 500);
-        return () => clearTimeout(timeoutId);
-    }, [searchTerm, applyFilters]);
+    const finalFilteredQuestions = applyAdditionalFilters();
 
-    // Handle filter changes
-    useEffect(() => {
-        applyFilters();
-    }, [filterCategory, filterSubcategory, applyFilters]);
+    // Create a stable reset trigger
+    const resetTrigger = useMemo(() => 
+        `${searchTerm}-${filterCategory}-${filterSubcategory}-${showArchived}`,
+        [searchTerm, filterCategory, filterSubcategory, showArchived]
+    );
+
+    // Pagination hook with auto-reset on filter changes
+    const questionsPagination = usePagination({
+        data: finalFilteredQuestions,
+        itemsPerPage: 10,
+        resetTrigger: resetTrigger, // Auto-reset when filters change
+    });
+
+
+    // Note: All filtering is now handled client-side for better pagination experience
+    // No server-side filtering needed since we're using client-side pagination
 
     // Reset subcategory when category changes
     useEffect(() => {
@@ -176,20 +185,6 @@ export default function FormsPage({ questions, categories, subcategories, filter
         setEditingQuestion(null);
         setSelectedCategory('');
         setAvailableSubcategories([]);
-    };
-
-
-
-    const getAccessBadge = (access: string) => {
-        return access === 'HTE' ? (
-            <Badge variant="default" className="bg-blue-100 text-blue-800">
-                HTE
-            </Badge>
-        ) : (
-            <Badge variant="secondary" className="bg-green-100 text-green-800">
-                Student
-            </Badge>
-        );
     };
 
     const getStatusBadge = (isActive: boolean) => {
@@ -462,7 +457,7 @@ export default function FormsPage({ questions, categories, subcategories, filter
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        {filteredQuestions.length === 0 ? (
+                        {finalFilteredQuestions.length === 0 ? (
                             <div className="text-center py-8">
                                 <FileTextIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                                 <h3 className="text-lg font-medium mb-2">
@@ -482,66 +477,93 @@ export default function FormsPage({ questions, categories, subcategories, filter
                                 )}
                             </div>
                         ) : (
-                            <div className="space-y-4">
-                                {filteredQuestions.map((question) => (
-                                    <div
-                                        key={question.id}
-                                        className="flex items-start justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                                    >
-                                        <div className="flex-1">
-                                            <div className="flex items-center gap-3 mb-2">
-                                                <h3 className="font-medium">Question #{question.id}</h3>
-                                                {getAccessBadge(question.access)}
-                                                {getStatusBadge(question.is_active)}
-                                            </div>
-                                            <p className="text-sm text-muted-foreground mb-2">
-                                                {question.question}
-                                            </p>
-                                            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                                <div>
-                                                    <span className="font-medium">Category:</span> {question.subcategory.category.category_name}
-                                                </div>
-                                                <div>
-                                                    <span className="font-medium">Subcategory:</span> {question.subcategory.subcategory_name}
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="flex gap-2">
-                                            {question.is_active ? (
-                                                <>
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        onClick={() => handleEdit(question)}
-                                                    >
-                                                        <EditIcon className="h-4 w-4" />
-                                                    </Button>
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        onClick={() => handleArchive(question.id)}
-                                                        className="text-orange-600 hover:text-orange-700"
-                                                    >
-                                                        <ArchiveIcon className="h-4 w-4" />
-                                                    </Button>
-                                                </>
-                                            ) : (
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() => handleRestore(question.id)}
-                                                    className="text-green-600 hover:text-green-700"
-                                                >
-                                                    <RotateCcwIcon className="h-4 w-4" />
-                                                </Button>
-                                            )}
-                                        </div>
-                                    </div>
-                                ))}
+                            <div className="overflow-x-auto">
+                                <table className="w-full">
+                                    <thead>
+                                        <tr className="border-b">
+                                            <th className="text-center p-3 font-medium text-muted-foreground w-16">#</th>
+                                            <th className="text-left p-3 font-medium text-muted-foreground">Question</th>
+                                            <th className="text-left p-3 font-medium text-muted-foreground">Category</th>
+                                            <th className="text-left p-3 font-medium text-muted-foreground">Subcategory</th>
+                                            <th className="text-left p-3 font-medium text-muted-foreground">Status</th>
+                                            <th className="text-right p-3 font-medium text-muted-foreground">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {questionsPagination.paginatedData.map((question, index) => (
+                                            <tr key={question.id} className="border-b hover:bg-muted/50 transition-colors">
+                                                <td className="text-center p-3 font-mono text-sm text-muted-foreground">
+                                                    {getRowNumber(questionsPagination.currentPage, 10, index)}
+                                                </td>
+                                                <td className="p-3">
+                                                    <div>
+                                                        <div className="font-medium mb-1">Question #{question.id}</div>
+                                                        <p className="text-sm text-muted-foreground">
+                                                            {question.question}
+                                                        </p>
+                                                    </div>
+                                                </td>
+                                                <td className="p-3">
+                                                    <span className="text-sm">{question.subcategory.category.category_name}</span>
+                                                </td>
+                                                <td className="p-3">
+                                                    <span className="text-sm">{question.subcategory.subcategory_name}</span>
+                                                </td>
+                                                <td className="p-3">
+                                                    {getStatusBadge(question.is_active)}
+                                                </td>
+                                                <td className="p-3 text-right">
+                                                    <div className="flex items-center justify-end gap-2">
+                                                        {question.is_active ? (
+                                                            <>
+                                                                <Button
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    onClick={() => handleEdit(question)}
+                                                                >
+                                                                    <EditIcon className="h-4 w-4" />
+                                                                </Button>
+                                                                <Button
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    onClick={() => handleArchive(question.id)}
+                                                                    className="text-orange-600 hover:text-orange-700"
+                                                                >
+                                                                    <ArchiveIcon className="h-4 w-4" />
+                                                                </Button>
+                                                            </>
+                                                        ) : (
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                onClick={() => handleRestore(question.id)}
+                                                                className="text-green-600 hover:text-green-700"
+                                                            >
+                                                                <RotateCcwIcon className="h-4 w-4" />
+                                                            </Button>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
                             </div>
                         )}
                     </CardContent>
                 </Card>
+
+                {/* Pagination */}
+                {finalFilteredQuestions.length > 0 && (
+                    <Pagination
+                        currentPage={questionsPagination.currentPage}
+                        totalPages={questionsPagination.totalPages}
+                        onPageChange={questionsPagination.handlePageChange}
+                        showSummary={true}
+                        totalItems={finalFilteredQuestions.length}
+                        itemsPerPage={10}
+                    />
+                )}
             </div>
         </AppLayout>
     );
