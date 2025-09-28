@@ -328,64 +328,6 @@ export default function HteReport({ internships, showSubmissionPrompt }: Props) 
                         </div>
                     </CardContent>
                 </Card>
-
-                {/* Quick Actions */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Quick Actions</CardTitle>
-                        <CardDescription>
-                            Common report generation tasks for your company
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                            <Button
-                                variant="outline"
-                                className="h-auto p-4 flex-col gap-2"
-                                onClick={() => {
-                                    setSelectedReportType('company-overview');
-                                    setSelectedFormat('pdf');
-                                }}
-                            >
-                                <BuildingIcon className="h-6 w-6" />
-                                <span>Company Overview</span>
-                                <span className="text-xs text-muted-foreground">
-                                    Complete company profile report
-                                </span>
-                            </Button>
-
-                            <Button
-                                variant="outline"
-                                className="h-auto p-4 flex-col gap-2"
-                                onClick={() => {
-                                    setSelectedReportType('placed-students');
-                                    setSelectedFormat('excel');
-                                }}
-                            >
-                                <UsersIcon className="h-6 w-6" />
-                                <span>Placed Students</span>
-                                <span className="text-xs text-muted-foreground">
-                                    List of students in your internships
-                                </span>
-                            </Button>
-
-                            <Button
-                                variant="outline"
-                                className="h-auto p-4 flex-col gap-2"
-                                onClick={() => {
-                                    setSelectedReportType('internship-slots');
-                                    setSelectedFormat('pdf');
-                                }}
-                            >
-                                <ClipboardListIcon className="h-6 w-6" />
-                                <span>Slot Utilization</span>
-                                <span className="text-xs text-muted-foreground">
-                                    Track internship slot usage
-                                </span>
-                            </Button>
-                        </div>
-                    </CardContent>
-                </Card>
             </div>
         </AppLayout>
     );

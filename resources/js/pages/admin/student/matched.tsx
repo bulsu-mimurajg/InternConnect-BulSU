@@ -552,10 +552,15 @@ export default function StudentMatched({ matchedStudents, filters }: Props) {
 
     const handleSelectAll = (checked: boolean) => {
         if (checked) {
-            const allIds = matchedStudents.map(s => s.id);
-            setSelectedStudents(new Set(allIds));
+            // Select only the students visible on the current page
+            const currentPageIds = matchedPagination.paginatedData.map(s => s.id);
+            setSelectedStudents(new Set(currentPageIds));
         } else {
-            setSelectedStudents(new Set());
+            // Deselect only the students visible on the current page
+            const currentPageIds = matchedPagination.paginatedData.map(s => s.id);
+            const newSelected = new Set(selectedStudents);
+            currentPageIds.forEach(id => newSelected.delete(id));
+            setSelectedStudents(newSelected);
         }
     };
 
@@ -1180,10 +1185,10 @@ export default function StudentMatched({ matchedStudents, filters }: Props) {
                                                 <th className="text-left p-3 font-medium text-muted-foreground">
                                                     <div className="flex items-center gap-2">
                                                         <Checkbox
-                                                            checked={selectedStudents.size === filteredMatchedStudents.length && filteredMatchedStudents.length > 0}
+                                                            checked={matchedPagination.paginatedData.length > 0 && matchedPagination.paginatedData.every(student => selectedStudents.has(student.id))}
                                                             onCheckedChange={handleSelectAll}
                                                         />
-                                                        Select All
+                                                        Select All ({matchedPagination.paginatedData.length})
                                                     </div>
                                                 </th>
                                                 <th className="text-left p-3 font-medium text-muted-foreground">Student</th>
