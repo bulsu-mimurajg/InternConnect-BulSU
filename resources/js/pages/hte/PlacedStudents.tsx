@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Head, router, Link } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { Badge } from '@/components/ui/badge';
@@ -7,6 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Pagination } from '@/components/ui/pagination';
+import { usePagination } from '@/hooks/usePagination';
+import { getRowNumber } from '@/lib/pagination-utils';
 import { 
     UserIcon, 
     CheckCircleIcon,
@@ -84,6 +87,7 @@ export default function PlacedStudents({
         internship: filters.internship || 'all',
         search: filters.search || '',
     });
+    const [isFiltersOpen, setIsFiltersOpen] = useState(false);
 
     // Update local filters when props change
     useEffect(() => {
@@ -123,6 +127,32 @@ export default function PlacedStudents({
             replace: true
         });
     };
+
+    // Filter placed students based on local filters
+    const filteredPlacedStudents = placed_students.filter(placement => {
+        const matchesSection = localFilters.section === 'all' || placement.student.section === localFilters.section;
+        const matchesInternship = localFilters.internship === 'all' || 
+                                 placement.internship.id.toString() === localFilters.internship;
+        const matchesSearch = localFilters.search === '' || 
+                             placement.student.first_name.toLowerCase().includes(localFilters.search.toLowerCase()) ||
+                             placement.student.last_name.toLowerCase().includes(localFilters.search.toLowerCase()) ||
+                             placement.student.student_number.toLowerCase().includes(localFilters.search.toLowerCase());
+        
+        return matchesSection && matchesInternship && matchesSearch;
+    });
+
+    // Create a stable reset trigger for pagination
+    const resetTrigger = useMemo(() => 
+        `${localFilters.section}-${localFilters.internship}-${localFilters.search}`,
+        [localFilters.section, localFilters.internship, localFilters.search]
+    );
+
+    // Pagination hook with auto-reset on filter changes
+    const placedPagination = usePagination({
+        data: filteredPlacedStudents,
+        itemsPerPage: 10,
+        resetTrigger: resetTrigger,
+    });
 
     const getStatusColor = (status: string) => {
         switch (status) {
@@ -187,107 +217,115 @@ export default function PlacedStudents({
                             View students who have been placed in your internships
                         </p>
                     </div>
+                    <div className="flex gap-2">
+                        <Button 
+                            variant="outline" 
+                            size="default"
+                            onClick={() => setIsFiltersOpen(!isFiltersOpen)}
+                        >
+                            <FilterIcon className="h-4 w-4" />
+                            Filters
+                        </Button>
+                    </div>
                 </div>
 
                 {/* Filters */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <FilterIcon className="h-5 w-5" />
-                            Filters
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                            {/* Section Filter */}
-                            <div className="space-y-2">
-                                <Label htmlFor="section-filter">Section</Label>
-                                <Select
-                                    value={localFilters.section}
-                                    onValueChange={(value) => handleFilterChange('section', value)}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="All Sections" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">All Sections</SelectItem>
-                                        {section_options.map((section) => (
-                                            <SelectItem key={section.name} value={section.name}>
-                                                {section.name} ({section.total_placements})
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
+                {isFiltersOpen && (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <FilterIcon className="h-5 w-5" />
+                                Filters
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="space-y-4">
+                                {/* First Row: Search, Section, Clear Filters */}
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    {/* Search Filter */}
+                                    <div className="space-y-2">
+                                        <Label htmlFor="search-filter">Search</Label>
+                                        <div className="relative">
+                                            <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                            <Input
+                                                id="search-filter"
+                                                placeholder="Search students..."
+                                                value={localFilters.search}
+                                                onChange={(e) => handleFilterChange('search', e.target.value)}
+                                                className="pl-10"
+                                            />
+                                        </div>
+                                    </div>
 
-                            {/* Internship Filter */}
-                            <div className="space-y-2">
-                                <Label htmlFor="internship-filter">Internship</Label>
-                                <Select
-                                    value={localFilters.internship}
-                                    onValueChange={(value) => handleFilterChange('internship', value)}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="All Internships" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">All Internships</SelectItem>
-                                        {internship_options.map((internship) => (
-                                            <SelectItem key={internship.id} value={internship.id.toString()}>
-                                                {internship.position_title} - {internship.department} ({internship.total_placements})
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
+                                    {/* Section Filter */}
+                                    <div className="space-y-2">
+                                        <Label htmlFor="section-filter">Section</Label>
+                                        <Select
+                                            value={localFilters.section}
+                                            onValueChange={(value) => handleFilterChange('section', value)}
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="All Sections" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="all">All Sections</SelectItem>
+                                                {section_options.map((section) => (
+                                                    <SelectItem key={section.name} value={section.name}>
+                                                        {section.name} ({section.total_placements})
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
 
-                            {/* Search Filter */}
-                            <div className="space-y-2">
-                                <Label htmlFor="search-filter">Search</Label>
-                                <div className="relative">
-                                    <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                                    <Input
-                                        id="search-filter"
-                                        placeholder="Search students..."
-                                        value={localFilters.search}
-                                        onChange={(e) => handleFilterChange('search', e.target.value)}
-                                        className="pl-10"
-                                    />
+                                    {/* Clear Filters */}
+                                    <div className="space-y-2">
+                                        <Label>&nbsp;</Label>
+                                        <Button
+                                            variant="outline"
+                                            onClick={clearFilters}
+                                            className="w-full"
+                                        >
+                                            Clear Filters
+                                        </Button>
+                                    </div>
+                                </div>
+
+                                {/* Second Row: Internship Filter (Full Width) */}
+                                <div className="space-y-2">
+                                    <Label htmlFor="internship-filter">Internship</Label>
+                                    <Select
+                                        value={localFilters.internship}
+                                        onValueChange={(value) => handleFilterChange('internship', value)}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="All Internships" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">All Internships</SelectItem>
+                                            {internship_options.map((internship) => (
+                                                <SelectItem key={internship.id} value={internship.id.toString()}>
+                                                    {internship.position_title} - {internship.department} ({internship.total_placements})
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                             </div>
-
-                            {/* Clear Filters */}
-                            <div className="space-y-2">
-                                <Label>&nbsp;</Label>
-                                <Button
-                                    variant="outline"
-                                    onClick={clearFilters}
-                                    className="w-full"
-                                >
-                                    Clear Filters
-                                </Button>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                {/* Results Summary */}
-                <div className="flex items-center justify-between">
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                        Showing {placed_students.length} placed student{placed_students.length !== 1 ? 's' : ''}
-                    </p>
-                </div>
+                        </CardContent>
+                    </Card>
+                )}
 
                 {/* Placed Students Table */}
                 <Card>
                     <CardHeader>
                         <CardTitle>Placed Students</CardTitle>
                         <CardDescription>
-                            {placed_students.length} student{placed_students.length !== 1 ? 's' : ''} placed in your internships
+                            {filteredPlacedStudents.length} student{filteredPlacedStudents.length !== 1 ? 's' : ''} placed in your internships
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        {placed_students.length === 0 ? (
+                        {filteredPlacedStudents.length === 0 ? (
                             <div className="text-center py-8">
                                 <UserIcon className="mx-auto h-12 w-12 text-gray-400" />
                                 <h3 className="mt-2 text-sm font-medium text-gray-900">No Placed Students</h3>
@@ -299,7 +337,7 @@ export default function PlacedStudents({
                             <>
                                 {/* Mobile/Tablet Card View */}
                                 <div className="block lg:hidden space-y-4">
-                                    {placed_students.map((placement) => (
+                                    {placedPagination.paginatedData.map((placement) => (
                                         <Card key={placement.id} className="p-4">
                                             <div className="flex items-start justify-between mb-3">
                                                 <div className="flex items-center gap-3">
@@ -369,6 +407,7 @@ export default function PlacedStudents({
                                     <table className="w-full min-w-[800px]">
                                         <thead>
                                             <tr className="border-b border-gray-200">
+                                                <th className="text-center py-3 px-2 font-semibold text-sm w-16">#</th>
                                                 <th className="text-left py-3 px-2 font-semibold text-sm w-48">Student</th>
                                                 <th className="text-left py-3 px-2 font-semibold text-sm hidden xl:table-cell w-32">Student Number</th>
                                                 <th className="text-left py-3 px-2 font-semibold text-sm hidden lg:table-cell w-24">Section</th>
@@ -381,8 +420,11 @@ export default function PlacedStudents({
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {placed_students.map((placement) => (
+                                            {placedPagination.paginatedData.map((placement, index) => (
                                             <tr key={placement.id} className="border-b border-gray-100 hover:bg-muted/50 transition-colors">
+                                                <td className="text-center py-3 px-2 font-mono text-sm text-muted-foreground">
+                                                    {getRowNumber(placedPagination.currentPage, 10, index)}
+                                                </td>
                                                 <td className="py-3 px-2">
                                                     <div className="flex items-center gap-2">
                                                         <UserIcon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
@@ -447,6 +489,18 @@ export default function PlacedStudents({
                                     </table>
                                 </div>
                             </>
+                        )}
+                        
+                        {/* Pagination */}
+                        {filteredPlacedStudents.length > 0 && (
+                            <Pagination
+                                currentPage={placedPagination.currentPage}
+                                totalPages={placedPagination.totalPages}
+                                onPageChange={placedPagination.handlePageChange}
+                                showSummary={true}
+                                totalItems={filteredPlacedStudents.length}
+                                itemsPerPage={10}
+                            />
                         )}
                     </CardContent>
                 </Card>

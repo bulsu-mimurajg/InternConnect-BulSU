@@ -47,7 +47,6 @@ interface Student {
     phone: string | null;
     section: string | null;
     specialization: string | null;
-    birth_date: string | null;
     is_submit: boolean;
 }
 
@@ -88,11 +87,6 @@ export default function Profile({ student, categories, additional_info = [], has
     const languageCategory = categories.find(cat => cat.name === 'Language Proficiency');
     const technicalCategory = categories.find(cat => cat.name === 'Technical Skill');
     const softCategory = categories.find(cat => cat.name === 'Soft Skill');
-
-    const formatDate = (dateString: string | null) => {
-        if (!dateString) return 'Not provided';
-        return new Date(dateString).toLocaleDateString();
-    };
 
     const getScoreColor = (score: number) => {
         if (score >= 4) return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
@@ -168,10 +162,6 @@ export default function Profile({ student, categories, additional_info = [], has
                             <p className="text-lg">{student.specialization || 'Not provided'}</p>
                         </div>
                         <div>
-                            <label className="text-sm font-medium text-muted-foreground">Birth Date</label>
-                            <p className="text-lg">{formatDate(student.birth_date)}</p>
-                        </div>
-                        <div>
                             <label className="text-sm font-medium text-muted-foreground">Phone</label>
                             <p className="text-lg">{student.phone || 'Not provided'}</p>
                         </div>
@@ -197,9 +187,9 @@ export default function Profile({ student, categories, additional_info = [], has
                                     </label>
                                     <p className="text-lg break-all">
                                         {info.info_value ? (
-                                            <a 
-                                                href={info.info_value} 
-                                                target="_blank" 
+                                            <a
+                                                href={info.info_value}
+                                                target="_blank"
                                                 rel="noopener noreferrer"
                                                 className="text-blue-600 hover:text-blue-800 underline"
                                             >
@@ -221,7 +211,7 @@ export default function Profile({ student, categories, additional_info = [], has
                                 No Additional Information
                             </h3>
                             <p className="text-muted-foreground text-sm">
-                                {hasSubmitted 
+                                {hasSubmitted
                                     ? "You haven't provided any additional information yet."
                                     : "Complete the assessment to provide additional information."
                                 }

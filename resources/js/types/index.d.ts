@@ -42,7 +42,34 @@ export interface User {
     created_at: string;
     updated_at: string;
     hte?: HTE;
+    student?: Student;
     [key: string]: unknown; // This allows for additional properties...
+}
+
+export interface Student {
+    id: number;
+    user_id: number;
+    student_number: string;
+    first_name: string;
+    middle_name: string;
+    last_name: string;
+    phone: string;
+    section_id: number;
+    specialization: string;
+    is_active: boolean;
+    is_submit: boolean;
+    is_placed: boolean;
+    created_at: string;
+    updated_at: string;
+    section?: Section;
+}
+
+export interface Section {
+    section_id: number;
+    section_name: string;
+    status: string;
+    created_at: string;
+    updated_at: string;
 }
 
 export interface HTE {

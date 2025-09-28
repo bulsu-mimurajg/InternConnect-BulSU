@@ -1,10 +1,13 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Head, useForm, router } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Pagination } from '@/components/ui/pagination';
+import { usePagination } from '@/hooks/usePagination';
+import { getRowNumber } from '@/lib/pagination-utils';
 
 import {
     Dialog,
@@ -217,6 +220,19 @@ export default function HTEManagement({ htes, showArchived = false, filters = {}
                                 (localFilters.submission === 'submitted' && hte.is_submit) ||
                                 (localFilters.submission === 'not_submitted' && !hte.is_submit);
         return matchesSearch && matchesStatus && matchesSubmission;
+    });
+
+    // Create a stable reset trigger for pagination
+    const resetTrigger = useMemo(() => 
+        `${localFilters.search}-${localFilters.status}-${localFilters.submission}`,
+        [localFilters.search, localFilters.status, localFilters.submission]
+    );
+
+    // Pagination hook with auto-reset on filter changes
+    const htePagination = usePagination({
+        data: filteredHTEs,
+        itemsPerPage: 10,
+        resetTrigger: resetTrigger,
     });
 
     const getStatusBadge = (status: string) => {
@@ -502,6 +518,7 @@ export default function HTEManagement({ htes, showArchived = false, filters = {}
                                 <table className="w-full">
                                     <thead>
                                         <tr className="border-b">
+                                            <th className="text-center py-3 px-4 font-semibold text-sm w-16">#</th>
                                             <th className="text-left py-3 px-4 font-semibold text-sm">Username</th>
                                             <th className="text-left py-3 px-4 font-semibold text-sm">Email</th>
                                             <th className="text-left py-3 px-4 font-semibold text-sm">Status</th>
@@ -513,8 +530,11 @@ export default function HTEManagement({ htes, showArchived = false, filters = {}
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {filteredHTEs.map((hte) => (
+                                        {htePagination.paginatedData.map((hte, index) => (
                                             <tr key={hte.id} className={`border-b hover:bg-muted/50 transition-colors ${hte.status === 'archived' ? 'opacity-75' : ''}`}>
+                                                <td className="text-center py-3 px-4 font-mono text-sm text-muted-foreground">
+                                                    {getRowNumber(htePagination.currentPage, 10, index)}
+                                                </td>
                                                 <td className="py-3 px-4 font-medium">
                                                     {hte.username}
                                                 </td>
@@ -571,6 +591,18 @@ export default function HTEManagement({ htes, showArchived = false, filters = {}
                                     </tbody>
                                 </table>
                             </div>
+                        )}
+                        
+                        {/* Pagination */}
+                        {filteredHTEs.length > 0 && (
+                            <Pagination
+                                currentPage={htePagination.currentPage}
+                                totalPages={htePagination.totalPages}
+                                onPageChange={htePagination.handlePageChange}
+                                showSummary={true}
+                                totalItems={filteredHTEs.length}
+                                itemsPerPage={10}
+                            />
                         )}
                     </CardContent>
                 </Card>

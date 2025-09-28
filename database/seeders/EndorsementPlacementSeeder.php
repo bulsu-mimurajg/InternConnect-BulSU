@@ -86,7 +86,7 @@ class EndorsementPlacementSeeder extends Seeder
                 // Assign student role using Spatie permissions
                 $user->assignRole('student');
                 
-                $student = Student::create([
+                $student =                 Student::create([
                     'user_id' => $user->id,
                     'student_number' => $studentNumberFormatted,
                     'first_name' => "Student{$studentNumber}",
@@ -94,9 +94,10 @@ class EndorsementPlacementSeeder extends Seeder
                     'middle_name' => "Middle{$studentNumber}",
                     'phone' => "0912345678{$studentNumber}",
                     'specialization' => "Computer Science",
-                    'birth_date' => now()->subYears(20)->format('Y-m-d'),
                     'section_id' => $sections->random()->section_id,
                     'is_submit' => true,
+                    'is_placed' => false,
+                    'is_active' => true,
                 ]);
                 
                 // Create some sample assessment scores for the student

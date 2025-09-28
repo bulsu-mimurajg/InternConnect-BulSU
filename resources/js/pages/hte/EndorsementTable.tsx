@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo} from 'react';
 import { Head, router, usePage, Link } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
@@ -6,8 +6,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { CheckCircle, XCircle, User, GraduationCap, Star, Building2, Briefcase, Target, AlertTriangle, Info, AlertCircle } from 'lucide-react';
+import { CheckCircle, XCircle, User, GraduationCap, Star, Building2, Briefcase, Target, AlertTriangle, Info, AlertCircle, FilterIcon } from 'lucide-react';
 import { toast } from 'sonner';
+import { Pagination } from '@/components/ui/pagination';
+import { usePagination } from '@/hooks/usePagination';
+import { getRowNumber } from '@/lib/pagination-utils';
 
 interface Student {
     id: number;
@@ -52,6 +55,7 @@ export default function EndorsementTable({ endorsements = [], internships = [], 
     const [batchLoading, setBatchLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [errorType, setErrorType] = useState<string | null>(null);
+    const [showFilters, setShowFilters] = useState(false);
     const { flash } = usePage<{ flash: { success?: string; error?: string } }>().props;
 
     // Handle student highlighting from notification clicks
@@ -91,6 +95,19 @@ export default function EndorsementTable({ endorsements = [], internships = [], 
 
     // Sort endorsements by compatibility score (highest first)
     const sortedEndorsements = [...filteredEndorsements].sort((a, b) => b.compatibility_score - a.compatibility_score);
+
+    // Create a stable reset trigger for pagination
+    const resetTrigger = useMemo(() => 
+        selectedInternship,
+        [selectedInternship]
+    );
+
+    // Pagination hook with auto-reset on filter changes
+    const endorsementPagination = usePagination({
+        data: sortedEndorsements,
+        itemsPerPage: 10,
+        resetTrigger: resetTrigger,
+    });
 
     const getScoreLabel = (score: number) => {
         if (score >= 90) return 'Excellent';
@@ -167,7 +184,7 @@ export default function EndorsementTable({ endorsements = [], internships = [], 
 
     const handleSelectAll = (checked: boolean) => {
         if (checked) {
-            const allIds = sortedEndorsements.map(e => e.id);
+            const allIds = endorsementPagination.paginatedData.map(e => e.id);
             setSelectedEndorsements(new Set(allIds));
         } else {
             setSelectedEndorsements(new Set());
@@ -344,44 +361,59 @@ export default function EndorsementTable({ endorsements = [], internships = [], 
                     </Card>
                 )}
 
-                <div className="flex flex-col gap-4">
+                <div className="flex justify-between items-center">
                     <div>
-                        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Student Endorsements</h1>
-                        <p className="text-muted-foreground text-sm md:text-base">
+                        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Student Endorsements</h1>
+                        <p className="text-gray-600 dark:text-gray-400 mt-1">
                             Review and approve students who have been endorsed by the admin for your internships.
                         </p>
+                    </div>
+                    <div className="flex gap-2">
+                        <Button 
+                            variant="outline" 
+                            size="default"
+                            onClick={() => setShowFilters(!showFilters)}
+                        >
+                            <FilterIcon className="h-4 w-4" />
+                            Filters
+                        </Button>
                     </div>
                 </div>
 
                 {/* Filters */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Filters</CardTitle>
-                        <CardDescription>Filter endorsements by internship position</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                                <label htmlFor="internship-filter" className="text-sm font-medium whitespace-nowrap">
-                                    Internship Position:
-                                </label>
-                                <Select value={selectedInternship} onValueChange={setSelectedInternship}>
-                                    <SelectTrigger className="w-full sm:w-[250px]">
-                                        <SelectValue placeholder="Select internship position" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">All Internships</SelectItem>
-                                        {internships.map((internship) => (
-                                            <SelectItem key={internship.id} value={internship.id.toString()}>
-                                                {internship.position}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                {showFilters && (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <FilterIcon className="h-5 w-5" />
+                                Filters
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="space-y-4">
+                                {/* Internship Filter (Full Width) */}
+                                <div className="space-y-2">
+                                    <label htmlFor="internship-filter" className="text-sm font-medium">
+                                        Internship Position
+                                    </label>
+                                    <Select value={selectedInternship} onValueChange={setSelectedInternship}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select internship position" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">All Internships</SelectItem>
+                                            {internships.map((internship) => (
+                                                <SelectItem key={internship.id} value={internship.id.toString()}>
+                                                    {internship.position}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
                             </div>
-                        </div>
-                    </CardContent>
-                </Card>
+                        </CardContent>
+                    </Card>
+                )}
 
                 {/* Batch Actions */}
                 {selectedEndorsements.size > 0 && (
@@ -455,23 +487,9 @@ export default function EndorsementTable({ endorsements = [], internships = [], 
                             <>
                                 {/* Mobile/Tablet Card View */}
                                 <div className="block lg:hidden space-y-4">
-                                    {sortedEndorsements.map((endorsement) => {
-                                        const isHighlighted = highlightedStudentId === endorsement.student.id;
-                                        console.log('Rendering mobile endorsement:', {
-                                            endorsementId: endorsement.id,
-                                            studentId: endorsement.student.id,
-                                            highlightedStudentId,
-                                            isHighlighted
-                                        });
-                                        return (
-                                        <Card 
-                                            key={endorsement.id} 
-                                            className={`p-4 transition-all duration-500 ${
-                                                isHighlighted
-                                                    ? 'ring-4 ring-yellow-500 bg-yellow-50/30' 
-                                                    : ''
-                                            }`}
-                                        >
+
+                                    {endorsementPagination.paginatedData.map((endorsement) => (
+                                        <Card key={endorsement.id} className="p-4">
                                             <div className="flex items-start justify-between mb-3">
                                                 <div className="flex items-center gap-3">
                                                     <Checkbox
@@ -558,10 +576,11 @@ export default function EndorsementTable({ endorsements = [], internships = [], 
                                             <tr className="border-b border-gray-200">
                                                 <th className="text-left py-3 px-2 font-semibold text-sm w-10">
                                                     <Checkbox
-                                                        checked={selectedEndorsements.size === sortedEndorsements.length && sortedEndorsements.length > 0}
+                                                        checked={selectedEndorsements.size === endorsementPagination.paginatedData.length && endorsementPagination.paginatedData.length > 0}
                                                         onCheckedChange={handleSelectAll}
                                                     />
                                                 </th>
+                                                <th className="text-center py-3 px-2 font-semibold text-sm w-16">#</th>
                                                 <th className="text-left py-3 px-2 font-semibold text-sm w-48">Student</th>
                                                 <th className="text-left py-3 px-2 font-semibold text-sm hidden xl:table-cell w-32">Student Number</th>
                                                 <th className="text-left py-3 px-2 font-semibold text-sm hidden lg:table-cell w-40">Specialization</th>
@@ -572,28 +591,16 @@ export default function EndorsementTable({ endorsements = [], internships = [], 
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {sortedEndorsements.map((endorsement) => {
-                                                const isHighlighted = highlightedStudentId === endorsement.student.id;
-                                                console.log('Rendering endorsement:', {
-                                                    endorsementId: endorsement.id,
-                                                    studentId: endorsement.student.id,
-                                                    highlightedStudentId,
-                                                    isHighlighted
-                                                });
-                                                return (
-                                            <tr 
-                                                key={endorsement.id} 
-                                                className={`border-b border-gray-100 hover:bg-muted/50 transition-all duration-500 ${
-                                                    isHighlighted
-                                                        ? 'ring-2 ring-yellow-500 bg-yellow-50/30' 
-                                                        : ''
-                                                }`}
-                                            >
+                                            {endorsementPagination.paginatedData.map((endorsement, index) => (
+                                            <tr key={endorsement.id} className="border-b border-gray-100 hover:bg-muted/50 transition-colors">
                                                 <td className="py-3 px-2">
                                                     <Checkbox
                                                         checked={selectedEndorsements.has(endorsement.id)}
                                                         onCheckedChange={(checked) => handleSelectEndorsement(endorsement.id, checked as boolean)}
                                                     />
+                                                </td>
+                                                <td className="text-center py-3 px-2 font-mono text-sm text-muted-foreground">
+                                                    {getRowNumber(endorsementPagination.currentPage, 10, index)}
                                                 </td>
                                                 <td className="py-3 px-2">
                                                     <div className="flex items-center gap-2">
@@ -667,6 +674,18 @@ export default function EndorsementTable({ endorsements = [], internships = [], 
                                     </table>
                                 </div>
                             </>
+                        )}
+                        
+                        {/* Pagination */}
+                        {sortedEndorsements.length > 0 && (
+                            <Pagination
+                                currentPage={endorsementPagination.currentPage}
+                                totalPages={endorsementPagination.totalPages}
+                                onPageChange={endorsementPagination.handlePageChange}
+                                showSummary={true}
+                                totalItems={sortedEndorsements.length}
+                                itemsPerPage={10}
+                            />
                         )}
                     </CardContent>
                 </Card>

@@ -110,22 +110,19 @@ export default function AdviserDashboard({ stats, recentAssessments, placementOv
             <div className="flex h-full flex-1 flex-col gap-6 rounded-xl p-4">
                 {/* Section Header */}
                 <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <div>
-                            <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-                            <p className="text-muted-foreground">
-                                Section: {adviserSection}
-                            </p>
-                        </div>
-                        {adviserSections.length > 1 && (
-                            <SectionSwitcher 
-                                sections={adviserSections}
-                                currentSectionId={currentSectionId}
-                                showAllSections={true}
-                                className="ml-4"
-                            />
-                        )}
+                    <div>
+                        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+                        <p className="text-muted-foreground">
+                            Section: {adviserSection}
+                        </p>
                     </div>
+                    {adviserSections.length > 1 && (
+                        <SectionSwitcher 
+                            sections={adviserSections}
+                            currentSectionId={currentSectionId}
+                            showAllSections={true}
+                        />
+                    )}
                 </div>
 
 

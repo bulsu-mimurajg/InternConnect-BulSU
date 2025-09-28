@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { Head, useForm, router } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
@@ -21,6 +21,8 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Pagination } from '@/components/ui/pagination';
+import { usePagination } from '@/hooks/usePagination';
 import { Plus, MoreHorizontal, Edit, Archive, ArchiveRestore, SquareLibraryIcon, Eye } from 'lucide-react';
 import { type BreadcrumbItem } from '@/types';
 
@@ -100,6 +102,27 @@ export default function SectionManagement({ sections, showArchived = false }: Pr
     const activeSections = sections.filter(section => section.status === 'active');
     const archivedSections = sections.filter(section => section.status === 'archived');
 
+    // Get current sections based on showArchivedSections state
+    const currentSections = showArchivedSections ? archivedSections : activeSections;
+
+    // Use pagination hook
+    const {
+        currentPage,
+        totalPages,
+        paginatedData: paginatedSections,
+        handlePageChange,
+        resetToFirstPage,
+    } = usePagination({
+        data: currentSections,
+        itemsPerPage: 10,
+    });
+
+    // Reset to page 1 when switching between active/archived sections
+    const handleToggleArchived = useCallback(() => {
+        setShowArchivedSections(!showArchivedSections);
+        resetToFirstPage();
+    }, [showArchivedSections, resetToFirstPage]);
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Section Management" />
@@ -115,7 +138,7 @@ export default function SectionManagement({ sections, showArchived = false }: Pr
                     <div className="flex items-center gap-2">
                         <Button
                             variant="outline"
-                            onClick={() => setShowArchivedSections(!showArchivedSections)}
+                            onClick={handleToggleArchived}
                         >
                             {showArchivedSections ? (
                                 <>
@@ -172,14 +195,6 @@ export default function SectionManagement({ sections, showArchived = false }: Pr
                     </div>
                 </div>
 
-
-                {/* Results Summary */}
-                <div className="flex items-center justify-between">
-                    <p className="text-sm text-muted-foreground">
-                        Showing {showArchivedSections ? archivedSections.length : activeSections.length} of {sections.length} Section{sections.length !== 1 ? 's' : ''}
-                    </p>
-                </div>
-
                 {/* Sections Table */}
                 <Card>
                     <CardHeader>
@@ -195,7 +210,7 @@ export default function SectionManagement({ sections, showArchived = false }: Pr
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        {(showArchivedSections ? archivedSections : activeSections).length === 0 ? (
+                        {currentSections.length === 0 ? (
                             <div className="py-12 text-center">
                                 <div className="flex flex-col items-center space-y-4">
                                     <Archive className="h-12 w-12 text-muted-foreground" />
@@ -232,7 +247,7 @@ export default function SectionManagement({ sections, showArchived = false }: Pr
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {(showArchivedSections ? archivedSections : activeSections).map((section) => (
+                                        {paginatedSections.map((section) => (
                                             <tr key={section.section_id} className={`border-b hover:bg-muted/50 transition-colors ${section.status === 'archived' ? 'opacity-75' : ''}`}>
                                                 <td className="py-3 px-4 font-medium">
                                                     {section.section_name}
@@ -291,6 +306,16 @@ export default function SectionManagement({ sections, showArchived = false }: Pr
                         )}
                     </CardContent>
                 </Card>
+
+                {/* Pagination */}
+                <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={handlePageChange}
+                    showSummary={true}
+                    totalItems={currentSections.length}
+                    itemsPerPage={10}
+                />
 
                 {/* Edit Dialog */}
                 <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>

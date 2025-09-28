@@ -1,10 +1,13 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Head, useForm, router } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Pagination } from '@/components/ui/pagination';
+import { usePagination } from '@/hooks/usePagination';
+import { getRowNumber } from '@/lib/pagination-utils';
 
 import {
     Dialog,
@@ -231,6 +234,19 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
         const matchesSection = localFilters.section === 'all' || 
                               adviser.sections.some(s => s.section_name === localFilters.section);
         return matchesSearch && matchesStatus && matchesSection;
+    });
+
+    // Create a stable reset trigger for pagination
+    const resetTrigger = useMemo(() => 
+        `${localFilters.search}-${localFilters.status}-${localFilters.section}`,
+        [localFilters.search, localFilters.status, localFilters.section]
+    );
+
+    // Pagination hook with auto-reset on filter changes
+    const adviserPagination = usePagination({
+        data: filteredAdvisers,
+        itemsPerPage: 10,
+        resetTrigger: resetTrigger,
     });
 
     const getStatusBadge = (status: string) => {
@@ -583,6 +599,7 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
                                 <table className="w-full">
                                     <thead>
                                         <tr className="border-b">
+                                            <th className="text-center py-3 px-4 font-semibold text-sm w-16">#</th>
                                             <th className="text-left py-3 px-4 font-semibold text-sm">Username</th>
                                             <th className="text-left py-3 px-4 font-semibold text-sm">Email</th>
                                             <th className="text-left py-3 px-4 font-semibold text-sm">Name</th>
@@ -593,8 +610,11 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {filteredAdvisers.map((adviser) => (
+                                        {adviserPagination.paginatedData.map((adviser, index) => (
                                             <tr key={adviser.id} className={`border-b hover:bg-muted/50 transition-colors ${adviser.status === 'archived' ? 'opacity-75' : ''}`}>
+                                                <td className="text-center py-3 px-4 font-mono text-sm text-muted-foreground">
+                                                    {getRowNumber(adviserPagination.currentPage, 10, index)}
+                                                </td>
                                                 <td className="py-3 px-4 font-medium">
                                                     {adviser.username}
                                                 </td>
@@ -642,6 +662,18 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
                                     </tbody>
                                 </table>
                             </div>
+                        )}
+                        
+                        {/* Pagination */}
+                        {filteredAdvisers.length > 0 && (
+                            <Pagination
+                                currentPage={adviserPagination.currentPage}
+                                totalPages={adviserPagination.totalPages}
+                                onPageChange={adviserPagination.handlePageChange}
+                                showSummary={true}
+                                totalItems={filteredAdvisers.length}
+                                itemsPerPage={10}
+                            />
                         )}
                     </CardContent>
                 </Card>

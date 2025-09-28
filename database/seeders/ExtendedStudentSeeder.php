@@ -39,7 +39,6 @@ class ExtendedStudentSeeder extends Seeder
                 'phone' => '09123456792',
                 'section_name' => 'BSIT-4A',
                 'specialization' => 'Web Development',
-                'birth_date' => '2000-11-25',
             ],
             [
                 'student_number' => '2021-0005',
@@ -49,7 +48,6 @@ class ExtendedStudentSeeder extends Seeder
                 'phone' => '09123456793',
                 'section_name' => 'BSIT-4B',
                 'specialization' => 'Mobile Development',
-                'birth_date' => '2000-07-05',
             ],
             [
                 'student_number' => '2021-0006',
@@ -59,7 +57,6 @@ class ExtendedStudentSeeder extends Seeder
                 'phone' => '09123456794',
                 'section_name' => 'BSIT-4C',
                 'specialization' => 'Data Science',
-                'birth_date' => '2000-09-12',
             ],
             [
                 'student_number' => '2021-0007',
@@ -69,7 +66,6 @@ class ExtendedStudentSeeder extends Seeder
                 'phone' => '09123456795',
                 'section_name' => 'BSIT-4A',
                 'specialization' => 'Cybersecurity',
-                'birth_date' => '2000-12-03',
             ],
             [
                 'student_number' => '2021-0008',
@@ -79,7 +75,6 @@ class ExtendedStudentSeeder extends Seeder
                 'phone' => '09123456796',
                 'section_name' => 'BSIT-4B',
                 'specialization' => 'Artificial Intelligence',
-                'birth_date' => '2000-04-18',
             ],
         ];
 
@@ -122,7 +117,6 @@ class ExtendedStudentSeeder extends Seeder
                 'phone' => $studentData['phone'],
                 'section_id' => $section->section_id,
                 'specialization' => $studentData['specialization'],
-                'birth_date' => $studentData['birth_date'],
                 'is_submit' => false,
                 'is_placed' => false,
                 'is_active' => true,

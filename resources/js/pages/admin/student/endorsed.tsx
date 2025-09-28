@@ -8,6 +8,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Pagination } from '@/components/ui/pagination';
+import { usePagination } from '@/hooks/usePagination';
+import { getRowNumber } from '@/lib/pagination-utils';
 import { 
     UserIcon, 
     CheckCircleIcon,
@@ -109,6 +112,30 @@ export default function StudentEndorsed({
             status: filters.status || 'all'
         });
     }, [filters]);
+
+    // Filter endorsed students based on local filters
+    const filteredEndorsedStudents = endorsed_students.filter(endorsement => {
+        const matchesSection = localFilters.section === 'all' || endorsement.student.section === localFilters.section;
+        const matchesInternship = localFilters.internship === 'all' || 
+                                 endorsement.internship.id.toString() === localFilters.internship;
+        const matchesSearch = localFilters.search === '' || 
+                             endorsement.student.first_name.toLowerCase().includes(localFilters.search.toLowerCase()) ||
+                             endorsement.student.last_name.toLowerCase().includes(localFilters.search.toLowerCase()) ||
+                             endorsement.student.student_number.toLowerCase().includes(localFilters.search.toLowerCase());
+        const matchesStatus = localFilters.status === 'all' || 
+                             (localFilters.status === 'pending_hte' && endorsement.placement_status === 'pending') ||
+                             (localFilters.status === 'approved_hte' && endorsement.placement_status === 'approved') ||
+                             (localFilters.status === 'rejected_hte' && endorsement.placement_status === 'rejected');
+        
+        return matchesSection && matchesInternship && matchesSearch && matchesStatus;
+    });
+
+    // Pagination hook
+    const endorsedPagination = usePagination({
+        data: filteredEndorsedStudents,
+        itemsPerPage: 10,
+        resetTrigger: localFilters, // Auto-reset when filters change
+    });
 
     const handleFilterChange = (filterType: 'section' | 'internship' | 'search' | 'status', value: string) => {
         const newFilters = { ...localFilters, [filterType]: value };
@@ -311,15 +338,8 @@ export default function StudentEndorsed({
                 </Card>
                 )}
 
-                {/* Results Summary */}
-                <div className="flex items-center justify-between">
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                        Showing {endorsed_students.length} endorsed student{endorsed_students.length !== 1 ? 's' : ''}
-                    </p>
-                </div>
-
                 {/* Endorsed Students Table */}
-                {endorsed_students.length === 0 ? (
+                {filteredEndorsedStudents.length === 0 ? (
                     <Card>
                         <CardContent className="text-center py-12">
                             <UsersIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
@@ -347,6 +367,7 @@ export default function StudentEndorsed({
                                 <table className="w-full">
                                     <thead>
                                         <tr className="border-b">
+                                            <th className="text-center p-3 font-medium text-muted-foreground w-16">#</th>
                                             <th className="text-left p-3 font-medium text-muted-foreground">Student</th>
                                             <th className="text-left p-3 font-medium text-muted-foreground">Student ID</th>
                                             <th className="text-left p-3 font-medium text-muted-foreground">Section</th>
@@ -359,8 +380,11 @@ export default function StudentEndorsed({
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {endorsed_students.map((endorsement) => (
+                                        {endorsedPagination.paginatedData.map((endorsement, index) => (
                                             <tr key={endorsement.id} className="border-b hover:bg-muted/50 transition-colors">
+                                                <td className="text-center p-3 font-mono text-sm text-muted-foreground">
+                                                    {getRowNumber(endorsedPagination.currentPage, 10, index)}
+                                                </td>
                                                 <td className="p-3">
                                                     <div>
                                                         <div className="font-medium">
@@ -438,6 +462,18 @@ export default function StudentEndorsed({
                             </div>
                         </CardContent>
                     </Card>
+                )}
+
+                {/* Pagination */}
+                {filteredEndorsedStudents.length > 0 && (
+                    <Pagination
+                        currentPage={endorsedPagination.currentPage}
+                        totalPages={endorsedPagination.totalPages}
+                        onPageChange={endorsedPagination.handlePageChange}
+                        showSummary={true}
+                        totalItems={filteredEndorsedStudents.length}
+                        itemsPerPage={10}
+                    />
                 )}
             </div>
         </AdminLayout>

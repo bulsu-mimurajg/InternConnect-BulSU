@@ -97,6 +97,12 @@ export default function Application({ pendingStudents, verifiedStudents, adviser
     };
 
     const handleSelectVerifiedStudent = (studentId: number, checked: boolean) => {
+        // Don't allow selection of students who have submitted their assessment
+        const student = verifiedStudents.find(s => s.id === studentId);
+        if (student?.student?.is_submit) {
+            return;
+        }
+        
         if (checked) {
             setSelectedVerifiedStudents(prev => [...prev, studentId]);
         } else {
@@ -106,7 +112,9 @@ export default function Application({ pendingStudents, verifiedStudents, adviser
 
     const handleSelectAllVerified = (checked: boolean) => {
         if (checked) {
-            setSelectedVerifiedStudents(verifiedStudents.map(student => student.id));
+            // Only select students who haven't submitted their assessment
+            const unsubmittedStudents = verifiedStudents.filter(student => !student.student?.is_submit);
+            setSelectedVerifiedStudents(unsubmittedStudents.map(student => student.id));
         } else {
             setSelectedVerifiedStudents([]);
         }
@@ -294,16 +302,28 @@ export default function Application({ pendingStudents, verifiedStudents, adviser
                                             }
                                         />
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-medium truncate">
-                                                {student.username}
-                                            </p>
-                                            <p className="text-xs text-muted-foreground truncate">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <p className="text-sm font-medium truncate">
+                                                    {student.username} | {student.student?.first_name} {student.student?.last_name}
+                                                </p>
+                                            </div>
+                                            <p className="text-xs text-muted-foreground truncate mb-2">
                                                 {student.email}
                                             </p>
                                             {currentSectionId === null && student.academe_accounts && student.academe_accounts.length > 0 && (
-                                                <p className="text-xs text-blue-600 truncate">
+                                                <p className="text-xs text-blue-600 truncate mb-2">
                                                     {student.academe_accounts[0].section.section_name}
                                                 </p>
+                                            )}
+                                            {student.student && (
+                                                <div className="space-y-1">
+                                                    <p className="text-xs">
+                                                        <span className="font-medium">Name:</span> {student.student.first_name} {student.student.last_name}
+                                                    </p>
+                                                    <p className="text-xs">
+                                                        <span className="font-medium">Assessment:</span> {student.student.is_submit ? 'Completed' : 'Pending'}
+                                                    </p>
+                                                </div>
                                             )}
                                         </div>
                                     </div>
@@ -362,7 +382,7 @@ export default function Application({ pendingStudents, verifiedStudents, adviser
                             {verifiedStudents.length > 0 && (
                                 <div className="flex items-center gap-2">
                                     <Checkbox
-                                        checked={selectedVerifiedStudents.length === verifiedStudents.length}
+                                        checked={selectedVerifiedStudents.length === verifiedStudents.filter(student => !student.student?.is_submit).length && verifiedStudents.filter(student => !student.student?.is_submit).length > 0}
                                         onCheckedChange={handleSelectAllVerified}
                                     />
                                     <span className="text-sm text-muted-foreground">Select All</span>
@@ -377,48 +397,61 @@ export default function Application({ pendingStudents, verifiedStudents, adviser
                             </div>
                         ) : (
                             <div className="space-y-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {verifiedStudents.map((student) => (
-                                    <div
-                                        key={student.id}
-                                        className="flex items-center space-x-3 p-3 border rounded-lg"
-                                    >
-                                        <Checkbox
-                                            checked={selectedVerifiedStudents.includes(student.id)}
-                                            onCheckedChange={(checked) =>
-                                                handleSelectVerifiedStudent(student.id, checked as boolean)
-                                            }
-                                        />
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center justify-between mb-2">
-                                                <p className="text-sm font-medium truncate">
-                                                    {student.username}
-                                                </p>
-                                                <Badge variant="secondary" className="text-xs">
-                                                    Verified
-                                                </Badge>
-                                            </div>
-                                            <p className="text-xs text-muted-foreground truncate mb-2">
-                                                {student.email}
-                                            </p>
-                                            {currentSectionId === null && student.academe_accounts && student.academe_accounts.length > 0 && (
-                                                <p className="text-xs text-blue-600 truncate mb-2">
-                                                    {student.academe_accounts[0].section.section_name}
-                                                </p>
-                                            )}
-                                            {student.student && (
-                                                <div className="space-y-1">
-                                                    <p className="text-xs">
-                                                        <span className="font-medium">Name:</span> {student.student.first_name} {student.student.last_name}
-                                                    </p>
-                                                    <p className="text-xs">
-                                                        <span className="font-medium">Assessment:</span> {student.student.is_submit ? 'Completed' : 'Pending'}
-                                                    </p>
-                                                </div>
-                                            )}
-                                        </div>
+                                {verifiedStudents.some(student => student.student?.is_submit) && (
+                                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                                        <p className="text-sm text-amber-800">
+                                            <strong>Note:</strong> Students who have completed their assessment cannot be unverified.
+                                        </p>
                                     </div>
-                                ))}
+                                )}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {verifiedStudents.map((student) => {
+                                    const hasSubmitted = student.student?.is_submit;
+                                    return (
+                                        <div
+                                            key={student.id}
+                                            className={`flex items-center space-x-3 p-3 border rounded-lg ${hasSubmitted ? 'opacity-60' : ''}`}
+                                        >
+                                            <Checkbox
+                                                checked={selectedVerifiedStudents.includes(student.id)}
+                                                onCheckedChange={(checked) =>
+                                                    handleSelectVerifiedStudent(student.id, checked as boolean)
+                                                }
+                                                disabled={hasSubmitted}
+                                            />
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <p className="text-sm font-medium truncate">
+                                                        {student.username} | {student.student?.first_name} {student.student?.last_name}
+                                                    </p>
+                                                    <div className="flex items-center gap-2">
+                                                        <Badge variant="secondary" className="text-xs">
+                                                            Verified
+                                                        </Badge>
+                                                    </div>
+                                                </div>
+                                                <p className="text-xs text-muted-foreground truncate mb-2">
+                                                    {student.email}
+                                                </p>
+                                                {currentSectionId === null && student.academe_accounts && student.academe_accounts.length > 0 && (
+                                                    <p className="text-xs text-blue-600 truncate mb-2">
+                                                        {student.academe_accounts[0].section.section_name}
+                                                    </p>
+                                                )}
+                                                {student.student && (
+                                                    <div className="space-y-1">
+                                                        <p className="text-xs">
+                                                            <span className="font-medium">Name:</span> {student.student.first_name} {student.student.last_name}
+                                                        </p>
+                                                        <p className="text-xs">
+                                                            <span className="font-medium">Assessment:</span> {student.student.is_submit ? 'Completed' : 'Pending'}
+                                                        </p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
                             </div>
 
                                 {selectedVerifiedStudents.length > 0 && (

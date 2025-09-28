@@ -61,7 +61,6 @@ export default function SectionSwitcher({ sections, currentSectionId, className 
 
     return (
         <div className={`flex items-center gap-2 ${className}`}>
-            <span className="text-sm text-muted-foreground">Section:</span>
             <Select
                 value={currentSectionId === null ? 'all' : currentSectionId.toString()}
                 onValueChange={handleSectionChange}

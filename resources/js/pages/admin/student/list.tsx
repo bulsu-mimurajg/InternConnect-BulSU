@@ -6,6 +6,9 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Pagination } from '@/components/ui/pagination';
+import { usePagination } from '@/hooks/usePagination';
+import { getRowNumber } from '@/lib/pagination-utils';
 import { UsersIcon, UserCheckIcon, ArchiveIcon, RotateCcwIcon, EditIcon, UserXIcon, Filter, ArrowUpDown, Search } from 'lucide-react';
 import { useState } from 'react';
 import type { BreadcrumbItem } from '@/types';
@@ -135,6 +138,7 @@ export default function StudentList({ students, unverifiedUsers = [], archivedSt
 
     const clearFilters = () => {
         setLocalFilters({ search: '', section: 'all', status: 'all' });
+        
         router.get('/student/list', {}, {
             preserveState: true,
             replace: true
@@ -174,6 +178,31 @@ export default function StudentList({ students, unverifiedUsers = [], archivedSt
         const matchesSection = localFilters.section === 'all' || user.section === localFilters.section;
         const matchesStatus = localFilters.status === 'all' || user.status === localFilters.status;
         return matchesSearch && matchesSection && matchesStatus;
+    });
+
+    // Pagination hooks for each data type with auto-reset on filter changes
+    const studentsPagination = usePagination({
+        data: filteredStudents,
+        itemsPerPage: 10,
+        resetTrigger: localFilters, // Auto-reset when filters change
+    });
+
+    const unverifiedPagination = usePagination({
+        data: filteredUnverifiedUsers,
+        itemsPerPage: 10,
+        resetTrigger: localFilters,
+    });
+
+    const archivedStudentsPagination = usePagination({
+        data: filteredArchivedStudents,
+        itemsPerPage: 10,
+        resetTrigger: localFilters,
+    });
+
+    const archivedUnverifiedPagination = usePagination({
+        data: filteredArchivedUnverifiedUsers,
+        itemsPerPage: 10,
+        resetTrigger: localFilters,
     });
 
     return (
@@ -362,7 +391,7 @@ export default function StudentList({ students, unverifiedUsers = [], archivedSt
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {filteredArchivedStudents.map((stud) => (
+                                                {archivedStudentsPagination.paginatedData.map((stud) => (
                                                     <tr key={stud.id} className="border-b hover:bg-muted/50 transition-colors">
                                                         <td className="p-3">
                                                             <div>
@@ -405,6 +434,16 @@ export default function StudentList({ students, unverifiedUsers = [], archivedSt
                             </CardContent>
                         </Card>
 
+                        {/* Pagination for Archived Students */}
+                        <Pagination
+                            currentPage={archivedStudentsPagination.currentPage}
+                            totalPages={archivedStudentsPagination.totalPages}
+                            onPageChange={archivedStudentsPagination.handlePageChange}
+                            showSummary={true}
+                            totalItems={filteredArchivedStudents.length}
+                            itemsPerPage={10}
+                        />
+
                         <Card>
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2">
@@ -432,6 +471,7 @@ export default function StudentList({ students, unverifiedUsers = [], archivedSt
                                         <table className="w-full">
                                             <thead>
                                                 <tr className="border-b">
+                                                    <th className="text-center p-3 font-medium text-muted-foreground w-16">#</th>
                                                     <th className="text-left p-3 font-medium text-muted-foreground">Username</th>
                                                     <th className="text-left p-3 font-medium text-muted-foreground">Email</th>
                                                     <th className="text-left p-3 font-medium text-muted-foreground">Section</th>
@@ -441,8 +481,11 @@ export default function StudentList({ students, unverifiedUsers = [], archivedSt
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {filteredArchivedUnverifiedUsers.map((user) => (
+                                                {archivedUnverifiedPagination.paginatedData.map((user, index) => (
                                                     <tr key={user.id} className="border-b hover:bg-muted/50 transition-colors">
+                                                        <td className="text-center p-3 font-mono text-sm text-muted-foreground">
+                                                            {getRowNumber(archivedUnverifiedPagination.currentPage, 10, index)}
+                                                        </td>
                                                         <td className="p-3">
                                                             <div className="font-medium">
                                                                 {user.username}
@@ -481,6 +524,16 @@ export default function StudentList({ students, unverifiedUsers = [], archivedSt
                                 )}
                             </CardContent>
                         </Card>
+
+                        {/* Pagination for Archived Unverified Users */}
+                        <Pagination
+                            currentPage={archivedUnverifiedPagination.currentPage}
+                            totalPages={archivedUnverifiedPagination.totalPages}
+                            onPageChange={archivedUnverifiedPagination.handlePageChange}
+                            showSummary={true}
+                            totalItems={filteredArchivedUnverifiedUsers.length}
+                            itemsPerPage={10}
+                        />
                     </>
                 )}
 
@@ -513,6 +566,7 @@ export default function StudentList({ students, unverifiedUsers = [], archivedSt
                                     <table className="w-full">
                                         <thead>
                                             <tr className="border-b">
+                                                <th className="text-center p-3 font-medium text-muted-foreground w-16">#</th>
                                                 <th className="text-left p-3 font-medium text-muted-foreground">Username</th>
                                                 <th className="text-left p-3 font-medium text-muted-foreground">Email</th>
                                                 <th className="text-left p-3 font-medium text-muted-foreground">Section</th>
@@ -522,8 +576,11 @@ export default function StudentList({ students, unverifiedUsers = [], archivedSt
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {filteredUnverifiedUsers.map((user) => (
+                                            {unverifiedPagination.paginatedData.map((user, index) => (
                                                 <tr key={user.id} className="border-b hover:bg-muted/50 transition-colors">
+                                                    <td className="text-center p-3 font-mono text-sm text-muted-foreground">
+                                                        {getRowNumber(unverifiedPagination.currentPage, 10, index)}
+                                                    </td>
                                                     <td className="p-3">
                                                         <div className="font-medium">
                                                             {user.username}
@@ -572,6 +629,19 @@ export default function StudentList({ students, unverifiedUsers = [], archivedSt
                             )}
                         </CardContent>
                     </Card>
+
+                )}
+
+                {/* Pagination for Unverified Users */}
+                {showUnverified && (
+                    <Pagination
+                        currentPage={unverifiedPagination.currentPage}
+                        totalPages={unverifiedPagination.totalPages}
+                        onPageChange={unverifiedPagination.handlePageChange}
+                        showSummary={true}
+                        totalItems={filteredUnverifiedUsers.length}
+                        itemsPerPage={10}
+                    />
                 )}
 
                 {/* Verified Students */}
@@ -603,6 +673,7 @@ export default function StudentList({ students, unverifiedUsers = [], archivedSt
                                     <table className="w-full">
                                         <thead>
                                             <tr className="border-b">
+                                                <th className="text-center p-3 font-medium text-muted-foreground w-16">#</th>
                                                 <th className="text-left p-3 font-medium text-muted-foreground">Name</th>
                                                 <th className="text-left p-3 font-medium text-muted-foreground">Student ID</th>
                                                 <th className="text-left p-3 font-medium text-muted-foreground">Section</th>
@@ -611,8 +682,11 @@ export default function StudentList({ students, unverifiedUsers = [], archivedSt
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {filteredStudents.map((stud) => (
+                                            {studentsPagination.paginatedData.map((stud, index) => (
                                                 <tr key={stud.id} className="border-b hover:bg-muted/50 transition-colors">
+                                                    <td className="text-center p-3 font-mono text-sm text-muted-foreground">
+                                                        {getRowNumber(studentsPagination.currentPage, 10, index)}
+                                                    </td>
                                                     <td className="p-3">
                                                         <div>
                                                             <div className="font-medium">
@@ -663,6 +737,19 @@ export default function StudentList({ students, unverifiedUsers = [], archivedSt
                             )}
                         </CardContent>
                     </Card>
+
+                )}
+
+                {/* Pagination for Verified Students */}
+                {!showArchived && !showUnverified && (
+                    <Pagination
+                        currentPage={studentsPagination.currentPage}
+                        totalPages={studentsPagination.totalPages}
+                        onPageChange={studentsPagination.handlePageChange}
+                        showSummary={true}
+                        totalItems={filteredStudents.length}
+                        itemsPerPage={10}
+                    />
                 )}
             </div>
         </AdminLayout>
