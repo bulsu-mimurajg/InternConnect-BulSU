@@ -1956,6 +1956,11 @@ class AdminController extends Controller
             $notificationService = new NotificationService();
             $notificationService->notifyNewDeadline($deadline);
 
+            // Trigger deadline notification check for HTE users
+            $deadlineService = new \App\Services\DeadlineNotificationService();
+            $deadlineService->cleanupOldDeadlineNotifications();
+            $deadlineService->checkAndCreateDeadlineNotifications();
+
             // Log the activity
             activity()
                 ->causedBy(Auth::user())
@@ -2013,6 +2018,11 @@ class AdminController extends Controller
                 'start_date' => $request->start_date,
                 'end_date' => $request->end_date,
             ]);
+
+            // Trigger deadline notification check after updating deadline
+            $deadlineService = new \App\Services\DeadlineNotificationService();
+            $deadlineService->cleanupOldDeadlineNotifications();
+            $deadlineService->checkAndCreateDeadlineNotifications();
 
             return redirect()->route('admin.events')->with('success', 'Deadline updated successfully.');
         } catch (\Exception $e) {

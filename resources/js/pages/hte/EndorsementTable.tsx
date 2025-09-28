@@ -58,7 +58,7 @@ export default function EndorsementTable({ endorsements = [], internships = [], 
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search);
         const highlightStudent = urlParams.get('highlightStudent');
-        const highlightDuration = parseInt(urlParams.get('highlightDuration') || '3000');
+        const highlightDuration = parseInt(urlParams.get('highlightDuration') || '1500');
 
         console.log('URL params:', { highlightStudent, highlightDuration });
         console.log('Current URL:', window.location.href);
@@ -468,7 +468,7 @@ export default function EndorsementTable({ endorsements = [], internships = [], 
                                             key={endorsement.id} 
                                             className={`p-4 transition-all duration-500 ${
                                                 isHighlighted
-                                                    ? 'ring-4 ring-blue-500 bg-blue-50 shadow-lg animate-pulse' 
+                                                    ? 'ring-4 ring-yellow-500 bg-yellow-50/30' 
                                                     : ''
                                             }`}
                                         >
@@ -585,7 +585,7 @@ export default function EndorsementTable({ endorsements = [], internships = [], 
                                                 key={endorsement.id} 
                                                 className={`border-b border-gray-100 hover:bg-muted/50 transition-all duration-500 ${
                                                     isHighlighted
-                                                        ? 'bg-blue-50 ring-2 ring-blue-500 shadow-md animate-pulse' 
+                                                        ? 'ring-2 ring-yellow-500 bg-yellow-50/30' 
                                                         : ''
                                                 }`}
                                             >

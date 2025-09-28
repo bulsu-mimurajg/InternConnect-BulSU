@@ -89,5 +89,8 @@ class DatabaseSeeder extends Seeder
         $this->call(EndorsementPlacementSeeder::class);
         $this->call(DeadlineSeeder::class);
         $this->call(AdditionalInfoSeeder::class);
+        
+        // Ensure all endorsements have corresponding notifications
+        $this->call(NotificationSeeder::class);
     }
 }

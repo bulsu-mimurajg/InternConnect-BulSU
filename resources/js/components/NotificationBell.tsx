@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { BellIcon, CheckIcon, ClockIcon, UsersIcon, AlertCircleIcon, BriefcaseIcon, CalendarIcon, RotateCcwIcon } from 'lucide-react';
+import { BellIcon, CheckIcon, ClockIcon, UsersIcon, AlertCircleIcon, BriefcaseIcon, CalendarIcon, RotateCcwIcon, ListIcon, MailIcon } from 'lucide-react';
 import { router } from '@inertiajs/react';
 
 interface Notification {
@@ -23,14 +23,39 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
     const [unreadCount, setUnreadCount] = useState(initialCount);
     const [isOpen, setIsOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [filter, setFilter] = useState<'all' | 'endorsement' | 'deadline'>('all');
+    const [showRead, setShowRead] = useState(true);
+    const [lastLocalUpdate, setLastLocalUpdate] = useState<{[key: number]: number}>({});
 
     const fetchNotifications = async () => {
         setIsLoading(true);
         try {
             const response = await fetch('/notifications/get');
             const data = await response.json();
-            setNotifications(data.notifications);
-            setUnreadCount(data.unreadCount);
+            const serverNotifications = data.notifications || [];
+            
+            // Preserve local changes by merging with server data
+            setNotifications(prev => {
+                const merged = serverNotifications.map((serverNotif: Notification) => {
+                    const localTimestamp = lastLocalUpdate[serverNotif.id];
+                    const serverTimestamp = new Date(serverNotif.updated_at).getTime();
+                    
+                    // If we have a local update that's more recent, preserve the local state
+                    if (localTimestamp && localTimestamp > serverTimestamp) {
+                        const localNotif = prev.find(p => p.id === serverNotif.id);
+                        return localNotif || serverNotif;
+                    }
+                    
+                    return serverNotif;
+                });
+                
+                // Sort by created_at date (newest first)
+                return merged.sort((a, b) => 
+                    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+                );
+            });
+            
+            setUnreadCount(data.unreadCount || 0);
         } catch (error) {
             console.error('Failed to fetch notifications:', error);
         } finally {
@@ -47,6 +72,13 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
                 },
             });
+            
+            // Record local update timestamp
+            const now = Date.now();
+            setLastLocalUpdate(prev => ({
+                ...prev,
+                [notificationId]: now
+            }));
             
             // Update local state
             setNotifications(prev => 
@@ -89,6 +121,13 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                 },
             });
             
+            // Record local update timestamp
+            const now = Date.now();
+            setLastLocalUpdate(prev => ({
+                ...prev,
+                [notificationId]: now
+            }));
+            
             // Update local state
             setNotifications(prev => 
                 prev.map(notif => 
@@ -101,11 +140,38 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
         }
     };
 
-    const handleNotificationClick = (notification: Notification) => {
-        // Mark as read if not already read
-        if (!notification.is_read) {
-            markAsRead(notification.id);
+    const getFilteredNotifications = () => {
+        let filtered = notifications;
+        
+        // Filter by type
+        switch (filter) {
+            case 'endorsement':
+                filtered = filtered.filter(n => n.type === 'hte_endorsement');
+                break;
+            case 'deadline':
+                filtered = filtered.filter(n => n.type === 'hte_deadline');
+                break;
+            default:
+                // Keep all notifications
+                break;
         }
+        
+        // Filter by read/unread status
+        if (!showRead) {
+            filtered = filtered.filter(n => !n.is_read);
+        }
+        // If showRead is true, show all notifications (both read and unread)
+        
+        return filtered;
+    };
+
+    const handleNotificationClick = (notification: Notification) => {
+        // Mark as read when clicked (regardless of current status)
+        markAsRead(notification.id);
+        
+        // Reset filters to show all notifications
+        setFilter('all');
+        setShowRead(true);
 
         // Handle navigation based on notification type
         if (notification.type === 'hte_endorsement') {
@@ -113,10 +179,27 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
             if (notification.data?.student_id) {
                 // If we have student_id, navigate with highlighting
                 const studentId = notification.data.student_id as number;
-                router.visit(`/hte/endorsement-table?highlightStudent=${studentId}&highlightDuration=3000`);
+                router.visit(`/hte/endorsement-table?highlightStudent=${studentId}&highlightDuration=1500`);
             } else {
                 // If no student_id, just navigate to the table
                 router.visit('/hte/endorsement-table');
+            }
+        } else if (notification.type === 'hte_deadline') {
+            // Navigate based on deadline category
+            console.log('HTE Deadline notification clicked:', {
+                type: notification.type,
+                data: notification.data,
+                category: notification.data?.category
+            });
+            
+            if (notification.data?.category === 'student_placements_by_hte') {
+                // For student placements deadlines, navigate to endorsement table
+                console.log('Navigating to endorsement table for student placements deadline');
+                router.visit('/hte/endorsement-table');
+            } else {
+                // For other HTE deadlines (like assessment forms), navigate to form page
+                console.log('Navigating to form page for other HTE deadline');
+                router.visit('/form');
             }
         }
     };
@@ -156,6 +239,8 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                 return <CalendarIcon className="h-4 w-4 text-blue-600" />;
             case 'hte_endorsement':
                 return <CheckIcon className="h-4 w-4 text-purple-600" />;
+            case 'hte_deadline':
+                return <ClockIcon className="h-4 w-4 text-red-600" />;
             default:
                 return <BellIcon className="h-4 w-4 text-gray-600" />;
         }
@@ -198,17 +283,76 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                                     </Badge>
                                 )}
                             </h3>
-                            {unreadCount > 0 && (
+                            <div className="flex gap-2">
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setShowRead(!showRead)}
+                                    className={`h-7 w-7 p-0 ${
+                                        showRead 
+                                            ? 'text-gray-600 hover:border hover:border-gray-500 hover:bg-white hover:text-gray-900' 
+                                            : 'bg-blue-600 text-white hover:bg-blue-700'
+                                    }`}
+                                    title={showRead ? 'Show unread notifications' : 'Show all notifications'}
+                                >
+                                    {showRead ? <ListIcon className="h-3 w-3" /> : <MailIcon className="h-3 w-3" />}
+                                </Button>
                                 <Button
                                     variant="ghost"
                                     size="sm"
                                     onClick={markAllAsRead}
-                                    className="text-xs h-7 px-2"
+                                    className={`text-xs h-7 px-2 ${
+                                        unreadCount === 0 
+                                            ? 'border border-gray-500 bg-white text-gray-500 hover:bg-gray-50' 
+                                            : 'text-gray-600 hover:text-white hover:bg-blue-600'
+                                    }`}
                                 >
                                     <CheckIcon className="h-3 w-3 mr-1" />
                                     Mark all read
                                 </Button>
-                            )}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {/* Filter Buttons */}
+                    <div className="p-3 border-b border-gray-200 bg-gray-50">
+                        <div className="flex justify-center gap-1">
+                            <Button
+                                variant={filter === 'all' ? 'default' : 'ghost'}
+                                size="sm"
+                                onClick={() => setFilter('all')}
+                                className={`h-8 px-3 text-xs ${
+                                    filter === 'all' 
+                                        ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                                }`}
+                            >
+                                All
+                            </Button>
+                            <Button
+                                variant={filter === 'endorsement' ? 'default' : 'ghost'}
+                                size="sm"
+                                onClick={() => setFilter('endorsement')}
+                                className={`h-8 px-3 text-xs ${
+                                    filter === 'endorsement' 
+                                        ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                                }`}
+                            >
+                                Endorsement
+                            </Button>
+                            <Button
+                                variant={filter === 'deadline' ? 'default' : 'ghost'}
+                                size="sm"
+                                onClick={() => setFilter('deadline')}
+                                className={`h-8 px-3 text-xs ${
+                                    filter === 'deadline' 
+                                        ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                                }`}
+                            >
+                                Deadline
+                            </Button>
                         </div>
                     </div>
                     
@@ -218,14 +362,16 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 mx-auto mb-2"></div>
                                 Loading notifications...
                             </div>
-                        ) : notifications.length === 0 ? (
+                        ) : getFilteredNotifications().length === 0 ? (
                             <div className="p-6 text-center text-gray-500">
                                 <BellIcon className="h-8 w-8 mx-auto mb-2 text-gray-300" />
-                                <p className="text-sm">No notifications</p>
+                                <p className="text-sm">
+                                    No {showRead ? '' : 'unread'} {filter === 'all' ? '' : filter} notifications
+                                </p>
                                 <p className="text-xs text-gray-400 mt-1">You're all caught up!</p>
                             </div>
                         ) : (
-                            notifications.map((notification) => (
+                            getFilteredNotifications().map((notification) => (
                                 <div
                                     key={notification.id}
                                     className={`p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors group cursor-pointer ${
