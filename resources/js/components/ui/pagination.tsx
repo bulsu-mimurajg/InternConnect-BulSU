@@ -35,7 +35,7 @@ export function Pagination({
           {showSummary && totalItems && (
             <div className="flex items-center gap-2">
               <p className="text-sm text-muted-foreground">
-                Showing {endIndex} of {totalItems} items -{totalPages > 1 && ` Page ${currentPage} of ${totalPages}`}
+                Showing {startIndex}-{endIndex} of {totalItems} items - {totalPages > 1 && ` Page ${currentPage} of ${totalPages}`}
               </p>
             </div>
           )}

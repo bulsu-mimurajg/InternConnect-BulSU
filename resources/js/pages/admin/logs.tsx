@@ -1,12 +1,13 @@
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link, router } from '@inertiajs/react';
-import React, { useState } from 'react';
+import { Head, router } from '@inertiajs/react';
+import React, { useState, useCallback } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Pagination } from '@/components/ui/pagination';
 import { ChevronDownIcon, ChevronRightIcon, ActivityIcon, UserIcon, ClockIcon, LogInIcon, LogOutIcon, FilterIcon, XIcon } from 'lucide-react';
 
 interface Activity {
@@ -118,6 +119,23 @@ export default function Logs({ activities, filters }: LogsProps) {
             replace: true
         });
     };
+
+    const handlePageChange = useCallback((page: number) => {
+        const params = new URLSearchParams();
+        params.append('page', page.toString());
+        
+        // Add current filters to maintain them when changing pages
+        Object.entries(filterValues).forEach(([filterKey, filterValue]) => {
+            if (filterValue && filterValue !== 'all') {
+                params.append(filterKey, filterValue);
+            }
+        });
+
+        router.get('/admin/logs', Object.fromEntries(params), {
+            preserveState: true,
+            replace: true
+        });
+    }, [filterValues]);
 
     const hasActiveFilters = Object.entries(filterValues).some(([key, value]) => {
         if (key === 'type' || key === 'role') {
@@ -417,27 +435,14 @@ export default function Logs({ activities, filters }: LogsProps) {
                     </CardContent>
                 </Card>
 
-                {activities.last_page > 1 && (
-                    <div className="flex justify-center items-center gap-2">
-                        {activities.current_page > 1 && (
-                            <Button variant="outline" size="sm" asChild>
-                                <Link href={`/admin/logs?page=${activities.current_page - 1}${hasActiveFilters ? `&${new URLSearchParams(filterValues).toString()}` : ''}`}>
-                                    Previous
-                                </Link>
-                            </Button>
-                        )}
-                        <span className="text-sm text-muted-foreground px-3">
-                            Page {activities.current_page} of {activities.last_page}
-                        </span>
-                        {activities.current_page < activities.last_page && (
-                            <Button variant="outline" size="sm" asChild>
-                                <Link href={`/admin/logs?page=${activities.current_page + 1}${hasActiveFilters ? `&${new URLSearchParams(filterValues).toString()}` : ''}`}>
-                                    Next
-                                </Link>
-                            </Button>
-                        )}
-                    </div>
-                )}
+                <Pagination
+                    currentPage={activities.current_page}
+                    totalPages={activities.last_page}
+                    onPageChange={handlePageChange}
+                    showSummary={true}
+                    totalItems={activities.total}
+                    itemsPerPage={activities.per_page}
+                />
 
                 {activities.data.length === 0 && (
                     <Card>
