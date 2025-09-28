@@ -615,6 +615,12 @@ class AdviserController extends Controller
             try {
                 $user = User::findOrFail($userId);
                 
+                // Check if student has submitted their assessment
+                if ($user->student && $user->student->is_submit) {
+                    $errors[] = "Cannot remove access for {$user->username} - assessment already submitted";
+                    continue;
+                }
+                
                 // Remove student role
                 $user->removeRole('student');
                 
