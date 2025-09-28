@@ -8,6 +8,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Pagination } from '@/components/ui/pagination';
+import { usePagination } from '@/hooks/usePagination';
+import { getRowNumber } from '@/lib/pagination-utils';
 import { 
     UserIcon, 
     CheckCircleIcon,
@@ -102,6 +105,26 @@ export default function StudentPlaced({ placedStudents = [], filters }: Props) {
             search: filters.currentSearch || ''
         });
     }, [filters]);
+
+    // Filter placed students based on local filters
+    const filteredPlacedStudents = placedStudents.filter(placement => {
+        const matchesSection = localFilters.section === 'all' || placement.student?.section === localFilters.section;
+        const matchesInternship = localFilters.internship === 'all' || 
+                                 placement.internship?.id.toString() === localFilters.internship;
+        const matchesSearch = localFilters.search === '' || 
+                             placement.student?.first_name.toLowerCase().includes(localFilters.search.toLowerCase()) ||
+                             placement.student?.last_name.toLowerCase().includes(localFilters.search.toLowerCase()) ||
+                             placement.student?.student_number.toLowerCase().includes(localFilters.search.toLowerCase());
+        
+        return matchesSection && matchesInternship && matchesSearch;
+    });
+
+    // Pagination hook
+    const placedPagination = usePagination({
+        data: filteredPlacedStudents,
+        itemsPerPage: 10,
+        resetTrigger: localFilters, // Auto-reset when filters change
+    });
 
     const handleFilterChange = (filterType: 'section' | 'internship' | 'search', value: string) => {
         const newFilters = { ...localFilters, [filterType]: value };
@@ -291,7 +314,7 @@ export default function StudentPlaced({ placedStudents = [], filters }: Props) {
                             <UsersIcon className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">{placedStudents.length}</div>
+                            <div className="text-2xl font-bold">{filteredPlacedStudents.length}</div>
                             <p className="text-xs text-muted-foreground">
                                 Students with placement decisions
                             </p>
@@ -305,7 +328,7 @@ export default function StudentPlaced({ placedStudents = [], filters }: Props) {
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">
-                                {placedStudents.filter(s => s.status && s.status === 'approved').length}
+                                {filteredPlacedStudents.filter(s => s.status && s.status === 'approved').length}
                             </div>
                             <p className="text-xs text-muted-foreground">
                                 Successfully placed students
@@ -320,7 +343,7 @@ export default function StudentPlaced({ placedStudents = [], filters }: Props) {
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">
-                                {placedStudents.filter(s => s.status && s.status === 'pending').length}
+                                {filteredPlacedStudents.filter(s => s.status && s.status === 'pending').length}
                             </div>
                             <p className="text-xs text-muted-foreground">
                                 Awaiting decision
@@ -341,7 +364,7 @@ export default function StudentPlaced({ placedStudents = [], filters }: Props) {
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        {placedStudents.length === 0 ? (
+                        {filteredPlacedStudents.length === 0 ? (
                             <div className="text-center py-12">
                                 <FileTextIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                                 <h3 className="text-lg font-medium mb-2">No Placements Found</h3>
@@ -357,6 +380,7 @@ export default function StudentPlaced({ placedStudents = [], filters }: Props) {
                                 <table className="w-full">
                                     <thead>
                                         <tr className="border-b">
+                                            <th className="text-center p-3 font-medium text-muted-foreground w-16">#</th>
                                             <th className="text-left p-3 font-medium text-muted-foreground">Student</th>
                                             <th className="text-left p-3 font-medium text-muted-foreground">Section</th>
                                             <th className="text-left p-3 font-medium text-muted-foreground">Internship</th>
@@ -366,8 +390,11 @@ export default function StudentPlaced({ placedStudents = [], filters }: Props) {
                                         </tr>
                                     </thead>
                                         <tbody>
-                                            {placedStudents.map((placement) => (
+                                            {placedPagination.paginatedData.map((placement, index) => (
                                                 <tr key={placement.id} className="border-b hover:bg-muted/50 transition-colors">
+                                                    <td className="text-center p-3 font-mono text-sm text-muted-foreground">
+                                                        {getRowNumber(placedPagination.currentPage, 10, index)}
+                                                    </td>
                                                     <td className="p-3">
                                                         <div>
                                                             <div className="font-medium">
@@ -435,6 +462,16 @@ export default function StudentPlaced({ placedStudents = [], filters }: Props) {
                             )}
                         </CardContent>
                     </Card>
+
+                    {/* Pagination */}
+                    <Pagination
+                        currentPage={placedPagination.currentPage}
+                        totalPages={placedPagination.totalPages}
+                        onPageChange={placedPagination.handlePageChange}
+                        showSummary={true}
+                        totalItems={filteredPlacedStudents.length}
+                        itemsPerPage={10}
+                    />
             </div>
         </AdminLayout>
     );

@@ -9,6 +9,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Pagination } from '@/components/ui/pagination';
+import { usePagination } from '@/hooks/usePagination';
+import { getRowNumber } from '@/lib/pagination-utils';
 import StudentDetailsModal from '@/components/student-details-modal';
 import { 
     UserIcon, 
@@ -207,6 +210,26 @@ export default function StudentMatched({ matchedStudents, filters }: Props) {
             search: filters.currentSearch || ''
         });
     }, [filters]);
+
+    // Filter matched students based on local filters
+    const filteredMatchedStudents = matchedStudents.filter(student => {
+        const matchesSection = localFilters.section === 'all' || student.section === localFilters.section;
+        const matchesInternship = localFilters.internship === 'all' || 
+                                 student.best_match?.internship?.id.toString() === localFilters.internship;
+        const matchesSearch = localFilters.search === '' || 
+                             student.first_name.toLowerCase().includes(localFilters.search.toLowerCase()) ||
+                             student.last_name.toLowerCase().includes(localFilters.search.toLowerCase()) ||
+                             student.student_number.toLowerCase().includes(localFilters.search.toLowerCase());
+        
+        return matchesSection && matchesInternship && matchesSearch;
+    });
+
+    // Pagination hook
+    const matchedPagination = usePagination({
+        data: filteredMatchedStudents,
+        itemsPerPage: 10,
+        resetTrigger: localFilters, // Auto-reset when filters change
+    });
 
     const getScoreColor = (score: number) => {
         if (score >= 80) return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
@@ -1038,7 +1061,7 @@ export default function StudentMatched({ matchedStudents, filters }: Props) {
                                 <UsersIcon className="h-4 w-4 text-muted-foreground" />
                             </CardHeader>
                             <CardContent>
-                                <div className="text-2xl font-bold">{matchedStudents.length}</div>
+                                <div className="text-2xl font-bold">{filteredMatchedStudents.length}</div>
                                 <p className="text-xs text-muted-foreground">
                                     Students with completed assessments
                                 </p>
@@ -1052,8 +1075,8 @@ export default function StudentMatched({ matchedStudents, filters }: Props) {
                             </CardHeader>
                             <CardContent>
                                 <div className="text-2xl font-bold">
-                                    {matchedStudents.length > 0 
-                                        ? Math.round(matchedStudents.reduce((sum, student) => sum + (student.best_match?.compatibility_score || 0), 0) / matchedStudents.length)
+                                    {filteredMatchedStudents.length > 0 
+                                        ? Math.round(filteredMatchedStudents.reduce((sum, student) => sum + (student.best_match?.compatibility_score || 0), 0) / filteredMatchedStudents.length)
                                         : 0
                                     }%
                                 </div>
@@ -1070,7 +1093,7 @@ export default function StudentMatched({ matchedStudents, filters }: Props) {
                             </CardHeader>
                             <CardContent>
                                 <div className="text-2xl font-bold">
-                                    {matchedStudents.filter(s => (s.best_match?.compatibility_score || 0) >= 80).length}
+                                    {filteredMatchedStudents.filter(s => (s.best_match?.compatibility_score || 0) >= 80).length}
                                 </div>
                                 <p className="text-xs text-muted-foreground">
                                     Students with 80%+ scores
@@ -1137,7 +1160,7 @@ export default function StudentMatched({ matchedStudents, filters }: Props) {
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            {matchedStudents.length === 0 ? (
+                            {filteredMatchedStudents.length === 0 ? (
                                 <div className="text-center py-12">
                                     <TargetIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                                     <h3 className="text-lg font-medium mb-2">No Matches Found</h3>
@@ -1153,10 +1176,11 @@ export default function StudentMatched({ matchedStudents, filters }: Props) {
                                     <table className="w-full">
                                         <thead>
                                             <tr className="border-b">
+                                                <th className="text-center p-3 font-medium text-muted-foreground w-16">#</th>
                                                 <th className="text-left p-3 font-medium text-muted-foreground">
                                                     <div className="flex items-center gap-2">
                                                         <Checkbox
-                                                            checked={selectedStudents.size === matchedStudents.length && matchedStudents.length > 0}
+                                                            checked={selectedStudents.size === filteredMatchedStudents.length && filteredMatchedStudents.length > 0}
                                                             onCheckedChange={handleSelectAll}
                                                         />
                                                         Select All
@@ -1170,8 +1194,11 @@ export default function StudentMatched({ matchedStudents, filters }: Props) {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {matchedStudents.map((student) => (
+                                            {matchedPagination.paginatedData.map((student, index) => (
                                                 <tr key={student.id} className="border-b hover:bg-muted/50 transition-colors">
+                                                    <td className="text-center p-3 font-mono text-sm text-muted-foreground">
+                                                        {getRowNumber(matchedPagination.currentPage, 10, index)}
+                                                    </td>
                                                     <td className="p-3">
                                                         <Checkbox
                                                             checked={selectedStudents.has(student.id)}
@@ -1286,6 +1313,16 @@ export default function StudentMatched({ matchedStudents, filters }: Props) {
                             )}
                         </CardContent>
                     </Card>
+
+                    {/* Pagination */}
+                    <Pagination
+                        currentPage={matchedPagination.currentPage}
+                        totalPages={matchedPagination.totalPages}
+                        onPageChange={matchedPagination.handlePageChange}
+                        showSummary={true}
+                        totalItems={filteredMatchedStudents.length}
+                        itemsPerPage={10}
+                    />
                 </div>
             </AdminLayout>
 

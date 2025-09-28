@@ -1,9 +1,10 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 
 interface UsePaginationProps<T> {
   data: T[];
   itemsPerPage?: number;
   initialPage?: number;
+  resetTrigger?: any; // Trigger to reset pagination (e.g., when filters change)
 }
 
 interface UsePaginationReturn<T> {
@@ -21,6 +22,7 @@ export function usePagination<T>({
   data,
   itemsPerPage = 10,
   initialPage = 1,
+  resetTrigger,
 }: UsePaginationProps<T>): UsePaginationReturn<T> {
   const [currentPage, setCurrentPage] = useState(initialPage);
 
@@ -31,6 +33,13 @@ export function usePagination<T>({
   const paginatedData = useMemo(() => {
     return data.slice(startIndex, endIndex);
   }, [data, startIndex, endIndex]);
+
+  // Auto-reset to first page when resetTrigger changes (e.g., filters change)
+  useEffect(() => {
+    if (resetTrigger !== undefined) {
+      setCurrentPage(1);
+    }
+  }, [resetTrigger]);
 
   const handlePageChange = useCallback((page: number) => {
     setCurrentPage(page);

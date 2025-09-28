@@ -10,6 +10,7 @@ interface PaginationProps {
   totalItems?: number;
   itemsPerPage?: number;
   className?: string;
+  showRowNumbers?: boolean;
 }
 
 export function Pagination({
@@ -20,6 +21,7 @@ export function Pagination({
   totalItems,
   itemsPerPage,
   className = "",
+  showRowNumbers = false,
 }: PaginationProps) {
   if (totalPages <= 1) {
     return null;
