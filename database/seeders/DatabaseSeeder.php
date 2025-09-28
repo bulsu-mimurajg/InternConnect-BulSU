@@ -62,7 +62,6 @@ class DatabaseSeeder extends Seeder
                 'phone' => '09123456792',
                 'section_id' => $section->section_id,
                 'specialization' => 'Programming',
-                'birth_date' => '2000-01-01',
                 'is_submit' => true, // Set to true so it appears in reports
                 'is_placed' => false,
                 'is_active' => true,

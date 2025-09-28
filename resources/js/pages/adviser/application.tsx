@@ -302,16 +302,28 @@ export default function Application({ pendingStudents, verifiedStudents, adviser
                                             }
                                         />
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-medium truncate">
-                                                {student.username}
-                                            </p>
-                                            <p className="text-xs text-muted-foreground truncate">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <p className="text-sm font-medium truncate">
+                                                    {student.username} | {student.student?.first_name} {student.student?.last_name}
+                                                </p>
+                                            </div>
+                                            <p className="text-xs text-muted-foreground truncate mb-2">
                                                 {student.email}
                                             </p>
                                             {currentSectionId === null && student.academe_accounts && student.academe_accounts.length > 0 && (
-                                                <p className="text-xs text-blue-600 truncate">
+                                                <p className="text-xs text-blue-600 truncate mb-2">
                                                     {student.academe_accounts[0].section.section_name}
                                                 </p>
+                                            )}
+                                            {student.student && (
+                                                <div className="space-y-1">
+                                                    <p className="text-xs">
+                                                        <span className="font-medium">Name:</span> {student.student.first_name} {student.student.last_name}
+                                                    </p>
+                                                    <p className="text-xs">
+                                                        <span className="font-medium">Assessment:</span> {student.student.is_submit ? 'Completed' : 'Pending'}
+                                                    </p>
+                                                </div>
                                             )}
                                         </div>
                                     </div>
@@ -410,7 +422,7 @@ export default function Application({ pendingStudents, verifiedStudents, adviser
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center justify-between mb-2">
                                                     <p className="text-sm font-medium truncate">
-                                                        {student.username}
+                                                        {student.username} | {student.student?.first_name} {student.student?.last_name}
                                                     </p>
                                                     <div className="flex items-center gap-2">
                                                         <Badge variant="secondary" className="text-xs">

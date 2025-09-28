@@ -22,7 +22,6 @@ return new class extends Migration
             $table->string('phone', 20);
             $table->unsignedInteger('section_id');
             $table->string('specialization', 50);
-            $table->date('birth_date');
             $table->boolean('is_active')->default(true);
             $table->boolean('is_submit')->default(false);
             $table->boolean('is_placed')->default(false);

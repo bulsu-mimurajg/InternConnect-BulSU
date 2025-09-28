@@ -20,8 +20,6 @@ class Student extends Model
         'phone',
         'section_id',
         'specialization',
-        'address',
-        'birth_date',
         'is_submit',
         'is_placed',
         'is_active',

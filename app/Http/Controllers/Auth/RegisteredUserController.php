@@ -98,10 +98,11 @@ class RegisteredUserController extends Controller
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
             'middle_name' => 'nullable|string|max:255',
-            'username' => 'required|digits:10|unique:'.User::class, //TODO: DUPLICATE
+            'username' => 'required|digits:10|unique:'.User::class,
             'email' => 'required|string|lowercase|email|max:255|unique:'.User::class,
             'contact_number' => 'required|string|max:11',
             'section_id' => 'required|exists:sections,section_id',
+            'specialization' => 'required|string|in:BA,WMAD,SM',
         ]);
 
         // Add password errors if any
@@ -122,6 +123,7 @@ class RegisteredUserController extends Controller
             'contact_number' => $request->contact_number,
             'password' => Hash::make($request->password),
             'section_id' => $request->section_id,
+            'specialization' => $request->specialization,
             'created_at' => now(),
         ];
 

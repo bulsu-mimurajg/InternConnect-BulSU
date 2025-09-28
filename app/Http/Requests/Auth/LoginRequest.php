@@ -56,7 +56,7 @@ class LoginRequest extends FormRequest
             RateLimiter::hit($this->throttleKey(), 3600);
 
             throw ValidationException::withMessages([
-                'username' => 'Your account is not yet verified. Please contact an administrator.',
+                'username' => 'Your account is not yet verified. Please contact your adviser.',
             ]);
         }
 

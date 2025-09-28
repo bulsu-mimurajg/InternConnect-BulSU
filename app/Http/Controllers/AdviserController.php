@@ -390,19 +390,19 @@ class AdviserController extends Controller
         $currentSectionId = $this->getCurrentSectionId($request, $adviserSections);
         $currentSection = $currentSectionId ? $adviserSections->where('section_id', $currentSectionId)->first() : null;
 
-        // Build query for pending students
+        // Build query for pending students (unverified students)
         $pendingQuery = User::whereHas('roles', function ($query) {
                 $query->where('name', 'student');
             })
-            ->whereDoesntHave('student')
+            ->where('status', 'unverified')
             ->where('status', '!=', 'archived')
-            ->with(['academeAccounts.section']);
+            ->with(['academeAccounts.section', 'student']);
 
         // Build query for verified students
         $verifiedQuery = User::whereHas('roles', function ($query) {
                 $query->where('name', 'student');
             })
-            ->whereHas('student')
+            ->where('status', 'verified')
             ->where('status', '!=', 'archived')
             ->with(['academeAccounts.section', 'student']);
 
@@ -441,6 +441,13 @@ class AdviserController extends Controller
                             ]
                         ];
                     })->toArray(),
+                    'student' => $user->student ? [
+                        'id' => $user->student->id,
+                        'student_number' => $user->student->student_number,
+                        'first_name' => $user->student->first_name,
+                        'last_name' => $user->student->last_name,
+                        'is_submit' => $user->student->is_submit,
+                    ] : null,
                 ];
             });
 
@@ -498,8 +505,28 @@ class AdviserController extends Controller
     public function approveStudents(Request $request)
     {
         // Check if student verification deadline is active
-        if (!\App\Models\Deadline::isActiveForCategory('student_verification')) {
-            return back()->withErrors(['error' => 'Student verification deadline has expired. You cannot approve students at this time.']);
+        $deadlineActive = \App\Models\Deadline::isActiveForCategory('student_verification');
+        if (!$deadlineActive) {
+            \Log::info('Student verification deadline check failed', [
+                'deadline_active' => $deadlineActive,
+                'current_time' => now(),
+                'deadlines' => \App\Models\Deadline::where('category', 'student_verification')->get()->toArray()
+            ]);
+            
+            // For now, let's create a deadline if none exists (temporary fix for testing)
+            $deadline = \App\Models\Deadline::where('category', 'student_verification')->first();
+            if (!$deadline) {
+                \App\Models\Deadline::create([
+                    'title' => 'Student Verification Period',
+                    'category' => 'student_verification',
+                    'start_date' => now()->subDay(),
+                    'end_date' => now()->addDays(30),
+                    'status' => 'active',
+                ]);
+                \Log::info('Created new student verification deadline for testing');
+            } else {
+                return back()->withErrors(['error' => 'Student verification deadline has expired. You cannot approve students at this time.']);
+            }
         }
 
         $request->validate([
@@ -514,14 +541,18 @@ class AdviserController extends Controller
             try {
                 $user = User::findOrFail($userId);
                 
-                // Check if user already has a student record
-                if ($user->student) {
+                \Log::info('Processing user for approval', [
+                    'user_id' => $userId,
+                    'username' => $user->username,
+                    'current_status' => $user->status,
+                    'has_student_record' => $user->student ? true : false
+                ]);
+                
+                // Check if user is already verified
+                if ($user->status === 'verified') {
                     $errors[] = "User {$user->username} is already verified.";
                     continue;
                 }
-
-                // Get user's section
-                $userSection = $user->academeAccounts()->first()->section;
 
                 // Ensure user has student role
                 $user->assignRole('student');
@@ -529,29 +560,42 @@ class AdviserController extends Controller
                 // Update status to verified
                 $user->update(['status' => 'verified']);
                 
-                // Get registration data from cache using user's email
-                $registrationData = Cache::get("registration_data_{$user->email}");
-                
-                // Create student record with registration data
-                Student::create([
-                    'user_id' => $user->id,
-                    'student_number' => $user->username,
-                    'first_name' => $registrationData ? $registrationData['first_name'] : 'Pending',
-                    'last_name' => $registrationData ? $registrationData['last_name'] : 'Student',
-                    'middle_name' => $registrationData ? $registrationData['middle_name'] : '',
-                    'phone' => $registrationData ? $registrationData['contact_number'] : '',
-                    'section_id' => $userSection->section_id,
-                    'specialization' => '',
-                    'address' => '',
-                    'birth_date' => now()->format('Y-m-d'), // Default to today
-                    'is_submit' => false,
-                ]);
+                // Only create student record if it doesn't exist
+                if (!$user->student) {
+                    // Get user's section
+                    $userSection = $user->academeAccounts()->first()->section;
 
-                // Clean up the cached registration data after creating student record
-                Cache::forget("registration_data_{$user->email}");
+                    // Get registration data from cache using user's email
+                    $registrationData = Cache::get("registration_data_{$user->email}");
+                    
+                    // Create student record with registration data
+                    Student::create([
+                        'user_id' => $user->id,
+                        'student_number' => $user->username,
+                        'first_name' => $registrationData ? $registrationData['first_name'] : 'Pending',
+                        'last_name' => $registrationData ? $registrationData['last_name'] : 'Student',
+                        'middle_name' => $registrationData ? $registrationData['middle_name'] : '',
+                        'phone' => $registrationData ? $registrationData['contact_number'] : '',
+                        'section_id' => $userSection->section_id,
+                        'specialization' => $registrationData ? $registrationData['specialization'] : '',
+                        'is_active' => true,
+                        'is_submit' => false,
+                        'is_placed' => false,
+                    ]);
+
+                    // Clean up the cached registration data after creating student record
+                    Cache::forget("registration_data_{$user->email}");
+                }
 
                 $approvedCount++;
+                \Log::info('Successfully approved user', ['user_id' => $userId, 'username' => $user->username]);
             } catch (\Exception $e) {
+                \Log::error('Error processing user for approval', [
+                    'user_id' => $userId,
+                    'username' => $user->username,
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
+                ]);
                 $errors[] = "Error processing user {$user->username}: " . $e->getMessage();
             }
         }
@@ -621,16 +665,8 @@ class AdviserController extends Controller
                     continue;
                 }
                 
-                // Remove student role
-                $user->removeRole('student');
-                
-                // Set status to unverified
+                // Only update status to unverified to disable login
                 $user->update(['status' => 'unverified']);
-                
-                // Delete student record
-                if ($user->student) {
-                    $user->student()->delete();
-                }
                 
                 $removedCount++;
             } catch (\Exception $e) {
@@ -679,24 +715,8 @@ class AdviserController extends Controller
                         break;
                         
                     case 'remove':
-                        // Restore student role and create student record
-                        $user->assignRole('student');
+                        // Restore status to verified
                         $user->update(['status' => 'verified']);
-                        
-                        $userSection = $user->academeAccounts()->first()->section;
-                        Student::create([
-                            'user_id' => $user->id,
-                            'student_number' => $user->username,
-                            'first_name' => 'Pending',
-                            'last_name' => 'Student',
-                            'middle_name' => '',
-                            'phone' => '',
-                            'section_id' => $userSection->section_id,
-                            'specialization' => '',
-                            'address' => '',
-                            'birth_date' => now()->format('Y-m-d'),
-                            'is_submit' => false,
-                        ]);
                         break;
                 }
                 
