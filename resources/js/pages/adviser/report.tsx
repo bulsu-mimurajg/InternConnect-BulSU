@@ -114,9 +114,6 @@ export default function AdviserReport({
                     <div className="flex items-center gap-4">
                         <div>
                             <h1 className="text-3xl font-bold tracking-tight">Generate Reports</h1>
-                            <p className="text-muted-foreground">
-                                Section: {adviserSection}
-                            </p>
                         </div>
                         {adviserSections.length > 1 && (
                             <SectionSwitcher 
