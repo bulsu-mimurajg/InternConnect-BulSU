@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo} from 'react';
 import { Head, router, usePage, Link } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
@@ -51,11 +51,42 @@ export default function EndorsementTable({ endorsements = [], internships = [], 
     const [selectedInternship, setSelectedInternship] = useState<string>('all');
     const [loading, setLoading] = useState<Record<number, boolean>>({});
     const [selectedEndorsements, setSelectedEndorsements] = useState<Set<number>>(new Set());
+    const [highlightedStudentId, setHighlightedStudentId] = useState<number | null>(null);
     const [batchLoading, setBatchLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [errorType, setErrorType] = useState<string | null>(null);
     const [showFilters, setShowFilters] = useState(false);
     const { flash } = usePage<{ flash: { success?: string; error?: string } }>().props;
+
+    // Handle student highlighting from notification clicks
+    useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const highlightStudent = urlParams.get('highlightStudent');
+        const highlightDuration = parseInt(urlParams.get('highlightDuration') || '1500');
+
+        console.log('URL params:', { highlightStudent, highlightDuration });
+        console.log('Current URL:', window.location.href);
+        console.log('Available endorsements:', endorsements.map(e => ({ id: e.student.id, name: `${e.student.first_name} ${e.student.last_name}` })));
+
+        if (highlightStudent) {
+            const studentId = parseInt(highlightStudent);
+            console.log('Setting highlighted student ID:', studentId, 'Type:', typeof studentId);
+            setHighlightedStudentId(studentId);
+
+            // Remove highlight after specified duration
+            const timer = setTimeout(() => {
+                console.log('Removing highlight for student ID:', studentId);
+                setHighlightedStudentId(null);
+                // Clean up URL parameters
+                const newUrl = new URL(window.location.href);
+                newUrl.searchParams.delete('highlightStudent');
+                newUrl.searchParams.delete('highlightDuration');
+                window.history.replaceState({}, '', newUrl.toString());
+            }, highlightDuration);
+
+            return () => clearTimeout(timer);
+        }
+    }, [endorsements]);
 
     // Filter endorsements based on selected internship
     const filteredEndorsements = selectedInternship === 'all' 
@@ -456,6 +487,7 @@ export default function EndorsementTable({ endorsements = [], internships = [], 
                             <>
                                 {/* Mobile/Tablet Card View */}
                                 <div className="block lg:hidden space-y-4">
+
                                     {endorsementPagination.paginatedData.map((endorsement) => (
                                         <Card key={endorsement.id} className="p-4">
                                             <div className="flex items-start justify-between mb-3">
@@ -533,7 +565,8 @@ export default function EndorsementTable({ endorsements = [], internships = [], 
                                                 </div>
                                             </div>
                                         </Card>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
 
                                 {/* Desktop Table View */}
@@ -635,7 +668,8 @@ export default function EndorsementTable({ endorsements = [], internships = [], 
                                                     </div>
                                                 </td>
                                             </tr>
-                                            ))}
+                                                );
+                                            })}
                                         </tbody>
                                     </table>
                                 </div>
