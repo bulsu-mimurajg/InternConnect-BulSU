@@ -304,7 +304,10 @@ export default function Application({ pendingStudents, verifiedStudents, adviser
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center justify-between mb-2">
                                                 <p className="text-sm font-medium truncate">
-                                                    {student.username} | {student.student?.first_name} {student.student?.last_name}
+                                                    {student.username} | {student.student?.first_name && student.student?.last_name 
+                                                        ? `${student.student.first_name} ${student.student.last_name}`
+                                                        : 'Pending'
+                                                    }
                                                 </p>
                                             </div>
                                             <p className="text-xs text-muted-foreground truncate mb-2">
