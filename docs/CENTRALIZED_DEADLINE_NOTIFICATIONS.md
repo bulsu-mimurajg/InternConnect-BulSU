@@ -112,11 +112,17 @@ The system uses the existing `notifications` table with:
 
 ## Migration from Old System
 
-The old role-specific services are still present but can be safely removed:
-- `DeadlineNotificationService.php` (HTE-specific)
-- `StudentDeadlineNotificationService.php` (Student-specific)
-- `HTEDeadlineNotification.php` (HTE-specific notification)
-- `StudentDeadlineNotification.php` (Student-specific notification)
+The old role-specific services have been successfully removed:
+- ✅ `DeadlineNotificationService.php` (HTE-specific) - **REMOVED**
+- ✅ `StudentDeadlineNotificationService.php` (Student-specific) - **REMOVED**
+- ✅ `HTEDeadlineNotification.php` (HTE-specific notification) - **REMOVED**
+- ✅ `StudentDeadlineNotification.php` (Student-specific notification) - **REMOVED**
+- ✅ `CheckDeadlineNotifications.php` (HTE-specific command) - **REMOVED**
+- ✅ `CheckStudentDeadlineNotifications.php` (Student-specific command) - **REMOVED**
+- ✅ `hte-deadline.blade.php` (HTE email template) - **REMOVED**
+- ✅ `student-deadline.blade.php` (Student email template) - **REMOVED**
+
+All functionality has been consolidated into the centralized system.
 
 ## Admin Benefits
 
