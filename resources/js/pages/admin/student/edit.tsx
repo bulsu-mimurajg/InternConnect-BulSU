@@ -17,6 +17,7 @@ interface Student {
     section_id: number;
     section: string;
     specialization?: string;
+    email: string;
 }
 
 interface Section {
@@ -37,6 +38,7 @@ export default function EditStudent({ student, sections }: Props) {
         last_name: student.last_name,
         section_id: student.section_id,
         specialization: student.specialization || '',
+        email: student.email || '',
     });
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -73,6 +75,22 @@ export default function EditStudent({ student, sections }: Props) {
                                     )}
                                 </div>
                                 <div>
+                                    <Label htmlFor="email">Email Address</Label>
+                                    <Input
+                                        id="email"
+                                        type="email"
+                                        value={data.email}
+                                        onChange={(e) => setData('email', e.target.value)}
+                                        className={errors.email ? 'border-red-500' : ''}
+                                    />
+                                    {errors.email && (
+                                        <p className="text-red-500 text-sm mt-1">{errors.email}</p>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
                                     <Label htmlFor="section_id">Section</Label>
                                     <Select
                                         value={data.section_id.toString()}
@@ -91,6 +109,25 @@ export default function EditStudent({ student, sections }: Props) {
                                     </Select>
                                     {errors.section_id && (
                                         <p className="text-red-500 text-sm mt-1">{errors.section_id}</p>
+                                    )}
+                                </div>
+                                <div>
+                                    <Label htmlFor="specialization">Specialization</Label>
+                                    <Select
+                                        value={data.specialization}
+                                        onValueChange={(value) => setData('specialization', value)}
+                                    >
+                                        <SelectTrigger className={errors.specialization ? 'border-red-500' : ''}>
+                                            <SelectValue placeholder="Select specialization" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="BA">BA</SelectItem>
+                                            <SelectItem value="WMAD">WMAD</SelectItem>
+                                            <SelectItem value="SM">SM</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    {errors.specialization && (
+                                        <p className="text-red-500 text-sm mt-1">{errors.specialization}</p>
                                     )}
                                 </div>
                             </div>
@@ -137,19 +174,6 @@ export default function EditStudent({ student, sections }: Props) {
                                 </div>
                             </div>
 
-                            <div>
-                                <Label htmlFor="specialization">Specialization</Label>
-                                <Input
-                                    id="specialization"
-                                    type="text"
-                                    value={data.specialization}
-                                    onChange={(e) => setData('specialization', e.target.value)}
-                                    className={errors.specialization ? 'border-red-500' : ''}
-                                />
-                                {errors.specialization && (
-                                    <p className="text-red-500 text-sm mt-1">{errors.specialization}</p>
-                                )}
-                            </div>
 
                             <div className="flex justify-end space-x-3 pt-4">
                                 <Button

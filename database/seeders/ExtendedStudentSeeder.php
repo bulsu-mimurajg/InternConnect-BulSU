@@ -30,53 +30,9 @@ class ExtendedStudentSeeder extends Seeder
             return;
         }
 
-        $additionalStudents = [
-            [
-                'student_number' => '2021-0004',
-                'first_name' => 'Ana',
-                'middle_name' => 'Reyes',
-                'last_name' => 'Martinez',
-                'phone' => '09123456792',
-                'section_name' => 'BSIT-4A',
-                'specialization' => 'Web Development',
-            ],
-            [
-                'student_number' => '2021-0005',
-                'first_name' => 'Carlos',
-                'middle_name' => 'Torres',
-                'last_name' => 'Fernandez',
-                'phone' => '09123456793',
-                'section_name' => 'BSIT-4B',
-                'specialization' => 'Mobile Development',
-            ],
-            [
-                'student_number' => '2021-0006',
-                'first_name' => 'Isabella',
-                'middle_name' => 'Cruz',
-                'last_name' => 'Ramos',
-                'phone' => '09123456794',
-                'section_name' => 'BSIT-4C',
-                'specialization' => 'Data Science',
-            ],
-            [
-                'student_number' => '2021-0007',
-                'first_name' => 'Miguel',
-                'middle_name' => 'Santos',
-                'last_name' => 'Torres',
-                'phone' => '09123456795',
-                'section_name' => 'BSIT-4A',
-                'specialization' => 'Cybersecurity',
-            ],
-            [
-                'student_number' => '2021-0008',
-                'first_name' => 'Sofia',
-                'middle_name' => 'Garcia',
-                'last_name' => 'Lopez',
-                'phone' => '09123456796',
-                'section_name' => 'BSIT-4B',
-                'specialization' => 'Artificial Intelligence',
-            ],
-        ];
+        // Note: Removed unused students as they are not referenced in any application functionality
+        // Only clairo and juna from DatabaseSeeder are actually used
+        $additionalStudents = [];
 
         $createdCount = 0;
         $skippedCount = 0;

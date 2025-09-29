@@ -262,7 +262,6 @@ class HTEController extends Controller
                             return [
                                 'id' => $question->id,
                                 'question' => $question->question,
-                                'access' => $question->access,
                                 'is_active' => (bool) $question->is_active,
                                 'subcategory_id' => $question->subcategory_id,
                                 'created_at' => $question->created_at,
@@ -476,7 +475,6 @@ class HTEController extends Controller
                             return [
                                 'id' => $question->id,
                                 'question' => $question->question,
-                                'access' => $question->access,
                                 'is_active' => (bool) $question->is_active,
                                 'subcategory_id' => $question->subcategory_id,
                                 'created_at' => $question->created_at,
@@ -608,7 +606,6 @@ class HTEController extends Controller
                             return [
                                 'id' => $question->id,
                                 'question' => $question->question,
-                                'access' => $question->access,
                                 'is_active' => (bool) $question->is_active,
                                 'subcategory_id' => $question->subcategory_id,
                                 'created_at' => $question->created_at,

@@ -62,7 +62,7 @@ class AssessmentController extends Controller
         }
 
         // Get all questions from database to build dynamic validation rules
-        $questions = Question::where('access', 'Student')->where('is_active', true)->get();
+        $questions = Question::where('is_active', true)->get();
         $additionalInfos = AdditionalInfo::where('is_active', true)->get();
 
         // Initialize validation rules array
@@ -237,7 +237,7 @@ class AssessmentController extends Controller
             }
 
             $subCategories = SubCategory::with(['questions' => function ($query) {
-                $query->where('access', 'Student')->where('is_active', true);
+                $query->where('is_active', true);
             }])->where('category_id', $languageCategory->id)->get();
 
             $languageProficiencySections = [];
@@ -281,7 +281,7 @@ class AssessmentController extends Controller
             }
 
             $subCategories = SubCategory::with(['questions' => function ($query) {
-                $query->where('access', 'Student')->where('is_active', true);
+                $query->where('is_active', true);
             }])->where('category_id', $technicalCategory->id)->get();
 
             $technicalSkillSections = [];
@@ -325,7 +325,7 @@ class AssessmentController extends Controller
             }
 
             $subCategories = SubCategory::with(['questions' => function ($query) {
-                $query->where('access', 'Student')->where('is_active', true);
+                $query->where('is_active', true);
             }])->where('category_id', $softCategory->id)->get();
 
             $softSkillSections = [];

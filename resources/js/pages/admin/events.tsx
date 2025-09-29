@@ -50,6 +50,9 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
     const [showArchived, setShowArchived] = useState(false);
     const [showExtendDialog, setShowExtendDialog] = useState(false);
     const [extendingDeadline, setExtendingDeadline] = useState<Deadline | null>(null);
+    const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+    const [deletingDeadline, setDeletingDeadline] = useState<Deadline | null>(null);
+    const [showEditDialog, setShowEditDialog] = useState(false);
     const { flash } = usePage().props as any;
 
     const { data, setData, post, put, delete: destroy, processing, errors, reset } = useForm({
@@ -72,6 +75,7 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
                 onSuccess: () => {
                     reset();
                     setShowForm(false);
+                    setShowEditDialog(false);
                     setEditingDeadline(null);
                 },
                 onError: (errors) => {
@@ -99,7 +103,7 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
             start_date: deadline.start_date,
             end_date: deadline.end_date,
         });
-        setShowForm(true);
+        setShowEditDialog(true);
     };
 
     const handleExtend = (deadline: Deadline) => {
@@ -122,15 +126,39 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
         }
     };
 
-    const handleDelete = (id: number) => {
-        if (confirm('Are you sure you want to delete this deadline?')) {
-            destroy(`/admin/deadlines/${id}`);
+    const handleDelete = (deadline: Deadline) => {
+        setDeletingDeadline(deadline);
+        setShowDeleteDialog(true);
+    };
+
+    const handleDeleteConfirm = () => {
+        if (deletingDeadline) {
+            destroy(`/admin/deadlines/${deletingDeadline.id}`, {
+                onSuccess: () => {
+                    setShowDeleteDialog(false);
+                    setDeletingDeadline(null);
+                },
+                onError: (errors) => {
+                    console.error('Delete errors:', errors);
+                },
+            });
         }
+    };
+
+    const handleDeleteCancel = () => {
+        setShowDeleteDialog(false);
+        setDeletingDeadline(null);
     };
 
     const handleCancel = () => {
         reset();
         setShowForm(false);
+        setEditingDeadline(null);
+    };
+
+    const handleEditCancel = () => {
+        reset();
+        setShowEditDialog(false);
         setEditingDeadline(null);
     };
 
@@ -270,19 +298,16 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
                     </div>
                 </div>
 
-                {/* Add/Edit Form */}
+                {/* Add Form */}
                 {showForm && (
                     <Card className="border-border shadow-sm">
                         <CardHeader className="pb-4 space-y-2">
                             <CardTitle className="flex items-center gap-2 text-xl font-semibold text-foreground">
                                 <CalendarIcon className="h-5 w-5" />
-                                {editingDeadline ? 'Edit Deadline' : 'Add New Deadline'}
+                                Add New Deadline
                             </CardTitle>
                             <CardDescription className="text-sm text-muted-foreground">
-                                {editingDeadline
-                                    ? 'Update the deadline information below.'
-                                    : 'Enter the deadline information below.'
-                                }
+                                Enter the deadline information below.
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-6">
@@ -379,7 +404,7 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
                                         disabled={processing}
                                         className="flex-1 sm:flex-none h-9"
                                     >
-                                        {processing ? 'Saving...' : (editingDeadline ? 'Update Deadline' : 'Create Deadline')}
+                                        {processing ? 'Saving...' : 'Create Deadline'}
                                     </Button>
                                     <Button
                                         type="button"
@@ -505,7 +530,7 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
                                                     <Button
                                                         variant="outline"
                                                         size="sm"
-                                                        onClick={() => handleDelete(deadline.id)}
+                                                        onClick={() => handleDelete(deadline)}
                                                         className="flex items-center gap-2 h-8 text-destructive hover:text-destructive hover:bg-destructive/10"
                                                     >
                                                         <TrashIcon className="h-4 w-4" />
@@ -574,6 +599,161 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
                                     Cancel
                                 </Button>
                             </div>
+                        </div>
+                    </DialogContent>
+                </Dialog>
+
+                {/* Edit Dialog */}
+                <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+                    <DialogContent className="sm:max-w-2xl">
+                        <DialogHeader className="space-y-3">
+                            <DialogTitle className="flex items-center gap-2 text-lg font-semibold text-foreground">
+                                <EditIcon className="h-5 w-5" />
+                                Edit Deadline
+                            </DialogTitle>
+                            <DialogDescription className="text-sm text-muted-foreground">
+                                Update the deadline information below.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-6">
+                            <form onSubmit={handleSubmit} className="space-y-6">
+                                <div className="grid grid-cols-1 gap-6">
+                                    <div className="space-y-3">
+                                        <Label htmlFor="edit_title" className="text-sm font-medium text-foreground">
+                                            Title
+                                        </Label>
+                                        <Input
+                                            id="edit_title"
+                                            type="text"
+                                            value={data.title}
+                                            onChange={(e) => setData('title', e.target.value)}
+                                            placeholder="Enter deadline title"
+                                            className={`h-10 ${errors.title ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                                        />
+                                        {errors.title && (
+                                            <p className="text-sm text-destructive">{errors.title}</p>
+                                        )}
+                                    </div>
+
+                                    <div className="space-y-3">
+                                        <Label htmlFor="edit_category" className="text-sm font-medium text-foreground">
+                                            Category
+                                        </Label>
+                                        <Select value={data.category} onValueChange={(value) => setData('category', value)}>
+                                            <SelectTrigger className={`h-10 ${errors.category ? 'border-destructive focus-visible:ring-destructive' : ''}`}>
+                                                <SelectValue placeholder="Select a category" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {categoryOptions.map((option) => (
+                                                    <SelectItem key={option.value} value={option.value}>
+                                                        {option.label}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        {errors.category && (
+                                            <p className="text-sm text-destructive">{errors.category}</p>
+                                        )}
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                                        <div className="space-y-3">
+                                            <Label htmlFor="edit_start_date" className="text-sm font-medium text-foreground">
+                                                Start Date & Time
+                                            </Label>
+                                            <Input
+                                                id="edit_start_date"
+                                                type="datetime-local"
+                                                value={data.start_date}
+                                                onChange={(e) => setData('start_date', e.target.value)}
+                                                className={`h-10 ${errors.start_date ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                                            />
+                                            {errors.start_date && (
+                                                <p className="text-sm text-destructive">{errors.start_date}</p>
+                                            )}
+                                        </div>
+
+                                        <div className="space-y-3">
+                                            <Label htmlFor="edit_end_date" className="text-sm font-medium text-foreground">
+                                                End Date & Time
+                                            </Label>
+                                            <Input
+                                                id="edit_end_date"
+                                                type="datetime-local"
+                                                value={data.end_date}
+                                                onChange={(e) => setData('end_date', e.target.value)}
+                                                className={`h-10 ${errors.end_date ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                                            />
+                                            {errors.end_date && (
+                                                <p className="text-sm text-destructive">{errors.end_date}</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Display general errors */}
+                                {Object.keys(errors).length > 0 && (
+                                    <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-lg">
+                                        <p className="font-medium text-sm">Please fix the following errors:</p>
+                                        <ul className="list-disc list-inside mt-2 text-sm space-y-1">
+                                            {Object.entries(errors).map(([field, error]) => (
+                                                <li key={field}>{field}: {String(error)}</li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
+
+                                <div className="flex flex-col sm:flex-row gap-3">
+                                    <Button
+                                        type="submit"
+                                        disabled={processing}
+                                        className="flex-1 sm:flex-none h-9"
+                                    >
+                                        {processing ? 'Updating...' : 'Update Deadline'}
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={handleEditCancel}
+                                        className="flex-1 sm:flex-none h-9"
+                                    >
+                                        Cancel
+                                    </Button>
+                                </div>
+                            </form>
+                        </div>
+                    </DialogContent>
+                </Dialog>
+
+                {/* Delete Confirmation Dialog */}
+                <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+                    <DialogContent className="sm:max-w-md">
+                        <DialogHeader className="space-y-2">
+                            <DialogTitle className="flex items-center gap-2 text-lg font-semibold text-foreground">
+                                <TrashIcon className="h-5 w-5 text-destructive" />
+                                Delete Deadline
+                            </DialogTitle>
+                            <DialogDescription className="text-sm text-muted-foreground">
+                                Delete "{deletingDeadline?.title}"? This action cannot be undone.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="flex flex-col sm:flex-row gap-3 pt-4">
+                            <Button
+                                variant="destructive"
+                                onClick={handleDeleteConfirm}
+                                disabled={processing}
+                                className="flex-1 sm:flex-none h-9"
+                            >
+                                {processing ? 'Deleting...' : 'Delete'}
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={handleDeleteCancel}
+                                className="flex-1 sm:flex-none h-9"
+                            >
+                                Cancel
+                            </Button>
                         </div>
                     </DialogContent>
                 </Dialog>

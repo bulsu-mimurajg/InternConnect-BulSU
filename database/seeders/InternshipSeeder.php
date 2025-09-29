@@ -17,7 +17,7 @@ class InternshipSeeder extends Seeder
         // Get all HTE records
         $htes = HTE::all();
 
-        // Create specific internship opportunities for each HTE
+        // Create specific internship opportunities for each HTE (reduced to minimum)
         $internshipData = [
             // TechCorp Solutions internships
             [
@@ -33,78 +33,6 @@ class InternshipSeeder extends Seeder
                 'position_title' => 'Data Science Intern',
                 'department' => 'Information Technology',
                 'placement_description' => 'Work with our data science team to analyze large datasets, build predictive models, and create data visualizations. Experience with Python, SQL, and machine learning frameworks is preferred.',
-                'slot_count' => 2,
-                'is_active' => true,
-            ],
-
-            // DataFlow Analytics internships
-            [
-                'hte_id' => $htes->where('company_name', 'DataFlow Analytics')->first()->id,
-                'position_title' => 'Data Analytics Intern',
-                'department' => 'Research & Development',
-                'placement_description' => 'Assist in collecting, cleaning, and analyzing data to provide insights for business decisions. You will work with tools like Tableau, Power BI, and SQL.',
-                'slot_count' => 4,
-                'is_active' => true,
-            ],
-            [
-                'hte_id' => $htes->where('company_name', 'DataFlow Analytics')->first()->id,
-                'position_title' => 'Business Intelligence Intern',
-                'department' => 'Operations',
-                'placement_description' => 'Help develop and maintain dashboards and reports for various business units. Experience with data visualization and business intelligence tools is a plus.',
-                'slot_count' => 2,
-                'is_active' => true,
-            ],
-
-            // GreenTech Industries internships
-            [
-                'hte_id' => $htes->where('company_name', 'GreenTech Industries')->first()->id,
-                'position_title' => 'Environmental Research Intern',
-                'department' => 'Research & Development',
-                'placement_description' => 'Conduct research on sustainable technologies and environmental impact assessments. You will work with our sustainability team to develop eco-friendly solutions.',
-                'slot_count' => 3,
-                'is_active' => true,
-            ],
-            [
-                'hte_id' => $htes->where('company_name', 'GreenTech Industries')->first()->id,
-                'position_title' => 'Marketing Intern',
-                'department' => 'Marketing',
-                'placement_description' => 'Support our marketing team in promoting our green technology solutions. You will help create content, manage social media, and assist with marketing campaigns.',
-                'slot_count' => 2,
-                'is_active' => true,
-            ],
-
-            // Creative Marketing Pro internships
-            [
-                'hte_id' => $htes->where('company_name', 'Creative Marketing Pro')->first()->id,
-                'position_title' => 'Digital Marketing Intern',
-                'department' => 'Marketing',
-                'placement_description' => 'Learn digital marketing strategies including SEO, SEM, social media marketing, and content creation. You will work on real client campaigns and track performance metrics.',
-                'slot_count' => 5,
-                'is_active' => true,
-            ],
-            [
-                'hte_id' => $htes->where('company_name', 'Creative Marketing Pro')->first()->id,
-                'position_title' => 'Graphic Design Intern',
-                'department' => 'Marketing',
-                'placement_description' => 'Create visual content for various marketing campaigns including social media graphics, website assets, and print materials. Proficiency in Adobe Creative Suite is preferred.',
-                'slot_count' => 2,
-                'is_active' => true,
-            ],
-
-            // FinanceFirst Bank internships
-            [
-                'hte_id' => $htes->where('company_name', 'FinanceFirst Bank')->first()->id,
-                'position_title' => 'Finance Intern',
-                'department' => 'Finance',
-                'placement_description' => 'Assist with financial analysis, budgeting, and reporting. You will work with our finance team to analyze financial data and prepare reports for management.',
-                'slot_count' => 3,
-                'is_active' => true,
-            ],
-            [
-                'hte_id' => $htes->where('company_name', 'FinanceFirst Bank')->first()->id,
-                'position_title' => 'Risk Management Intern',
-                'department' => 'Operations',
-                'placement_description' => 'Support our risk management team in identifying, assessing, and monitoring various types of risks. You will help develop risk mitigation strategies.',
                 'slot_count' => 2,
                 'is_active' => true,
             ],
@@ -126,22 +54,12 @@ class InternshipSeeder extends Seeder
                 'slot_count' => 2,
                 'is_active' => true,
             ],
-            [
-                'hte_id' => $htes->where('company_name', 'MariaTech Solutions')->first()->id,
-                'position_title' => 'DevOps Intern',
-                'department' => 'Information Technology',
-                'placement_description' => 'Learn cloud infrastructure, CI/CD pipelines, and deployment automation. You will work with AWS, Docker, and Kubernetes to support our development and deployment processes.',
-                'slot_count' => 2,
-                'is_active' => true,
-            ],
         ];
 
         foreach ($internshipData as $data) {
             Internship::create($data);
         }
 
-        // Create additional random internships using factory
-        // This will create internships for the factory-generated HTEs as well
-        Internship::factory(20)->create();
+        // Note: Removed factory-generated internships as they are not used in any functionality
     }
 }

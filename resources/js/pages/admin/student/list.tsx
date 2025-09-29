@@ -29,6 +29,7 @@ interface Student {
     section: string;
     specialization?: string;
     is_active: boolean;
+    email?: string;
 }
 
 interface UnverifiedUser {
@@ -373,6 +374,7 @@ export default function StudentList({ students, unverifiedUsers = [], archivedSt
                                                 <tr className="border-b">
                                                     <th className="text-left p-3 font-medium text-muted-foreground">Name</th>
                                                     <th className="text-left p-3 font-medium text-muted-foreground">Student ID</th>
+                                                    <th className="text-left p-3 font-medium text-muted-foreground">Email</th>
                                                     <th className="text-left p-3 font-medium text-muted-foreground">Section</th>
                                                     <th className="text-left p-3 font-medium text-muted-foreground">Specialization</th>
                                                     <th className="text-right p-3 font-medium text-muted-foreground">Actions</th>
@@ -395,6 +397,9 @@ export default function StudentList({ students, unverifiedUsers = [], archivedSt
                                                         </td>
                                                         <td className="p-3 font-mono text-sm">
                                                             {stud.student_number}
+                                                        </td>
+                                                        <td className="p-3 text-sm text-muted-foreground">
+                                                            {stud.email || '-'}
                                                         </td>
                                                         <td className="p-3 text-sm">
                                                             {stud.section}
@@ -664,6 +669,7 @@ export default function StudentList({ students, unverifiedUsers = [], archivedSt
                                                 <th className="text-center p-3 font-medium text-muted-foreground w-16">#</th>
                                                 <th className="text-left p-3 font-medium text-muted-foreground">Name</th>
                                                 <th className="text-left p-3 font-medium text-muted-foreground">Student ID</th>
+                                                <th className="text-left p-3 font-medium text-muted-foreground">Email</th>
                                                 <th className="text-left p-3 font-medium text-muted-foreground">Section</th>
                                                 <th className="text-left p-3 font-medium text-muted-foreground">Specialization</th>
                                                 <th className="text-right p-3 font-medium text-muted-foreground">Actions</th>
@@ -689,6 +695,9 @@ export default function StudentList({ students, unverifiedUsers = [], archivedSt
                                                     </td>
                                                     <td className="p-3 font-mono text-sm">
                                                         {stud.student_number}
+                                                    </td>
+                                                    <td className="p-3 text-sm text-muted-foreground">
+                                                        {stud.email || '-'}
                                                     </td>
                                                     <td className="p-3 text-sm">
                                                         {stud.section}

@@ -18,7 +18,7 @@ class EndorsementPlacementSeeder extends Seeder
      */
     public function run(): void
     {
-        $this->command->info('Creating endorsements and placements for testing...');
+        $this->command->info('Creating 5 test students with specific statuses for different views...');
 
         // Get Maria's HTE and her internships specifically
         $mariaUser = User::where('username', 'maria')->first();
@@ -35,199 +35,173 @@ class EndorsementPlacementSeeder extends Seeder
             return;
         }
 
-        // Get all sections to ensure we have enough students for at least 3 per internship
+        // Get sections
         $sections = Section::all();
         if ($sections->isEmpty()) {
             $this->command->warn('No sections found. Please run SectionSeeder first.');
             return;
         }
 
-        // Get students from all sections (try both is_submit true and students with scores)
-        $students = Student::whereHas('user.academeAccounts', function ($query) use ($sections) {
-            $query->whereIn('section_id', $sections->pluck('section_id'));
-        })->where(function ($query) {
-            $query->where('is_submit', true)
-                  ->orWhereHas('scores'); // Include students who have assessment scores
-        })->get();
-
-        if ($students->isEmpty()) {
-            $this->command->warn("No students found in any sections with submitted assessments.");
+        // Get subcategories for assessment scores
+        $subCategories = \App\Models\SubCategory::take(5)->get();
+        if ($subCategories->isEmpty()) {
+            $this->command->warn('No subcategories found. Please run CategorySeeder first.');
             return;
         }
 
-        $this->command->info("Found {$students->count()} students across " . $sections->count() . " sections");
         $this->command->info("Found {$mariaInternships->count()} active internships for MariaTech Solutions");
 
-        // If we don't have enough students for 3 per internship, create additional students
-        $studentsNeeded = $mariaInternships->count() * 3;
-        if ($students->count() < $studentsNeeded) {
-            $this->command->info("Need {$studentsNeeded} students but only have {$students->count()}. Creating additional students...");
-            
-            // Create additional students
-            $additionalStudentsNeeded = $studentsNeeded - $students->count();
-            $additionalStudents = [];
-            
-            for ($i = 0; $i < $additionalStudentsNeeded; $i++) {
-                $studentNumber = $i + 1;
-                $timestamp = time();
-                $uniqueId = $timestamp + $i;
-                
-                // Generate student number in format '2022100000' (year + sequential number)
-                $studentNumberFormatted = '2022' . str_pad($studentNumber, 6, '0', STR_PAD_LEFT);
-                
-                $user = \App\Models\User::create([
-                    'username' => "student{$studentNumberFormatted}",
-                    'email' => "student{$studentNumberFormatted}@example.com",
-                    'password' => bcrypt('password'),
-                    'status' => 'verified',
-                    'email_verified_at' => now(),
-                ]);
-                
-                // Assign student role using Spatie permissions
-                $user->assignRole('student');
-                
-                $student =                 Student::create([
-                    'user_id' => $user->id,
-                    'student_number' => $studentNumberFormatted,
-                    'first_name' => "Student{$studentNumber}",
-                    'last_name' => "LastName{$studentNumber}",
-                    'middle_name' => "Middle{$studentNumber}",
-                    'phone' => "0912345678{$studentNumber}",
-                    'specialization' => "Computer Science",
-                    'section_id' => $sections->random()->section_id,
-                    'is_submit' => true,
-                    'is_placed' => false,
-                    'is_active' => true,
-                ]);
-                
-                // Create some sample assessment scores for the student
-                $subCategories = \App\Models\SubCategory::take(5)->get();
-                foreach ($subCategories as $subCategory) {
-                    \App\Models\StudentScore::create([
-                        'student_id' => $student->id,
-                        'sub_category_id' => $subCategory->id,
-                        'score' => rand(70, 95),
-                    ]);
-                }
-                
-                $additionalStudents[] = $student;
-                $this->command->info("  ✓ Created additional student: {$student->first_name} {$student->last_name}");
-            }
-            
-            // Merge additional students with existing ones
-            $students = $students->merge(collect($additionalStudents));
-            $this->command->info("Now have {$students->count()} students total.");
-        }
+        // Create exactly 5 students with specific statuses
+        $testStudents = [
+            // Student 1: Basic student for list.tsx (no special status)
+            [
+                'student_number' => '2022-0001',
+                'first_name' => 'Alice',
+                'last_name' => 'Johnson',
+                'middle_name' => 'A',
+                'specialization' => 'BA',
+                'status' => 'basic', // Just a regular student
+            ],
+            // Student 2: Matched student for matched.tsx (has match, not endorsed)
+            [
+                'student_number' => '2022-0002',
+                'first_name' => 'Bob',
+                'last_name' => 'Smith',
+                'middle_name' => 'B',
+                'specialization' => 'WMAD',
+                'status' => 'matched', // Has match but not endorsed
+            ],
+            // Student 3: Matched student for matched.tsx (has match, not endorsed)
+            [
+                'student_number' => '2022-0003',
+                'first_name' => 'Carol',
+                'last_name' => 'Davis',
+                'middle_name' => 'C',
+                'specialization' => 'SM',
+                'status' => 'matched', // Has match but not endorsed
+            ],
+            // Student 4: Endorsed student for endorsed.tsx (endorsed, pending HTE approval)
+            [
+                'student_number' => '2022-0004',
+                'first_name' => 'David',
+                'last_name' => 'Wilson',
+                'middle_name' => 'D',
+                'specialization' => 'WMAD',
+                'status' => 'endorsed', // Endorsed but pending HTE approval
+            ],
+            // Student 5: Placed student for placed.tsx (approved placement)
+            [
+                'student_number' => '2022-0005',
+                'first_name' => 'Eva',
+                'last_name' => 'Brown',
+                'middle_name' => 'E',
+                'specialization' => 'BA',
+                'status' => 'placed', // Already placed and approved
+            ],
+        ];
 
-        // Create endorsements and placements
+        $createdStudents = [];
         $endorsementCount = 0;
         $placementCount = 0;
 
-        // Ensure at least 3 endorsed students per internship (not placed)
-        $studentsPerInternship = 3;
-        $totalEndorsementsNeeded = $mariaInternships->count() * $studentsPerInternship;
-        
-        // If we don't have enough students, use what we have but ensure at least 1 per internship
-        if ($students->count() < $totalEndorsementsNeeded) {
-            $studentsPerInternship = max(1, intval($students->count() / $mariaInternships->count()));
-            $this->command->info("Note: Limited students available. Creating {$studentsPerInternship} endorsements per internship.");
+        foreach ($testStudents as $index => $studentData) {
+            // Create user account
+            $user = \App\Models\User::create([
+                'username' => strtolower($studentData['first_name'] . '.' . $studentData['last_name']),
+                'email' => strtolower($studentData['first_name'] . '.' . $studentData['last_name']) . '@example.com',
+                'password' => bcrypt('password'),
+                'status' => 'verified',
+                'email_verified_at' => now(),
+            ]);
+            
+            // Assign student role
+            $user->assignRole('student');
+            
+            // Create student record
+            $student = Student::create([
+                'user_id' => $user->id,
+                'student_number' => $studentData['student_number'],
+                'first_name' => $studentData['first_name'],
+                'last_name' => $studentData['last_name'],
+                'middle_name' => $studentData['middle_name'],
+                'phone' => '0912345678' . ($index + 1),
+                'specialization' => $studentData['specialization'],
+                'section_id' => $sections->random()->section_id,
+                'is_submit' => true,
+                'is_placed' => $studentData['status'] === 'placed',
+                'is_active' => true,
+            ]);
+
+            // Create academe account
+            \App\Models\AcademeAccount::create([
+                'user_id' => $user->id,
+                'section_id' => $student->section_id,
+            ]);
+
+            // Create assessment scores for all students
+            foreach ($subCategories as $subCategory) {
+                \App\Models\StudentScore::create([
+                    'student_id' => $student->id,
+                    'sub_category_id' => $subCategory->id,
+                    'score' => rand(75, 95),
+                ]);
+            }
+
+            $createdStudents[] = $student;
+            $this->command->info("  ✓ Created student: {$student->first_name} {$student->last_name} ({$studentData['status']})");
         }
 
-        $studentIndex = 0;
-        
-        // Create endorsements for each internship
-        foreach ($mariaInternships as $internshipIndex => $internship) {
-            $this->command->info("Processing internship: {$internship->position_title}");
+        // Use Maria's first internship for all matches
+        $mariaInternship = $mariaInternships->first();
+
+        // Create matches and endorsements/placements based on status
+        foreach ($createdStudents as $index => $student) {
+            $studentData = $testStudents[$index];
             
-            for ($i = 0; $i < $studentsPerInternship && $studentIndex < $students->count(); $i++) {
-                $student = $students[$studentIndex];
-                $studentIndex++;
-                
-                // Create student match first (if not exists)
-                $studentMatch = StudentMatch::firstOrCreate(
-                    [
+            if (in_array($studentData['status'], ['matched', 'endorsed', 'placed'])) {
+                // Create student match with Maria's internship
+                $studentMatch = StudentMatch::create([
+                    'student_id' => $student->id,
+                    'internship_id' => $mariaInternship->id,
+                    'rank' => $index + 1,
+                    'compatibility_score' => rand(80, 95),
+                    'endorsement_status' => in_array($studentData['status'], ['endorsed', 'placed']) ? 'endorsed' : 'pending',
+                    'placement_status' => $studentData['status'] === 'placed' ? 'approved' : 'pending'
+                ]);
+
+                if (in_array($studentData['status'], ['endorsed', 'placed'])) {
+                    // Create endorsement with Maria's internship
+                    Endorsement::create([
                         'student_id' => $student->id,
-                        'internship_id' => $internship->id
-                    ],
-                    [
-                        'rank' => ($internshipIndex * $studentsPerInternship) + $i + 1,
-                        'compatibility_score' => rand(70, 95),
-                        'endorsement_status' => 'pending',
-                        'placement_status' => 'pending'
-                    ]
-                );
-
-                // Only endorse half of the students (create endorsement records for half)
-                $shouldEndorse = $studentIndex <= ($totalEndorsementsNeeded / 2);
-                
-                if ($shouldEndorse) {
-                    // Create endorsement (these will be NOT placed, so HTE can review them)
-                    $endorsement = Endorsement::firstOrCreate(
-                        [
-                            'student_id' => $student->id,
-                            'internship_id' => $internship->id
-                        ],
-                        [
-                            'status' => 'endorsed',
-                            'compatibility_score' => $studentMatch->compatibility_score,
-                            'notes' => "Excellent candidate for {$internship->position_title} position",
-                            'endorsement_date' => now()->subDays(rand(1, 10))
-                        ]
-                    );
-
-                    // Update student match endorsement status
-                    $studentMatch->update(['endorsement_status' => 'endorsed']);
+                        'internship_id' => $mariaInternship->id,
+                        'status' => 'endorsed',
+                        'compatibility_score' => $studentMatch->compatibility_score,
+                        'notes' => "Excellent candidate for {$mariaInternship->position_title} position at MariaTech Solutions",
+                        'endorsement_date' => now()->subDays(rand(1, 5))
+                    ]);
                     $endorsementCount++;
+                }
 
-                    $statusText = $endorsement->wasRecentlyCreated ? 'endorsement' : 'existing endorsement';
-                    $this->command->info("  ✓ Created {$statusText} for {$student->first_name} {$student->last_name} -> {$internship->hte->company_name} ({$internship->position_title})");
-                } else {
-                    // Keep as matched (pending endorsement) - no endorsement record created
-                    $this->command->info("  ✓ Created match (pending endorsement) for {$student->first_name} {$student->last_name} -> {$internship->hte->company_name} ({$internship->position_title})");
+                if ($studentData['status'] === 'placed') {
+                    // Create placement with Maria's internship
+                    StudentPlacement::create([
+                        'student_id' => $student->id,
+                        'internship_id' => $mariaInternship->id,
+                        'status' => 'approved',
+                        'compatibility_score' => $studentMatch->compatibility_score,
+                        'placement_date' => now()->subDays(rand(1, 3))
+                    ]);
+                    $placementCount++;
                 }
             }
         }
 
-        // Create a few placements to show some students are already placed (separate from endorsements)
-        $placementStudents = $students->slice(0, min(2, $students->count()));
-        foreach ($placementStudents as $index => $student) {
-            $internship = $mariaInternships->get($index % $mariaInternships->count());
-            
-            // Create student match for placement
-            $studentMatch = StudentMatch::firstOrCreate(
-                [
-                    'student_id' => $student->id,
-                    'internship_id' => $internship->id
-                ],
-                [
-                    'rank' => 999 + $index, // High rank to separate from endorsements
-                    'compatibility_score' => rand(70, 95),
-                    'endorsement_status' => 'endorsed',
-                    'placement_status' => 'pending'
-                ]
-            );
-
-            // Create placement (this student is already placed)
-            $placement = StudentPlacement::firstOrCreate(
-                [
-                    'student_id' => $student->id,
-                    'internship_id' => $internship->id
-                ],
-                [
-                    'status' => 'approved',
-                    'compatibility_score' => $studentMatch->compatibility_score,
-                    'placement_date' => now()->subDays(rand(1, 5))
-                ]
-            );
-
-            // Update student match placement status
-            $studentMatch->update(['placement_status' => 'approved']);
-            $placementCount++;
-
-            $this->command->info("  ✓ Created placement for {$student->first_name} {$student->last_name} -> {$internship->hte->company_name}");
-        }
-
-        $this->command->info("Successfully created {$endorsementCount} endorsements and {$placementCount} placements!");
-        $this->command->info("These will now appear in the HTE endorsement table for MariaTech Solutions.");
+        $this->command->info("Successfully created 5 test students for MariaTech Solutions:");
+        $this->command->info("  • 1 basic student (for list.tsx)");
+        $this->command->info("  • 2 matched students (for matched.tsx)");
+        $this->command->info("  • 1 endorsed student (for endorsed.tsx)");
+        $this->command->info("  • 1 placed student (for placed.tsx)");
+        $this->command->info("All students are associated with Maria's HTE (MariaTech Solutions)");
+        $this->command->info("Created {$endorsementCount} endorsements and {$placementCount} placements!");
     }
 }

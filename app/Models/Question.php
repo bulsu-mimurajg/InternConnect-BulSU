@@ -15,7 +15,6 @@ class Question extends Model
     protected $fillable = [
         'subcategory_id',
         'question',
-        'access',
         'is_active',
     ];
 

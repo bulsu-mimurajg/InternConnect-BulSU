@@ -30,46 +30,9 @@ class StudentSeeder extends Seeder
             return;
         }
 
-        $students = [
-            [
-                'student_number' => '2021-0001',
-                'first_name' => 'Juan',
-                'middle_name' => 'Santos',
-                'last_name' => 'Dela Cruz',
-                'phone' => '09123456789',
-                'section_name' => 'BSIT-4A',
-                'specialization' => 'Programming',
-            ],
-            [
-                'student_number' => '2021-0002',
-                'first_name' => 'Maria',
-                'middle_name' => 'Garcia',
-                'last_name' => 'Santos',
-                'phone' => '09123456790',
-                'section_name' => 'BSIT-4B',
-                'specialization' => 'Networking',
-            ],
-            [
-                'student_number' => '2021-0003',
-                'first_name' => 'Pedro',
-                'middle_name' => 'Lopez',
-                'last_name' => 'Gonzales',
-                'phone' => '09123456791',
-                'section_name' => 'BSIT-4C',
-                'specialization' => 'Database',
-            ],
-            [
-                'student_number' => '2021-9999',
-                'first_name' => 'John',
-                'middle_name' => 'Michael',
-                'last_name' => 'Smith',
-                'phone' => '09123456792',
-                'section_name' => 'BSIT-4A',
-                'specialization' => 'Web Development',
-                'username' => 'stud',
-                'password' => 'password',
-            ],
-        ];
+        // Note: Removed unused students as they are not referenced in any application functionality
+        // Only clairo and juna from DatabaseSeeder are actually used
+        $students = [];
 
         $createdCount = 0;
         $skippedCount = 0;

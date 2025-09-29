@@ -31,7 +31,7 @@ class StudentController extends Controller
         $sectionFilter = $request->get('section', 'all');
         $statusFilter = $request->get('status', 'all');
         // Build students query with filters
-        $studentsQuery = Student::with('section')
+        $studentsQuery = Student::with(['section', 'user'])
             ->select([
                 'id',
                 'student_number',
@@ -40,7 +40,8 @@ class StudentController extends Controller
                 'last_name',
                 'section_id',
                 'specialization',
-                'is_active'
+                'is_active',
+                'user_id'
             ]);
 
         // Apply status filter
@@ -84,6 +85,7 @@ class StudentController extends Controller
                 'section' => $student->section->section_name ?? '',
                 'specialization' => $student->specialization,
                 'is_active' => $student->is_active,
+                'email' => $student->user->email ?? '',
             ];
         });
 
@@ -110,7 +112,7 @@ class StudentController extends Controller
         });
 
         // Get archived students for the Show Archived functionality
-        $archivedStudents = Student::with('section')
+        $archivedStudents = Student::with(['section', 'user'])
             ->select([
                 'id',
                 'student_number',
@@ -119,7 +121,8 @@ class StudentController extends Controller
                 'last_name',
                 'section_id',
                 'specialization',
-                'is_active'
+                'is_active',
+                'user_id'
             ])
             ->where('is_active', false)
             ->orderBy('last_name')
@@ -137,6 +140,7 @@ class StudentController extends Controller
                 'section' => $student->section->section_name ?? '',
                 'specialization' => $student->specialization,
                 'is_active' => $student->is_active,
+                'email' => $student->user->email ?? '',
             ];
         });
 
@@ -251,7 +255,7 @@ class StudentController extends Controller
         Log::info('Current user: ' . Auth::user()->email ?? 'No user');
         Log::info('User roles: ' . Auth::user()->getRoleNames()->implode(', ') ?? 'No roles');
         
-        $student->load('section');
+        $student->load(['section', 'user']);
         
         // Get all available sections for the dropdown
         $sections = \App\Models\Section::where('status', 'active')
@@ -267,6 +271,7 @@ class StudentController extends Controller
             'section_id' => $student->section_id,
             'section' => $student->section->section_name ?? '',
             'specialization' => $student->specialization,
+            'email' => $student->user->email ?? '',
         ];
         
         return Inertia::render('admin/student/edit', [
@@ -290,12 +295,26 @@ class StudentController extends Controller
             'last_name' => 'required|string|max:50',
             'student_number' => 'required|string|max:20',
             'section_id' => 'required|integer|exists:sections,section_id',
-            'specialization' => 'required|string|max:100',
+            'specialization' => 'required|string|in:BA,WMAD,SM',
+            'email' => 'required|email|max:255',
         ]);
 
         Log::info('Validated data: ' . json_encode($validated));
 
-        $student->update($validated);
+        // Update student data
+        $student->update([
+            'first_name' => $validated['first_name'],
+            'middle_name' => $validated['middle_name'],
+            'last_name' => $validated['last_name'],
+            'student_number' => $validated['student_number'],
+            'section_id' => $validated['section_id'],
+            'specialization' => $validated['specialization'],
+        ]);
+
+        // Update user email if provided
+        if ($student->user && $validated['email']) {
+            $student->user->update(['email' => $validated['email']]);
+        }
 
         return redirect()->route('student-list')->with('success', 'Student updated successfully');
     }

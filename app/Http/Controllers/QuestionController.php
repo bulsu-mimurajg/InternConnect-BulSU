@@ -99,7 +99,6 @@ class QuestionController extends Controller
         Question::create([
             'question' => $request->question,
             'subcategory_id' => $request->subcategory_id,
-            'access' => 'Student', // Always set to Student
             'is_active' => true,
         ]);
 
@@ -119,7 +118,6 @@ class QuestionController extends Controller
         $question->update([
             'question' => $request->question,
             'subcategory_id' => $request->subcategory_id,
-            'access' => 'Student', // Always set to Student
         ]);
 
         return redirect()->back()->with('success', 'Question updated successfully!');

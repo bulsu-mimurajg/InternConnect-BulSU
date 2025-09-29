@@ -118,7 +118,6 @@ class CategorySeeder extends Seeder
                     Question::firstOrCreate([
                         'question' => $questionText,
                         'subcategory_id' => $subCategory->id,
-                        'access' => 'Student', // Default access
                         'is_active' => true
                     ]);
                 }

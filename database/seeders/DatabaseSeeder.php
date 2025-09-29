@@ -26,7 +26,7 @@ class DatabaseSeeder extends Seeder
 
         User::factory()->hte()->create([
             'username' => 'maria',
-            'email' => 'maria@example.com',
+            'email' => 'mimuraschool@gmail.com',
             'status' => 'verified',
             'password' => bcrypt('password'),
         ]);
@@ -40,7 +40,7 @@ class DatabaseSeeder extends Seeder
 
         $clairoUser = User::factory()->student()->create([
             'username' => 'clairo',
-            'email' => 'clairo@example.com',
+            'email' => 'lesutemp@gmail.com',
             'status' => 'verified',
             'password' => bcrypt('password'),
         ]);
@@ -69,7 +69,7 @@ class DatabaseSeeder extends Seeder
                 'last_name' => 'Student',
                 'phone' => '09123456792',
                 'section_id' => $section->section_id,
-                'specialization' => 'Programming',
+                'specialization' => 'WMAD',
                 'is_submit' => true, // Set to true so it appears in reports
                 'is_placed' => false,
                 'is_active' => true,
@@ -123,7 +123,7 @@ class DatabaseSeeder extends Seeder
         $this->call(EndorsementPlacementSeeder::class);
         $this->call(DeadlineSeeder::class);
         $this->call(AdditionalInfoSeeder::class);
-        
+
         // Ensure all endorsements have corresponding notifications
         $this->call(NotificationSeeder::class);
     }
