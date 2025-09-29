@@ -1989,9 +1989,9 @@ class AdminController extends Controller
             $notificationService = new NotificationService();
             $notificationService->notifyNewDeadline($deadline);
 
-            // Trigger centralized deadline notification check for all users
+            // Queue deadline notifications for all users (non-blocking)
             $deadlineService = new CentralizedDeadlineNotificationService();
-            $deadlineService->checkAndCreateDeadlineNotifications();
+            $deadlineService->queueDeadlineNotifications();
 
             // Log the activity
             activity()
@@ -2051,9 +2051,9 @@ class AdminController extends Controller
                 'end_date' => $request->end_date,
             ]);
 
-            // Trigger centralized deadline notification check after updating deadline
+            // Queue deadline notifications after updating deadline (non-blocking)
             $deadlineService = new CentralizedDeadlineNotificationService();
-            $deadlineService->checkAndCreateDeadlineNotifications();
+            $deadlineService->queueDeadlineNotifications();
 
             return redirect()->route('admin.events')->with('success', 'Deadline updated successfully.');
         } catch (\Exception $e) {
@@ -2079,9 +2079,9 @@ class AdminController extends Controller
                 'end_date' => $newEndDate,
             ]);
 
-            // Trigger centralized deadline notification check after extending deadline
+            // Queue deadline notifications after extending deadline (non-blocking)
             $deadlineService = new CentralizedDeadlineNotificationService();
-            $deadlineService->checkAndCreateDeadlineNotifications();
+            $deadlineService->queueDeadlineNotifications();
 
             return redirect()->route('admin.events')->with('success', "Deadline extended by 1 month successfully.");
         } catch (\Exception $e) {

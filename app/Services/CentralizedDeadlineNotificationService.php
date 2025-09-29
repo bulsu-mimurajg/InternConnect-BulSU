@@ -6,6 +6,8 @@ use App\Models\Deadline;
 use App\Models\Notification;
 use App\Models\User;
 use App\Notifications\UnifiedDeadlineNotification;
+use App\Jobs\ProcessDeadlineNotificationJob;
+use App\Jobs\ProcessAllDeadlineNotificationsJob;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -62,6 +64,71 @@ class CentralizedDeadlineNotificationService
         $this->cleanupOldDeadlineNotifications();
 
         Log::info('Centralized deadline notification check completed');
+    }
+
+    /**
+     * Queue deadline notifications for all users (non-blocking)
+     */
+    public function queueDeadlineNotifications(): void
+    {
+        Log::info('Queueing deadline notifications for batch processing');
+
+        // Dispatch the batch job to process all deadline notifications
+        ProcessAllDeadlineNotificationsJob::dispatch()
+            ->onQueue('deadline-notifications')
+            ->delay(now()->addSeconds(5)); // Small delay to ensure database consistency
+
+        Log::info('Deadline notifications queued successfully');
+    }
+
+    /**
+     * Queue deadline notifications for a specific user (non-blocking)
+     */
+    public function queueDeadlineNotificationsForUser(User $user): void
+    {
+        Log::info('Queueing deadline notifications for specific user', [
+            'user_id' => $user->id,
+            'user_email' => $user->email,
+        ]);
+
+        // Get deadlines relevant to user's roles
+        $userRoles = $user->getRoleNames()->toArray();
+        $relevantCategories = [];
+
+        foreach ($userRoles as $role) {
+            if (isset(self::ROLE_DEADLINE_MAPPING[$role])) {
+                $relevantCategories = array_merge($relevantCategories, self::ROLE_DEADLINE_MAPPING[$role]);
+            }
+        }
+
+        $relevantCategories = array_unique($relevantCategories);
+
+        if (empty($relevantCategories)) {
+            Log::info('No relevant deadline categories found for user', ['user_id' => $user->id]);
+            return;
+        }
+
+        // Get relevant deadlines
+        $deadlines = Deadline::whereIn('category', $relevantCategories)
+            ->where('status', 'active')
+            ->where('end_date', '>', Carbon::now())
+            ->get();
+
+        // Queue individual jobs for each deadline
+        foreach ($deadlines as $deadline) {
+            foreach ($userRoles as $role) {
+                if (in_array($deadline->category, self::ROLE_DEADLINE_MAPPING[$role] ?? [])) {
+                    ProcessDeadlineNotificationJob::dispatch($deadline->id, $user->id, $role)
+                        ->onQueue('deadline-notifications')
+                        ->delay(now()->addSeconds(rand(1, 10))); // Random delay to spread load
+                }
+            }
+        }
+
+        Log::info('User deadline notifications queued successfully', [
+            'user_id' => $user->id,
+            'deadlines_count' => $deadlines->count(),
+        ]);
     }
 
     /**

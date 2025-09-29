@@ -16,14 +16,15 @@ class ProcessDeadlineNotifications extends Command
     protected $signature = 'deadlines:process-notifications 
                             {--user-id= : Process notifications for a specific user ID}
                             {--role= : Process notifications for a specific role}
-                            {--cleanup : Only cleanup old notifications}';
+                            {--cleanup : Only cleanup old notifications}
+                            {--queue : Queue notifications instead of processing immediately}';
 
     /**
      * The console command description.
      *
      * @var string
      */
-    protected $description = 'Process deadline notifications for all users or specific users/roles';
+    protected $description = 'Process deadline notifications for all users or specific users/roles (supports queuing)';
 
     /**
      * Execute the console command.
@@ -42,12 +43,16 @@ class ProcessDeadlineNotifications extends Command
                 return;
             }
 
-            if ($userId = $this->option('user-id')) {
-                $this->processForUser($service, $userId);
-            } elseif ($role = $this->option('role')) {
-                $this->processForRole($service, $role);
+            if ($this->option('queue')) {
+                $this->queueNotifications($service);
             } else {
-                $this->processForAll($service);
+                if ($userId = $this->option('user-id')) {
+                    $this->processForUser($service, $userId);
+                } elseif ($role = $this->option('role')) {
+                    $this->processForRole($service, $role);
+                } else {
+                    $this->processForAll($service);
+                }
             }
 
             $this->info('Deadline notification processing completed successfully.');
@@ -116,5 +121,16 @@ class ProcessDeadlineNotifications extends Command
         $bar->finish();
         $this->newLine();
         $this->info("Processed notifications for {$users->count()} users with role: {$role}");
+    }
+
+    /**
+     * Queue notifications for processing
+     */
+    private function queueNotifications(CentralizedDeadlineNotificationService $service): void
+    {
+        $this->info('Queueing deadline notifications for background processing...');
+        $service->queueDeadlineNotifications();
+        $this->info('Deadline notifications queued successfully. They will be processed by the queue worker.');
+        $this->warn('Make sure your queue worker is running: php artisan queue:work');
     }
 }
