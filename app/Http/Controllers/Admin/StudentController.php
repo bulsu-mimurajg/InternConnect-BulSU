@@ -30,6 +30,7 @@ class StudentController extends Controller
         $search = $request->get('search', '');
         $sectionFilter = $request->get('section', 'all');
         $statusFilter = $request->get('status', 'all');
+        $assessmentFilter = $request->get('assessment', 'all');
         // Build students query with filters
         $studentsQuery = Student::with(['section', 'user'])
             ->select([
@@ -41,6 +42,7 @@ class StudentController extends Controller
                 'section_id',
                 'specialization',
                 'is_active',
+                'is_submit',
                 'user_id'
             ]);
 
@@ -70,6 +72,13 @@ class StudentController extends Controller
             });
         }
 
+        // Apply assessment filter
+        if ($assessmentFilter === 'submitted') {
+            $studentsQuery->where('is_submit', true);
+        } elseif ($assessmentFilter === 'pending') {
+            $studentsQuery->where('is_submit', false);
+        }
+
         $students = $studentsQuery->orderBy('last_name')
             ->orderBy('first_name')
             ->get();
@@ -85,6 +94,7 @@ class StudentController extends Controller
                 'section' => $student->section->section_name ?? '',
                 'specialization' => $student->specialization,
                 'is_active' => $student->is_active,
+                'is_submit' => $student->is_submit,
                 'email' => $student->user->email ?? '',
             ];
         });
@@ -122,6 +132,7 @@ class StudentController extends Controller
                 'section_id',
                 'specialization',
                 'is_active',
+                'is_submit',
                 'user_id'
             ])
             ->where('is_active', false)
@@ -140,6 +151,7 @@ class StudentController extends Controller
                 'section' => $student->section->section_name ?? '',
                 'specialization' => $student->specialization,
                 'is_active' => $student->is_active,
+                'is_submit' => $student->is_submit,
                 'email' => $student->user->email ?? '',
             ];
         });
@@ -188,6 +200,7 @@ class StudentController extends Controller
                 'search' => $search,
                 'section' => $sectionFilter,
                 'status' => $statusFilter,
+                'assessment' => $assessmentFilter,
             ]
         ]);
     }

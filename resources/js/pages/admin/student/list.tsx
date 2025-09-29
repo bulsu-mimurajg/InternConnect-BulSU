@@ -29,6 +29,7 @@ interface Student {
     section: string;
     specialization?: string;
     is_active: boolean;
+    is_submit: boolean;
     email?: string;
 }
 
@@ -56,6 +57,7 @@ interface Props {
         search?: string;
         section?: string;
         status?: string;
+        assessment?: string;
     };
 }
 
@@ -67,6 +69,7 @@ export default function StudentList({ students, unverifiedUsers = [], archivedSt
         search: filters.search || '',
         section: filters.section || 'all',
         status: filters.status || 'all',
+        assessment: filters.assessment || 'all',
     });
 
     // Use section options from backend
@@ -115,7 +118,7 @@ export default function StudentList({ students, unverifiedUsers = [], archivedSt
         }
     };
 
-    const handleFilterChange = (filterType: 'search' | 'section' | 'status', value: string) => {
+    const handleFilterChange = (filterType: 'search' | 'section' | 'status' | 'assessment', value: string) => {
         const newFilters = { ...localFilters, [filterType]: value };
         setLocalFilters(newFilters);
 
@@ -130,6 +133,9 @@ export default function StudentList({ students, unverifiedUsers = [], archivedSt
         if (newFilters.status && newFilters.status !== 'all') {
             params.status = newFilters.status;
         }
+        if (newFilters.assessment && newFilters.assessment !== 'all') {
+            params.assessment = newFilters.assessment;
+        }
 
         router.get('/student/list', params, {
             preserveState: true,
@@ -138,7 +144,7 @@ export default function StudentList({ students, unverifiedUsers = [], archivedSt
     };
 
     const clearFilters = () => {
-        setLocalFilters({ search: '', section: 'all', status: 'all' });
+        setLocalFilters({ search: '', section: 'all', status: 'all', assessment: 'all' });
         
         router.get('/student/list', {}, {
             preserveState: true,
@@ -154,7 +160,10 @@ export default function StudentList({ students, unverifiedUsers = [], archivedSt
         const matchesStatus = localFilters.status === 'all' || 
                              (localFilters.status === 'active' && student.is_active) ||
                              (localFilters.status === 'inactive' && !student.is_active);
-        return matchesSearch && matchesSection && matchesStatus;
+        const matchesAssessment = localFilters.assessment === 'all' || 
+                                 (localFilters.assessment === 'submitted' && student.is_submit) ||
+                                 (localFilters.assessment === 'pending' && !student.is_submit);
+        return matchesSearch && matchesSection && matchesStatus && matchesAssessment;
     });
 
     const filteredUnverifiedUsers = unverifiedUsers.filter(user => {
@@ -162,7 +171,9 @@ export default function StudentList({ students, unverifiedUsers = [], archivedSt
                             user.email.toLowerCase().includes(localFilters.search.toLowerCase());
         const matchesSection = localFilters.section === 'all' || user.section === localFilters.section;
         const matchesStatus = localFilters.status === 'all' || user.status === localFilters.status;
-        return matchesSearch && matchesSection && matchesStatus;
+        // Unverified users don't have assessment data, so only show them if assessment filter is 'all'
+        const matchesAssessment = localFilters.assessment === 'all';
+        return matchesSearch && matchesSection && matchesStatus && matchesAssessment;
     });
 
     const filteredArchivedStudents = archivedStudents.filter(student => {
@@ -170,7 +181,10 @@ export default function StudentList({ students, unverifiedUsers = [], archivedSt
                             student.last_name.toLowerCase().includes(localFilters.search.toLowerCase()) ||
                             student.student_number.toLowerCase().includes(localFilters.search.toLowerCase());
         const matchesSection = localFilters.section === 'all' || student.section === localFilters.section;
-        return matchesSearch && matchesSection;
+        const matchesAssessment = localFilters.assessment === 'all' || 
+                                 (localFilters.assessment === 'submitted' && student.is_submit) ||
+                                 (localFilters.assessment === 'pending' && !student.is_submit);
+        return matchesSearch && matchesSection && matchesAssessment;
     });
 
     const filteredArchivedUnverifiedUsers = archivedUnverifiedUsers.filter(user => {
@@ -178,7 +192,9 @@ export default function StudentList({ students, unverifiedUsers = [], archivedSt
                             user.email.toLowerCase().includes(localFilters.search.toLowerCase());
         const matchesSection = localFilters.section === 'all' || user.section === localFilters.section;
         const matchesStatus = localFilters.status === 'all' || user.status === localFilters.status;
-        return matchesSearch && matchesSection && matchesStatus;
+        // Archived unverified users don't have assessment data, so only show them if assessment filter is 'all'
+        const matchesAssessment = localFilters.assessment === 'all';
+        return matchesSearch && matchesSection && matchesStatus && matchesAssessment;
     });
 
     // Pagination hooks for each data type with auto-reset on filter changes
@@ -265,11 +281,11 @@ export default function StudentList({ students, unverifiedUsers = [], archivedSt
                                 Filters & Search
                             </CardTitle>
                             <CardDescription>
-                                Filter students by section, status, or search by name or student number
+                                Filter students by searching their name or student number, section, status, or assessment status 
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                                 {/* Search Filter */}
                                 <div className="space-y-2">
                                     <Label htmlFor="search-filter">Search</Label>
@@ -321,6 +337,24 @@ export default function StudentList({ students, unverifiedUsers = [], archivedSt
                                             <SelectItem value="active">Active</SelectItem>
                                             <SelectItem value="inactive">Inactive</SelectItem>
                                             <SelectItem value="unverified">Unverified</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                {/* Assessment Status Filter */}
+                                <div className="space-y-2">
+                                    <Label htmlFor="assessment-filter">Assessment</Label>
+                                    <Select
+                                        value={localFilters.assessment}
+                                        onValueChange={(value) => handleFilterChange('assessment', value)}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="All Assessments" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">All Assessments</SelectItem>
+                                            <SelectItem value="submitted">Submitted</SelectItem>
+                                            <SelectItem value="pending">Pending</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -377,6 +411,7 @@ export default function StudentList({ students, unverifiedUsers = [], archivedSt
                                                     <th className="text-left p-3 font-medium text-muted-foreground">Email</th>
                                                     <th className="text-left p-3 font-medium text-muted-foreground">Section</th>
                                                     <th className="text-left p-3 font-medium text-muted-foreground">Specialization</th>
+                                                    <th className="text-center p-3 font-medium text-muted-foreground">Assessment</th>
                                                     <th className="text-right p-3 font-medium text-muted-foreground">Actions</th>
                                                 </tr>
                                             </thead>
@@ -406,6 +441,17 @@ export default function StudentList({ students, unverifiedUsers = [], archivedSt
                                                         </td>
                                                         <td className="p-3 text-sm text-muted-foreground">
                                                             {stud.specialization || '-'}
+                                                        </td>
+                                                        <td className="p-3 text-center">
+                                                            <Badge 
+                                                                variant={stud.is_submit ? "default" : "secondary"}
+                                                                className={stud.is_submit 
+                                                                    ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" 
+                                                                    : "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200"
+                                                                }
+                                                            >
+                                                                {stud.is_submit ? 'Submitted' : 'Pending'}
+                                                            </Badge>
                                                         </td>
                                                         <td className="p-3 text-right">
                                                             <Button
@@ -672,6 +718,7 @@ export default function StudentList({ students, unverifiedUsers = [], archivedSt
                                                 <th className="text-left p-3 font-medium text-muted-foreground">Email</th>
                                                 <th className="text-left p-3 font-medium text-muted-foreground">Section</th>
                                                 <th className="text-left p-3 font-medium text-muted-foreground">Specialization</th>
+                                                <th className="text-center p-3 font-medium text-muted-foreground">Assessment</th>
                                                 <th className="text-right p-3 font-medium text-muted-foreground">Actions</th>
                                             </tr>
                                         </thead>
@@ -704,6 +751,17 @@ export default function StudentList({ students, unverifiedUsers = [], archivedSt
                                                     </td>
                                                     <td className="p-3 text-sm text-muted-foreground">
                                                         {stud.specialization || '-'}
+                                                    </td>
+                                                    <td className="p-3 text-center">
+                                                        <Badge 
+                                                            variant={stud.is_submit ? "default" : "secondary"}
+                                                            className={stud.is_submit 
+                                                                ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" 
+                                                                : "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200"
+                                                            }
+                                                        >
+                                                            {stud.is_submit ? 'Submitted' : 'Pending'}
+                                                        </Badge>
                                                     </td>
                                                     <td className="p-3 text-right">
                                                         <div className="flex items-center justify-end gap-2">
