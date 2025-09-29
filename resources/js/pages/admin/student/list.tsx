@@ -341,18 +341,6 @@ export default function StudentList({ students, unverifiedUsers = [], archivedSt
                     </Card>
                 )}
 
-                {/* Results Summary */}
-                <div className="flex items-center justify-between">
-                    <p className="text-sm text-muted-foreground">
-                        {showArchived 
-                            ? `Showing ${filteredArchivedStudents.length} archived students`
-                            : showUnverified 
-                                ? `Showing ${filteredUnverifiedUsers.length} unverified users`
-                                : `Showing ${filteredStudents.length} students`
-                        }
-                    </p>
-                </div>
-
                 {/* Archived Students */}
                 {showArchived && (
                     <>

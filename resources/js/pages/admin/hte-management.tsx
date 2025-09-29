@@ -467,14 +467,7 @@ export default function HTEManagement({ htes, showArchived = false, filters = {}
                         </CardContent>
                     </Card>
                 )}
-
-                {/* Results Summary */}
-                <div className="flex items-center justify-between">
-                    <p className="text-sm text-muted-foreground">
-                        Showing {filteredHTEs.length} of {htes.length} HTE{htes.length !== 1 ? 's' : ''}
-                    </p>
-                </div>
-
+                
                 {/* HTEs Table */}
                 <Card>
                     <CardHeader>

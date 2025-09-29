@@ -549,13 +549,6 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
                     </Card>
                 )}
 
-                {/* Results Summary */}
-                <div className="flex items-center justify-between">
-                    <p className="text-sm text-muted-foreground">
-                        Showing {filteredAdvisers.length} of {advisers.length} adviser{advisers.length !== 1 ? 's' : ''}
-                    </p>
-                </div>
-
                 {/* Advisers Table */}
                 <Card>
                     <CardHeader>

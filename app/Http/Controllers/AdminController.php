@@ -18,6 +18,8 @@ use App\Services\ChartGeneratorService;
 use App\Services\NotificationService;
 use App\Services\AutomaticEndorsementService;
 use App\Services\AutomaticPlacementService;
+use App\Notifications\HTECredentialsNotification;
+use App\Notifications\AdviserCredentialsNotification;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Spatie\Activitylog\Models\Activity;
 use Illuminate\Http\Request;
@@ -1060,7 +1062,19 @@ class AdminController extends Controller
                 ])
                 ->log('created HTE account');
 
-            return redirect()->route('admin.hte')->with('success', 'HTE account created successfully.');
+            // Dispatch async notification with credentials
+            $user->notify(new HTECredentialsNotification(
+                $request->username,
+                $request->password,
+                $hte->company_name
+            ));
+
+            Log::info('HTE credentials notification dispatched', [
+                'hte_id' => $hte->id,
+                'email' => $user->email,
+            ]);
+
+            return redirect()->route('admin.hte')->with('success', 'HTE account created successfully. Credentials have been sent to the provided email address.');
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('HTE creation failed', [
@@ -1355,7 +1369,25 @@ class AdminController extends Controller
                 ])
                 ->log('created adviser account');
 
-            return redirect()->route('admin.adviser')->with('success', 'Adviser account created successfully.');
+            // Get section names for the notification
+            $sectionNames = Section::whereIn('section_id', $request->section_ids)->pluck('section_name')->toArray();
+            $adviserName = $request->adviser_fname . ' ' . $request->adviser_lname;
+
+            // Dispatch async notification with credentials
+            $user->notify(new AdviserCredentialsNotification(
+                $request->username,
+                $request->password,
+                $adviserName,
+                $sectionNames
+            ));
+
+            Log::info('Adviser credentials notification dispatched', [
+                'adviser_id' => $adviser->id,
+                'email' => $user->email,
+                'sections' => $sectionNames,
+            ]);
+
+            return redirect()->route('admin.adviser')->with('success', 'Adviser account created successfully. Credentials have been sent to the provided email address.');
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Adviser creation failed', [
