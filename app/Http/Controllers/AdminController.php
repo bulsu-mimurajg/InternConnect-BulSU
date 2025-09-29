@@ -2055,6 +2055,13 @@ class AdminController extends Controller
             $deadlineService = new \App\Services\DeadlineNotificationService();
             $deadlineService->cleanupOldDeadlineNotifications();
             $deadlineService->checkAndCreateDeadlineNotifications();
+            
+            // Also trigger student deadline notifications for student-related deadlines
+            if (in_array($request->category, ['student_assessment_form', 'student_placements_by_hte'])) {
+                $studentDeadlineService = new \App\Services\StudentDeadlineNotificationService();
+                $studentDeadlineService->cleanupOldDeadlineNotifications();
+                $studentDeadlineService->checkAndCreateDeadlineNotifications();
+            }
 
             return redirect()->route('admin.events')->with('success', 'Deadline updated successfully.');
         } catch (\Exception $e) {
@@ -2079,6 +2086,18 @@ class AdminController extends Controller
             $deadline->update([
                 'end_date' => $newEndDate,
             ]);
+
+            // Trigger deadline notification check after extending deadline
+            $deadlineService = new \App\Services\DeadlineNotificationService();
+            $deadlineService->cleanupOldDeadlineNotifications();
+            $deadlineService->checkAndCreateDeadlineNotifications();
+            
+            // Also trigger student deadline notifications for student-related deadlines
+            if (in_array($deadline->category, ['student_assessment_form', 'student_placements_by_hte'])) {
+                $studentDeadlineService = new \App\Services\StudentDeadlineNotificationService();
+                $studentDeadlineService->cleanupOldDeadlineNotifications();
+                $studentDeadlineService->checkAndCreateDeadlineNotifications();
+            }
 
             return redirect()->route('admin.events')->with('success', "Deadline extended by 1 month successfully.");
         } catch (\Exception $e) {

@@ -45,6 +45,14 @@ class DatabaseSeeder extends Seeder
             'password' => bcrypt('password'),
         ]);
 
+        // Create Juna - a student who needs adviser approval (pending verification)
+        $junaUser = User::factory()->student()->create([
+            'username' => 'juna',
+            'email' => 'juna@example.com',
+            'status' => 'unverified', // Unverified so she shows in pending students
+            'password' => bcrypt('password'),
+        ]);
+
         // Student::factory()->count(20)->create();
 
         $this->call(CategorySeeder::class);
@@ -72,6 +80,33 @@ class DatabaseSeeder extends Seeder
                 'user_id' => $clairoUser->id,
                 'section_id' => $section->section_id,
             ]);
+        }
+
+        // Get Emman's section (3A-G1) to assign Juna to the same section
+        $emmanSection = \App\Models\Section::where('section_name', '3A-G1')->first();
+        if ($emmanSection) {
+            // Create academe account for Juna (pending student - no Student record yet)
+            \App\Models\AcademeAccount::create([
+                'user_id' => $junaUser->id,
+                'section_id' => $emmanSection->section_id, // Same section as Emman (adviser)
+            ]);
+
+            // Create notification for Emman about Juna needing approval
+            $emmanUser = User::where('username', 'emman')->first();
+            if ($emmanUser) {
+                \App\Models\Notification::create([
+                    'user_id' => $emmanUser->id,
+                    'type' => 'student_approval_request',
+                    'title' => 'Student Approval Request',
+                    'message' => 'Student Juna needs your approval for registration.',
+                    'data' => [
+                        'adviser_id' => $emmanUser->id,
+                        'student_name' => 'Juna',
+                        'section_id' => $emmanSection->section_id
+                    ],
+                    'is_read' => false,
+                ]);
+            }
         }
 
         $this->call(HTESeeder::class);

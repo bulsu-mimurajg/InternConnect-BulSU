@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Student;
 use App\Models\Section;
 use App\Models\User;
+use App\Services\AdviserNotificationService;
+use App\Services\StudentPlacementNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
@@ -129,6 +131,34 @@ class StudentController extends Controller
         return response()->json([
             'message' => 'Student section updated successfully',
             'student' => $student->load('section')
+        ]);
+    }
+
+    /**
+     * Example method showing how to trigger notifications when a student is placed
+     * This would typically be called from a placement service or controller
+     */
+    public function notifyStudentPlacement(Student $student, array $placementData)
+    {
+        $placementService = new StudentPlacementNotificationService();
+        $placementService->notifyStudentForPlacement($student, $placementData);
+        
+        return response()->json([
+            'message' => 'Placement notification sent successfully'
+        ]);
+    }
+
+    /**
+     * Example method showing how to trigger adviser notifications when a student registers
+     * This would typically be called from the signup process
+     */
+    public function notifyAdviserForNewStudent(Student $student)
+    {
+        $adviserService = new AdviserNotificationService();
+        $adviserService->notifyAdviserForStudentApproval($student);
+        
+        return response()->json([
+            'message' => 'Adviser notification sent successfully'
         ]);
     }
 }

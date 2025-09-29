@@ -850,6 +850,14 @@ class StudentController extends Controller
                     $student->id,
                     $internship->id
                 );
+
+                // Also notify the student about their placement
+                $notificationService->notifyStudentForPlacement(
+                    $student,
+                    $companyName,
+                    $internship->position_title,
+                    $internship->id
+                );
             }
 
             // Do not auto-fallback on admin endorsement. HTE rejection will drive fallback.
@@ -1462,6 +1470,15 @@ class StudentController extends Controller
                             'compatibility_score' => $bestMatch->compatibility_score,
                             'endorsement_date' => now(),
                         ]);
+
+                        // Send notification to student about their placement
+                        $notificationService = new NotificationService();
+                        $notificationService->notifyStudentForPlacement(
+                            $student,
+                            $internship->hte->company_name,
+                            $internship->position_title,
+                            $internship->id
+                        );
                         
                         $successfulEndorsements[] = [
                             'student_id' => $student->id,
@@ -1532,6 +1549,15 @@ class StudentController extends Controller
                             'compatibility_score' => $bestAvailableMatch->compatibility_score,
                             'endorsement_date' => now(),
                         ]);
+
+                        // Send notification to student about their placement
+                        $notificationService = new NotificationService();
+                        $notificationService->notifyStudentForPlacement(
+                            $student,
+                            $fallbackInternship->hte->company_name,
+                            $fallbackInternship->position_title,
+                            $fallbackInternship->id
+                        );
                         
                         $successfulEndorsements[] = [
                             'student_id' => $student->id,
@@ -1567,6 +1593,15 @@ class StudentController extends Controller
                             'compatibility_score' => $bestMatch->compatibility_score,
                             'endorsement_date' => now(),
                         ]);
+
+                        // Send notification to student about their placement
+                        $notificationService = new NotificationService();
+                        $notificationService->notifyStudentForPlacement(
+                            $student,
+                            $internship->hte->company_name,
+                            $internship->position_title,
+                            $internship->id
+                        );
                         
                         $successfulEndorsements[] = [
                             'student_id' => $student->id,
