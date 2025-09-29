@@ -565,8 +565,7 @@ export default function EndorsementTable({ endorsements = [], internships = [], 
                                                 </div>
                                             </div>
                                         </Card>
-                                        );
-                                    })}
+                                    ))}
                                 </div>
 
                                 {/* Desktop Table View */}
@@ -668,8 +667,7 @@ export default function EndorsementTable({ endorsements = [], internships = [], 
                                                     </div>
                                                 </td>
                                             </tr>
-                                                );
-                                            })}
+                                            ))}
                                         </tbody>
                                     </table>
                                 </div>

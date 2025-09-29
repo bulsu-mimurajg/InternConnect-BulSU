@@ -5,55 +5,55 @@ namespace App\Services;
 use App\Models\Deadline;
 use App\Models\Notification;
 use App\Models\User;
-use App\Notifications\HTEDeadlineNotification;
+use App\Notifications\StudentDeadlineNotification;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
-class DeadlineNotificationService
+class StudentDeadlineNotificationService
 {
     /**
-     * Check and create/update deadline notifications for HTE users
+     * Check and create/update deadline notifications for Student users
      */
     public function checkAndCreateDeadlineNotifications(): void
     {
-        // Get all HTE users
-        $hteUsers = User::role('hte')->get();
+        // Get all Student users
+        $studentUsers = User::role('student')->get();
 
-        foreach ($hteUsers as $hteUser) {
-            $this->processDeadlineNotificationsForUser($hteUser);
+        foreach ($studentUsers as $studentUser) {
+            $this->processDeadlineNotificationsForUser($studentUser);
         }
     }
 
     /**
-     * Process deadline notifications for a specific HTE user
+     * Process deadline notifications for a specific Student user
      */
-    public function processDeadlineNotificationsForUser(User $hteUser): void
+    public function processDeadlineNotificationsForUser(User $studentUser): void
     {
-        // Get HTE deadlines (both assessment form and student placements)
-        $hteDeadlines = Deadline::whereIn('category', ['hte_assessment_form', 'student_placements_by_hte'])->get();
+        // Get Student deadlines (assessment form and placement deadlines)
+        $studentDeadlines = Deadline::whereIn('category', ['student_assessment_form', 'student_placements_by_hte'])->get();
 
-        foreach ($hteDeadlines as $deadline) {
-            $this->processDeadlineForUser($hteUser, $deadline);
+        foreach ($studentDeadlines as $deadline) {
+            $this->processDeadlineForUser($studentUser, $deadline);
         }
     }
 
     /**
      * Process a specific deadline for a user
      */
-    private function processDeadlineForUser(User $hteUser, Deadline $deadline): void
+    private function processDeadlineForUser(User $studentUser, Deadline $deadline): void
     {
-        // Check if this is an HTE assessment form deadline
-        if ($deadline->category === 'hte_assessment_form') {
-            // Check if the HTE user has already submitted their assessment form
-            if ($hteUser->hte && $hteUser->hte->is_submit) {
+        // Check if this is a student assessment form deadline
+        if ($deadline->category === 'student_assessment_form') {
+            // Check if the student user has already submitted their assessment form
+            if ($studentUser->student && $studentUser->student->is_submit) {
                 // User has already submitted, remove any existing notifications and skip
-                $this->removeExistingDeadlineNotifications($hteUser->id, $deadline->id);
+                $this->removeExistingDeadlineNotifications($studentUser->id, $deadline->id);
                 return;
             }
         }
         
-        // For student placements by HTE deadlines, show notifications to all HTE users
+        // For student placement deadlines, show notifications to all student users
         // regardless of their assessment submission status
 
         $now = Carbon::now();
@@ -75,13 +75,12 @@ class DeadlineNotificationService
         }
 
         // Check if notification already exists for this deadline
-        $existingNotification = Notification::where('user_id', $hteUser->id)
-            ->where('type', 'hte_deadline')
+        $existingNotification = Notification::where('user_id', $studentUser->id)
+            ->where('type', 'student_deadline')
             ->whereJsonContains('data->deadline_id', $deadline->id)
             ->first();
 
         $isNewNotification = !$existingNotification;
-        $contentChanged = false;
 
         if ($existingNotification) {
             // Check if the notification content has changed significantly
@@ -113,25 +112,25 @@ class DeadlineNotificationService
                     ->update(['created_at' => now()]);
             }
             
-            Log::info("Updated deadline notification for HTE user {$hteUser->id}, deadline {$deadline->id}" . 
+            Log::info("Updated deadline notification for Student user {$studentUser->id}, deadline {$deadline->id}" . 
                      ($contentChanged ? ' (content changed, moved to top)' : ''));
         } else {
             // Create new notification
             Notification::create([
-                'user_id' => $hteUser->id,
-                'type' => 'hte_deadline',
+                'user_id' => $studentUser->id,
+                'type' => 'student_deadline',
                 'title' => $notificationData['title'],
                 'message' => $notificationData['message'],
                 'data' => $notificationData['data'],
                 'is_read' => false,
             ]);
             
-            Log::info("Created deadline notification for HTE user {$hteUser->id}, deadline {$deadline->id}");
+            Log::info("Created deadline notification for Student user {$studentUser->id}, deadline {$deadline->id}");
         }
 
-        // Send email notification for new notifications or when content/time remaining changes significantly
+        // Send email notification for new notifications or when time remaining changes significantly
         if ($isNewNotification || $contentChanged) {
-            $this->sendEmailNotification($hteUser, $deadline, $notificationData);
+            $this->sendEmailNotification($studentUser, $deadline, $notificationData);
         }
     }
 
@@ -146,8 +145,8 @@ class DeadlineNotificationService
         if (in_array($daysRemaining, [1, 3, 5])) {
             $urgencyLevel = $this->getUrgencyLevel($daysRemaining, $deadline->category);
             $message = $deadline->category === 'student_placements_by_hte'
-                ? "Student placements deadline is in {$daysRemaining} day(s). {$urgencyLevel['message']}"
-                : "HTE {$deadlineName} deadline is in {$daysRemaining} day(s). {$urgencyLevel['message']}";
+                ? "Student placement deadline is in {$daysRemaining} day(s). {$urgencyLevel['message']}"
+                : "Student {$deadlineName} deadline is in {$daysRemaining} day(s). {$urgencyLevel['message']}";
             
             return [
                 'title' => $urgencyLevel['title'],
@@ -165,8 +164,8 @@ class DeadlineNotificationService
         // If less than 24 hours remaining (within the day), show hours
         if ($hoursRemaining < 24 && $hoursRemaining > 0) {
             $message = $deadline->category === 'student_placements_by_hte' 
-                ? "Student placements deadline is in {$hoursRemaining} hours. Please complete your placements soon!"
-                : "HTE {$deadlineName} deadline is in {$hoursRemaining} hours. Please submit your form soon!";
+                ? "Student placement deadline is in {$hoursRemaining} hours. Please complete your placement soon!"
+                : "Student {$deadlineName} deadline is in {$hoursRemaining} hours. Please submit your assessment soon!";
                 
             return [
                 'title' => 'Deadline Approaching!',
@@ -196,29 +195,29 @@ class DeadlineNotificationService
                 return [
                     'title' => '⚠️ Deadline Tomorrow!',
                     'message' => $isPlacement 
-                        ? 'Please complete your student placements immediately to avoid missing the deadline.'
-                        : 'Please submit your assessment form immediately to avoid missing the deadline.',
+                        ? 'Please complete your student placement immediately to avoid missing the deadline.'
+                        : 'Please submit your assessment immediately to avoid missing the deadline.',
                 ];
             case 3:
                 return [
                     'title' => 'Deadline in 3 Days',
                     'message' => $isPlacement
-                        ? 'Please prepare and complete your student placements soon.'
-                        : 'Please prepare and submit your assessment form soon.',
+                        ? 'Please prepare and complete your student placement soon.'
+                        : 'Please prepare and submit your assessment soon.',
                 ];
             case 5:
                 return [
                     'title' => 'Deadline in 5 Days',
                     'message' => $isPlacement
-                        ? 'Please start preparing your student placements.'
-                        : 'Please start preparing your assessment form.',
+                        ? 'Please start preparing your student placement.'
+                        : 'Please start preparing your assessment.',
                 ];
             default:
                 return [
                     'title' => 'Deadline Reminder',
                     'message' => $isPlacement
-                        ? 'Please complete your student placements before the deadline.'
-                        : 'Please submit your assessment form before the deadline.',
+                        ? 'Please complete your student placement before the deadline.'
+                        : 'Please submit your assessment before the deadline.',
                 ];
         }
     }
@@ -229,7 +228,7 @@ class DeadlineNotificationService
     private function removeExistingDeadlineNotifications(int $userId, int $deadlineId): void
     {
         $deletedCount = Notification::where('user_id', $userId)
-            ->where('type', 'hte_deadline')
+            ->where('type', 'student_deadline')
             ->whereJsonContains('data->deadline_id', $deadlineId)
             ->delete();
             
@@ -243,10 +242,12 @@ class DeadlineNotificationService
      */
     public function cleanupOldDeadlineNotifications(): void
     {
-        $pastDeadlines = Deadline::where('end_date', '<', now())->pluck('id');
+        $pastDeadlines = Deadline::whereIn('category', ['student_assessment_form', 'student_placements_by_hte'])
+            ->where('end_date', '<', now())
+            ->pluck('id');
         
         if ($pastDeadlines->isNotEmpty()) {
-            $deletedCount = Notification::where('type', 'hte_deadline')
+            $deletedCount = Notification::where('type', 'student_deadline')
                 ->where(function ($query) use ($pastDeadlines) {
                     foreach ($pastDeadlines as $deadlineId) {
                         $query->orWhereJsonContains('data->deadline_id', $deadlineId);
@@ -254,7 +255,7 @@ class DeadlineNotificationService
                 })
                 ->delete();
                 
-            Log::info("Cleaned up {$deletedCount} old deadline notifications");
+            Log::info("Cleaned up {$deletedCount} old student deadline notifications");
         }
     }
 
@@ -277,14 +278,14 @@ class DeadlineNotificationService
     }
 
     /**
-     * Send email notification to HTE user
+     * Send email notification to Student user
      */
-    private function sendEmailNotification(User $hteUser, Deadline $deadline, array $notificationData): void
+    private function sendEmailNotification(User $studentUser, Deadline $deadline, array $notificationData): void
     {
         try {
             // Validate email address before sending
-            if (!$this->isValidEmail($hteUser->email)) {
-                Log::warning("Skipping email notification for HTE user {$hteUser->id}: Invalid email address '{$hteUser->email}'");
+            if (!$this->isValidEmail($studentUser->email)) {
+                Log::warning("Skipping email notification for Student user {$studentUser->id}: Invalid email address '{$studentUser->email}'");
                 return;
             }
 
@@ -297,11 +298,11 @@ class DeadlineNotificationService
                 'hours_remaining' => $notificationData['data']['hours_remaining'] ?? null,
             ];
 
-            $hteUser->notify(new HTEDeadlineNotification($emailData, $emailData['days_remaining'], $emailData['hours_remaining']));
+            $studentUser->notify(new StudentDeadlineNotification($emailData, $emailData['days_remaining'], $emailData['hours_remaining']));
             
-            Log::info("Sent deadline email notification to HTE user {$hteUser->id} ({$hteUser->email}) for deadline {$deadline->id}");
+            Log::info("Sent deadline email notification to Student user {$studentUser->id} ({$studentUser->email}) for deadline {$deadline->id}");
         } catch (\Exception $e) {
-            Log::error("Failed to send deadline email notification to HTE user {$hteUser->id}: " . $e->getMessage());
+            Log::error("Failed to send deadline email notification to Student user {$studentUser->id}: " . $e->getMessage());
         }
     }
 
@@ -310,6 +311,7 @@ class DeadlineNotificationService
      */
     private function isValidEmail(string $email): bool
     {
+
         // Basic validation checks
         if (empty($email) || !is_string($email)) {
             return false;
@@ -326,6 +328,7 @@ class DeadlineNotificationService
             '/^admin@/i',
             '/^noreply@/i',
             '/^no-reply@/i',
+            // Allow example domains only in non-prod; blocked here for prod
             '/@example\./i',
             '/@localhost/i',
             '/@test\./i',

@@ -47,6 +47,25 @@ class NotificationService
     }
 
     /**
+     * Notify students when they get placed/endorsed
+     */
+    public function notifyStudentForPlacement(Student $student, string $companyName, string $positionTitle, int $internshipId): void
+    {
+        Notification::createNotification(
+            $student->user_id,
+            'student_placement',
+            'Congratulations! You\'ve Been Placed',
+            "Congratulations! You have been placed at {$companyName} for the position: {$positionTitle}. Check your dashboard for more details.",
+            [
+                'student_id' => $student->id,
+                'internship_id' => $internshipId,
+                'company_name' => $companyName,
+                'position_title' => $positionTitle
+            ]
+        );
+    }
+
+    /**
      * Notify only relevant users when a new deadline is released
      */
     public function notifyNewDeadline(Deadline $deadline): void
@@ -209,6 +228,26 @@ class NotificationService
     }
 
     /**
+     * Notify adviser about individual student approval request
+     */
+    public function notifyAdviserForStudentApproval(int $adviserId, Student $student): void
+    {
+        Notification::createNotification(
+            $adviserId,
+            'student_approval_request',
+            'Student Approval Request',
+            "Student {$student->first_name} {$student->last_name} ({$student->student_number}) needs your approval for registration.",
+            [
+                'adviser_id' => $adviserId,
+                'student_id' => $student->id,
+                'student_name' => "{$student->first_name} {$student->last_name}",
+                'student_number' => $student->student_number,
+                'section_id' => $student->section_id
+            ]
+        );
+    }
+
+    /**
      * Notify HTE when SIP endorses something
      */
     public function notifyHTEForEndorsement(int $hteId, string $studentName, string $companyName, int $studentId = null, int $internshipId = null): void
@@ -256,17 +295,4 @@ class NotificationService
         );
     }
 
-    /**
-     * Notify student when they have been placed
-     */
-    public function notifyStudentForPlacement(int $studentId, string $companyName, string $position): void
-    {
-        Notification::createNotification(
-            $studentId,
-            'student_placement',
-            'Congratulations! You\'ve Been Placed',
-            "You have been successfully placed at {$companyName} for the position of {$position}.",
-            ['student_id' => $studentId, 'company_name' => $companyName, 'position' => $position]
-        );
-    }
 }

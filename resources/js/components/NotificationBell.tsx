@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { BellIcon, CheckIcon, ClockIcon, UsersIcon, AlertCircleIcon, BriefcaseIcon, CalendarIcon, RotateCcwIcon, ListIcon, MailIcon } from 'lucide-react';
-import { router } from '@inertiajs/react';
+import { router, usePage } from '@inertiajs/react';
 
 interface Notification {
     id: number;
@@ -19,11 +19,12 @@ interface NotificationBellProps {
 }
 
 export default function NotificationBell({ initialCount = 0 }: NotificationBellProps) {
+    const { auth } = usePage<{ auth: { user: { roles: string[] } } }>().props;
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [unreadCount, setUnreadCount] = useState(initialCount);
     const [isOpen, setIsOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
-    const [filter, setFilter] = useState<'all' | 'endorsement' | 'deadline'>('all');
+    const [filter, setFilter] = useState<'all' | 'endorsement' | 'deadline' | 'placement' | 'approval'>('all');
     const [showRead, setShowRead] = useState(true);
     const [lastLocalUpdate, setLastLocalUpdate] = useState<{[key: number]: number}>({});
 
@@ -149,7 +150,24 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                 filtered = filtered.filter(n => n.type === 'hte_endorsement');
                 break;
             case 'deadline':
-                filtered = filtered.filter(n => n.type === 'hte_deadline');
+                filtered = filtered.filter(n => 
+                    n.type === 'hte_deadline' || 
+                    n.type === 'student_deadline' ||
+                    n.type === 'deadline_released' ||
+                    n.type === 'deadline_expired'
+                );
+                break;
+            case 'placement':
+                filtered = filtered.filter(n => 
+                    n.type === 'student_placement' || 
+                    n.type === 'student_placement_status'
+                );
+                break;
+            case 'approval':
+                filtered = filtered.filter(n => 
+                    n.type === 'student_approval_request' || 
+                    n.type === 'student_status_change'
+                );
                 break;
             default:
                 // Keep all notifications
@@ -166,6 +184,22 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
     };
 
     const handleNotificationClick = (notification: Notification) => {
+        // Helper function to check if user has a specific role
+        const hasRole = (roleName: string) => {
+            return auth.user?.roles?.some((role: any) => role.name === roleName) || false;
+        };
+
+        // Debug logging
+        console.log('=== NOTIFICATION DEBUG ===');
+        console.log('Notification type:', notification.type);
+        console.log('User roles:', auth.user?.roles);
+        console.log('Roles is array:', Array.isArray(auth.user?.roles));
+        console.log('Roles length:', auth.user?.roles?.length);
+        console.log('First role:', auth.user?.roles?.[0]);
+        console.log('Has adviser role (old):', auth.user?.roles?.includes('adviser'));
+        console.log('Has adviser role (new):', hasRole('adviser'));
+        console.log('==========================');
+        
         // Mark as read when clicked (regardless of current status)
         markAsRead(notification.id);
         
@@ -186,20 +220,55 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
             }
         } else if (notification.type === 'hte_deadline') {
             // Navigate based on deadline category
-            console.log('HTE Deadline notification clicked:', {
-                type: notification.type,
-                data: notification.data,
-                category: notification.data?.category
-            });
-            
             if (notification.data?.category === 'student_placements_by_hte') {
-                // For student placements deadlines, navigate to endorsement table
-                console.log('Navigating to endorsement table for student placements deadline');
                 router.visit('/hte/endorsement-table');
             } else {
-                // For other HTE deadlines (like assessment forms), navigate to form page
-                console.log('Navigating to form page for other HTE deadline');
                 router.visit('/form');
+            }
+        } else if (notification.type === 'student_deadline') {
+            // Navigate to student assessment or placement based on category and user role
+            if (notification.data?.category === 'student_placements') {
+                // Navigate based on user role
+                if (hasRole('admin')) {
+                    router.visit('/placement');
+                } else {
+                    router.visit('/student/dashboard');
+                }
+            } else {
+                // Navigate to assessment (available for students)
+                router.visit('/assessment');
+            }
+        } else if (notification.type === 'student_placement' || notification.type === 'student_placement_status') {
+            // Navigate based on user role
+            if (hasRole('admin')) {
+                router.visit('/placement');
+            } else {
+                router.visit('/student/dashboard');
+            }
+        } else if (notification.type === 'student_approval_request' || notification.type === 'student_status_change') {
+            // Navigate based on user role
+            if (hasRole('adviser')) {
+                router.visit('/student-verification');
+            } else if (hasRole('admin')) {
+                router.visit('/student/list');
+            } else {
+                router.visit('/student/dashboard');
+            }
+        } else {
+            // Default fallback - log unknown notification type
+            console.warn('Unknown notification type:', notification.type);
+            console.log('Available user roles:', auth.user?.roles);
+            console.log('Notification data:', notification.data);
+            
+            // Default navigation based on user role
+            if (hasRole('adviser')) {
+                router.visit('/adviser/dashboard');
+            } else if (hasRole('admin')) {
+                router.visit('/admin/dashboard');
+            } else if (hasRole('hte')) {
+                router.visit('/hte/dashboard');
+            } else {
+                router.visit('/student/dashboard');
             }
         }
     };
@@ -210,6 +279,14 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
         // Poll for new notifications every 30 seconds
         const interval = setInterval(fetchNotifications, 30000);
         return () => clearInterval(interval);
+    }, []);
+
+    // Reset filter to 'all' when component mounts to ensure it's valid for user's role
+    useEffect(() => {
+        const validFilters = getFilterButtons().map(btn => btn.key);
+        if (!validFilters.includes(filter)) {
+            setFilter('all');
+        }
     }, []);
 
     const formatTimeAgo = (dateString: string) => {
@@ -233,6 +310,7 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                 return <AlertCircleIcon className="h-4 w-4 text-yellow-600" />;
             case 'student_match_found':
             case 'student_placement':
+            case 'student_placement_status':
                 return <BriefcaseIcon className="h-4 w-4 text-green-600" />;
             case 'deadline_released':
             case 'deadline_expired':
@@ -240,10 +318,56 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
             case 'hte_endorsement':
                 return <CheckIcon className="h-4 w-4 text-purple-600" />;
             case 'hte_deadline':
+            case 'student_deadline':
                 return <ClockIcon className="h-4 w-4 text-red-600" />;
+            case 'student_approval_request':
+            case 'student_status_change':
+                return <UsersIcon className="h-4 w-4 text-blue-600" />;
             default:
                 return <BellIcon className="h-4 w-4 text-gray-600" />;
         }
+    };
+
+    const getFilterButtons = () => {
+        // Helper function to check if user has a specific role
+        const hasRole = (roleName: string) => {
+            return auth.user?.roles?.some((role: any) => role.name === roleName) || false;
+        };
+        
+        if (hasRole('student')) {
+            // Students only see: All, Placement, Deadline
+            return [
+                { key: 'all', label: 'All' },
+                { key: 'placement', label: 'Placement' },
+                { key: 'deadline', label: 'Deadline' }
+            ];
+        } else if (hasRole('hte')) {
+            // HTEs see: All, Endorsement, Deadline
+            return [
+                { key: 'all', label: 'All' },
+                { key: 'endorsement', label: 'Endorsement' },
+                { key: 'deadline', label: 'Deadline' }
+            ];
+        } else if (hasRole('adviser')) {
+            // Advisers see: All, Approval, Deadline
+            return [
+                { key: 'all', label: 'All' },
+                { key: 'approval', label: 'Approval' },
+                { key: 'deadline', label: 'Deadline' }
+            ];
+        } else if (hasRole('admin')) {
+            // Admins see: All, Endorsement, Deadline
+            return [
+                { key: 'all', label: 'All' },
+                { key: 'endorsement', label: 'Endorsement' },
+                { key: 'deadline', label: 'Deadline' }
+            ];
+        }
+        
+        // Default fallback
+        return [
+            { key: 'all', label: 'All' }
+        ];
     };
 
     return (
@@ -271,7 +395,7 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
             </Button>
 
             {isOpen && (
-                <div className="absolute right-0 top-full mt-2 w-96 bg-white border border-gray-200 rounded-lg shadow-xl z-50 max-h-96 overflow-hidden">
+                <div className="absolute right-0 top-full mt-2 w-96 bg-white border border-gray-200 rounded-lg shadow-xl z-50">
                     <div className="p-4 border-b border-gray-200 bg-gray-50">
                         <div className="flex items-center justify-between">
                             <h3 className="font-semibold text-gray-900 flex items-center gap-2">
@@ -317,46 +441,25 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                     {/* Filter Buttons */}
                     <div className="p-3 border-b border-gray-200 bg-gray-50">
                         <div className="flex justify-center gap-1">
-                            <Button
-                                variant={filter === 'all' ? 'default' : 'ghost'}
-                                size="sm"
-                                onClick={() => setFilter('all')}
-                                className={`h-8 px-3 text-xs ${
-                                    filter === 'all' 
-                                        ? 'bg-blue-600 text-white hover:bg-blue-700' 
-                                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                                }`}
-                            >
-                                All
-                            </Button>
-                            <Button
-                                variant={filter === 'endorsement' ? 'default' : 'ghost'}
-                                size="sm"
-                                onClick={() => setFilter('endorsement')}
-                                className={`h-8 px-3 text-xs ${
-                                    filter === 'endorsement' 
-                                        ? 'bg-blue-600 text-white hover:bg-blue-700' 
-                                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                                }`}
-                            >
-                                Endorsement
-                            </Button>
-                            <Button
-                                variant={filter === 'deadline' ? 'default' : 'ghost'}
-                                size="sm"
-                                onClick={() => setFilter('deadline')}
-                                className={`h-8 px-3 text-xs ${
-                                    filter === 'deadline' 
-                                        ? 'bg-blue-600 text-white hover:bg-blue-700' 
-                                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                                }`}
-                            >
-                                Deadline
-                            </Button>
+                            {getFilterButtons().map((button) => (
+                                <Button
+                                    key={button.key}
+                                    variant={filter === button.key ? 'default' : 'ghost'}
+                                    size="sm"
+                                    onClick={() => setFilter(button.key as any)}
+                                    className={`h-8 px-3 text-xs ${
+                                        filter === button.key 
+                                            ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                                            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                                    }`}
+                                >
+                                    {button.label}
+                                </Button>
+                            ))}
                         </div>
                     </div>
                     
-                    <div className="max-h-80 overflow-y-auto">
+                    <div className="max-h-96 overflow-y-auto pb-6 mb-2">
                         {isLoading ? (
                             <div className="p-6 text-center text-gray-500">
                                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 mx-auto mb-2"></div>
@@ -439,18 +542,6 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                         )}
                     </div>
                     
-                    {notifications.length > 0 && (
-                        <div className="p-3 border-t border-gray-200 bg-gray-50">
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => router.visit('/notifications')}
-                                className="w-full text-xs"
-                            >
-                                View all notifications
-                            </Button>
-                        </div>
-                    )}
                 </div>
             )}
         </div>
