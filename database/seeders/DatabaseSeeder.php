@@ -63,7 +63,7 @@ class DatabaseSeeder extends Seeder
         if ($section) {
             Student::create([
                 'user_id' => $clairoUser->id,
-                'student_number' => '2021-0004',
+                'student_number' => '2022100100',
                 'first_name' => 'Clairo',
                 'middle_name' => 'Test',
                 'last_name' => 'Student',

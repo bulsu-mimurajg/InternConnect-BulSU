@@ -42,7 +42,10 @@ class StudentScoreSeeder extends Seeder
         ];
 
         foreach ($students as $student) {
-            // Generate scores for all students including clairo for testing purposes
+            // Only generate scores for students who have submitted their assessments
+            if (!$student->is_submit) {
+                continue;
+            }
             
             foreach ($subcategories as $subcategory) {
                 // Generate a random score between 1 and 5 with more variation
@@ -88,12 +91,15 @@ class StudentScoreSeeder extends Seeder
         // Create some standout students for visualization purposes
         $this->createStandoutStudents($students, $subcategories);
 
-        // Mark all students as having submitted assessments since we're creating scores for them
-        foreach ($students as $student) {
-            $student->update(['is_submit' => true]);
+        // Only mark students as having submitted assessments if they don't already have scores
+        $studentsWithScores = Student::whereHas('scores')->get();
+        foreach ($studentsWithScores as $student) {
+            if (!$student->is_submit) {
+                $student->update(['is_submit' => true]);
+            }
         }
 
-        $this->command->info('Marked all students as having submitted assessments.');
+        $this->command->info('Updated submission status for students with scores.');
     }
 
     /**
@@ -101,8 +107,8 @@ class StudentScoreSeeder extends Seeder
      */
     private function createStandoutStudents($students, $subcategories)
     {
-        // Get a few students to make them stand out
-        $standoutStudents = $students->take(3);
+        // Get a few students who have submitted assessments to make them stand out
+        $standoutStudents = $students->where('is_submit', true)->take(3);
         $programmingSubcategories = $subcategories->whereIn('subcategory_name', ['Java', 'Python', 'JavaScript']);
         $softSkillSubcategories = $subcategories->whereIn('subcategory_name', ['Communication Skills', 'Problem-Solving and Analytical Skills']);
 

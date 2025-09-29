@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Pagination } from '@/components/ui/pagination';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { usePagination } from '@/hooks/usePagination';
 import { getRowNumber } from '@/lib/pagination-utils';
 import { UsersIcon, UserCheckIcon, ArchiveIcon, RotateCcwIcon, EditIcon, UserXIcon, Filter, ArrowUpDown, Search } from 'lucide-react';
@@ -65,6 +66,9 @@ export default function StudentList({ students, unverifiedUsers = [], archivedSt
     const [showUnverified, setShowUnverified] = useState(false);
     const [showArchived, setShowArchived] = useState(false);
     const [showFilters, setShowFilters] = useState(false);
+    const [showArchiveDialog, setShowArchiveDialog] = useState(false);
+    const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+    const [selectedUnverifiedUser, setSelectedUnverifiedUser] = useState<UnverifiedUser | null>(null);
     const [localFilters, setLocalFilters] = useState({
         search: filters.search || '',
         section: filters.section || 'all',
@@ -80,20 +84,37 @@ export default function StudentList({ students, unverifiedUsers = [], archivedSt
         router.get(`/student/${studentId}/edit`);
     };
 
-    const handleArchive = (studentId: number | string) => {
-        if (confirm('Are you sure you want to archive this student?')) {
-            router.patch(`/student/${studentId}/archive`);
-        }
+    const handleArchive = (student: Student) => {
+        setSelectedStudent(student);
+        setSelectedUnverifiedUser(null);
+        setShowArchiveDialog(true);
     };
 
     const handleEditUnverified = (userId: number | string) => {
         router.get(`/student/unverified/${userId}/edit`);
     };
 
-    const handleArchiveUnverified = (userId: number | string) => {
-        if (confirm('Are you sure you want to archive this unverified user?')) {
-            router.patch(`/student/unverified/${userId}/archive`);
+    const handleArchiveUnverified = (user: UnverifiedUser) => {
+        setSelectedUnverifiedUser(user);
+        setSelectedStudent(null);
+        setShowArchiveDialog(true);
+    };
+
+    const confirmArchive = () => {
+        if (selectedStudent) {
+            router.patch(`/student/${selectedStudent.id}/archive`);
+        } else if (selectedUnverifiedUser) {
+            router.patch(`/student/unverified/${selectedUnverifiedUser.id}/archive`);
         }
+        setShowArchiveDialog(false);
+        setSelectedStudent(null);
+        setSelectedUnverifiedUser(null);
+    };
+
+    const cancelArchive = () => {
+        setShowArchiveDialog(false);
+        setSelectedStudent(null);
+        setSelectedUnverifiedUser(null);
     };
 
     const handleShowUnverified = () => {
@@ -652,7 +673,7 @@ export default function StudentList({ students, unverifiedUsers = [], archivedSt
                                                             <Button
                                                                 variant="outline"
                                                                 size="sm"
-                                                                onClick={() => handleArchiveUnverified(user.id)}
+                                                                onClick={() => handleArchiveUnverified(user)}
                                                                 className="text-orange-600 hover:text-orange-700"
                                                             >
                                                                 <ArchiveIcon className="h-4 w-4 mr-2" />
@@ -776,7 +797,7 @@ export default function StudentList({ students, unverifiedUsers = [], archivedSt
                                                             <Button
                                                                 variant="outline"
                                                                 size="sm"
-                                                                onClick={() => handleArchive(stud.id)}
+                                                                onClick={() => handleArchive(stud)}
                                                                 className="text-orange-600 hover:text-orange-700"
                                                             >
                                                                 <ArchiveIcon className="h-4 w-4 mr-2" />
@@ -806,6 +827,57 @@ export default function StudentList({ students, unverifiedUsers = [], archivedSt
                         itemsPerPage={10}
                     />
                 )}
+
+                {/* Archive Confirmation Dialog */}
+                <Dialog open={showArchiveDialog} onOpenChange={setShowArchiveDialog}>
+                    <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2">
+                                <ArchiveIcon className="h-5 w-5 text-orange-600" />
+                                Archive {selectedStudent ? 'Student' : 'User'}
+                            </DialogTitle>
+                            <DialogDescription>
+                                {selectedStudent ? (
+                                    <>
+                                        Are you sure you want to archive <strong>{selectedStudent.first_name} {selectedStudent.last_name}</strong>?
+                                        <br />
+                                        <span className="text-sm text-muted-foreground mt-1 block">
+                                            Student ID: {selectedStudent.student_number}
+                                        </span>
+                                    </>
+                                ) : selectedUnverifiedUser ? (
+                                    <>
+                                        Are you sure you want to archive <strong>{selectedUnverifiedUser.username}</strong>?
+                                        <br />
+                                        <span className="text-sm text-muted-foreground mt-1 block">
+                                            Email: {selectedUnverifiedUser.email}
+                                        </span>
+                                    </>
+                                ) : null}
+                                <br />
+                                <span className="text-sm text-amber-600 dark:text-amber-400 mt-2 block">
+                                    This action can be undone by restoring the {selectedStudent ? 'student' : 'user'} later.
+                                </span>
+                            </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter className="gap-2">
+                            <Button
+                                variant="outline"
+                                onClick={cancelArchive}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                variant="destructive"
+                                onClick={confirmArchive}
+                                className="bg-orange-600 hover:bg-orange-700"
+                            >
+                                <ArchiveIcon className="h-4 w-4 mr-2" />
+                                Archive {selectedStudent ? 'Student' : 'User'}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
             </div>
         </AdminLayout>
     );

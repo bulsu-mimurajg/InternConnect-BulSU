@@ -55,7 +55,7 @@ class EndorsementPlacementSeeder extends Seeder
         $testStudents = [
             // Student 1: Basic student for list.tsx (no special status)
             [
-                'student_number' => '2022-0001',
+                'student_number' => '2022100201',
                 'first_name' => 'Alice',
                 'last_name' => 'Johnson',
                 'middle_name' => 'A',
@@ -64,7 +64,7 @@ class EndorsementPlacementSeeder extends Seeder
             ],
             // Student 2: Matched student for matched.tsx (has match, not endorsed)
             [
-                'student_number' => '2022-0002',
+                'student_number' => '2022100202',
                 'first_name' => 'Bob',
                 'last_name' => 'Smith',
                 'middle_name' => 'B',
@@ -73,7 +73,7 @@ class EndorsementPlacementSeeder extends Seeder
             ],
             // Student 3: Matched student for matched.tsx (has match, not endorsed)
             [
-                'student_number' => '2022-0003',
+                'student_number' => '2022100203',
                 'first_name' => 'Carol',
                 'last_name' => 'Davis',
                 'middle_name' => 'C',
@@ -82,16 +82,16 @@ class EndorsementPlacementSeeder extends Seeder
             ],
             // Student 4: Endorsed student for endorsed.tsx (endorsed, pending HTE approval)
             [
-                'student_number' => '2022-0004',
+                'student_number' => '2022100204',
                 'first_name' => 'David',
-                'last_name' => 'Wilson',
+                'last_name' => 'Martinez',
                 'middle_name' => 'D',
                 'specialization' => 'WMAD',
                 'status' => 'endorsed', // Endorsed but pending HTE approval
             ],
             // Student 5: Placed student for placed.tsx (approved placement)
             [
-                'student_number' => '2022-0005',
+                'student_number' => '2022100205',
                 'first_name' => 'Eva',
                 'last_name' => 'Brown',
                 'middle_name' => 'E',

@@ -52,7 +52,7 @@ class AdviserSeeder extends Seeder
             ],
             [
                 'adviser_fname' => 'Michael',
-                'adviser_lname' => 'Brown',
+                'adviser_lname' => 'Johnson',
                 'is_active' => false,
                 'section_ids' => $sections->pluck('section_id')->toArray(), // All sections
                 'user_id' => null, // Will be created as a new user
