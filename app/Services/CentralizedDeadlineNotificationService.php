@@ -82,6 +82,38 @@ class CentralizedDeadlineNotificationService
     }
 
     /**
+     * Queue deadline notifications for a specific deadline (for updates)
+     */
+    public function queueDeadlineNotificationsForDeadline(Deadline $deadline): void
+    {
+        Log::info('Queueing deadline notifications for specific deadline', [
+            'deadline_id' => $deadline->id,
+            'deadline_title' => $deadline->title,
+            'deadline_category' => $deadline->category,
+        ]);
+
+        // Get all users who should receive notifications for this deadline
+        $users = $this->getUsersForDeadline($deadline);
+
+        // Queue individual jobs for each user
+        foreach ($users as $user) {
+            $userRoles = $user->getRoleNames()->toArray();
+            foreach ($userRoles as $role) {
+                if (in_array($deadline->category, self::ROLE_DEADLINE_MAPPING[$role] ?? [])) {
+                    ProcessDeadlineNotificationJob::dispatch($deadline->id, $user->id, $role)
+                        ->onQueue('deadline-notifications')
+                        ->delay(now()->addSeconds(rand(1, 10))); // Random delay to spread load
+                }
+            }
+        }
+
+        Log::info('Deadline-specific notifications queued successfully', [
+            'deadline_id' => $deadline->id,
+            'users_count' => $users->count(),
+        ]);
+    }
+
+    /**
      * Queue deadline notifications for a specific user (non-blocking)
      */
     public function queueDeadlineNotificationsForUser(User $user): void
@@ -129,6 +161,45 @@ class CentralizedDeadlineNotificationService
             'user_id' => $user->id,
             'deadlines_count' => $deadlines->count(),
         ]);
+    }
+
+    /**
+     * Get users who should receive notifications for a specific deadline
+     */
+    private function getUsersForDeadline(Deadline $deadline): \Illuminate\Database\Eloquent\Collection
+    {
+        $users = collect();
+
+        // Get users based on deadline category
+        switch ($deadline->category) {
+            case 'student_verification':
+                $users = User::whereHas('roles', function ($query) {
+                    $query->where('name', 'adviser');
+                })->get();
+                break;
+            case 'student_assessment_form':
+                $users = User::whereHas('roles', function ($query) {
+                    $query->where('name', 'student');
+                })->get();
+                break;
+            case 'hte_assessment_form':
+                $users = User::whereHas('roles', function ($query) {
+                    $query->where('name', 'hte');
+                })->get();
+                break;
+            case 'sip_endorsement':
+                $users = User::whereHas('roles', function ($query) {
+                    $query->where('name', 'admin');
+                })->get();
+                break;
+            case 'student_placements_by_hte':
+                $users = User::whereHas('roles', function ($query) {
+                    $query->whereIn('name', ['admin', 'hte', 'student']);
+                })->get();
+                break;
+        }
+
+        return $users;
     }
 
     /**
@@ -208,8 +279,11 @@ class CentralizedDeadlineNotificationService
             $existingData = $existingNotification->data;
             $contentChanged = $this->hasNotificationContentChanged($existingData, $notificationData);
             
+            // Always send email for deadline updates, even if content hasn't changed significantly
+            // This ensures users get updated information when deadlines are modified
             if (!$contentChanged) {
-                return; // No need to update
+                // Still send email but don't update database notification
+                Log::info("Content unchanged but sending updated email for deadline {$deadline->id} to user {$user->id}");
             }
         }
 
@@ -238,14 +312,16 @@ class CentralizedDeadlineNotificationService
                 
                 Log::info("Created new deadline notification for user {$user->id} ({$role}) for deadline {$deadline->id}");
             } else {
+                // Always update existing notification with new time information
                 $existingNotification->update([
                     'title' => $notificationData['title'],
                     'message' => $notificationData['message'],
                     'data' => $notificationData['data'],
                     'read_at' => null, // Mark as unread when updated
+                    'updated_at' => now(), // Update timestamp
                 ]);
                 
-                Log::info("Updated deadline notification for user {$user->id} ({$role}) for deadline {$deadline->id}");
+                Log::info("Updated deadline notification for user {$user->id} ({$role}) for deadline {$deadline->id} with new time information");
             }
 
         } catch (\Exception $e) {

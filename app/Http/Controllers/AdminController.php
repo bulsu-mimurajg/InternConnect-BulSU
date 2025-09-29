@@ -2001,8 +2001,6 @@ class AdminController extends Controller
                     'deadline_id' => $deadline->id,
                     'title' => $deadline->title,
                     'category' => $deadline->category,
-                    'start_date' => $deadline->start_date,
-                    'end_date' => $deadline->end_date,
                 ])
                 ->log('created deadline');
 
@@ -2044,6 +2042,14 @@ class AdminController extends Controller
                 }
             }
 
+            // Capture old values before update
+            $oldValues = [
+                'title' => $deadline->title,
+                'category' => $deadline->category,
+                'start_date' => $deadline->start_date,
+                'end_date' => $deadline->end_date,
+            ];
+
             $deadline->update([
                 'title' => $request->title,
                 'category' => $request->category,
@@ -2051,9 +2057,39 @@ class AdminController extends Controller
                 'end_date' => $request->end_date,
             ]);
 
-            // Queue deadline notifications after updating deadline (non-blocking)
+            // Queue deadline notifications for this specific deadline (non-blocking)
             $deadlineService = new CentralizedDeadlineNotificationService();
-            $deadlineService->queueDeadlineNotifications();
+            $deadlineService->queueDeadlineNotificationsForDeadline($deadline);
+
+            // Helper function to compare dates properly
+            $compareDates = function($oldDate, $newDate) {
+                if ($oldDate === $newDate) return true; // Exact string match
+                
+                try {
+                    $oldDateTime = new \DateTime($oldDate);
+                    $newDateTime = new \DateTime($newDate);
+                    return $oldDateTime->format('Y-m-d H:i:s') === $newDateTime->format('Y-m-d H:i:s');
+                } catch (\Exception $e) {
+                    return false; // If parsing fails, consider them different
+                }
+            };
+
+            // Log the activity with concise details
+            $changes = [];
+            if ($oldValues['title'] !== $request->title) $changes['title'] = ['old' => $oldValues['title'], 'new' => $request->title];
+            if ($oldValues['category'] !== $request->category) $changes['category'] = ['old' => $oldValues['category'], 'new' => $request->category];
+            if (!$compareDates($oldValues['start_date'], $request->start_date)) $changes['start_date'] = ['old' => $oldValues['start_date'], 'new' => $request->start_date];
+            if (!$compareDates($oldValues['end_date'], $request->end_date)) $changes['end_date'] = ['old' => $oldValues['end_date'], 'new' => $request->end_date];
+            
+            activity()
+                ->causedBy(Auth::user())
+                ->performedOn($deadline)
+                ->withProperties([
+                    'deadline_id' => $deadline->id,
+                    'title' => $deadline->title,
+                    'changes' => $changes,
+                ])
+                ->log('updated deadline');
 
             return redirect()->route('admin.events')->with('success', 'Deadline updated successfully.');
         } catch (\Exception $e) {
@@ -2073,15 +2109,32 @@ class AdminController extends Controller
     public function extendDeadline(Request $request, Deadline $deadline)
     {
         try {
+            $oldEndDate = $deadline->end_date;
             $newEndDate = $deadline->end_date->addMonth();
 
             $deadline->update([
                 'end_date' => $newEndDate,
             ]);
 
-            // Queue deadline notifications after extending deadline (non-blocking)
+            // Queue deadline notifications for this specific deadline after extending (non-blocking)
             $deadlineService = new CentralizedDeadlineNotificationService();
-            $deadlineService->queueDeadlineNotifications();
+            $deadlineService->queueDeadlineNotificationsForDeadline($deadline);
+
+            // Log the activity
+            activity()
+                ->causedBy(Auth::user())
+                ->performedOn($deadline)
+                ->withProperties([
+                    'deadline_id' => $deadline->id,
+                    'title' => $deadline->title,
+                    'changes' => [
+                        'end_date' => [
+                            'old' => $oldEndDate,
+                            'new' => $newEndDate
+                        ]
+                    ],
+                ])
+                ->log('extended deadline');
 
             return redirect()->route('admin.events')->with('success', "Deadline extended by 1 month successfully.");
         } catch (\Exception $e) {
@@ -2101,7 +2154,26 @@ class AdminController extends Controller
     public function deleteDeadline(Deadline $deadline)
     {
         try {
+            // Capture deadline details before deletion for logging
+            $deadlineDetails = [
+                'deadline_id' => $deadline->id,
+                'title' => $deadline->title,
+                'category' => $deadline->category,
+                'start_date' => $deadline->start_date,
+                'end_date' => $deadline->end_date,
+            ];
+
             $deadline->delete();
+
+            // Log the activity
+            activity()
+                ->causedBy(Auth::user())
+                ->withProperties([
+                    'deadline_id' => $deadlineDetails['deadline_id'],
+                    'title' => $deadlineDetails['title'],
+                    'category' => $deadlineDetails['category'],
+                ])
+                ->log('deleted deadline');
 
             return redirect()->route('admin.events')->with('success', 'Deadline deleted successfully.');
         } catch (\Exception $e) {

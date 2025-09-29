@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Pagination } from '@/components/ui/pagination';
-import { ChevronDownIcon, ChevronRightIcon, ActivityIcon, UserIcon, ClockIcon, LogInIcon, LogOutIcon, FilterIcon, XIcon } from 'lucide-react';
+import { ChevronDownIcon, ChevronRightIcon, ActivityIcon, UserIcon, ClockIcon, LogInIcon, LogOutIcon, FilterIcon, XIcon, CalendarIcon } from 'lucide-react';
 
 interface Activity {
     id: number;
@@ -74,6 +74,10 @@ export default function Logs({ activities, filters }: LogsProps) {
     const getActivityBadge = (description: string) => {
         if (description.includes('logged in')) return { variant: 'default' as const, text: 'Login' };
         if (description.includes('logged out')) return { variant: 'outline' as const, text: 'Logout' };
+        if (description.includes('created deadline')) return { variant: 'default' as const, text: 'Deadline Created' };
+        if (description.includes('updated deadline')) return { variant: 'secondary' as const, text: 'Deadline Updated' };
+        if (description.includes('extended deadline')) return { variant: 'secondary' as const, text: 'Deadline Extended' };
+        if (description.includes('deleted deadline')) return { variant: 'destructive' as const, text: 'Deadline Deleted' };
         if (description.includes('created')) return { variant: 'default' as const, text: 'Created' };
         if (description.includes('updated')) return { variant: 'secondary' as const, text: 'Updated' };
         if (description.includes('archived')) return { variant: 'outline' as const, text: 'Archived' };
@@ -85,6 +89,7 @@ export default function Logs({ activities, filters }: LogsProps) {
     const getActivityIcon = (description: string) => {
         if (description.includes('logged in')) return LogInIcon;
         if (description.includes('logged out')) return LogOutIcon;
+        if (description.includes('deadline')) return CalendarIcon;
         return ActivityIcon;
     };
 
@@ -152,7 +157,28 @@ export default function Logs({ activities, filters }: LogsProps) {
             return value.join(', ');
         }
         if (typeof value === 'object') return JSON.stringify(value, null, 2);
-        return String(value);
+        
+        // Check if the value is a date string (ISO format or datetime-local format)
+        const stringValue = String(value);
+        if (stringValue.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/) || stringValue.match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}/)) {
+            try {
+                const date = new Date(stringValue);
+                if (!isNaN(date.getTime())) {
+                    return date.toLocaleString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: true
+                    });
+                }
+            } catch (e) {
+                // If date parsing fails, return original value
+            }
+        }
+        
+        return stringValue;
     };
 
     const renderPropertyDetails = (properties: Record<string, any>) => {
