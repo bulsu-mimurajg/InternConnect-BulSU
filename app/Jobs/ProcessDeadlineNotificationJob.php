@@ -61,8 +61,8 @@ class ProcessDeadlineNotificationJob implements ShouldQueue
             // Create the centralized service instance
             $service = new CentralizedDeadlineNotificationService();
             
-            // Process the notification for this specific user and deadline
-            $service->processDeadlineNotificationsForUser($user);
+            // Process the notification for this specific user and specific deadline
+            $service->processDeadlineNotificationForUserAndDeadline($user, $deadline, $this->userRole);
 
             Log::info('Deadline notification job completed successfully', [
                 'deadline_id' => $this->deadlineId,

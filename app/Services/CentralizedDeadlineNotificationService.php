@@ -30,7 +30,6 @@ class CentralizedDeadlineNotificationService
         ],
         'student' => [
             'student_assessment_form',
-            'student_placements_by_hte',
         ],
         'hte' => [
             'hte_assessment_form',
@@ -170,34 +169,73 @@ class CentralizedDeadlineNotificationService
     {
         $users = collect();
 
-        // Get users based on deadline category
+        // Get users based on deadline category with proper filtering
         switch ($deadline->category) {
             case 'student_verification':
                 $users = User::whereHas('roles', function ($query) {
                     $query->where('name', 'adviser');
-                })->get();
+                })
+                ->where('status', '!=', 'archived')
+                ->whereHas('adviser', function ($query) {
+                    $query->where('is_active', true);
+                })
+                ->get();
                 break;
             case 'student_assessment_form':
                 $users = User::whereHas('roles', function ($query) {
                     $query->where('name', 'student');
-                })->get();
+                })
+                ->where('status', '!=', 'archived')
+                ->whereHas('student', function ($query) {
+                    $query->where('is_active', true);
+                })
+                ->get();
                 break;
             case 'hte_assessment_form':
                 $users = User::whereHas('roles', function ($query) {
                     $query->where('name', 'hte');
-                })->get();
+                })
+                ->where('status', '!=', 'archived')
+                ->whereHas('hte', function ($query) {
+                    $query->where('is_active', true);
+                })
+                ->get();
                 break;
             case 'sip_endorsement':
                 $users = User::whereHas('roles', function ($query) {
                     $query->where('name', 'admin');
-                })->get();
+                })
+                ->where('status', '!=', 'archived')
+                ->get();
                 break;
             case 'student_placements_by_hte':
                 $users = User::whereHas('roles', function ($query) {
-                    $query->whereIn('name', ['admin', 'hte', 'student']);
-                })->get();
+                    $query->whereIn('name', ['admin', 'hte']);
+                })
+                ->where('status', '!=', 'archived')
+                ->where(function ($query) {
+                    $query->whereHas('roles', function ($roleQuery) {
+                        $roleQuery->where('name', 'admin');
+                    })
+                    ->orWhere(function ($subQuery) {
+                        $subQuery->whereHas('roles', function ($roleQuery) {
+                            $roleQuery->where('name', 'hte');
+                        })
+                        ->whereHas('hte', function ($hteQuery) {
+                            $hteQuery->where('is_active', true);
+                        });
+                    });
+                })
+                ->get();
                 break;
         }
+
+        Log::info("Retrieved users for deadline category: {$deadline->category}", [
+            'deadline_id' => $deadline->id,
+            'deadline_category' => $deadline->category,
+            'users_count' => $users->count(),
+            'user_emails' => $users->pluck('email')->toArray(),
+        ]);
 
         return $users;
     }
@@ -339,6 +377,7 @@ class CentralizedDeadlineNotificationService
     {
         // Admin always receives notifications
         if ($role === 'admin') {
+            Log::info("Admin user {$user->id} should receive notification for deadline {$deadline->id}");
             return true;
         }
 
@@ -346,23 +385,56 @@ class CentralizedDeadlineNotificationService
         switch ($role) {
             case 'adviser':
                 // Advisers receive student verification notifications
-                return $deadline->category === 'student_verification';
+                $shouldReceive = $deadline->category === 'student_verification';
+                Log::info("Adviser user {$user->id} should receive notification: " . ($shouldReceive ? 'YES' : 'NO'), [
+                    'deadline_category' => $deadline->category,
+                    'user_id' => $user->id,
+                ]);
+                return $shouldReceive;
                 
             case 'student':
                 // Students receive notifications unless they've already submitted
                 if ($deadline->category === 'student_assessment_form') {
-                    return !($user->student && $user->student->is_submit);
+                    $hasSubmitted = $user->student && $user->student->is_submit;
+                    $shouldReceive = !$hasSubmitted;
+                    Log::info("Student user {$user->id} should receive notification: " . ($shouldReceive ? 'YES' : 'NO'), [
+                        'deadline_category' => $deadline->category,
+                        'user_id' => $user->id,
+                        'has_student_record' => $user->student ? 'YES' : 'NO',
+                        'is_submit' => $hasSubmitted,
+                    ]);
+                    return $shouldReceive;
                 }
+                Log::info("Student user {$user->id} should receive notification: YES (placement notification)", [
+                    'deadline_category' => $deadline->category,
+                    'user_id' => $user->id,
+                ]);
                 return true; // Always receive placement notifications
                 
             case 'hte':
                 // HTEs receive notifications unless they've already submitted
                 if ($deadline->category === 'hte_assessment_form') {
-                    return !($user->hte && $user->hte->is_submit);
+                    $hasSubmitted = $user->hte && $user->hte->is_submit;
+                    $shouldReceive = !$hasSubmitted;
+                    Log::info("HTE user {$user->id} should receive notification: " . ($shouldReceive ? 'YES' : 'NO'), [
+                        'deadline_category' => $deadline->category,
+                        'user_id' => $user->id,
+                        'has_hte_record' => $user->hte ? 'YES' : 'NO',
+                        'is_submit' => $hasSubmitted,
+                    ]);
+                    return $shouldReceive;
                 }
+                Log::info("HTE user {$user->id} should receive notification: YES (placement notification)", [
+                    'deadline_category' => $deadline->category,
+                    'user_id' => $user->id,
+                ]);
                 return true; // Always receive placement notifications
         }
 
+        Log::info("User {$user->id} with role {$role} should receive notification: YES (default)", [
+            'deadline_category' => $deadline->category,
+            'user_id' => $user->id,
+        ]);
         return true;
     }
 
@@ -427,6 +499,7 @@ class CentralizedDeadlineNotificationService
             ];
         }
         
+        
         return null; // No notification needed
     }
 
@@ -460,6 +533,10 @@ class CentralizedDeadlineNotificationService
                 $level = 'medium';
                 $title = 'Deadline Reminder';
                 $message = 'Please plan to complete this task in the coming days.';
+            } else {
+                $level = 'low';
+                $title = 'Deadline Reminder';
+                $message = 'Please plan to complete this task in the coming weeks.';
             }
         } elseif ($hoursRemaining !== null && $hoursRemaining < 24) {
             if ($hoursRemaining <= 0) {
@@ -533,6 +610,115 @@ class CentralizedDeadlineNotificationService
                 ->delete();
                 
             Log::info("Cleaned up {$deletedCount} old deadline notifications");
+        }
+    }
+
+    /**
+     * Process deadline notifications for a specific user and specific deadline
+     */
+    public function processDeadlineNotificationForUserAndDeadline(User $user, Deadline $deadline, string $role): void
+    {
+        Log::info('Processing deadline notification for specific user and deadline', [
+            'user_id' => $user->id,
+            'user_email' => $user->email,
+            'deadline_id' => $deadline->id,
+            'deadline_title' => $deadline->title,
+            'deadline_category' => $deadline->category,
+            'user_role' => $role,
+        ]);
+
+        // Check if user should receive this notification based on their status
+        if (!$this->shouldUserReceiveNotification($user, $deadline, $role)) {
+            Log::info("User {$user->id} should not receive notification for deadline {$deadline->id} with role {$role} - SKIPPING");
+            return;
+        }
+
+        Log::info("User {$user->id} should receive notification for deadline {$deadline->id} with role {$role} - PROCEEDING");
+
+        $now = Carbon::now();
+        $deadlineDate = Carbon::parse($deadline->end_date);
+        
+        // Calculate time remaining
+        $timeRemaining = $now->diffInHours($deadlineDate, false);
+        $daysRemaining = round($now->diffInDays($deadlineDate, false));
+        
+        // Only process if deadline is in the future
+        if ($timeRemaining <= 0) {
+            Log::info("Deadline {$deadline->id} has already passed, skipping notification");
+            return;
+        }
+
+        $notificationData = $this->getNotificationDataForDeadline($deadline, $timeRemaining, $daysRemaining);
+        
+        if (!$notificationData) {
+            Log::info("No notification needed for deadline {$deadline->id} (not in 1, 3, 5 days or < 24 hours)");
+            return; // No notification needed
+        }
+
+        // Check if notification already exists for this deadline and user
+        $existingNotification = Notification::where('user_id', $user->id)
+            ->where('type', 'unified_deadline')
+            ->whereJsonContains('data->deadline_id', $deadline->id)
+            ->first();
+
+        $isNewNotification = !$existingNotification;
+        $contentChanged = false;
+
+        if ($existingNotification) {
+            // Check if content has changed (urgency level, time remaining, etc.)
+            $existingData = $existingNotification->data;
+            $contentChanged = $this->hasNotificationContentChanged($existingData, $notificationData);
+            
+            // Always send email for deadline updates, even if content hasn't changed significantly
+            // This ensures users get updated information when deadlines are modified
+            if (!$contentChanged) {
+                // Still send email but don't update database notification
+                Log::info("Content unchanged but sending updated email for deadline {$deadline->id} to user {$user->id}");
+            }
+        }
+
+        try {
+            // Create notification instance
+            $notification = new UnifiedDeadlineNotification(
+                $deadline,
+                $role,
+                $daysRemaining,
+                $timeRemaining < 24 ? $timeRemaining : null
+            );
+
+            // Send notification using custom EmailService
+            $notification->sendCustomEmail($user);
+
+            // Create or update database notification
+            if ($isNewNotification) {
+                Notification::create([
+                    'user_id' => $user->id,
+                    'type' => 'unified_deadline',
+                    'title' => $notificationData['title'],
+                    'message' => $notificationData['message'],
+                    'data' => $notificationData['data'],
+                    'read_at' => null,
+                ]);
+                
+                Log::info("Created new deadline notification for user {$user->id} ({$role}) for deadline {$deadline->id}");
+            } else {
+                // Always update existing notification with new time information
+                $existingNotification->update([
+                    'title' => $notificationData['title'],
+                    'message' => $notificationData['message'],
+                    'data' => $notificationData['data'],
+                    'read_at' => null, // Mark as unread when updated
+                    'updated_at' => now(), // Update timestamp
+                ]);
+                
+                Log::info("Updated deadline notification for user {$user->id} ({$role}) for deadline {$deadline->id} with new time information");
+            }
+
+        } catch (\Exception $e) {
+            Log::error("Failed to send deadline notification to user {$user->id} ({$role}) for deadline {$deadline->id}", [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
         }
     }
 

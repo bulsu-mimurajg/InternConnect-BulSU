@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\Deadline;
 use App\Models\User;
 use App\Services\CentralizedDeadlineNotificationService;
+use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 
@@ -12,114 +13,205 @@ class TestDeadlineUpdateNotifications extends Command
 {
     /**
      * The name and signature of the console command.
-     *
-     * @var string
      */
-    protected $signature = 'test:deadline-update-notifications {email} {--deadline-id=}';
+    protected $signature = 'test:deadline-update-notifications {deadline_id} {days_remaining}';
 
     /**
      * The console command description.
-     *
-     * @var string
      */
-    protected $description = 'Test deadline update notifications to verify time remaining is updated correctly';
+    protected $description = 'Test deadline update notifications with specific days remaining';
 
     /**
      * Execute the console command.
      */
     public function handle()
     {
-        $email = $this->argument('email');
-        $deadlineId = $this->option('deadline-id');
+        $deadlineId = $this->argument('deadline_id');
+        $daysRemaining = $this->argument('days_remaining');
 
-        $this->info('Testing Deadline Update Notifications');
-        $this->info('=====================================');
+        $this->info("Testing deadline update notifications for deadline ID: {$deadlineId} with {$daysRemaining} days remaining");
 
-        // Find or create a test deadline
-        if ($deadlineId) {
-            $deadline = Deadline::find($deadlineId);
-            if (!$deadline) {
-                $this->error("Deadline with ID {$deadlineId} not found.");
-                return 1;
-            }
-        } else {
-            // Create a test deadline
-            $deadline = Deadline::create([
-                'title' => 'Test Deadline Update',
-                'category' => 'student_assessment_form',
-                'start_date' => now()->subDay(),
-                'end_date' => now()->addDays(3), // 3 days remaining
-            ]);
-            $this->info("Created test deadline with ID: {$deadline->id}");
-        }
-
-        $this->info("Testing with deadline: {$deadline->title}");
-        $this->info("Current end date: {$deadline->end_date}");
-        $this->info("Days remaining: " . now()->diffInDays($deadline->end_date, false));
-
-        // Find a test user
-        $user = User::where('email', $email)->first();
-        if (!$user) {
-            $this->error("User with email {$email} not found.");
+        // Get the deadline
+        $deadline = Deadline::find($deadlineId);
+        if (!$deadline) {
+            $this->error("Deadline with ID {$deadlineId} not found");
             return 1;
         }
 
-        $this->info("Testing with user: {$user->email} (Role: {$user->getRoleNames()->first()})");
+        // Update the deadline to have the specified days remaining
+        $newEndDate = Carbon::now()->addDays($daysRemaining);
+        $deadline->update(['end_date' => $newEndDate]);
 
-        // Test 1: Send initial notification
-        $this->info("\n1. Sending initial notification...");
+        $this->info("Updated deadline '{$deadline->title}' to end on: {$newEndDate->format('Y-m-d H:i:s')}");
+
+        // Get a test user (admin user)
+        $user = User::whereHas('roles', function ($query) {
+            $query->where('name', 'admin');
+        })->first();
+
+        if (!$user) {
+            $this->error("No admin user found for testing");
+            return 1;
+        }
+
+        $this->info("Using test user: {$user->email} (ID: {$user->id})");
+
+        // Test the new method
         $service = new CentralizedDeadlineNotificationService();
-        $service->queueDeadlineNotificationsForDeadline($deadline);
-        $this->info("   ✅ Initial notification queued");
+        
+        $this->info("Testing processDeadlineNotificationForUserAndDeadline method...");
+        
+        try {
+            $service->processDeadlineNotificationForUserAndDeadline($user, $deadline, 'admin');
+            $this->info("✅ Notification sent successfully!");
+        } catch (\Exception $e) {
+            $this->error("❌ Error sending notification: " . $e->getMessage());
+            return 1;
+        }
 
-        // Test 2: Update deadline to 1 day remaining
-        $this->info("\n2. Updating deadline to 1 day remaining...");
-        $deadline->update([
-            'end_date' => now()->addDay(), // 1 day remaining
-        ]);
-        $this->info("   Updated end date: {$deadline->end_date}");
-        $this->info("   Days remaining: " . now()->diffInDays($deadline->end_date, false));
+        // Show the current time remaining calculation
+        $now = Carbon::now();
+        $deadlineDate = Carbon::parse($deadline->end_date);
+        $timeRemaining = $now->diffInHours($deadlineDate, false);
+        $daysRemainingCalculated = round($now->diffInDays($deadlineDate, false));
 
-        $service->queueDeadlineNotificationsForDeadline($deadline);
-        $this->info("   ✅ Updated notification queued (1 day remaining)");
+        $this->info("Current time remaining calculation:");
+        $this->info("- Hours remaining: {$timeRemaining}");
+        $this->info("- Days remaining: {$daysRemainingCalculated}");
 
-        // Test 3: Update deadline to 5 days remaining
-        $this->info("\n3. Updating deadline to 5 days remaining...");
-        $deadline->update([
-            'end_date' => now()->addDays(5), // 5 days remaining
-        ]);
-        $this->info("   Updated end date: {$deadline->end_date}");
-        $this->info("   Days remaining: " . now()->diffInDays($deadline->end_date, false));
-
-        $service->queueDeadlineNotificationsForDeadline($deadline);
-        $this->info("   ✅ Updated notification queued (5 days remaining)");
-
-        // Test 4: Update deadline to critical (2 hours remaining)
-        $this->info("\n4. Updating deadline to critical (2 hours remaining)...");
-        $deadline->update([
-            'end_date' => now()->addHours(2), // 2 hours remaining
-        ]);
-        $this->info("   Updated end date: {$deadline->end_date}");
-        $this->info("   Hours remaining: " . now()->diffInHours($deadline->end_date, false));
-
-        $service->queueDeadlineNotificationsForDeadline($deadline);
-        $this->info("   ✅ Updated notification queued (2 hours remaining)");
-
-        $this->info("\nTest Summary:");
-        $this->info("=============");
-        $this->info("✅ Initial notification (3 days)");
-        $this->info("✅ Updated notification (1 day)");
-        $this->info("✅ Updated notification (5 days)");
-        $this->info("✅ Updated notification (2 hours - critical)");
-        $this->info("\nCheck your email for the notifications with updated time information!");
-        $this->info("Each email should show the correct time remaining based on the deadline update.");
-
-        // Clean up test deadline if we created it
-        if (!$this->option('deadline-id')) {
-            $deadline->delete();
-            $this->info("\n🧹 Cleaned up test deadline");
+        // Test the notification data generation
+        $notificationData = $this->getNotificationDataForDeadline($deadline, $timeRemaining, $daysRemainingCalculated);
+        
+        if ($notificationData) {
+            $this->info("Notification data generated:");
+            $this->info("- Title: {$notificationData['title']}");
+            $this->info("- Message: {$notificationData['message']}");
+            $this->info("- Days remaining in data: {$notificationData['data']['days_remaining']}");
+        } else {
+            $this->info("No notification data generated (deadline not in 1, 3, 5 days or < 24 hours)");
         }
 
         return 0;
+    }
+
+    /**
+     * Get notification data for deadline based on time remaining (copied from service for testing)
+     */
+    private function getNotificationDataForDeadline(Deadline $deadline, int $hoursRemaining, int $daysRemaining): ?array
+    {
+        $deadlineName = $deadline->title ?? $this->getDefaultDeadlineName($deadline->category);
+        
+        // Check for specific day reminders (1, 3, 5 days) - PRIORITY
+        if (in_array($daysRemaining, [1, 3, 5])) {
+            $urgencyLevel = $this->getUrgencyLevel($daysRemaining, null, $deadline->category);
+            
+            return [
+                'title' => $urgencyLevel['title'],
+                'message' => "{$deadlineName} deadline is in {$daysRemaining} day(s). {$urgencyLevel['message']}",
+                'data' => [
+                    'deadline_id' => $deadline->id,
+                    'deadline_name' => $deadlineName,
+                    'days_remaining' => $daysRemaining,
+                    'deadline_date' => $deadline->end_date,
+                    'category' => $deadline->category,
+                    'urgency_level' => $urgencyLevel['level'],
+                    'is_critical' => $urgencyLevel['is_critical'],
+                ],
+            ];
+        }
+        
+        // If less than 24 hours remaining (within the day), show hours
+        if ($hoursRemaining < 24 && $hoursRemaining > 0) {
+            $urgencyLevel = $this->getUrgencyLevel(null, $hoursRemaining, $deadline->category);
+            
+            return [
+                'title' => $urgencyLevel['title'],
+                'message' => "{$deadlineName} deadline is in {$hoursRemaining} hours. {$urgencyLevel['message']}",
+                'data' => [
+                    'deadline_id' => $deadline->id,
+                    'deadline_name' => $deadlineName,
+                    'hours_remaining' => $hoursRemaining,
+                    'deadline_date' => $deadline->end_date,
+                    'category' => $deadline->category,
+                    'urgency_level' => $urgencyLevel['level'],
+                    'is_critical' => $urgencyLevel['is_critical'],
+                ],
+            ];
+        }
+        
+        return null; // No notification needed
+    }
+
+    /**
+     * Get urgency level based on time remaining and deadline category (copied from service for testing)
+     */
+    private function getUrgencyLevel($daysRemaining, $hoursRemaining, $category): array
+    {
+        $isCritical = false;
+        $level = 'normal';
+        $title = 'Deadline Reminder';
+        $message = '';
+
+        if ($daysRemaining !== null) {
+            if ($daysRemaining <= 0) {
+                $isCritical = true;
+                $level = 'expired';
+                $title = 'Deadline Expired!';
+                $message = 'This deadline has passed. Please contact the administrator immediately.';
+            } elseif ($daysRemaining == 1) {
+                $isCritical = true;
+                $level = 'urgent';
+                $title = 'Deadline Tomorrow!';
+                $message = 'This is your final reminder. Please complete the required actions immediately.';
+            } elseif ($daysRemaining <= 3) {
+                $isCritical = true;
+                $level = 'high';
+                $title = 'Deadline Approaching!';
+                $message = 'Please prioritize this task and complete it soon.';
+            } elseif ($daysRemaining <= 5) {
+                $level = 'medium';
+                $title = 'Deadline Reminder';
+                $message = 'Please plan to complete this task in the coming days.';
+            }
+        } elseif ($hoursRemaining !== null && $hoursRemaining < 24) {
+            if ($hoursRemaining <= 0) {
+                $isCritical = true;
+                $level = 'expired';
+                $title = 'Deadline Expired!';
+                $message = 'This deadline has passed. Please contact the administrator immediately.';
+            } elseif ($hoursRemaining <= 2) {
+                $isCritical = true;
+                $level = 'critical';
+                $title = 'Deadline in Hours!';
+                $message = 'This is extremely urgent. Please complete the required actions immediately.';
+            } else {
+                $isCritical = true;
+                $level = 'urgent';
+                $title = 'Deadline Today!';
+                $message = 'Please complete the required actions as soon as possible.';
+            }
+        }
+
+        return [
+            'level' => $level,
+            'is_critical' => $isCritical,
+            'title' => $title,
+            'message' => $message,
+        ];
+    }
+
+    /**
+     * Get default deadline name based on category (copied from service for testing)
+     */
+    private function getDefaultDeadlineName(string $category): string
+    {
+        return match($category) {
+            'student_verification' => 'Student Verification',
+            'student_assessment_form' => 'Student Assessment Form',
+            'hte_assessment_form' => 'HTE Assessment Form',
+            'sip_endorsement' => 'SIP Endorsement',
+            'student_placements_by_hte' => 'Student Placements',
+            default => 'Assessment Form',
+        };
     }
 }

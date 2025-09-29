@@ -270,8 +270,8 @@ export default function Register({ sections }: RegisterProps) {
                         </div>
                         <div className="col-span-full">
                             <p className="text-xs text-muted-foreground text-justify">
-                                Password must be at least 8 characters, have at least one uppercase letter, have at least one lowercase letter, and have at least one number,
-                                and one special character (@$!%*?&).
+                                Password must be at least 8 characters, have at least one uppercase letter, have at least one lowercase letter, have at least one number,
+                                and have at least one special character (@$!%*?&).
                             </p>
                         </div>
                     </div>
