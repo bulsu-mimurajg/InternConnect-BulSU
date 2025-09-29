@@ -18,6 +18,7 @@ use App\Services\ChartGeneratorService;
 use App\Services\NotificationService;
 use App\Services\AutomaticEndorsementService;
 use App\Services\AutomaticPlacementService;
+use App\Services\CentralizedDeadlineNotificationService;
 use App\Notifications\HTECredentialsNotification;
 use App\Notifications\AdviserCredentialsNotification;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -1988,9 +1989,8 @@ class AdminController extends Controller
             $notificationService = new NotificationService();
             $notificationService->notifyNewDeadline($deadline);
 
-            // Trigger deadline notification check for HTE users
-            $deadlineService = new \App\Services\DeadlineNotificationService();
-            $deadlineService->cleanupOldDeadlineNotifications();
+            // Trigger centralized deadline notification check for all users
+            $deadlineService = new CentralizedDeadlineNotificationService();
             $deadlineService->checkAndCreateDeadlineNotifications();
 
             // Log the activity
@@ -2051,17 +2051,9 @@ class AdminController extends Controller
                 'end_date' => $request->end_date,
             ]);
 
-            // Trigger deadline notification check after updating deadline
-            $deadlineService = new \App\Services\DeadlineNotificationService();
-            $deadlineService->cleanupOldDeadlineNotifications();
+            // Trigger centralized deadline notification check after updating deadline
+            $deadlineService = new CentralizedDeadlineNotificationService();
             $deadlineService->checkAndCreateDeadlineNotifications();
-            
-            // Also trigger student deadline notifications for student-related deadlines
-            if (in_array($request->category, ['student_assessment_form', 'student_placements_by_hte'])) {
-                $studentDeadlineService = new \App\Services\StudentDeadlineNotificationService();
-                $studentDeadlineService->cleanupOldDeadlineNotifications();
-                $studentDeadlineService->checkAndCreateDeadlineNotifications();
-            }
 
             return redirect()->route('admin.events')->with('success', 'Deadline updated successfully.');
         } catch (\Exception $e) {
@@ -2087,17 +2079,9 @@ class AdminController extends Controller
                 'end_date' => $newEndDate,
             ]);
 
-            // Trigger deadline notification check after extending deadline
-            $deadlineService = new \App\Services\DeadlineNotificationService();
-            $deadlineService->cleanupOldDeadlineNotifications();
+            // Trigger centralized deadline notification check after extending deadline
+            $deadlineService = new CentralizedDeadlineNotificationService();
             $deadlineService->checkAndCreateDeadlineNotifications();
-            
-            // Also trigger student deadline notifications for student-related deadlines
-            if (in_array($deadline->category, ['student_assessment_form', 'student_placements_by_hte'])) {
-                $studentDeadlineService = new \App\Services\StudentDeadlineNotificationService();
-                $studentDeadlineService->cleanupOldDeadlineNotifications();
-                $studentDeadlineService->checkAndCreateDeadlineNotifications();
-            }
 
             return redirect()->route('admin.events')->with('success', "Deadline extended by 1 month successfully.");
         } catch (\Exception $e) {

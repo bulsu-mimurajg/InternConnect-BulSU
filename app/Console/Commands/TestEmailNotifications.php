@@ -104,6 +104,47 @@ class TestEmailNotifications extends Command
             $this->error('❌ HTE deadline notification failed: ' . $e->getMessage());
         }
 
+        $this->info('Testing Unified Deadline Notification with Custom EmailService...');
+        
+        // Test Unified Deadline notification for different roles using custom EmailService
+        try {
+            // Test for admin role
+            $adminNotification = new \App\Notifications\UnifiedDeadlineNotification([
+                'id' => 1,
+                'title' => 'Student Assessment Deadline',
+                'category' => 'student_assessment_form',
+                'end_date' => now()->addDays(3),
+                'getCategoryDisplayName' => fn() => 'Student Assessment Form',
+            ], 'admin', 3, null);
+            $adminNotification->sendCustomEmail($testUser);
+            $this->info('✅ Unified deadline notification (admin) sent via custom EmailService!');
+            
+            // Test for student role
+            $studentNotification = new \App\Notifications\UnifiedDeadlineNotification([
+                'id' => 2,
+                'title' => 'Student Assessment Deadline',
+                'category' => 'student_assessment_form',
+                'end_date' => now()->addDays(1),
+                'getCategoryDisplayName' => fn() => 'Student Assessment Form',
+            ], 'student', 1, null);
+            $studentNotification->sendCustomEmail($testUser);
+            $this->info('✅ Unified deadline notification (student) sent via custom EmailService!');
+            
+            // Test for HTE role
+            $hteNotification = new \App\Notifications\UnifiedDeadlineNotification([
+                'id' => 3,
+                'title' => 'HTE Assessment Deadline',
+                'category' => 'hte_assessment_form',
+                'end_date' => now()->addHours(6),
+                'getCategoryDisplayName' => fn() => 'HTE Assessment Form',
+            ], 'hte', null, 6);
+            $hteNotification->sendCustomEmail($testUser);
+            $this->info('✅ Unified deadline notification (HTE) sent via custom EmailService!');
+            
+        } catch (\Exception $e) {
+            $this->error('❌ Unified deadline notification via custom EmailService failed: ' . $e->getMessage());
+        }
+
         $this->info('Testing EmailService with Blade templates...');
         
         // Test EmailService methods
