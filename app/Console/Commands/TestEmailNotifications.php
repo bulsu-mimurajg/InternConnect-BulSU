@@ -76,6 +76,34 @@ class TestEmailNotifications extends Command
             $this->error('❌ Password reset notification failed: ' . $e->getMessage());
         }
 
+        $this->info('Testing Student Deadline Notification with Blade template...');
+        
+        // Test Student Deadline notification
+        try {
+            $testUser->notify(new \App\Notifications\StudentDeadlineNotification([
+                'deadline_name' => 'Student Assessment',
+                'deadline_date' => now()->addDays(3)->format('Y-m-d H:i:s'),
+                'category' => 'student_assessment_form',
+            ], 3, null));
+            $this->info('✅ Student deadline notification sent successfully!');
+        } catch (\Exception $e) {
+            $this->error('❌ Student deadline notification failed: ' . $e->getMessage());
+        }
+
+        $this->info('Testing HTE Deadline Notification with Blade template...');
+        
+        // Test HTE Deadline notification
+        try {
+            $testUser->notify(new \App\Notifications\HTEDeadlineNotification([
+                'deadline_name' => 'HTE Assessment Form',
+                'deadline_date' => now()->addDays(5)->format('M d, Y \a\t g:i A'),
+                'category' => 'hte_assessment_form',
+            ], 5, null));
+            $this->info('✅ HTE deadline notification sent successfully!');
+        } catch (\Exception $e) {
+            $this->error('❌ HTE deadline notification failed: ' . $e->getMessage());
+        }
+
         $this->info('Testing EmailService with Blade templates...');
         
         // Test EmailService methods

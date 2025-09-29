@@ -5,6 +5,8 @@ namespace App\Notifications;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
+use App\Services\EmailService;
+use Illuminate\Support\Facades\Log;
 
 class StudentDeadlineNotification extends Notification
 {
@@ -53,6 +55,35 @@ class StudentDeadlineNotification extends Notification
             }
         }
 
+        // Use the custom EmailService to send the deadline email
+        $emailService = new EmailService();
+        
+        // Determine subject based on time remaining
+        $subject = 'Student Assessment Deadline Reminder';
+        if ($this->daysRemaining === 1) {
+            $subject = '⚠️ Student Assessment Deadline Tomorrow!';
+        } elseif (in_array($this->daysRemaining, [3, 5])) {
+            $subject = "Student Assessment Deadline in {$this->daysRemaining} Days";
+        } elseif ($this->hoursRemaining && $this->hoursRemaining < 24) {
+            $subject = '⚠️ Assessment Deadline in ' . $this->hoursRemaining . ' Hours!';
+        }
+        
+        // Generate HTML body using Blade template
+        $body = view('emails.student-deadline', [
+            'deadlineName' => $deadlineName,
+            'formattedDate' => $formattedDate,
+            'daysRemaining' => $this->daysRemaining,
+            'hoursRemaining' => $this->hoursRemaining,
+        ])->render();
+
+        try {
+            $emailService->sendEmail($notifiable->email, $subject, $body, $notifiable->name ?? 'Student');
+        } catch (\Exception $e) {
+            // Log the error but don't fail the notification
+            Log::error('Failed to send student deadline email: ' . $e->getMessage());
+        }
+
+        // Return the default Laravel mail message for compatibility
         $message = new MailMessage;
         
         // Determine subject and content based on time remaining

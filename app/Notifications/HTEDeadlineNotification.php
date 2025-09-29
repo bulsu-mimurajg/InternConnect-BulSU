@@ -6,6 +6,8 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
+use App\Services\EmailService;
+use Illuminate\Support\Facades\Log;
 
 class HTEDeadlineNotification extends Notification
 {
@@ -42,7 +44,40 @@ class HTEDeadlineNotification extends Notification
     {
         $deadlineName = $this->deadline['deadline_name'] ?? 'Assessment Form';
         $isPlacement = $this->deadline['category'] === 'student_placements_by_hte';
+        $deadlineDate = $this->deadline['deadline_date'] ?? '';
         
+        // Use the custom EmailService to send the deadline email
+        $emailService = new EmailService();
+        
+        // Determine subject based on time remaining and category
+        $subject = 'HTE Deadline Reminder';
+        if ($this->hoursRemaining && $this->hoursRemaining < 24) {
+            $subject = 'Deadline Approaching!';
+        } elseif ($this->daysRemaining === 1) {
+            $subject = '⚠️ Deadline Tomorrow!';
+        } elseif ($this->daysRemaining === 3) {
+            $subject = 'Deadline in 3 Days';
+        } elseif ($this->daysRemaining === 5) {
+            $subject = 'Deadline in 5 Days';
+        }
+        
+        // Generate HTML body using Blade template
+        $body = view('emails.hte-deadline', [
+            'deadlineName' => $deadlineName,
+            'deadlineDate' => $deadlineDate,
+            'isPlacement' => $isPlacement,
+            'daysRemaining' => $this->daysRemaining,
+            'hoursRemaining' => $this->hoursRemaining,
+        ])->render();
+
+        try {
+            $emailService->sendEmail($notifiable->email, $subject, $body, $notifiable->name ?? 'HTE Representative');
+        } catch (\Exception $e) {
+            // Log the error but don't fail the notification
+            Log::error('Failed to send HTE deadline email: ' . $e->getMessage());
+        }
+
+        // Return the default Laravel mail message for compatibility
         // Determine the message based on time remaining and category
         if ($this->hoursRemaining && $this->hoursRemaining < 24) {
             $title = 'Deadline Approaching!';
@@ -67,8 +102,8 @@ class HTEDeadlineNotification extends Notification
             ->line($message)
             ->line("Deadline: {$this->deadline['deadline_date']}")
             ->action($actionText, $actionUrl)
-            ->line('Thank you for using InternCity!')
-            ->salutation('Best regards, InternCity Team');
+            ->line('Thank you for using BULSU InternConnect!')
+            ->salutation('Best regards, BULSU InternConnect Team');
 
         // Add urgency styling for 1-day reminders
         if ($this->daysRemaining === 1) {
