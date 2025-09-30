@@ -30,6 +30,7 @@ class CentralizedDeadlineNotificationService
         ],
         'student' => [
             'student_assessment_form',
+            'student_placements_by_hte',
         ],
         'hte' => [
             'hte_assessment_form',
@@ -405,11 +406,34 @@ class CentralizedDeadlineNotificationService
                     ]);
                     return $shouldReceive;
                 }
-                Log::info("Student user {$user->id} should receive notification: YES (placement notification)", [
+                
+                // For placement-related deadlines, only notify students who are actually placed
+                // or have endorsed matches (not just endorsement records that might be inconsistent)
+                if ($deadline->category === 'student_placements_by_hte') {
+                    $isPlaced = $user->student && $user->student->is_placed;
+                    
+                    // Check if student has any matches that are actually endorsed (not just endorsement records)
+                    $hasEndorsedMatches = $user->student && $user->student->matches()
+                        ->where('endorsement_status', 'endorsed')
+                        ->exists();
+                    
+                    $shouldReceive = $isPlaced || $hasEndorsedMatches;
+                    
+                    Log::info("Student user {$user->id} should receive placement notification: " . ($shouldReceive ? 'YES' : 'NO'), [
+                        'deadline_category' => $deadline->category,
+                        'user_id' => $user->id,
+                        'has_student_record' => $user->student ? 'YES' : 'NO',
+                        'is_placed' => $isPlaced,
+                        'has_endorsed_matches' => $hasEndorsedMatches,
+                    ]);
+                    return $shouldReceive;
+                }
+                
+                Log::info("Student user {$user->id} should receive notification: YES (default)", [
                     'deadline_category' => $deadline->category,
                     'user_id' => $user->id,
                 ]);
-                return true; // Always receive placement notifications
+                return true; // Default behavior for other deadline categories
                 
             case 'hte':
                 // HTEs receive notifications unless they've already submitted

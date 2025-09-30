@@ -305,7 +305,6 @@ export default function Profile({ student, categories, additional_info = [], has
                                     <tr className="border-b">
                                         <th className="text-left p-2 font-medium">Subcategory</th>
                                         <th className="text-right p-2 font-medium">Score</th>
-                                        <th className="text-center p-2 font-medium">Rating</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -313,12 +312,6 @@ export default function Profile({ student, categories, additional_info = [], has
                                         <tr key={subcategory.id} className="border-b">
                                             <td className="p-2">{subcategory.name}</td>
                                             <td className="p-2 text-right">{subcategory.score}/5</td>
-                                            <td className="p-2 text-center">
-                                                <Badge className={getScoreColor(subcategory.score)}>
-                                                    {subcategory.score >= 4 ? 'Excellent' :
-                                                     subcategory.score >= 3 ? 'Good' : 'Needs Improvement'}
-                                                </Badge>
-                                            </td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -337,7 +330,7 @@ export default function Profile({ student, categories, additional_info = [], has
                 {/* Sub Navigation */}
                 <Card>
                     <CardContent className="p-0">
-                        <div className="flex flex-wrap gap-1 p-4">
+                        <div className="flex flex-wrap justify-center gap-2">
                             {navigationItems.map((item) => {
                                 const Icon = item.icon;
                                 return (

@@ -7,8 +7,6 @@ import {
     CheckIcon,
     ClockIcon,
     UsersIcon,
-    AlertCircleIcon,
-    BriefcaseIcon,
     CalendarIcon,
     RotateCcwIcon,
     ListIcon,
@@ -27,6 +25,7 @@ interface Notification {
     message: string;
     is_read: boolean;
     created_at: string;
+    updated_at: string;
     data?: Record<string, unknown>;
 }
 
@@ -34,8 +33,33 @@ interface NotificationBellProps {
     initialCount?: number;
 }
 
+interface UserRole {
+    name: string;
+    id?: number;
+}
+
+interface AuthUser {
+    id: number;
+    name: string;
+    email: string;
+    roles: UserRole[];
+}
+
+interface SharedData {
+    auth: {
+        user: AuthUser;
+        role: string;
+    };
+    [key: string]: unknown;
+}
+
+interface FilterButton {
+    key: 'all' | 'endorsement' | 'deadline' | 'placement' | 'approval';
+    label: string;
+}
+
 export default function NotificationBell({ initialCount = 0 }: NotificationBellProps) {
-    const { auth } = usePage<{ auth: { user: { roles: string[] } } }>().props;
+    const { auth } = usePage<SharedData>().props;
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [unreadCount, setUnreadCount] = useState(initialCount);
     const [isOpen, setIsOpen] = useState(false);
@@ -67,7 +91,7 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                 });
 
                 // Sort by created_at date (newest first)
-                return merged.sort((a, b) =>
+                return merged.sort((a: Notification, b: Notification) =>
                     new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
                 );
             });
@@ -95,7 +119,7 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
             }
 
             const result = await response.json();
-            
+
             if (result.success) {
                 // Record local update timestamp
                 const now = Date.now();
@@ -141,7 +165,7 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
             }
 
             const result = await response.json();
-            
+
             if (result.success) {
                 setNotifications(prev =>
                     prev.map(notif => ({ ...notif, is_read: true }))
@@ -233,20 +257,9 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
 
     const handleNotificationClick = (notification: Notification) => {
         // Helper function to check if user has a specific role
-        const hasRole = (roleName: string) => {
-            return auth.user?.roles?.some((role: any) => role.name === roleName) || false;
+        const hasRole = (roleName: string): boolean => {
+            return auth.user?.roles?.some((role: UserRole) => role.name === roleName) || false;
         };
-
-        // Debug logging
-        console.log('=== NOTIFICATION DEBUG ===');
-        console.log('Notification type:', notification.type);
-        console.log('User roles:', auth.user?.roles);
-        console.log('Roles is array:', Array.isArray(auth.user?.roles));
-        console.log('Roles length:', auth.user?.roles?.length);
-        console.log('First role:', auth.user?.roles?.[0]);
-        console.log('Has adviser role (old):', auth.user?.roles?.includes('adviser'));
-        console.log('Has adviser role (new):', hasRole('adviser'));
-        console.log('==========================');
 
         // Mark as read when clicked (regardless of current status)
         markAsRead(notification.id);
@@ -377,10 +390,10 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
         }
     };
 
-    const getFilterButtons = () => {
+    const getFilterButtons = (): FilterButton[] => {
         // Helper function to check if user has a specific role
-        const hasRole = (roleName: string) => {
-            return auth.user?.roles?.some((role: any) => role.name === roleName) || false;
+        const hasRole = (roleName: string): boolean => {
+            return auth.user?.roles?.some((role: UserRole) => role.name === roleName) || false;
         };
 
         if (hasRole('student')) {
@@ -490,7 +503,7 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                                         key={button.key}
                                         variant={filter === button.key ? 'default' : 'ghost'}
                                         size="sm"
-                                        onClick={() => setFilter(button.key as any)}
+                                        onClick={() => setFilter(button.key)}
                                         className="h-8 px-3 text-xs"
                                     >
                                         {button.label}

@@ -3,11 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
-    Briefcase,
-    Building,
     GraduationCap,
     User,
-    Target
+    BriefcaseBusinessIcon
 } from 'lucide-react';
 import { Link } from '@inertiajs/react';
 
@@ -39,24 +37,23 @@ export function StudentInternshipOpportunities({
     internships,
     currentMatch
 }: StudentInternshipOpportunitiesProps) {
-    // Ensure internships is always an array
     const internshipsArray = Array.isArray(internships) ? internships : [];
+    const isShowingAvailable = internshipsArray.some(internship => internship.compatibility_score === 50);
     
     if (internshipsArray.length === 0) {
         return (
             <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <Briefcase className="h-5 w-5" />
-                        Possible Internships
+                <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                        <BriefcaseBusinessIcon className="h-4 w-4" />
+                        Internship Opportunities
                     </CardTitle>
                 </CardHeader>
-                <CardContent>
-                    <div className="text-center py-8">
-                        <Briefcase className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                        <p className="text-muted-foreground mb-2">No possible internships found</p>
-                        <p className="text-sm text-muted-foreground">
-                            Complete your assessment to see your top matches
+                <CardContent className="pt-0">
+                    <div className="text-center py-6">
+                        <BriefcaseBusinessIcon className="mx-auto h-8 w-8 text-muted-foreground mb-3" />
+                        <p className="text-muted-foreground text-sm">
+                            Complete your assessment to see matches
                         </p>
                     </div>
                 </CardContent>
@@ -66,131 +63,94 @@ export function StudentInternshipOpportunities({
 
     return (
         <Card>
-            <CardHeader>
-                                    <CardTitle className="flex items-center gap-2">
-                        <Briefcase className="h-5 w-5" />
-                        Possible Internships
-                        <Badge variant="secondary" className="ml-2">
-                            {internshipsArray.some(internship => internship.compatibility_score === 50) 
-                                ? 'Available Opportunities' 
-                                : 'Your Top Matches'}
-                        </Badge>
-                    </CardTitle>
+            <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                    <BriefcaseBusinessIcon className="h-4 w-4" />
+                    {isShowingAvailable ? 'Available Opportunities' : 'Your Top Matches'}
+                    <Badge variant="secondary" className="text-xs">
+                        {internshipsArray.length}
+                    </Badge>
+                </CardTitle>
             </CardHeader>
-            <CardContent>
-                {internshipsArray.some(internship => internship.compatibility_score === 50) && (
-                    <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-950 rounded-lg">
-                        <p className="text-sm text-blue-700 dark:text-blue-300">
-                            <strong>Note:</strong> Showing available internship opportunities. Complete your assessment to see personalized matches based on your skills.
+            <CardContent className="pt-0">
+                {isShowingAvailable && (
+                    <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-950 rounded-md">
+                        <p className="text-xs text-blue-700 dark:text-blue-300">
+                            Complete assessment for personalized matches
                         </p>
                     </div>
                 )}
+                
                 <div className="space-y-4">
                     {internshipsArray.map((internship) => (
                         <div
                             key={internship.id}
-                            className="p-4 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group"
+                            className="px-4 py-2 border rounded-lg hover:bg-muted/50 transition-colors"
                         >
-                            <div className="flex items-start justify-between">
-                                <div className="flex-1 space-y-3">
-                                    <div>
-                                        <h4 className="font-semibold text-lg group-hover:text-blue-600 transition-colors">
-                                            {internship.position_title}
-                                        </h4>
-                                        <div className="flex items-center gap-1 text-muted-foreground">
-                                            <Building className="h-4 w-4" />
-                                            <span className="font-medium">{internship.company_name}</span>
-                                        </div>
+                            <div className="flex items-start justify-between gap-4">
+                                <div className="flex-1 min-w-0">
+                                    <h4 className="font-medium text-base leading-tight mb-2">
+                                        {internship.position_title}
+                                    </h4>
+                                    <div className="flex items-center gap-1 text-sm text-muted-foreground mb-2">
+                                        <BriefcaseBusinessIcon className="h-4 w-4 flex-shrink-0" />
+                                        <span className="truncate">{internship.company_name}</span>
                                     </div>
-
-                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-                                        <div className="flex items-center gap-2">
-                                            <GraduationCap className="h-4 w-4 text-muted-foreground" />
-                                            <span className="text-muted-foreground">Department:</span>
-                                            <span className="font-medium">{internship.department}</span>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <User className="h-4 w-4 text-muted-foreground" />
-                                            <span className="text-muted-foreground">Slots:</span>
-                                            <span className="font-medium">{internship.slot_count}</span>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <Target className="h-4 w-4 text-muted-foreground" />
-                                            <span className="text-muted-foreground">Compatibility:</span>
-                                            <Badge
-                                                variant={
-                                                    internship.compatibility_score >= 80 ? "default" :
-                                                    internship.compatibility_score >= 70 ? "secondary" :
-                                                    internship.compatibility_score >= 60 ? "outline" : "destructive"
-                                                }
-                                                className="text-xs"
-                                            >
-                                                {internship.compatibility_score}%
-                                            </Badge>
-                                        </div>
+                                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                        <span className="flex items-center gap-1">
+                                            <GraduationCap className="h-4 w-4" />
+                                            {internship.department}
+                                        </span>
                                     </div>
                                 </div>
-
-                                <div className="flex flex-col items-end gap-2 ml-4">
+                                <div className="flex flex-col items-end gap-1 self-end">
                                     <Badge
                                         variant={
                                             internship.compatibility_score >= 80 ? "default" :
                                             internship.compatibility_score >= 70 ? "secondary" :
                                             internship.compatibility_score >= 60 ? "outline" : "destructive"
                                         }
-                                        className="text-xs"
+                                        className="text-sm flex-shrink-0"
                                     >
                                         {internship.compatibility_score}%
                                     </Badge>
+                                    <span className="text-xs text-muted-foreground">
+                                        Criteria Match
+                                    </span>
                                 </div>
                             </div>
                         </div>
                     ))}
                 </div>
 
-                {/* Current Match Status */}
                 {currentMatch && (
-                    <div className="mt-6 pt-6 border-t">
-                        <div className="bg-blue-50 dark:bg-blue-950 p-4 rounded-lg">
-                            <div className="flex items-center gap-2 mb-3">
-                                <Target className="h-5 w-5 text-blue-600" />
-                                <h4 className="font-semibold text-blue-900 dark:text-blue-100">
-                                    Your Current Match
+                    <div className="mt-4 pt-4 border-t">
+                        <div className="bg-blue-50 dark:bg-blue-950 p-3 rounded-md">
+                            <div className="flex items-center justify-between mb-2">
+                                <h4 className="font-medium text-sm text-blue-900 dark:text-blue-100">
+                                    Current Match
                                 </h4>
+                                <Badge variant="outline" className="text-xs border-blue-200 text-blue-700 dark:border-blue-800 dark:text-blue-300">
+                                    {currentMatch.status}
+                                </Badge>
                             </div>
-                            <div className="space-y-2">
-                                <div className="flex items-center justify-between">
-                                    <span className="text-blue-700 dark:text-blue-300 font-medium">
-                                        {currentMatch.internship.position_title}
-                                    </span>
-                                    <Badge
-                                        variant="outline"
-                                        className="border-blue-200 text-blue-700 dark:border-blue-800 dark:text-blue-300"
-                                    >
-                                        {currentMatch.status}
-                                    </Badge>
-                                </div>
-                                <p className="text-blue-600 dark:text-blue-400 text-sm">
-                                    {currentMatch.internship.company_name}
-                                </p>
-                                <div className="flex items-center gap-4 text-sm text-blue-600 dark:text-blue-400">
-                                    <span>Match Score: {currentMatch.match_score}%</span>
-                                </div>
-                            </div>
+                            <p className="text-xs text-blue-600 dark:text-blue-400 mb-1">
+                                {currentMatch.internship.position_title} at {currentMatch.internship.company_name}
+                            </p>
+                            <p className="text-xs text-blue-600 dark:text-blue-400">
+                                Match Score: {currentMatch.match_score}%
+                            </p>
                         </div>
                     </div>
                 )}
 
-                {/* Action Buttons */}
-                <div className="mt-6 pt-6 border-t">
-                    <div className="flex justify-center">
-                        <Button asChild variant="outline" className="w-full max-w-xs">
-                            <Link href="/student-profile">
-                                <User className="h-4 w-4 mr-2" />
-                                Check Your Profile
-                            </Link>
-                        </Button>
-                    </div>
+                <div className="mt-4 pt-4 border-t">
+                    <Button asChild variant="outline" size="sm" className="w-full">
+                        <Link href="/student-profile">
+                            <User className="h-3 w-3 mr-2" />
+                            Check Your Profile
+                        </Link>
+                    </Button>
                 </div>
             </CardContent>
         </Card>
