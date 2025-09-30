@@ -47,102 +47,112 @@ export default function ReviewAndSubmit({ isSubmitting, categories = [] }: Props
 
     return (
         <div className="space-y-6">
-            <h2 className="text-xl font-semibold">Review and Submit</h2>
+            <div className="space-y-2">
+                <h2 className="text-xl font-semibold">Review and Submit</h2>
+                <p className="text-muted-foreground">Please review your information before submitting the HTE form.</p>
+            </div>
             
             {/* Basic Information Summary */}
-            <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                <h3 className="font-medium mb-4">Basic Information</h3>
-                <div className="space-y-3 text-sm">
-                    <div><strong>Company:</strong> {formData.companyName}</div>
-                    <div><strong>Contact Person:</strong> {formData.contactPerson}</div>
-                    <div><strong>Email:</strong> {formData.email}</div>
-                    <div><strong>Phone:</strong> {formData.phone}</div>
-                    <div><strong>Address:</strong> {formData.address}</div>
-                </div>
-            </div>
+            <Card>
+                <CardHeader>
+                    <CardTitle className="text-lg">Basic Information</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-3">
+                            <div>
+                                <span className="text-sm font-medium text-muted-foreground">Company Name</span>
+                                <p className="text-sm text-foreground">{formData.companyName}</p>
+                            </div>
+                            <div>
+                                <span className="text-sm font-medium text-muted-foreground">Contact Person</span>
+                                <p className="text-sm text-foreground">{formData.contactPerson}</p>
+                            </div>
+                            <div>
+                                <span className="text-sm font-medium text-muted-foreground">Email</span>
+                                <p className="text-sm text-foreground">{formData.email}</p>
+                            </div>
+                        </div>
+                        <div className="space-y-3">
+                            <div>
+                                <span className="text-sm font-medium text-muted-foreground">Phone</span>
+                                <p className="text-sm text-foreground">{formData.phone}</p>
+                            </div>
+                            <div className="md:col-span-1">
+                                <span className="text-sm font-medium text-muted-foreground">Address</span>
+                                <p className="text-sm text-foreground">{formData.address}</p>
+                            </div>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
 
             {/* Internship Details Summary */}
-            <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                <h3 className="font-medium mb-4">Internship Details</h3>
-                <div className="space-y-3 text-sm">
-                    <div><strong>Position:</strong> {formData.position}</div>
-                    <div><strong>Department:</strong> {formData.department}</div>
-                    <div><strong>Duration:</strong> {formData.duration}</div>
-                    <div><strong>Number of Interns:</strong> {formData.numberOfInterns}</div>
-                    <div><strong>Start Date:</strong> {formData.startDate}</div>
-                    <div><strong>End Date:</strong> {formData.endDate}</div>
-                </div>
-            </div>
+            <Card>
+                <CardHeader>
+                    <CardTitle className="text-lg">Internship Details</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-3">
+                            <div>
+                                <span className="text-sm font-medium text-muted-foreground">Position</span>
+                                <p className="text-sm text-foreground">{formData.position}</p>
+                            </div>
+                            <div>
+                                <span className="text-sm font-medium text-muted-foreground">Department</span>
+                                <p className="text-sm text-foreground">{formData.department}</p>
+                            </div>
+                        </div>
+                        <div className="space-y-3">
+                            <div>
+                                <span className="text-sm font-medium text-muted-foreground">Duration</span>
+                                <p className="text-sm text-foreground">{formData.duration}</p>
+                            </div>
+                            <div>
+                                <span className="text-sm font-medium text-muted-foreground">Number of Interns</span>
+                                <p className="text-sm text-foreground">{formData.numberOfInterns}</p>
+                            </div>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
 
-            {/* Enhanced Assessment Criteria Summary */}
+            {/* Assessment Criteria Summary */}
             {categories.length > 0 && (
-                <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                    <h3 className="font-medium mb-4">Assessment Criteria & Weight Allocation</h3>
-                    
-                    {/* Overall Weight Summary */}
-                    <div className="mb-6 p-4 bg-white rounded-lg border">
-                        <h4 className="font-medium text-gray-900 mb-3">Overall Weight Distribution</h4>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="text-lg">Assessment Criteria & Weight Allocation</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                        {/* Detailed Category Breakdown */}
+                        <div className="space-y-4">
                             {categories.map((category: Category) => {
                                 const categoryTotal = calculateCategoryTotal(category.id);
                                 const weightStatus = getWeightStatus(categoryTotal);
                                 
                                 return (
-                                    <div key={category.id} className={`p-3 rounded-lg border ${weightStatus.bgColor} ${weightStatus.borderColor}`}>
-                                        <div className="text-center">
-                                            <div className={`text-lg font-bold ${weightStatus.color}`}>
-                                                {categoryTotal}%
-                                            </div>
-                                            <div className="text-sm text-gray-600">{category.category_name}</div>
+                                    <div key={category.id} className={`rounded-lg border-2 ${weightStatus.borderColor} ${weightStatus.bgColor} p-4 transition-all duration-200`}>
+                                        <div className="flex items-center justify-between mb-4">
+                                            <h4 className="text-lg font-medium text-foreground">{category.category_name}</h4>
                                             <Badge 
                                                 variant={weightStatus.status === 'valid' ? 'default' : weightStatus.status === 'exceeded' ? 'destructive' : 'secondary'}
-                                                className="mt-2"
+                                                className="text-xs"
                                             >
-                                                {weightStatus.status === 'valid' ? 'Complete' : 
-                                                 weightStatus.status === 'exceeded' ? 'Exceeded' : 'Incomplete'}
+                                                {weightStatus.status === 'valid' ? '✓' : 
+                                                 weightStatus.status === 'exceeded' ? '✗' : '!'}
                                             </Badge>
                                         </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
-
-                    {/* Detailed Category Breakdown */}
-                    <div className="space-y-4">
-                        {categories.map((category: Category) => {
-                            const categoryTotal = calculateCategoryTotal(category.id);
-                            const weightStatus = getWeightStatus(categoryTotal);
-                            
-                            return (
-                                <Card key={category.id} className={`border-2 ${weightStatus.borderColor}`}>
-                                    <CardHeader className={`${weightStatus.bgColor}`}>
-                                        <CardTitle className="flex items-center justify-between">
-                                            <span className="text-lg">{category.category_name}</span>
-                                            <div className="flex items-center gap-2">
-                                                <span className={`text-sm font-medium ${weightStatus.color}`}>
-                                                    Total: {categoryTotal}%
-                                                </span>
-                                                <Badge 
-                                                    variant={weightStatus.status === 'valid' ? 'default' : weightStatus.status === 'exceeded' ? 'destructive' : 'secondary'}
-                                                >
-                                                    {weightStatus.status === 'valid' ? '✓' : 
-                                                     weightStatus.status === 'exceeded' ? '✗' : '!'}
-                                                </Badge>
-                                            </div>
-                                        </CardTitle>
-                                    </CardHeader>
-                                    
-                                    <CardContent className="p-4">
+                                        
                                         {/* Weight Progress Bar */}
                                         <div className="mb-4">
-                                            <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
+                                            <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
                                                 <span>Weight Distribution</span>
                                                 <span>{categoryTotal}/100%</span>
                                             </div>
-                                            <div className="w-full bg-gray-200 rounded-full h-3">
+                                            <div className="w-full bg-muted rounded-full h-2">
                                                 <div 
-                                                    className={`h-3 rounded-full transition-all duration-300 ${
+                                                    className={`h-2 rounded-full transition-all duration-300 ${
                                                         weightStatus.status === 'valid' ? 'bg-green-500' : 
                                                         weightStatus.status === 'exceeded' ? 'bg-red-500' : 'bg-yellow-500'
                                                     }`}
@@ -158,21 +168,21 @@ export default function ReviewAndSubmit({ isSubmitting, categories = [] }: Props
                                                 const questionCount = subcat.questions ? subcat.questions.length : 0;
                                                 
                                                 return (
-                                                    <div key={subcat.id} className="bg-gray-50 p-3 rounded-lg border">
+                                                    <div key={subcat.id} className="bg-background/50 p-3 rounded-lg border border-border/50">
                                                         <div className="text-center space-y-2">
-                                                            <div className="text-xl font-bold text-blue-600">
+                                                            <div className="text-lg font-bold text-primary">
                                                                 {weight}%
                                                             </div>
-                                                            <div className="text-sm font-medium text-gray-900">
+                                                            <div className="text-sm font-medium text-foreground">
                                                                 {subcat.subcategory_name}
                                                             </div>
-                                                            <div className="text-xs text-gray-600">
+                                                            <div className="text-xs text-muted-foreground">
                                                                 {questionCount} question{questionCount !== 1 ? 's' : ''}
                                                             </div>
                                                             {/* Weight Bar */}
-                                                            <div className="w-full bg-gray-200 rounded-full h-2">
+                                                            <div className="w-full bg-muted rounded-full h-1.5">
                                                                 <div 
-                                                                    className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                                                                    className="bg-primary h-1.5 rounded-full transition-all duration-300"
                                                                     style={{ width: `${weight}%` }}
                                                                 ></div>
                                                             </div>
@@ -181,60 +191,14 @@ export default function ReviewAndSubmit({ isSubmitting, categories = [] }: Props
                                                 );
                                             })}
                                         </div>
-
-                                        {/* Category Summary */}
-                                        <div className="mt-4 p-3 bg-gray-100 rounded-lg">
-                                            <div className="text-sm text-gray-700">
-                                                <strong>Summary:</strong> {category.subCategories?.length || 0} subcategories with a total weight allocation of {categoryTotal}%
-                                                {weightStatus.status === 'valid' && ' ✓ All weights properly distributed'}
-                                                {weightStatus.status === 'exceeded' && ' ⚠️ Weights exceed 100% - please adjust'}
-                                                {weightStatus.status === 'incomplete' && ' ⚠️ Weights do not total 100% - please complete'}
-                                            </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            );
-                        })}
-                    </div>
-
-                    {/* Final Validation Message */}
-                    <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                        <h4 className="font-medium text-blue-900 mb-2">Weight Allocation Validation</h4>
-                        <div className="text-sm text-blue-800">
-                            {categories.every(cat => calculateCategoryTotal(cat.id) === 100) ? (
-                                <div className="flex items-center gap-2 text-green-700">
-                                    <span>✓</span>
-                                    <span>All categories have proper weight distribution (100% each)</span>
-                                </div>
-                            ) : (
-                                <div className="space-y-2">
-                                    <div className="flex items-center gap-2 text-red-700">
-                                        <span>⚠️</span>
-                                        <span>Some categories need weight adjustment before submission</span>
                                     </div>
-                                    <ul className="ml-6 list-disc space-y-1">
-                                        {categories.map((cat: Category) => {
-                                            const total = calculateCategoryTotal(cat.id);
-                                            if (total !== 100) {
-                                                return (
-                                                    <li key={cat.id} className="text-red-600">
-                                                        {cat.category_name}: {total}% (needs {100 - total}% more)
-                                                    </li>
-                                                );
-                                            }
-                                            return null;
-                                        })}
-                                    </ul>
-                                </div>
-                            )}
+                                );
+                            })}
                         </div>
-                    </div>
-                </div>
-            )}
 
-            <Button type="submit" disabled={isSubmitting} className="w-full">
-                {isSubmitting ? 'Submitting...' : 'Submit HTE Form'}
-            </Button>
+                    </CardContent>
+                </Card>
+            )}
         </div>
     );
 }

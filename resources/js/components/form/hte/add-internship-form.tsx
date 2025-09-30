@@ -18,9 +18,6 @@ const FormSchema = z.object({
     department: z.string().min(1, 'Department is required'),
     numberOfInterns: z.string().min(1, 'Number of interns is required'),
     duration: z.string().min(1, 'Duration is required'),
-    startDate: z.string().min(1, 'Start date is required'),
-    endDate: z.string().min(1, 'End date is required'),
-
 
     // Weights
     subcategoryWeights: z.record(z.string(), z.number().min(0).max(100)),
@@ -93,9 +90,6 @@ export default function AddInternshipForm() {
             department: '',
             numberOfInterns: '',
             duration: '',
-            startDate: '',
-            endDate: '',
-
             subcategoryWeights: {},
         },
     });
@@ -105,11 +99,13 @@ export default function AddInternshipForm() {
         if (typedCategories && typedCategories.length > 0) {
             typedCategories.forEach((category: Category) => {
                 if (category.subCategories && category.subCategories.length > 0) {
-                    const equalWeight = Math.round(100 / category.subCategories.length);
-                    const remainder = 100 % category.subCategories.length;
+                    const subcategoryCount = category.subCategories.length;
+                    const baseWeight = Math.floor(100 / subcategoryCount);
+                    const remainder = 100 % subcategoryCount;
 
+                    // Distribute weights evenly, with remainder distributed to first subcategories
                     category.subCategories.forEach((subcat: SubCategory, index: number) => {
-                        const weight = index < remainder ? equalWeight + 1 : equalWeight;
+                        const weight = index < remainder ? baseWeight + 1 : baseWeight;
                         form.setValue(`subcategoryWeights.${subcat.id}`, weight);
                     });
                 }
@@ -147,7 +143,7 @@ export default function AddInternshipForm() {
 
         switch (currentStep) {
             case 0: // Internship Information
-                fieldsToValidate = ['position', 'department', 'numberOfInterns', 'duration', 'startDate', 'endDate'];
+                fieldsToValidate = ['position', 'department', 'numberOfInterns', 'duration'];
                 break;
             case 1: // Criteria
                 fieldsToValidate = ['subcategoryWeights'];
@@ -236,18 +232,10 @@ export default function AddInternshipForm() {
                                                     <label className="text-sm font-medium">Number of Interns</label>
                                                     <p className="text-sm text-muted-foreground">{form.watch('numberOfInterns')}</p>
                                                 </div>
-                                                <div>
-                                                    <label className="text-sm font-medium">Duration</label>
-                                                    <p className="text-sm text-muted-foreground">{form.watch('duration')}</p>
-                                                </div>
-                                                <div>
-                                                    <label className="text-sm font-medium">Start Date</label>
-                                                    <p className="text-sm text-muted-foreground">{form.watch('startDate')}</p>
-                                                </div>
-                                                <div>
-                                                    <label className="text-sm font-medium">End Date</label>
-                                                    <p className="text-sm text-muted-foreground">{form.watch('endDate')}</p>
-                                                </div>
+                                            <div>
+                                                <label className="text-sm font-medium">Duration</label>
+                                                <p className="text-sm text-muted-foreground">{form.watch('duration')}</p>
+                                            </div>
                                             </div>
                                         </div>
 

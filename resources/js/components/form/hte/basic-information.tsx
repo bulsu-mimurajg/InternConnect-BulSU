@@ -79,7 +79,9 @@ export default function BasicInformation() {
                                                     />
                                                 )}
                                             </FormControl>
-                                            <FormMessage />
+                                            <div className="min-h-[20px]">
+                                                <FormMessage />
+                                            </div>
                                         </FormItem>
                                     )}
                                 />

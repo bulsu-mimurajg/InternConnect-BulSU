@@ -652,30 +652,83 @@ export default function HTEProfilePage() {
                                     </div>
                                 </div>
 
+                                {/* Student Assessment Deadline Warning */}
+                                {studentAssessmentDeadlineActive && (
+                                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                                        <div className="flex items-start gap-3">
+                                            <div className="flex-shrink-0">
+                                                <Calendar className="h-4 w-4 text-amber-600 mt-0.5" />
+                                            </div>
+                                            <div className="flex-1">
+                                                <h4 className="text-sm font-medium text-amber-800">
+                                                    Student Assessment Period Active
+                                                </h4>
+                                                <p className="text-xs text-amber-700 mt-1">
+                                                    {studentAssessmentDeadline?.title} is currently active (ends {studentAssessmentDeadline?.end_date}). 
+                                                    <br />You cannot activate or deactivate internships during this period.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
                                 {/* Selected Internship Display */}
                                 {selectedInternship ? (
                                     <Card className="border-2">
                                         <CardHeader>
                                             <div className="flex items-center justify-between">
                                                 <div>
-                                                    <CardTitle className="text-xl">{selectedInternship.position_title}</CardTitle>
+                                                    <div className="flex items-center gap-3 mb-1">
+                                                        <CardTitle className="text-xl">{selectedInternship.position_title}</CardTitle>
+                                                        <Badge variant={selectedInternship.is_active ? "default" : "secondary"} className="px-3 py-2 text-xs font-medium">
+                                                            {selectedInternship.is_active ? (
+                                                                <>
+                                                                    <CheckCircle className="h-4 w-4 mr-1" />
+                                                                    Active
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <XCircle className="h-4 w-4 mr-1" />
+                                                                    Inactive
+                                                                </>
+                                                            )}
+                                                        </Badge>
+                                                    </div>
                                                     <CardDescription>
                                                         {selectedInternship.department} • {selectedInternship.slot_count} slot{selectedInternship.slot_count !== 1 ? 's' : ''}
                                                     </CardDescription>
                                                 </div>
-                                                <Badge variant={selectedInternship.is_active ? "default" : "secondary"} className="px-4 py-2 text-sm font-semibold">
+                                                
+                                                {/* Action Buttons moved to header */}
+                                                <div className="flex gap-2">
+                                                    <Link href={`/hte/edit-internship/${selectedInternship.id}`}>
+                                                        <Button variant="outline" className="gap-2 px-4 py-2 text-sm font-semibold">
+                                                            <EditIcon className="h-6 w-6 mr-2" />
+                                                            Edit
+                                                        </Button>
+                                                    </Link>
                                                     {selectedInternship.is_active ? (
-                                                        <>
-                                                            <CheckCircle className="h-6 w-6 mr-2" />
-                                                            Active
-                                                        </>
+                                                        <Button 
+                                                            variant="destructive" 
+                                                            className="gap-2 px-4 py-2 text-sm font-semibold"
+                                                            onClick={() => handleToggleStatus(selectedInternship.id)}
+                                                            disabled={isToggling || studentAssessmentDeadlineActive}
+                                                            title={studentAssessmentDeadlineActive ? 'Cannot deactivate during student assessment period' : ''}
+                                                        >
+                                                            {isToggling ? 'Updating...' : 'Deactivate'}
+                                                        </Button>
                                                     ) : (
-                                                        <>
-                                                            <XCircle className="h-6 w-6 mr-2" />
-                                                            Inactive
-                                                        </>
+                                                        <Button 
+                                                            variant="default" 
+                                                            className="gap-2 px-4 py-2 text-sm font-semibold"
+                                                            onClick={() => handleToggleStatus(selectedInternship.id)}
+                                                            disabled={isToggling || studentAssessmentDeadlineActive}
+                                                            title={studentAssessmentDeadlineActive ? 'Cannot activate during student assessment period' : ''}
+                                                        >
+                                                            {isToggling ? 'Updating...' : 'Activate'}
+                                                        </Button>
                                                     )}
-                                                </Badge>
+                                                </div>
                                             </div>
                                         </CardHeader>
                                         <CardContent className="space-y-6">
@@ -842,60 +895,6 @@ export default function HTEProfilePage() {
                                                 </div>
                                             </div>
 
-                                            {/* Action Buttons */}
-                                            <div className="pt-4 border-t border-border">
-                                                {/* Student Assessment Deadline Warning */}
-                                                {studentAssessmentDeadlineActive && (
-                                                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
-                                                        <div className="flex items-start gap-3">
-                                                            <div className="flex-shrink-0">
-                                                                <Calendar className="h-4 w-4 text-amber-600 mt-0.5" />
-                                                            </div>
-                                                            <div className="flex-1">
-                                                                <h4 className="text-sm font-medium text-amber-800">
-                                                                    Student Assessment Period Active
-                                                                </h4>
-                                                                <p className="text-xs text-amber-700 mt-1">
-                                                                    {studentAssessmentDeadline?.title} is currently active (ends {studentAssessmentDeadline?.end_date}). 
-                                                                    <br />You cannot activate or deactivate internships during this period.
-                                                                </p>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                )}
-                                                
-                                                <div className="flex justify-end gap-3">
-                                                    <Link href={`/hte/edit-internship/${selectedInternship.id}`}>
-                                                        <Button variant="outline" size="sm" className="gap-2">
-                                                            <EditIcon className="h-4 w-4" />
-                                                            Edit Internship
-                                                        </Button>
-                                                    </Link>
-                                                    {selectedInternship.is_active ? (
-                                                        <Button 
-                                                            variant="destructive" 
-                                                            size="sm" 
-                                                            className="gap-2"
-                                                            onClick={() => handleToggleStatus(selectedInternship.id)}
-                                                            disabled={isToggling || studentAssessmentDeadlineActive}
-                                                            title={studentAssessmentDeadlineActive ? 'Cannot deactivate during student assessment period' : ''}
-                                                        >
-                                                            {isToggling ? 'Updating...' : 'Deactivate'}
-                                                        </Button>
-                                                    ) : (
-                                                        <Button 
-                                                            variant="default" 
-                                                            size="sm" 
-                                                            className="gap-2"
-                                                            onClick={() => handleToggleStatus(selectedInternship.id)}
-                                                            disabled={isToggling || studentAssessmentDeadlineActive}
-                                                            title={studentAssessmentDeadlineActive ? 'Cannot activate during student assessment period' : ''}
-                                                        >
-                                                            {isToggling ? 'Updating...' : 'Activate'}
-                                                        </Button>
-                                                    )}
-                                                </div>
-                                            </div>
                                         </CardContent>
                                     </Card>
                                 ) : (

@@ -5,25 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\Notification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Inertia\Inertia;
-use Inertia\Response;
 
 class NotificationController extends Controller
 {
-    /**
-     * Get notifications for the authenticated user
-     */
-    public function index(): Response
-    {
-        $user = Auth::user();
-        $notifications = Notification::getForUser($user->id, 20);
-        $unreadCount = Notification::getUnreadCount($user->id);
-
-        return Inertia::render('notifications/index', [
-            'notifications' => $notifications,
-            'unreadCount' => $unreadCount,
-        ]);
-    }
 
     /**
      * Get unread notifications count (for AJAX)

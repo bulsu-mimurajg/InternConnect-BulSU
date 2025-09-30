@@ -35,18 +35,6 @@ const internshipSections = [
                 placeholder: 'e.g., 3 months, 6 months',
                 type: 'text',
             },
-            {
-                name: 'startDate',
-                label: 'Start Date',
-                placeholder: '',
-                type: 'date',
-            },
-            {
-                name: 'endDate',
-                label: 'End Date',
-                placeholder: '',
-                type: 'date',
-            },
         ],
     },
 ];
@@ -76,7 +64,9 @@ export default function InternshipOffered() {
                                                     {...formField} 
                                                 />
                                             </FormControl>
-                                            <FormMessage />
+                                            <div className="min-h-[20px]">
+                                                <FormMessage />
+                                            </div>
                                         </FormItem>
                                     )}
                                 />

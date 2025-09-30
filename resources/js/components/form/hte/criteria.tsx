@@ -3,7 +3,8 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { PieChart } from '@/components/charts/pie-chart';
+import { Badge } from '@/components/ui/badge';
+import { PieChart, SimplePieChart } from '@/components/charts';
 import { useFormContext } from 'react-hook-form';
 import React, { useCallback, useMemo } from 'react';
 import { ChevronDownIcon } from '@radix-ui/react-icons';
@@ -39,16 +40,24 @@ interface CriteriaProps {
     categories: Category[];
     loading: boolean;
     expandedCategories: Set<number>;
+    expandedSubcategories: Set<number>;
     expandedQuestions: Set<number>;
+    setExpandedCategories: React.Dispatch<React.SetStateAction<Set<number>>>;
+    setExpandedSubcategories: React.Dispatch<React.SetStateAction<Set<number>>>;
     setExpandedQuestions: React.Dispatch<React.SetStateAction<Set<number>>>;
+    highlightInvalidCategories?: boolean;
 }
 
 export default function Criteria({
     categories,
     loading,
     expandedCategories,
+    expandedSubcategories,
     expandedQuestions,
+    setExpandedCategories,
+    setExpandedSubcategories,
     setExpandedQuestions,
+    highlightInvalidCategories = false,
 }: CriteriaProps) {
     const { control, watch, setValue } = useFormContext();
     const { auth } = usePage<SharedData>().props;
@@ -58,27 +67,8 @@ export default function Criteria({
         return watch('subcategoryWeights') || {};
     }, [watch]);
 
-    // Initialize default weights when categories are loaded
-    React.useEffect(() => {
-        if (categories.length > 0 && Object.keys(subcategoryWeights).length === 0) {
-            const newWeights: Record<string, number> = {};
-
-            categories.forEach((category) => {
-                if (category.subCategories && category.subCategories.length > 0) {
-                    const equalWeight = Math.floor(100 / category.subCategories.length);
-                    const remainder = 100 % category.subCategories.length;
-
-                    category.subCategories.forEach((subcat: SubCategory, index: number) => {
-                        newWeights[subcat.id] = index < remainder ? equalWeight + 1 : equalWeight;
-                    });
-                }
-            });
-
-            Object.entries(newWeights).forEach(([subcatId, weight]) => {
-                setValue(`subcategoryWeights.${subcatId}`, weight);
-            });
-        }
-    }, [categories, setValue, subcategoryWeights]);
+    // Note: Weight initialization is handled in the parent form component
+    // to avoid conflicts and ensure proper weight distribution
 
     const toggleQuestions = useCallback(
         (subcategoryId: number) => {
@@ -102,23 +92,73 @@ export default function Criteria({
 
             const clampedWeight = Math.max(0, Math.min(100, newWeight));
             const subcategories = category.subCategories;
-            const currentTotal = subcategories.reduce((sum, subcat) => {
-                if (subcat.id === subcategoryId) return sum + clampedWeight;
+            
+            // If only one subcategory, set it to the weight
+            if (subcategories.length === 1) {
+                setValue(`subcategoryWeights.${subcategoryId}`, clampedWeight);
+                return;
+            }
+
+            // Get other subcategories (excluding the one being changed)
+            const otherSubcategories = subcategories.filter((subcat) => subcat.id !== subcategoryId);
+            
+            // Calculate total weight of other subcategories
+            const otherSubcategoriesTotal = otherSubcategories.reduce((sum, subcat) => {
                 return sum + (subcategoryWeights[subcat.id] || 0);
             }, 0);
 
-            if (currentTotal > 100) {
-                const excess = currentTotal - 100;
-                const otherSubcategories = subcategories.filter((subcat) => subcat.id !== subcategoryId);
-                const otherTotal = otherSubcategories.reduce((sum, subcat) => sum + (subcategoryWeights[subcat.id] || 0), 0);
+            // Calculate remaining weight to distribute
+            const remainingWeight = 100 - clampedWeight;
+            
+            if (remainingWeight <= 0) {
+                // If the new weight is 100 or more, set all others to 0
+                otherSubcategories.forEach((subcat) => {
+                    setValue(`subcategoryWeights.${subcat.id}`, 0);
+                });
+                setValue(`subcategoryWeights.${subcategoryId}`, clampedWeight);
+                return;
+            }
 
-                if (otherTotal > 0) {
-                    otherSubcategories.forEach((subcat) => {
-                        const currentWeight = subcategoryWeights[subcat.id] || 0;
-                        const proportion = currentWeight / otherTotal;
-                        const adjustedWeight = Math.max(0, currentWeight - excess * proportion);
-                        setValue(`subcategoryWeights.${subcat.id}`, Math.round(adjustedWeight));
+            if (otherSubcategoriesTotal === 0) {
+                // If other subcategories have no weight, distribute remaining weight equally
+                const equalWeight = Math.floor(remainingWeight / otherSubcategories.length);
+                const remainder = remainingWeight % otherSubcategories.length;
+                
+                otherSubcategories.forEach((subcat, index) => {
+                    const weight = equalWeight + (index < remainder ? 1 : 0);
+                    setValue(`subcategoryWeights.${subcat.id}`, weight);
+                });
+            } else {
+                // Distribute remaining weight proportionally based on current weights
+                otherSubcategories.forEach((subcat) => {
+                    const currentWeight = subcategoryWeights[subcat.id] || 0;
+                    const proportionalWeight = Math.round((currentWeight / otherSubcategoriesTotal) * remainingWeight);
+                    setValue(`subcategoryWeights.${subcat.id}`, proportionalWeight);
+                });
+                
+                // Adjust for rounding errors to ensure total is exactly 100
+                // We need to calculate the new total after setting the proportional weights
+                const newOtherTotal = otherSubcategories.reduce((sum, subcat) => {
+                    const currentWeight = subcategoryWeights[subcat.id] || 0;
+                    const proportionalWeight = Math.round((currentWeight / otherSubcategoriesTotal) * remainingWeight);
+                    return sum + proportionalWeight;
+                }, 0);
+                
+                const newTotal = clampedWeight + newOtherTotal;
+                
+                if (newTotal !== 100) {
+                    const difference = 100 - newTotal;
+                    // Apply difference to the largest other subcategory
+                    const largestOther = otherSubcategories.reduce((largest, current) => {
+                        const currentWeight = subcategoryWeights[current.id] || 0;
+                        const largestWeight = subcategoryWeights[largest.id] || 0;
+                        return currentWeight > largestWeight ? current : largest;
                     });
+                    
+                    const currentWeight = subcategoryWeights[largestOther.id] || 0;
+                    const proportionalWeight = Math.round((currentWeight / otherSubcategoriesTotal) * remainingWeight);
+                    const adjustedWeight = Math.max(0, proportionalWeight + difference);
+                    setValue(`subcategoryWeights.${largestOther.id}`, adjustedWeight);
                 }
             }
 
@@ -132,11 +172,13 @@ export default function Criteria({
             const category = categories.find((cat) => cat.id === categoryId);
             if (!category || !category.subCategories) return;
 
-            const equalWeight = Math.floor(100 / category.subCategories.length);
-            const remainder = 100 % category.subCategories.length;
+            const subcategoryCount = category.subCategories.length;
+            const baseWeight = Math.floor(100 / subcategoryCount);
+            const remainder = 100 % subcategoryCount;
 
+            // Distribute weights evenly, with remainder distributed to first subcategories
             category.subCategories.forEach((subcat: SubCategory, index: number) => {
-                const weight = index < remainder ? equalWeight + 1 : equalWeight;
+                const weight = index < remainder ? baseWeight + 1 : baseWeight;
                 setValue(`subcategoryWeights.${subcat.id}`, weight);
             });
         },
@@ -146,11 +188,13 @@ export default function Criteria({
     const ensureAllWeightsSet = useCallback(() => {
         categories.forEach((category) => {
             if (category.subCategories && category.subCategories.length > 0) {
-                const equalWeight = Math.floor(100 / category.subCategories.length);
-                const remainder = 100 % category.subCategories.length;
+                const subcategoryCount = category.subCategories.length;
+                const baseWeight = Math.floor(100 / subcategoryCount);
+                const remainder = 100 % subcategoryCount;
 
+                // Distribute weights evenly, with remainder distributed to first subcategories
                 category.subCategories.forEach((subcat: SubCategory, index: number) => {
-                    const weight = index < remainder ? equalWeight + 1 : equalWeight;
+                    const weight = index < remainder ? baseWeight + 1 : baseWeight;
                     setValue(`subcategoryWeights.${subcat.id}`, weight);
                 });
             }
@@ -164,11 +208,12 @@ export default function Criteria({
 
             const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D', '#FFC658', '#FF6B6B'];
 
-            return category.subCategories.map((subcat, index) => ({
+            const chartData = category.subCategories.map((subcat, index) => ({
                 name: subcat.subcategory_name,
                 value: subcategoryWeights[subcat.id] || 0,
                 color: COLORS[index % COLORS.length],
             }));
+            return chartData;
         },
         [subcategoryWeights],
     );
@@ -218,12 +263,6 @@ export default function Criteria({
         return validationErrors;
     }, [categories, watch]);
 
-    React.useEffect(() => {
-        const errors = validateWeights();
-        if (errors.length > 0 && process.env.NODE_ENV === 'development') {
-            console.warn('Weight validation errors:', errors);
-        }
-    }, [validateWeights]);
 
     // Calculate overall weight status
     const overallStatus = useMemo(() => {
@@ -316,43 +355,23 @@ export default function Criteria({
 
     return (
         <div className="space-y-6">
-            {/* Overall Weight Status */}
-            <Card className="border-2 border-blue-100 bg-blue-50">
-                <CardHeader>
-                    <CardTitle className="text-blue-800">Weight Assignment Status</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="grid grid-cols-2 gap-4 text-center md:grid-cols-4">
-                        <div>
-                            <div className="text-2xl font-bold text-blue-600">{overallStatus.subcategoriesWithWeights}</div>
-                            <div className="text-sm text-blue-700">Subcategories with Weights</div>
-                            <div className="text-xs text-blue-600">of {overallStatus.totalSubcategories}</div>
+            {/* Categories */}
+            <div className="space-y-2">
+                <h2 className="text-xl font-semibold">Assessment Criteria</h2>
+                <p className="text-muted-foreground">Assign weights to each subcategory of each category.</p>
+                {highlightInvalidCategories && (
+                    <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                        <div className="flex-shrink-0">
+                            <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                            </svg>
                         </div>
-                        <div>
-                            <div className="text-2xl font-bold text-blue-600">{overallStatus.categoriesWithValidWeights}</div>
-                            <div className="text-sm text-blue-700">Categories with 100%</div>
-                            <div className="text-xs text-blue-600">of {overallStatus.totalCategories}</div>
-                        </div>
-                        <div>
-                            <div className="text-2xl font-bold text-blue-600">
-                                {Math.round((overallStatus.subcategoriesWithWeights / overallStatus.totalSubcategories) * 100)}%
-                            </div>
-                            <div className="text-sm text-blue-700">Completion</div>
-                        </div>
-                        <div>
-                            <div className={`text-2xl font-bold ${overallStatus.isComplete ? 'text-green-600' : 'text-yellow-600'}`}>
-                                {overallStatus.isComplete ? '✓' : '⚠'}
-                            </div>
-                            <div className="text-sm text-blue-700">Status</div>
-                            <div className="text-xs text-blue-600">{overallStatus.isComplete ? 'Ready' : 'Incomplete'}</div>
+                        <div className="text-sm text-red-800">
+                            <strong>Validation Error:</strong> Some categories need weight adjustment. Please ensure all categories total exactly 100%.
                         </div>
                     </div>
-                </CardContent>
-            </Card>
-
-            {/* Categories */}
-            <h2 className="text-xl font-semibold">Assessment Criteria</h2>
-            <p className="text-gray-600 dark:text-gray-400">Assign weights to each subcategory. Weights within each category must total 100%.</p>
+                )}
+            </div>
 
             {/* Register the subcategoryWeights field with react-hook-form */}
             <FormField
@@ -370,7 +389,7 @@ export default function Criteria({
                                         const parsed = JSON.parse(e.target.value);
                                         field.onChange(parsed);
                                     } catch (error) {
-                                        console.error('Error parsing subcategoryWeights:', error);
+                                        // Handle parsing error silently
                                     }
                                 }}
                             />
@@ -384,28 +403,31 @@ export default function Criteria({
                     expandedCategories.has(category.id);
                     const categoryTotal = calculateCategoryTotal(category.id);
                     const pieChartData = getPieChartData(category);
+                    const isInvalid = categoryTotal !== 100;
 
                     return (
-                        <Card key={category.id} className="border-2">
+                        <Card 
+                            key={category.id} 
+                            id={`category-card-${category.category_name.toLowerCase().replace(/\s+/g, '-')}`}
+                            className={`border-2 transition-all duration-300 ${
+                                highlightInvalidCategories && isInvalid 
+                                    ? 'ring-2 ring-red-500 ring-opacity-50 bg-red-50 border-red-200' 
+                                    : ''
+                            }`}
+                        >
                             <CardHeader>
                                 <div className="flex items-center justify-between">
                                     <CardTitle className="text-lg">{category.category_name}</CardTitle>
                                     <div className="flex items-center gap-4">
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-sm font-medium">Total: {categoryTotal}%</span>
-                                            <div
-                                                className={`rounded-full px-2 py-1 text-xs font-medium ${
-                                                    categoryTotal === 100
-                                                        ? 'bg-green-100 text-green-800'
-                                                        : categoryTotal > 100
-                                                          ? 'bg-red-100 text-red-800'
-                                                          : 'bg-yellow-100 text-yellow-800'
-                                                }`}
-                                            >
-                                                {categoryTotal === 100 ? '✓ Valid' : categoryTotal > 100 ? '✗ Exceeds 100%' : '⚠ Incomplete'}
-                                            </div>
-                                        </div>
-                                        <Button variant="outline" size="sm" onClick={() => resetToEqualWeights(category.id)}>
+                                        <Button 
+                                            type="button"
+                                            variant="outline" 
+                                            size="sm" 
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                resetToEqualWeights(category.id);
+                                            }}
+                                        >
                                             Reset to Equal
                                         </Button>
                                     </div>
@@ -413,157 +435,229 @@ export default function Criteria({
                             </CardHeader>
 
                             <CardContent className="space-y-6">
-                                {/* Pie Chart */}
-                                <div className="flex justify-center">
-                                    <PieChart
-                                        data={pieChartData}
-                                        title={`${category.category_name} Weight Distribution`}
-                                        totalWeight={100}
-                                        showLabels={true}
-                                        showTooltip={true}
-                                        showLegend={true}
-                                        onSliceClick={(data) => {
-                                            // Find the subcategory by name and focus on its weight input
-                                            const subcategory = category.subCategories.find((sub) => sub.subcategory_name === data.name);
-                                            if (subcategory) {
-                                                const inputElement = document.getElementById(`weight-${subcategory.id}`) as HTMLInputElement;
-                                                if (inputElement) {
-                                                    inputElement.focus();
-                                                    inputElement.select();
-                                                }
-                                            }
-                                        }}
-                                    />
-                                </div>
-
-                                {/* Weight Distribution Summary */}
-                                <div className="rounded-lg bg-gray-50 p-4">
-                                    <h5 className="mb-3 font-medium text-gray-700">Weight Distribution Summary</h5>
-
-                                    {/* Progress Bar */}
-                                    <div className="mb-4">
-                                        <div className="mb-2 flex items-center justify-between text-sm text-gray-600">
-                                            <span>Total Weight: {categoryTotal}%</span>
-                                            <span>Target: 100%</span>
-                                        </div>
-                                        <div className="h-2 w-full rounded-full bg-gray-200">
-                                            <div
-                                                className={`h-2 rounded-full transition-all duration-300 ${
-                                                    categoryTotal === 100 ? 'bg-green-500' : categoryTotal > 100 ? 'bg-red-500' : 'bg-yellow-500'
-                                                }`}
-                                                style={{ width: `${Math.min(categoryTotal, 100)}%` }}
-                                            ></div>
-                                        </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
-                                        {category.subCategories.map((subcat) => {
-                                            const weight = subcategoryWeights[subcat.id] || 0;
-                                            const percentage = ((weight / 100) * 100).toFixed(1);
-                                            const questionCount = subcat.questions ? subcat.questions.length : 0;
-                                            return (
-                                                <div key={subcat.id} className="text-center">
-                                                    <div className="text-lg font-semibold text-blue-600">{weight}%</div>
-                                                    <div className="text-xs text-gray-600">{subcat.subcategory_name}</div>
-                                                    <div className="text-xs text-gray-500">{percentage}% of total</div>
-                                                    <div className="text-xs text-gray-400">
-                                                        {questionCount} question{questionCount !== 1 ? 's' : ''}
-                                                    </div>
+                                {/* Three-Column Layout: Labels - Chart - Stats */}
+                                <div className="flex flex-col lg:flex-row items-center justify-center gap-6 w-full">
+                                    {/* Left: Weight Distribution Labels (Auto-sizing) */}
+                                    <div className="flex-shrink-0">
+                                        {pieChartData.length > 0 && pieChartData.some(item => item.value > 0) ? (
+                                            <div className="space-y-2 min-w-[200px]">
+                                                <h5 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Distribution</h5>
+                                                <div className="space-y-1">
+                                                    {pieChartData.map((item, index) => (
+                                                        <div key={index} className="flex items-center justify-between py-1.5 gap-3">
+                                                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                                                                <div 
+                                                                    className="w-2.5 h-2.5 rounded-full flex-shrink-0" 
+                                                                    style={{ backgroundColor: item.color }}
+                                                                />
+                                                                <span className="text-xs font-medium text-foreground truncate" title={item.name}>
+                                                                    {item.name}
+                                                                </span>
+                                                            </div>
+                                                            <span className="text-xs font-mono text-muted-foreground flex-shrink-0 text-right min-w-[3rem]">
+                                                                {item.value}%
+                                                            </span>
+                                                        </div>
+                                                    ))}
                                                 </div>
-                                            );
-                                        })}
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center justify-center h-24 w-48 bg-muted/30 rounded border border-dashed border-border/50">
+                                                <div className="text-center">
+                                                    <div className="text-muted-foreground text-xs">Set weights</div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Middle: Large Prominent Pie Chart */}
+                                    <div className="flex-shrink-0 flex items-center justify-center">
+                                        {pieChartData.length > 0 && pieChartData.some(item => item.value > 0) ? (
+                                            <div className="relative" style={{ 
+                                                width: `${Math.max(240, Math.min(320, 240 + (pieChartData.length * 12)))}px`,
+                                                height: `${Math.max(240, Math.min(320, 240 + (pieChartData.length * 12)))}px`
+                                            }}>
+                                                <SimplePieChart
+                                                    data={pieChartData}
+                                                    title=""
+                                                    totalWeight={100}
+                                                    showLabels={false}
+                                                    showLegend={false}
+                                                    onSliceClick={(data) => {
+                                                        const subcategory = category.subCategories.find((sub) => sub.subcategory_name === data.name);
+                                                        if (subcategory) {
+                                                            const inputElement = document.getElementById(`weight-${subcategory.id}`) as HTMLInputElement;
+                                                            if (inputElement) {
+                                                                inputElement.focus();
+                                                                inputElement.select();
+                                                            }
+                                                        }
+                                                    }}
+                                                />
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center justify-center w-80 h-80 bg-muted/30 rounded border border-dashed border-border/50">
+                                                <div className="text-center">
+                                                    <div className="text-muted-foreground text-lg">Set weights to see chart</div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Right: Fixed Stats */}
+                                    <div className="flex-shrink-0">
+                                        <div className="space-y-3 min-w-[140px]">
+                                            {/* Completion Status */}
+                                            <div className="text-center">
+                                            <div className={`text-2xl font-bold ${
+                                                categoryTotal === 100 ? 'text-green-600' : 
+                                                categoryTotal > 100 ? 'text-red-600' : 'text-yellow-600'
+                                            }`}>
+                                                {categoryTotal}%
+                                            </div>
+                                                <div className="text-xs text-muted-foreground">
+                                                {categoryTotal === 100 ? 'Complete' : 
+                                                     categoryTotal > 100 ? 'Exceeds' : 'Incomplete'}
+                                                </div>
+                                            </div>
+
+                                            {/* Compact Stats */}
+                                            <div className="text-center space-y-1">
+                                                <div className="text-xs text-muted-foreground">
+                                                    {category.subCategories.length} subcategories
+                                                </div>
+                                                <div className="text-xs text-muted-foreground">
+                                                    {category.subCategories.reduce((total, sub) => total + (sub.questions?.length || 0), 0)} questions
+                                                </div>
+                                            </div>
+
+                                            {/* Reset Button */}
+                                            <div className="pt-1">
+                                                <Button 
+                                                    type="button"
+                                                    variant="outline" 
+                                                    size="sm" 
+                                                    className="w-full text-xs"
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        resetToEqualWeights(category.id);
+                                                    }}
+                                                >
+                                                    Reset to Equal
+                                                </Button>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
-                                {/* Subcategories with Weight Inputs */}
-                                <div className="space-y-4">
-                                    <div className="flex items-center justify-between">
-                                        <h4 className="font-medium text-gray-700">Subcategory Weights</h4>
-                                        <Button type="button" variant="outline" size="sm" onClick={ensureAllWeightsSet} className="text-xs">
-                                            Redistribute Weights Evenly
-                                        </Button>
-                                    </div>
-                                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                                {/* Compact Weight Inputs */}
+                                <div className="space-y-3">
+                                    <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Set Weights</h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
                                         {category.subCategories.map((subcategory) => {
                                             const isQuestionsExpanded = expandedQuestions.has(subcategory.id);
                                             const subcategoryWeight = subcategoryWeights[subcategory.id] || 0;
+                                            const questionCount = subcategory.questions ? subcategory.questions.length : 0;
 
                                             return (
-                                                <Card key={subcategory.id} className="border">
-                                                    <CardHeader className="pb-3">
-                                                        <Collapsible open={isQuestionsExpanded} onOpenChange={() => toggleQuestions(subcategory.id)}>
-                                                            <CollapsibleTrigger asChild>
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    className="h-auto w-full justify-between p-0 font-normal hover:bg-transparent"
-                                                                >
-                                                                    <span className="text-sm font-medium">{subcategory.subcategory_name}</span>
-                                                                    <ChevronDownIcon
-                                                                        className={`h-4 w-4 transition-transform duration-200 ${
-                                                                            isQuestionsExpanded ? 'rotate-180' : ''
-                                                                        }`}
-                                                                    />
-                                                                </Button>
-                                                            </CollapsibleTrigger>
-                                                        </Collapsible>
-                                                    </CardHeader>
-
-                                                    <CardContent className="space-y-3">
-                                                        {/* Weight Input */}
-                                                        <div className="space-y-2">
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="text-sm">Weight:</span>
-                                                                <Input
-                                                                    id={`weight-${subcategory.id}`}
-                                                                    type="number"
-                                                                    min="0"
-                                                                    max="100"
-                                                                    value={subcategoryWeight}
-                                                                    onChange={(e) =>
-                                                                        handleWeightChange(category.id, subcategory.id, Number(e.target.value))
-                                                                    }
-                                                                    className="w-20"
-                                                                />
-                                                                <span className="text-sm">%</span>
-                                                            </div>
-
-                                                            {/* Weight Bar */}
-                                                            <div className="h-2 w-full rounded-full bg-gray-200">
-                                                                <div
-                                                                    className="h-2 rounded-full bg-blue-500 transition-all duration-300"
-                                                                    style={{ width: `${subcategoryWeight}%` }}
-                                                                ></div>
-                                                            </div>
-                                                            <div className="text-center text-xs text-gray-500">
-                                                                {subcategoryWeight}% of category total
+                                                <div key={subcategory.id} className="bg-muted/30 rounded-lg p-3 border border-border/50 hover:bg-muted/50 transition-colors">
+                                                    <div className="flex items-center justify-between mb-2 gap-2">
+                                                        <div className="flex-1 min-w-0">
+                                                            <h5 className="font-medium text-foreground text-sm truncate" title={subcategory.subcategory_name}>
+                                                                {subcategory.subcategory_name}
+                                                            </h5>
+                                                            <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                                                                <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
+                                                                    subcategoryWeight === 0 ? 'bg-gray-100 text-gray-600' :
+                                                                    subcategoryWeight < 25 ? 'bg-blue-100 text-blue-700' :
+                                                                    subcategoryWeight < 50 ? 'bg-green-100 text-green-700' :
+                                                                    'bg-orange-100 text-orange-700'
+                                                                }`}>
+                                                                    {subcategoryWeight === 0 ? 'Unset' :
+                                                                     subcategoryWeight < 25 ? 'Low' :
+                                                                     subcategoryWeight < 50 ? 'Medium' : 'High'}
+                                                                </span>
                                                             </div>
                                                         </div>
+                                                        <div className="flex items-center gap-1 flex-shrink-0">
+                                                            <Input
+                                                                id={`weight-${subcategory.id}`}
+                                                                type="number"
+                                                                min="0"
+                                                                max="100"
+                                                                value={subcategoryWeight || ''}
+                                                                onChange={(e) => {
+                                                                    const value = e.target.value;
+                                                                    if (value === '') {
+                                                                        handleWeightChange(category.id, subcategory.id, 0);
+                                                                    } else {
+                                                                        const numValue = Number(value);
+                                                                        if (!isNaN(numValue)) {
+                                                                            handleWeightChange(category.id, subcategory.id, numValue);
+                                                                        }
+                                                                    }
+                                                                }}
+                                                                onFocus={(e) => e.target.select()}
+                                                                className="w-14 h-7 text-center text-xs px-1"
+                                                            />
+                                                            <span className="text-xs text-muted-foreground">%</span>
+                                                        </div>
+                                                    </div>
 
-                                                        {/* Questions - Now revealed with dropdown animation */}
-                                                        <Collapsible open={isQuestionsExpanded}>
-                                                            <CollapsibleContent className="space-y-2 duration-200 animate-in fade-in-0 slide-in-from-top-2">
-                                                                <h5 className="text-xs font-medium text-gray-600">
-                                                                    Questions ({subcategory.questions ? subcategory.questions.length : 0}):
-                                                                </h5>
-                                                                <div className="max-h-32 space-y-1 overflow-y-auto">
-                                                                    {subcategory.questions && subcategory.questions.length > 0 ? (
-                                                                        subcategory.questions.map((question, qIndex) => (
-                                                                            <div
-                                                                                key={question.id}
-                                                                                className="border-l-2 border-gray-200 pl-2 text-xs text-gray-600"
-                                                                            >
-                                                                                <span className="font-medium text-gray-700">Q{qIndex + 1}:</span>{' '}
-                                                                                {question.question}
-                                                                            </div>
-                                                                        ))
-                                                                    ) : (
-                                                                        <div className="pl-2 text-xs text-gray-500">No questions available</div>
-                                                                    )}
-                                                                </div>
-                                                            </CollapsibleContent>
-                                                        </Collapsible>
-                                                    </CardContent>
-                                                </Card>
+                                                    {/* Compact Progress Bar */}
+                                                    <div className="space-y-1">
+                                                        <div className="flex justify-between text-xs text-muted-foreground">
+                                                            <span>0%</span>
+                                                            <span className="font-medium">{subcategoryWeight}%</span>
+                                                            <span>100%</span>
+                                                        </div>
+                                                        <div className="h-1.5 w-full rounded-full bg-muted relative overflow-hidden">
+                                                            <div
+                                                                className={`h-1.5 rounded-full transition-all duration-300 ${
+                                                                    subcategoryWeight === 0 ? 'bg-gray-400' :
+                                                                    subcategoryWeight < 25 ? 'bg-blue-500' :
+                                                                    subcategoryWeight < 50 ? 'bg-green-500' :
+                                                                    'bg-orange-500'
+                                                                }`}
+                                                            style={{ width: `${subcategoryWeight}%` }}
+                                                        ></div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Compact Questions Toggle */}
+                                                    <Collapsible open={isQuestionsExpanded} onOpenChange={() => toggleQuestions(subcategory.id)}>
+                                                        <CollapsibleTrigger asChild>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                className="h-5 w-full text-xs text-muted-foreground hover:text-foreground mt-1"
+                                                            >
+                                                                <span>Questions</span>
+                                                                <ChevronDownIcon
+                                                                    className={`h-3 w-3 ml-1 transition-transform duration-200 ${
+                                                                        isQuestionsExpanded ? 'rotate-180' : ''
+                                                                    }`}
+                                                                />
+                                                            </Button>
+                                                        </CollapsibleTrigger>
+                                                        <CollapsibleContent className="mt-1">
+                                                            <div className="max-h-20 space-y-1 overflow-y-auto border-t pt-1">
+                                                                {subcategory.questions && subcategory.questions.length > 0 ? (
+                                                                    subcategory.questions.map((question, qIndex) => (
+                                                                        <div
+                                                                            key={question.id}
+                                                                            className="text-xs text-muted-foreground border-l border-border pl-2"
+                                                                        >
+                                                                            <span className="font-medium">Q{qIndex + 1}:</span> {question.question}
+                                                                        </div>
+                                                                    ))
+                                                                ) : (
+                                                                    <div className="text-xs text-muted-foreground pl-2">No questions</div>
+                                                                )}
+                                                            </div>
+                                                        </CollapsibleContent>
+                                                    </Collapsible>
+                                                </div>
                                             );
                                         })}
                                     </div>

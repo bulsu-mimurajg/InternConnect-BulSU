@@ -5,7 +5,6 @@ import {
     UsersIcon, 
     BriefcaseIcon, 
     Building2Icon,
-    TargetIcon,
     TrendingUpIcon,
     AlertCircle
 } from 'lucide-react';
@@ -272,41 +271,6 @@ export default function HTEDashboardPage() {
                     </CardContent>
                 </Card>
 
-                {/* Assessment Criteria Overview */}
-                {hte.internships.length > 0 && (
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <TargetIcon className="h-5 w-5" />
-                                Assessment Criteria
-                            </CardTitle>
-                            <CardDescription>
-                                Your weighted criteria for student evaluation
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-4">
-                                {hte.internships.map((internship) => (
-                                    <div key={internship.id} className="border rounded-lg p-4">
-                                        <h4 className="font-medium mb-3">{internship.position_title}</h4>
-                                        {internship.subcategory_weights.length > 0 ? (
-                                            <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
-                                                {internship.subcategory_weights.map((weight) => (
-                                                    <div key={weight.id} className="flex items-center justify-between p-2 bg-muted rounded">
-                                                        <span className="text-sm">{weight.subcategory.subcategory_name}</span>
-                                                        <Badge variant="outline">{weight.weight}</Badge>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        ) : (
-                                            <p className="text-sm text-muted-foreground">No criteria weights set</p>
-                                        )}
-                                    </div>
-                                ))}
-                </div>
-                        </CardContent>
-                    </Card>
-                )}
 
             </div>
         </AppLayout>

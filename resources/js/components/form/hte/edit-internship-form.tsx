@@ -15,8 +15,6 @@ const FormSchema = z.object({
     department: z.string().min(1, 'Department is required'),
     numberOfInterns: z.string().min(1, 'Number of interns is required'),
     duration: z.string().min(1, 'Duration is required'),
-    startDate: z.string().min(1, 'Start date is required'),
-    endDate: z.string().min(1, 'End date is required'),
     subcategoryWeights: z.record(z.string(), z.number().min(0).max(100)),
 });
 
@@ -49,8 +47,6 @@ interface EditInternshipFormProps {
         department: string;
         numberOfInterns: string;
         duration: string;
-        startDate: string;
-        endDate: string;
         is_active: boolean;
     };
     existingWeights: Record<string, number>;
@@ -78,8 +74,6 @@ export default function EditInternshipForm({ categories, internship, existingWei
             department: internship.department,
             numberOfInterns: internship.numberOfInterns,
             duration: internship.duration,
-            startDate: internship.startDate,
-            endDate: internship.endDate,
             subcategoryWeights: existingWeights,
         },
     });
@@ -123,11 +117,47 @@ export default function EditInternshipForm({ categories, internship, existingWei
         
         switch (currentStep) {
             case 0:
-                fieldsToValidate = ['position', 'department', 'numberOfInterns', 'duration', 'startDate', 'endDate'];
+                fieldsToValidate = ['position', 'department', 'numberOfInterns', 'duration'];
                 break;
-            case 1:
+            case 1: {
                 fieldsToValidate = ['subcategoryWeights'];
+                
+                // Check if each category totals 100%
+                const weights = form.watch('subcategoryWeights') || {};
+                const categoriesWithInvalidWeights: Array<{name: string, total: number, missing: number}> = [];
+                
+                categories.forEach((category) => {
+                    if (category.subCategories && category.subCategories.length > 0) {
+                        const categoryWeights = category.subCategories.map((subcat) => weights[subcat.id] || 0);
+                        const totalWeight = categoryWeights.reduce((sum, weight) => sum + weight, 0);
+                        
+                        if (totalWeight !== 100) {
+                            categoriesWithInvalidWeights.push({
+                                name: category.category_name,
+                                total: totalWeight,
+                                missing: 100 - totalWeight
+                            });
+                        }
+                    }
+                });
+
+                if (categoriesWithInvalidWeights.length > 0) {
+                    // Focus on the first invalid category card
+                    const firstInvalidCategory = categoriesWithInvalidWeights[0];
+                    setTimeout(() => {
+                        const categoryCard = document.getElementById(`category-card-${firstInvalidCategory.name.toLowerCase().replace(/\s+/g, '-')}`);
+                        if (categoryCard) {
+                            categoryCard.scrollIntoView({ 
+                                behavior: 'smooth', 
+                                block: 'center' 
+                            });
+                        }
+                    }, 100);
+                    
+                    return;
+                }
                 break;
+            }
         }
 
         if (fieldsToValidate.length > 0) {
@@ -146,8 +176,8 @@ export default function EditInternshipForm({ categories, internship, existingWei
                 <FormStepCounter steps={steps} currentStep={currentStep} />
             </div>
             <div className="relative min-h-[100vh] flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 md:min-h-min dark:border-sidebar-border">
-                <div className="p-4">
-                    <div className="">
+                <div className="flex flex-col h-full">
+                    <div className="flex-1 p-4 overflow-y-auto">
                         <Form {...form}>
                             <form onSubmit={form.handleSubmit(onSubmit)}>
                                 {currentStep === 0 && <InternshipOffered />}
@@ -184,7 +214,7 @@ export default function EditInternshipForm({ categories, internship, existingWei
                             </form>
                         </Form>
                     </div>
-                    <div className="mt-4 flex justify-between items-center">
+                    <div className="border-t border-border bg-background p-4 flex justify-between items-center">
                         <div className="text-sm text-gray-600">
                             {currentStep < steps.length - 1 && (
                                 <span>Please complete all required fields before proceeding</span>
@@ -194,7 +224,7 @@ export default function EditInternshipForm({ categories, internship, existingWei
                             <Button onClick={prev} disabled={currentStep === 0} variant="outline">
                                 Previous
                             </Button>
-                            <Button onClick={next} disabled={currentStep === 3}>
+                            <Button onClick={next} disabled={currentStep === steps.length - 1}>
                                 Next
                             </Button>
                         </div>

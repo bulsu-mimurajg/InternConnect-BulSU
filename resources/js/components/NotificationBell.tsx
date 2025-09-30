@@ -514,9 +514,23 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
 
                         <div className="max-h-96 overflow-y-auto">
                             {isLoading ? (
-                                <div className="p-6 text-center text-muted-foreground">
-                                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-2"></div>
-                                    Loading notifications...
+                                <div className="p-4">
+                                    <div className="flex items-start gap-3">
+                                        <div className="flex-shrink-0 rounded-full p-2.5 bg-muted animate-pulse">
+                                            <BellIcon className="h-4 w-4 text-muted-foreground" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="space-y-2">
+                                                <div className="h-4 bg-muted rounded animate-pulse w-3/4"></div>
+                                                <div className="h-3 bg-muted rounded animate-pulse w-full"></div>
+                                                <div className="h-3 bg-muted rounded animate-pulse w-2/3"></div>
+                                            </div>
+                                            <div className="flex items-center gap-1.5 mt-3">
+                                                <div className="h-3 w-3 bg-muted rounded animate-pulse"></div>
+                                                <div className="h-3 bg-muted rounded animate-pulse w-16"></div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             ) : getFilteredNotifications().length === 0 ? (
                                 <div className="p-6 text-center text-muted-foreground">

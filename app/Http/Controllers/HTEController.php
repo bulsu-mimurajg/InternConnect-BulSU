@@ -71,15 +71,6 @@ class HTEController extends Controller
             return redirect()->back()->withErrors(['error' => 'No current Deadline or Deadline is expired. You cannot submit HTE forms at this time.']);
         }
 
-        // Debug: Log the incoming request data FIRST
-        Log::info('HTE Form Submission - Request Received:', [
-            'method' => $request->method(),
-            'url' => $request->url(),
-            'all_request_data' => $request->all(),
-            'user_id' => Auth::id(),
-            'has_hte' => Auth::user()->hte ? 'yes' : 'no'
-        ]);
-
         // Check if user has already submitted the HTE form
         $user = Auth::user();
         if ($user->hte && $user->hte->is_submit) {
@@ -99,8 +90,6 @@ class HTEController extends Controller
                 'department' => 'required|string|max:100',
                 'numberOfInterns' => 'required|string|max:50',
                 'duration' => 'required|string|max:100',
-                'startDate' => 'required|string|max:50',
-                'endDate' => 'required|string|max:50',
                 'subcategoryWeights' => 'required|array',
             ]);
             Log::info('HTE Form Submission - Validation passed');
@@ -111,13 +100,6 @@ class HTEController extends Controller
             ]);
             throw $e;
         }
-
-        // Debug: Log the incoming request data
-        Log::info('HTE Form Submission - Request Data:', [
-            'subcategoryWeights' => $request->subcategoryWeights,
-            'subcategoryWeights_count' => count($request->subcategoryWeights),
-            'all_request_data' => $request->all()
-        ]);
 
         try {
             // Create or update HTE record
@@ -161,7 +143,7 @@ class HTEController extends Controller
                 $internship->update([
                     'position_title' => $request->position,
                     'department' => $request->department,
-                    'placement_description' => 'Internship opportunity at ' . $request->companyName . ' - Duration: ' . $request->duration . ' from ' . $request->startDate . ' to ' . $request->endDate,
+                    'placement_description' => 'Internship opportunity at ' . $request->companyName . ' - Duration: ' . $request->duration,
                     'slot_count' => (int) $request->numberOfInterns,
                     'is_active' => true,
                 ]);
@@ -172,7 +154,7 @@ class HTEController extends Controller
                     'hte_id' => $hte->id,
                     'position_title' => $request->position,
                     'department' => $request->department,
-                    'placement_description' => 'Internship opportunity at ' . $request->companyName . ' - Duration: ' . $request->duration . ' from ' . $request->startDate . ' to ' . $request->endDate,
+                    'placement_description' => 'Internship opportunity at ' . $request->companyName . ' - Duration: ' . $request->duration,
                     'slot_count' => (int) $request->numberOfInterns,
                     'is_active' => true,
                 ]);
@@ -336,8 +318,8 @@ class HTEController extends Controller
         ]);
 
         // Check if HTE has complete data (submitted form OR has internships with subcategory weights)
-        $hasCompleteData = $hte->is_submit || 
-            ($hteWithData->internships->count() > 0 && 
+        $hasCompleteData = $hte->is_submit ||
+            ($hteWithData->internships->count() > 0 &&
              $hteWithData->internships->every(function($internship) {
                  return $internship->subcategoryWeights->count() > 0;
              }));
@@ -345,7 +327,7 @@ class HTEController extends Controller
         // Check if there's an active student assessment deadline
         $studentAssessmentDeadlineActive = \App\Models\Deadline::isActiveForCategory('student_assessment_form');
         $studentAssessmentDeadline = null;
-        
+
         if ($studentAssessmentDeadlineActive) {
             $studentAssessmentDeadline = \App\Models\Deadline::getActiveForCategory('student_assessment_form');
         }
@@ -415,8 +397,8 @@ class HTEController extends Controller
         });
 
         // Check if HTE has complete data (submitted form OR has internships with subcategory weights)
-        $hasCompleteData = $hte->is_submit || 
-            ($dashboardData->internships->count() > 0 && 
+        $hasCompleteData = $hte->is_submit ||
+            ($dashboardData->internships->count() > 0 &&
              $dashboardData->internships->every(function($internship) {
                  return $internship->subcategoryWeights->count() > 0;
              }));
@@ -448,6 +430,14 @@ class HTEController extends Controller
 
         if (!$hte) {
             return redirect()->route('form');
+        }
+
+        // Check if there's an active student assessment deadline
+        $studentAssessmentDeadlineActive = \App\Models\Deadline::isActiveForCategory('student_assessment_form');
+        $studentAssessmentDeadline = null;
+
+        if ($studentAssessmentDeadlineActive) {
+            $studentAssessmentDeadline = \App\Models\Deadline::getActiveForCategory('student_assessment_form');
         }
 
         // Get categories for criteria selection
@@ -490,6 +480,11 @@ class HTEController extends Controller
             'hte' => $hte,
             'categories' => $transformedCategories,
             'showSubmissionPrompt' => !$hte->is_submit,
+            'studentAssessmentDeadlineActive' => $studentAssessmentDeadlineActive,
+            'studentAssessmentDeadline' => $studentAssessmentDeadline ? [
+                'title' => $studentAssessmentDeadline->title,
+                'end_date' => $studentAssessmentDeadline->end_date->format('M d, Y H:i'),
+            ] : null
         ]);
     }
 
@@ -510,14 +505,20 @@ class HTEController extends Controller
             return redirect()->back()->withErrors(['error' => 'Please complete the assessment form first before adding internships.']);
         }
 
+        // Check if there's an active student assessment deadline
+        if (\App\Models\Deadline::isActiveForCategory('student_assessment_form')) {
+            $deadline = \App\Models\Deadline::getActiveForCategory('student_assessment_form');
+            return redirect()->back()->withErrors([
+                'error' => "Cannot add internships during active student assessment period. Assessment period ends on " . $deadline->end_date->format('M d, Y H:i') . "."
+            ]);
+        }
+
         // Validate the request
         $request->validate([
             'position' => 'required|string|max:100',
             'department' => 'required|string|max:50',
             'numberOfInterns' => 'required|string|max:50',
             'duration' => 'required|string|max:100',
-            'startDate' => 'required|string|max:50',
-            'endDate' => 'required|string|max:50',
             'subcategoryWeights' => 'required|array',
         ]);
 
@@ -527,7 +528,7 @@ class HTEController extends Controller
                 'hte_id' => $hte->id,
                 'position_title' => $request->position,
                 'department' => $request->department,
-                'placement_description' => 'Internship opportunity at ' . $hte->company_name . ' - Duration: ' . $request->duration . ' from ' . $request->startDate . ' to ' . $request->endDate,
+                'placement_description' => 'Internship opportunity at ' . $hte->company_name . ' - Duration: ' . $request->duration,
                 'slot_count' => (int) $request->numberOfInterns,
                 'is_active' => true,
             ]);
@@ -708,8 +709,6 @@ class HTEController extends Controller
             'department' => 'required|string|max:50',
             'numberOfInterns' => 'required|string|max:50',
             'duration' => 'required|string|max:100',
-            'startDate' => 'required|string|max:50',
-            'endDate' => 'required|string|max:50',
             'subcategoryWeights' => 'required|array',
         ]);
 
@@ -727,7 +726,7 @@ class HTEController extends Controller
             $internship->update([
                 'position_title' => $request->position,
                 'department' => $request->department,
-                'placement_description' => 'Internship opportunity at ' . $hte->company_name . ' - Duration: ' . $request->duration . ' from ' . $request->startDate . ' to ' . $request->endDate,
+                'placement_description' => 'Internship opportunity at ' . $hte->company_name . ' - Duration: ' . $request->duration,
                 'slot_count' => (int) $request->numberOfInterns,
             ]);
 
@@ -1453,7 +1452,7 @@ class HTEController extends Controller
         // Validate report type
         $validReportTypes = [
             'company-overview',
-            'placed-students', 
+            'placed-students',
             'internship-slots'
         ];
 
@@ -1635,16 +1634,16 @@ class HTEController extends Controller
         $companyName = preg_replace('/[^a-zA-Z0-9_-]/', '_', $hte->company_name);
         $reportTypeName = str_replace('-', '_', $reportType);
         $date = now()->format('Y-m-d');
-        
+
         $filename = "HTE_{$companyName}_{$reportTypeName}_{$date}";
-        
+
         if ($internship) {
             $internshipName = preg_replace('/[^a-zA-Z0-9_-]/', '_', $internship->position_title);
             $filename .= "_{$internshipName}";
         }
-        
+
         $filename .= ".{$format}";
-        
+
         return $filename;
     }
 
@@ -1654,13 +1653,13 @@ class HTEController extends Controller
         $internships = $hte->internships()->with('subcategoryWeights.subcategory.category')->get();
         $totalSlots = $internships->sum('slot_count');
         $activeInternships = $internships->where('is_active', true)->count();
-        
+
         $placedStudents = StudentPlacement::whereHas('internship', function($query) use ($hte) {
             $query->where('hte_id', $hte->id);
         })->where('status', 'approved')->count();
-        
+
         $utilizationRate = $totalSlots > 0 ? round(($placedStudents / $totalSlots) * 100, 1) : 0;
-        
+
         return [
             'internships' => $internships,
             'totalSlots' => $totalSlots,
@@ -1699,10 +1698,10 @@ class HTEController extends Controller
             $filledSlots = StudentPlacement::where('internship_id', $internship->id)
                 ->where('status', 'approved')
                 ->count();
-            
-            $utilizationRate = $internship->slot_count > 0 ? 
+
+            $utilizationRate = $internship->slot_count > 0 ?
                 round(($filledSlots / $internship->slot_count) * 100, 1) : 0;
-            
+
             return [
                 'id' => $internship->id,
                 'position_title' => $internship->position_title,
@@ -1779,7 +1778,7 @@ class HTEController extends Controller
 
         $avgCompatibilityScore = $placements->avg('compatibility_score') ?? 0;
         $filledSlots = $placements->where('status', 'approved')->count();
-        $utilizationRate = $internship->slot_count > 0 ? 
+        $utilizationRate = $internship->slot_count > 0 ?
             round(($filledSlots / $internship->slot_count) * 100, 1) : 0;
 
         return [
@@ -1862,7 +1861,7 @@ class HTEController extends Controller
     private function generateHTECompanyOverviewCSV($hte, $csvContent): string
     {
         $data = $this->getHTECompanyOverviewData($hte);
-        
+
         $csvContent .= "Company Overview\n";
         $csvContent .= "Total Internships," . $data['internships']->count() . "\n";
         $csvContent .= "Active Internships," . $data['activeInternships'] . "\n";
@@ -1885,10 +1884,10 @@ class HTEController extends Controller
     private function generateHTEPlacedStudentsCSV($hte, $csvContent): string
     {
         $data = $this->getHTEPlacedStudentsData($hte);
-        
+
         $csvContent .= "Placed Students\n";
         $csvContent .= "Student Number,Name,Section,Position,Department,Compatibility Score,Placement Date\n";
-        
+
         foreach ($data['placedStudents'] as $student) {
             $csvContent .= $student['student_number'] . ",";
             $csvContent .= '"' . $student['name'] . '",';
@@ -1905,10 +1904,10 @@ class HTEController extends Controller
     private function generateHTEInternshipSlotsCSV($hte, $csvContent): string
     {
         $data = $this->getHTEInternshipSlotsData($hte);
-        
+
         $csvContent .= "Internship Slots Utilization\n";
         $csvContent .= "Position,Department,Total Slots,Filled Slots,Available Slots,Utilization Rate,Status\n";
-        
+
         foreach ($data['internships'] as $internship) {
             $csvContent .= '"' . $internship['position_title'] . '",';
             $csvContent .= '"' . $internship['department'] . '",';
@@ -1925,10 +1924,10 @@ class HTEController extends Controller
     private function generateHTEPlacementTimelineCSV($hte, $csvContent): string
     {
         $data = $this->getHTEPlacementTimelineData($hte);
-        
+
         $csvContent .= "Placement Timeline\n";
         $csvContent .= "Student Name,Position,Status,Compatibility Score,Created At,Placement Date\n";
-        
+
         foreach ($data['placements'] as $placement) {
             $csvContent .= '"' . $placement['student_name'] . '",';
             $csvContent .= '"' . $placement['position'] . '",';
@@ -1944,10 +1943,10 @@ class HTEController extends Controller
     private function generateHTEEndorsementSummaryCSV($hte, $csvContent): string
     {
         $data = $this->getHTEEndorsementSummaryData($hte);
-        
+
         $csvContent .= "Endorsement Summary\n";
         $csvContent .= "Status,Student Name,Position,Compatibility Score,Endorsement Date\n";
-        
+
         foreach ($data['endorsements'] as $status => $endorsements) {
             foreach ($endorsements as $endorsement) {
                 $csvContent .= ucfirst($status) . ",";
@@ -1964,7 +1963,7 @@ class HTEController extends Controller
     private function generateHTEInternshipPerformanceCSV($hte, $internship, $csvContent): string
     {
         $data = $this->getHTEInternshipPerformanceData($hte, $internship);
-        
+
         $csvContent .= "Performance Summary\n";
         $csvContent .= "Average Compatibility Score," . $data['avgCompatibilityScore'] . "\n";
         $csvContent .= "Filled Slots," . $data['filledSlots'] . "\n";
@@ -1972,7 +1971,7 @@ class HTEController extends Controller
 
         $csvContent .= "Student Placements\n";
         $csvContent .= "Student Name,Section,Compatibility Score,Status,Placement Date\n";
-        
+
         foreach ($data['placements'] as $placement) {
             $csvContent .= '"' . $placement['student_name'] . '",';
             $csvContent .= $placement['section'] . ",";
@@ -1987,10 +1986,10 @@ class HTEController extends Controller
     private function generateHTEStudentCompatibilityCSV($hte, $internship, $csvContent): string
     {
         $data = $this->getHTEStudentCompatibilityData($hte, $internship);
-        
+
         $csvContent .= "Student Compatibility Rankings\n";
         $csvContent .= "Rank,Student Name,Section,Compatibility Score,Status\n";
-        
+
         foreach ($data['placements'] as $index => $placement) {
             $csvContent .= ($index + 1) . ",";
             $csvContent .= '"' . $placement['student_name'] . '",';
@@ -2005,10 +2004,10 @@ class HTEController extends Controller
     private function generateHTECriteriaWeightsCSV($hte, $internship, $csvContent): string
     {
         $data = $this->getHTECriteriaWeightsData($hte, $internship);
-        
+
         $csvContent .= "Criteria Weights\n";
         $csvContent .= "Category,Subcategory,Weight\n";
-        
+
         foreach ($data['weights'] as $weight) {
             $csvContent .= $weight['category'] . ",";
             $csvContent .= '"' . $weight['subcategory'] . '",';

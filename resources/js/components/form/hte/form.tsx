@@ -6,7 +6,7 @@ import ReviewAndSubmit from '@/components/form/hte/review-and-submit';
 import { Button } from '@/components/ui/button';
 import { Form } from '@/components/ui/form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Path, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { router, usePage } from '@inertiajs/react';
@@ -25,9 +25,6 @@ const FormSchema = z.object({
     department: z.string().min(1, 'Department is required'),
     numberOfInterns: z.string().min(1, 'Number of interns is required'),
     duration: z.string().min(1, 'Duration is required'),
-    startDate: z.string().min(1, 'Start date is required'),
-    endDate: z.string().min(1, 'End date is required'),
-
     
     // Weights
     subcategoryWeights: z.record(z.string(), z.number().min(0).max(100)),
@@ -71,6 +68,7 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
     const [expandedQuestions, setExpandedQuestions] = useState<Set<number>>(new Set());
     const [categoriesLoading, setCategoriesLoading] = useState(true);
     const [dataFetched, setDataFetched] = useState(false);
+    const [showValidationErrors, setShowValidationErrors] = useState(false);
 
     const steps = [
         { id: 'Step 1', name: 'Basic Information' },
@@ -92,8 +90,6 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
             department: '',
             numberOfInterns: '',
             duration: '',
-            startDate: '',
-            endDate: '',
             subcategoryWeights: {},
         },
     });
@@ -118,7 +114,6 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
             }
 
             const data = await response.json();
-            console.log('Categories data received:', data);
             
             // Filter out categories without subcategories
             const processedData = data.filter((category: { subCategories: Array<unknown> }) => {
@@ -131,11 +126,13 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
             // Initialize equal weights for all subcategories
             processedData.forEach((category: Category) => {
                 if (category.subCategories && category.subCategories.length > 0) {
-                    const equalWeight = Math.round(100 / category.subCategories.length);
-                    const remainder = 100 % category.subCategories.length;
+                    const subcategoryCount = category.subCategories.length;
+                    const baseWeight = Math.floor(100 / subcategoryCount);
+                    const remainder = 100 % subcategoryCount;
                     
+                    // Distribute weights evenly, with remainder distributed to first subcategories
                     category.subCategories.forEach((subcat: SubCategory, index: number) => {
-                        const weight = index < remainder ? equalWeight + 1 : equalWeight;
+                        const weight = index < remainder ? baseWeight + 1 : baseWeight;
                         form.setValue(`subcategoryWeights.${subcat.id}`, weight);
                     });
                 }
@@ -144,7 +141,6 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
             setDataFetched(true);
             setCategoriesLoading(false);
         } catch (error) {
-            console.error('Error fetching categories:', error);
             setCategoriesLoading(false);
         }
     }, [dataFetched, form]);
@@ -163,60 +159,49 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
     function onSubmit(values: FormData) {
         setIsSubmitting(true);
         
-        // Debug: Log the form data being sent
-        console.log('HTE Form Submission - Form Data:', values);
-        console.log('Subcategory Weights:', values.subcategoryWeights);
-        console.log('Subcategory Weights Count:', Object.keys(values.subcategoryWeights || {}).length);
-        
-        // Validate that all subcategory weights are properly set
-        const weights = values.subcategoryWeights || {};
-        const weightKeys = Object.keys(weights);
-        
-        if (weightKeys.length === 0) {
-            alert('Please set subcategory weights before submitting the form.');
-            setIsSubmitting(false);
-            return;
-        }
-        
-        // Check if any weights are missing or invalid
-        const missingWeights = weightKeys.filter(key => 
-            weights[key] === undefined || weights[key] === null || weights[key] < 0
-        );
-        
-        if (missingWeights.length > 0) {
-            alert('Some subcategory weights are missing or invalid. Please check all weight fields.');
-            setIsSubmitting(false);
-            return;
-        }
-        
-        // Keep weights as numbers for form submission
-        const formData = {
-            ...values,
-        };
-        
-        console.log('Proceeding with form submission...');
-        
-        router.post('/hte/submit', formData, {
+        router.post('/hte/submit', values, {
             onSuccess: (page) => {
-                console.log('Form submission successful:', page);
                 setIsSubmitted(true);
                 setIsSubmitting(false);
             },
             onError: (errors) => {
-                console.error('Form submission failed:', errors);
                 setIsSubmitting(false);
-                // Show error message to user
-                if (errors && typeof errors === 'object') {
-                    const errorMessages = Object.values(errors).flat();
-                    alert('Form submission failed: ' + errorMessages.join(', '));
-                } else {
-                    alert('Form submission failed. Please try again.');
-                }
+                // Error handling is now done through visual feedback
             }
         });
     }
 
     const [currentStep, setCurrentStep] = useState(0);
+
+    // Check if all categories have valid weights (total 100% and no unset weights)
+    const areAllWeightsValid = useMemo(() => {
+        if (currentStep !== 2 || categories.length === 0) return true;
+        
+        const weights = form.watch('subcategoryWeights') || {};
+        
+        return categories.every((category) => {
+            if (!category.subCategories || category.subCategories.length === 0) return true;
+            
+            const categoryWeights = category.subCategories.map((subcat) => {
+                const weight = weights[subcat.id];
+                // Check if weight exists and is a valid number > 0
+                return (weight !== undefined && weight !== null && !isNaN(Number(weight)) && Number(weight) > 0) ? Number(weight) : 0;
+            });
+            const totalWeight = categoryWeights.reduce((sum, weight) => sum + weight, 0);
+            
+            // Check if total is 100% AND no weights are unset (0)
+            const hasUnsetWeights = categoryWeights.some(weight => weight === 0);
+            
+            return totalWeight === 100 && !hasUnsetWeights;
+        });
+    }, [currentStep, categories, form.watch('subcategoryWeights')]);
+
+    // Clear validation errors when weights become valid
+    React.useEffect(() => {
+        if (areAllWeightsValid && showValidationErrors) {
+            setShowValidationErrors(false);
+        }
+    }, [areAllWeightsValid, showValidationErrors]);
 
     const prev = () => {
         if (currentStep > 0) {
@@ -232,7 +217,7 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
                 fieldsToValidate = ['companyName', 'contactPerson', 'email', 'phone', 'address'];
                 break;
             case 1: // Internship Offered
-                fieldsToValidate = ['position', 'department', 'numberOfInterns', 'duration', 'startDate', 'endDate'];
+                fieldsToValidate = ['position', 'department', 'numberOfInterns', 'duration'];
                 break;
             case 2: { // Criteria
                 fieldsToValidate = ['subcategoryWeights'];
@@ -242,18 +227,59 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
                 const weightKeys = Object.keys(weights);
                 
                 if (weightKeys.length === 0) {
-                    alert('Please set subcategory weights before proceeding. Click "Redistribute Weights Evenly" if needed.');
+                    setShowValidationErrors(true);
                     return;
                 }
                 
-                // Check if any weights are missing
+                // Check if any weights are missing or unset
                 const missingWeights = weightKeys.filter(key => {
                     const weight = weights[key];
-                    return weight === undefined || weight === null || weight < 0;
+                    return weight === undefined || weight === null || isNaN(Number(weight)) || Number(weight) <= 0;
                 });
                 
                 if (missingWeights.length > 0) {
-                    alert('Some subcategory weights are missing. Please ensure all subcategories have weights assigned.');
+                    setShowValidationErrors(true);
+                    return;
+                }
+
+                // Check if each category totals 100% and has no unset weights
+                const categoriesWithInvalidWeights: Array<{name: string, total: number, missing: number, hasUnset: boolean}> = [];
+                categories.forEach((category) => {
+                    if (category.subCategories && category.subCategories.length > 0) {
+                        const categoryWeights = category.subCategories.map((subcat) => {
+                            const weight = weights[subcat.id];
+                            return (weight !== undefined && weight !== null && !isNaN(Number(weight)) && Number(weight) > 0) ? Number(weight) : 0;
+                        });
+                        const totalWeight = categoryWeights.reduce((sum, weight) => sum + weight, 0);
+                        const hasUnsetWeights = categoryWeights.some(weight => weight === 0);
+                        
+                        if (totalWeight !== 100 || hasUnsetWeights) {
+                            categoriesWithInvalidWeights.push({
+                                name: category.category_name,
+                                total: totalWeight,
+                                missing: 100 - totalWeight,
+                                hasUnset: hasUnsetWeights
+                            });
+                        }
+                    }
+                });
+
+                if (categoriesWithInvalidWeights.length > 0) {
+                    // Show validation errors and highlight invalid cards
+                    setShowValidationErrors(true);
+                    
+                    // Focus on the first invalid category card
+                    const firstInvalidCategory = categoriesWithInvalidWeights[0];
+                    setTimeout(() => {
+                        const categoryCard = document.getElementById(`category-card-${firstInvalidCategory.name.toLowerCase().replace(/\s+/g, '-')}`);
+                        if (categoryCard) {
+                            categoryCard.scrollIntoView({ 
+                                behavior: 'smooth', 
+                                block: 'center' 
+                            });
+                        }
+                    }, 100);
+                    
                     return;
                 }
                 break;
@@ -331,8 +357,8 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
             )}
             
             <div className="relative min-h-[100vh] flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 md:min-h-min dark:border-sidebar-border">
-                <div className="p-4">
-                    <div className="">
+                <div className="flex flex-col h-full">
+                    <div className="flex-1 p-4 overflow-y-auto">
                         <Form {...form}>
                             <form onSubmit={form.handleSubmit(onSubmit)}>
                                 {currentStep === 0 && <BasicInformation />}
@@ -347,26 +373,58 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
                                         setExpandedCategories={setExpandedCategories}
                                         setExpandedSubcategories={setExpandedSubcategories}
                                         setExpandedQuestions={setExpandedQuestions}
+                                        highlightInvalidCategories={showValidationErrors}
                                     />
                                 )}
-                                {currentStep === 3 && <ReviewAndSubmit isSubmitting={isSubmitting} categories={categories} />}
+                                {currentStep === 3 && (
+                                    <>
+                                        <ReviewAndSubmit isSubmitting={isSubmitting} categories={categories} />
+                                        <div className="flex justify-between items-center mt-6">
+                                            <div className="text-sm text-muted-foreground">
+                                                Review your information and submit the form
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <Button onClick={prev} variant="outline">
+                                                    Previous
+                                                </Button>
+                                                <Button 
+                                                    type="submit" 
+                                                    disabled={isSubmitting}
+                                                >
+                                                    {isSubmitting ? 'Submitting...' : 'Submit'}
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
                             </form>
                         </Form>
                     </div>
-                    <div className="mt-4 flex justify-between items-center">
+                    <div className="border-t border-border bg-background p-4 flex justify-between items-center">
                         <div className="text-sm text-gray-600">
                             {currentStep < steps.length - 1 && (
-                                <span>Please complete all required fields before proceeding</span>
+                                <span>
+                                    {currentStep === 2 && !areAllWeightsValid 
+                                        ? "All subcategories must have weights assigned and total 100% before proceeding" 
+                                        : "Please complete all required fields before proceeding"
+                                    }
+                                </span>
                             )}
                         </div>
-                        <div className="flex gap-2">
-                            <Button onClick={prev} disabled={currentStep === 0} variant="outline">
-                                Previous
-                            </Button>
-                            <Button onClick={next} disabled={currentStep === steps.length - 1}>
-                                Next
-                            </Button>
-                        </div>
+                        {currentStep < steps.length - 1 && (
+                            <div className="flex gap-2">
+                                <Button onClick={prev} disabled={currentStep === 0} variant="outline">
+                                    Previous
+                                </Button>
+                                <Button 
+                                    onClick={next} 
+                                    disabled={currentStep === steps.length - 1 || (currentStep === 2 && !areAllWeightsValid)}
+                                    className={currentStep === 2 && !areAllWeightsValid ? "opacity-50" : ""}
+                                >
+                                    Next
+                                </Button>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
