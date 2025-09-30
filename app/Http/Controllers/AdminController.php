@@ -203,12 +203,25 @@ class AdminController extends Controller
      */
     private function getPlacementOverview(): array
     {
-        // Placements by status
+        // Placements by status - include both actual placements and matches
         $placementsByStatus = StudentPlacement::select('status', DB::raw('count(*) as count'))
             ->groupBy('status')
             ->get()
             ->pluck('count', 'status')
             ->toArray();
+
+        // Add matches from student_matches table for all statuses
+        $matchesByStatus = StudentMatch::select('placement_status', DB::raw('count(*) as count'))
+            ->whereNotNull('placement_status')
+            ->groupBy('placement_status')
+            ->get()
+            ->pluck('count', 'placement_status')
+            ->toArray();
+
+        // Combine the counts
+        foreach ($matchesByStatus as $status => $count) {
+            $placementsByStatus[$status] = ($placementsByStatus[$status] ?? 0) + $count;
+        }
 
         // Placements by company
         $placementsByCompany = StudentPlacement::with('internship.hte')

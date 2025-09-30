@@ -3,7 +3,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { PieChart } from '@/components/ui/pie-chart';
+import { PieChart } from '@/components/charts/pie-chart';
 import { useFormContext } from 'react-hook-form';
 import React, { useCallback, useMemo } from 'react';
 import { ChevronDownIcon } from '@radix-ui/react-icons';

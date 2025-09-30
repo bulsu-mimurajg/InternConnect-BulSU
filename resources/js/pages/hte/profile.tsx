@@ -4,7 +4,7 @@ import { Head, usePage, Link, router } from '@inertiajs/react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { PieChart } from '@/components/ui/pie-chart';
+import { PieChart } from '@/components/charts/pie-chart';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
     Building2, 
@@ -779,7 +779,6 @@ export default function HTEProfilePage() {
                                                                         <div key={categoryName} className="border border-border rounded-lg bg-card">
                                                                             <div className="bg-primary/5 px-4 py-3 border-b border-border">
                                                                                 <h4 className="font-semibold text-base text-foreground">{categoryName}</h4>
-                                                                                <p className="text-sm text-muted-foreground">Total Weight:  {categoryTotal}%</p>
                                                                             </div>
                                                                             <div className="p-8">
                                                                                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

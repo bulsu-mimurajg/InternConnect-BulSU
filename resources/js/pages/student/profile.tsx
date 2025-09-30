@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { RadarChart } from '@/components/ui/radar-chart';
+import { RadarChart } from '@/components/charts/radar-chart';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import AppLayout from '@/layouts/app-layout';

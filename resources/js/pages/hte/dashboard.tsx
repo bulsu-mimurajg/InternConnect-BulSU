@@ -141,39 +141,42 @@ export default function HTEDashboardPage() {
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <div className="grid gap-4 md:grid-cols-2">
-                            <div className="space-y-2">
-                                <div className="flex items-center justify-between">
-                                    <span className="text-sm font-medium">Assessment Status</span>
+                        <div className="grid gap-6 md:grid-cols-2">
+                            {/* Status Information */}
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between py-2">
+                                    <span className="text-sm font-medium text-muted-foreground">Assessment Status</span>
                                     <Badge variant={hte.is_submit ? "default" : "secondary"}>
                                         {hte.is_submit ? "Completed" : "Pending"}
                                     </Badge>
                                 </div>
-                                <div className="flex items-center justify-between">
-                                    <span className="text-sm font-medium">Company Status</span>
+                                <div className="flex items-center justify-between py-2">
+                                    <span className="text-sm font-medium text-muted-foreground">Company Status</span>
                                     <Badge variant={hte.is_active ? "default" : "destructive"}>
                                         {hte.is_active ? "Active" : "Inactive"}
                                     </Badge>
                                 </div>
-                                <div className="flex items-center justify-between">
-                                    <span className="text-sm font-medium">Registration Date</span>
-                                    <span className="text-sm text-muted-foreground">
+                                <div className="flex items-center justify-between py-2">
+                                    <span className="text-sm font-medium text-muted-foreground">Registration Date</span>
+                                    <span className="text-sm font-medium">
                                         {new Date(hte.created_at).toLocaleDateString()}
                                     </span>
                                 </div>
                             </div>
-                            <div className="space-y-2">
-                                <div className="text-sm">
-                                    <span className="font-medium">Contact Person:</span>
-                                    <span className="ml-2">{hte.cperson_fname} {hte.cperson_lname}</span>
+                            
+                            {/* Contact Information */}
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between py-2">
+                                    <span className="text-sm font-medium text-muted-foreground">Contact Person</span>
+                                    <span className="text-sm font-medium">{hte.cperson_fname} {hte.cperson_lname}</span>
                                 </div>
-                                <div className="text-sm">
-                                    <span className="font-medium">Position:</span>
-                                    <span className="ml-2">{hte.cperson_position}</span>
+                                <div className="flex items-center justify-between py-2">
+                                    <span className="text-sm font-medium text-muted-foreground">Position</span>
+                                    <span className="text-sm font-medium">{hte.cperson_position}</span>
                                 </div>
-                                <div className="text-sm">
-                                    <span className="font-medium">Email:</span>
-                                    <span className="ml-2">{hte.company_email}</span>
+                                <div className="flex items-center justify-between py-2">
+                                    <span className="text-sm font-medium text-muted-foreground">Email</span>
+                                    <span className="text-sm font-medium">{hte.company_email}</span>
                                 </div>
                             </div>
                         </div>

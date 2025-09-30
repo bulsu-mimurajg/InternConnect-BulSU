@@ -63,4 +63,4 @@ export function RadarChart({ data, title, maxValue }: RadarChartProps) {
             </ResponsiveContainer>
         </div>
     );
-} 
+}

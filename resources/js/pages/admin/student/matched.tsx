@@ -1,7 +1,6 @@
 import { Head, router, usePage } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
 import AdminLayout from '@/layouts/admin/layout';
-import Heading from '@/components/heading';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,20 +13,17 @@ import { usePagination } from '@/hooks/usePagination';
 import { getRowNumber } from '@/lib/pagination-utils';
 import StudentDetailsModal from '@/components/student-details-modal';
 import { 
-    UserIcon, 
     TargetIcon,
-    TrendingUpIcon,
     EyeIcon,
     CheckCircleIcon,
     XCircleIcon,
     SearchIcon,
     FilterIcon,
     UsersIcon,
-    BarChart3Icon,
-    AwardIcon,
     AlertTriangleIcon,
     InfoIcon,
-    ArrowUpDownIcon,
+    BriefcaseBusinessIcon,
+    CaptionsIcon,
 } from 'lucide-react';
 import type { BreadcrumbItem } from '@/types';
 
@@ -370,7 +366,7 @@ export default function StudentMatched({ matchedStudents, filters }: Props) {
                     setErrorMessage('Student placement approved successfully!');
                     setErrorType('success');
                     setTimeout(() => {
-                        window.location.reload();
+                        router.reload({ only: ['matchedStudents'] });
                     }, 1500);
                     return;
                 }
@@ -400,7 +396,7 @@ export default function StudentMatched({ matchedStudents, filters }: Props) {
                 setErrorMessage('Student placement approved successfully!');
                 setErrorType('success');
                 setTimeout(() => {
-                    window.location.reload();
+                    router.reload({ only: ['matchedStudents'] });
                 }, 1500);
             } else {
                 // Handle errors
@@ -482,7 +478,7 @@ export default function StudentMatched({ matchedStudents, filters }: Props) {
                     }
                     setErrorType('success');
                     setTimeout(() => {
-                        window.location.reload();
+                        router.reload({ only: ['matchedStudents'] });
                     }, 1500);
                     return;
                 }
@@ -516,7 +512,7 @@ export default function StudentMatched({ matchedStudents, filters }: Props) {
                 }
                 setErrorType('success');
                 setTimeout(() => {
-                    window.location.reload();
+                    router.reload({ only: ['matchedStudents'] });
                 }, 1500);
             } else {
                 // Handle errors
@@ -667,7 +663,7 @@ export default function StudentMatched({ matchedStudents, filters }: Props) {
                         setErrorType('success');
                         setSelectedStudents(new Set());
                         setTimeout(() => {
-                            window.location.reload();
+                            router.reload({ only: ['matchedStudents'] });
                         }, 1500);
                     } else {
                         if (result.errors && result.errors.length > 0) {
@@ -708,7 +704,7 @@ export default function StudentMatched({ matchedStudents, filters }: Props) {
                     setErrorType('success');
                     setSelectedStudents(new Set());
                     setTimeout(() => {
-                        window.location.reload();
+                        router.reload({ only: ['matchedStudents'] });
                     }, 1500);
                 } else {
                     if (result.errors && result.errors.length > 0) {
@@ -809,7 +805,7 @@ export default function StudentMatched({ matchedStudents, filters }: Props) {
                 setErrorType('success');
                 setSelectedStudents(new Set());
                 setTimeout(() => {
-                    window.location.reload();
+                    router.reload({ only: ['matchedStudents'] });
                 }, 1500);
             } else {
                 const errorDetails = failed.map((result, index) => {
@@ -1016,6 +1012,52 @@ export default function StudentMatched({ matchedStudents, filters }: Props) {
                     </Card>
                     )}
 
+                    {/* Summary Cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium">Total Students</CardTitle>
+                                <UsersIcon className="h-4 w-4 text-muted-foreground" />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-2xl font-bold">{filteredMatchedStudents.length}</div>
+                                <p className="text-xs text-muted-foreground">
+                                    Students with completed assessments
+                                </p>
+                            </CardContent>
+                        </Card>
+
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium">Total HTE</CardTitle>
+                                <BriefcaseBusinessIcon className="h-4 w-4 text-muted-foreground" />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-2xl font-bold">
+                                    {new Set(filteredMatchedStudents.map(s => s.best_match?.internship?.hte?.company_name).filter(Boolean)).size}
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                    Host training establishments
+                                </p>
+                            </CardContent>
+                        </Card>
+
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium">Total Internships</CardTitle>
+                                <CaptionsIcon className="h-4 w-4 text-muted-foreground" />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-2xl font-bold">
+                                    {new Set(filteredMatchedStudents.map(s => s.best_match?.internship?.id).filter(Boolean)).size}
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                    Available intenrship positions
+                                </p>
+                            </CardContent>
+                        </Card>
+                    </div>
+
                     {/* Error Display */}
                     {errorMessage && (
                         <Card className={`border-l-4 ${
@@ -1044,68 +1086,18 @@ export default function StudentMatched({ matchedStudents, filters }: Props) {
                                     </div>
                                     <Button
                                         variant="ghost"
-                                        size="sm"
                                         onClick={() => {
                                             setErrorMessage(null);
                                             setErrorType(null);
                                         }}
-                                        className="text-muted-foreground hover:text-foreground"
+                                        className="text-muted-foreground hover:text-foreground h-10 w-10 p-0 min-h-[44px] min-w-[44px]"
                                     >
-                                        <XCircleIcon className="h-4 w-4" />
+                                        <XCircleIcon className="h-6 w-6" />
                                     </Button>
                                 </div>
                             </CardContent>
                         </Card>
                     )}
-
-                    {/* Summary Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <Card>
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium">Total Matches</CardTitle>
-                                <UsersIcon className="h-4 w-4 text-muted-foreground" />
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-2xl font-bold">{filteredMatchedStudents.length}</div>
-                                <p className="text-xs text-muted-foreground">
-                                    Students with completed assessments
-                                </p>
-                            </CardContent>
-                        </Card>
-
-                        <Card>
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium">Average Score</CardTitle>
-                                <BarChart3Icon className="h-4 w-4 text-muted-foreground" />
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-2xl font-bold">
-                                    {filteredMatchedStudents.length > 0 
-                                        ? Math.round(filteredMatchedStudents.reduce((sum, student) => sum + (student.best_match?.compatibility_score || 0), 0) / filteredMatchedStudents.length)
-                                        : 0
-                                    }%
-                                </div>
-                                <p className="text-xs text-muted-foreground">
-                                    Overall compatibility
-                                </p>
-                            </CardContent>
-                        </Card>
-
-                        <Card>
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium">Top Performers</CardTitle>
-                                <AwardIcon className="h-4 w-4 text-muted-foreground" />
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-2xl font-bold">
-                                    {filteredMatchedStudents.filter(s => (s.best_match?.compatibility_score || 0) >= 80).length}
-                                </div>
-                                <p className="text-xs text-muted-foreground">
-                                    Students with 80%+ scores
-                                </p>
-                            </CardContent>
-                        </Card>
-                    </div>
 
                     {/* Batch Actions */}
                     {selectedStudents.size > 0 && (

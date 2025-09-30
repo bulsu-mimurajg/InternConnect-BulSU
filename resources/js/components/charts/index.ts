@@ -1,4 +1,6 @@
-export { default as LineChart } from './LineChart';
-export { default as BarChart } from './BarChart';
-export { default as PieChart } from './PieChart';
-export { default as AreaChart } from './AreaChart';
+// Export all chart components
+export { AreaChart } from './area-chart';
+export { BarChart } from './bar-chart';
+export { LineChart } from './line-chart';
+export { PieChart } from './pie-chart';
+export { RadarChart } from './radar-chart';

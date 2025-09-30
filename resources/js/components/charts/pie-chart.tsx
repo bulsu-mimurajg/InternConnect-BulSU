@@ -45,9 +45,8 @@ export function PieChart({
         if (active && payload && payload.length) {
             const data = payload[0].payload;
             return (
-                <div className="bg-card border border-border p-4 rounded-xl shadow-lg backdrop-blur-sm">
+                <div className="bg-card border border-border p-4 rounded-xl shadow-lg backdrop-blur-sm text-center">
                     <p className="font-semibold text-foreground">{data.name}</p>
-                    <p className="text-sm text-muted-foreground">Weight: {data.value}%</p>
                     <p className="text-xs text-muted-foreground">
                         {((data.value / totalWeight) * 100).toFixed(1)}% of total
                     </p>
@@ -73,7 +72,7 @@ export function PieChart({
                             cx="50%"
                             cy="50%"
                             labelLine={false}
-                            label={showLabels ? ({ value }) => `${value}%` : undefined}
+                            label={showLabels ? ({ value }) => `${((value / totalWeight) * 100).toFixed(1)}%` : undefined}
                             outerRadius={120}
                             innerRadius={30}
                             fill="#8884d8"

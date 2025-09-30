@@ -3,19 +3,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { BarChart, PieChart, AreaChart } from '@/components/charts';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link } from '@inertiajs/react';
+import { Head } from '@inertiajs/react';
 import {
-    UsersIcon,
     CheckCircleIcon,
     BriefcaseIcon,
-    BuildingIcon,
     BarChart3Icon,
     UserCheckIcon,
-    TargetIcon,
     ActivityIcon,
     TrendingUpIcon,
     PieChartIcon,
-    LineChartIcon, GraduationCapIcon, BriefcaseBusinessIcon
+    LineChartIcon, 
+    GraduationCapIcon, 
+    BriefcaseBusinessIcon
 } from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -100,11 +99,6 @@ interface AssessmentTrend {
     total: number;
 }
 
-interface PlacementStatusData {
-    name: string;
-    value: number;
-    count: number;
-}
 
 interface SectionPerformanceData {
     section: string;
@@ -122,7 +116,6 @@ interface AssessmentTrendData {
 
 type ActivityType = 'student_registration' | 'hte_registration' | 'placement';
 
-type ChartColors = [string, string, string];
 
 interface AdminDashboardProps {
     stats: DashboardStats;
@@ -145,9 +138,9 @@ export default function AdminDashboard({
     const getActivityIcon = (type: ActivityType): React.ReactElement => {
         switch (type) {
             case 'student_registration':
-                return <UsersIcon className="h-4 w-4 text-blue-500" />;
+                return <GraduationCapIcon className="h-4 w-4 text-blue-500" />;
             case 'hte_registration':
-                return <BuildingIcon className="h-4 w-4 text-green-500" />;
+                return <BriefcaseBusinessIcon className="h-4 w-4 text-green-500" />;
             case 'placement':
                 return <CheckCircleIcon className="h-4 w-4 text-purple-500" />;
             default:
@@ -169,11 +162,16 @@ export default function AdminDashboard({
     };
 
     // Prepare data for charts
-    const placementStatusData: PlacementStatusData[] = Object.entries(placementOverview.byStatus).map(([status, count]) => ({
-        name: status.charAt(0).toUpperCase() + status.slice(1),
-        value: count,
-        count: count
-    }));
+    const placementStatusData = Object.entries(placementOverview.byStatus).map(([status, count], index) => {
+        const colors = ['#10b981', '#f59e0b', '#ef4444', '#3b82f6', '#8b5cf6'];
+        return {
+            name: status.charAt(0).toUpperCase() + status.slice(1),
+            value: count,
+            color: colors[index % colors.length]
+        };
+    });
+
+    const totalPlacements = placementStatusData.reduce((sum, item) => sum + item.value, 0);
 
     const sectionPerformanceData: SectionPerformanceData[] = sectionAnalytics.map((section: SectionAnalytics) => ({
         section: section.section,
@@ -277,14 +275,16 @@ export default function AdminDashboard({
                                 Daily assessment completion rates over the last 30 days
                             </CardDescription>
                         </CardHeader>
-                        <CardContent>
-                            <AreaChart
-                                data={assessmentTrendData}
-                                dataKey="completionRate"
-                                xAxisKey="date"
-                                color="#3b82f6"
-                                height={250}
-                            />
+                        <CardContent className="h-full">
+                            <div className="w-full h-full">
+                                <AreaChart
+                                    data={assessmentTrendData}
+                                    dataKey="completionRate"
+                                    xAxisKey="date"
+                                    color="#3b82f6"
+                                    height={350}
+                                />
+                            </div>
                         </CardContent>
                     </Card>
 
@@ -302,10 +302,10 @@ export default function AdminDashboard({
                         <CardContent>
                             <PieChart
                                 data={placementStatusData}
-                                dataKey="value"
-                                nameKey="name"
-                                height={250}
-                                colors={['#10b981', '#f59e0b', '#ef4444'] as ChartColors}
+                                totalWeight={totalPlacements}
+                                showLabels={true}
+                                showTooltip={true}
+                                showLegend={true}
                             />
                         </CardContent>
                     </Card>
@@ -325,13 +325,15 @@ export default function AdminDashboard({
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <BarChart
-                                data={sectionPerformanceData}
-                                dataKey="completionRate"
-                                xAxisKey="section"
-                                color="#8b5cf6"
-                                height={300}
-                            />
+                            <div className="w-full">
+                                <BarChart
+                                    data={sectionPerformanceData}
+                                    dataKey="completionRate"
+                                    xAxisKey="section"
+                                    color="#3b82f6"
+                                    height={300}
+                                />
+                            </div>
                         </CardContent>
                     </Card>
 
@@ -339,7 +341,7 @@ export default function AdminDashboard({
                     <Card>
                         <CardHeader>
                             <CardTitle className="flex items-center space-x-2">
-                                <BuildingIcon className="h-5 w-5" />
+                                <BriefcaseBusinessIcon className="h-5 w-5" />
                                 <span>HTE Overview</span>
                             </CardTitle>
                             <CardDescription>
@@ -371,99 +373,39 @@ export default function AdminDashboard({
                     </Card>
                 </div>
 
-                {/* Recent Activity & Quick Actions */}
-                <div className="grid gap-6 lg:grid-cols-3">
-                    {/* Recent Activity */}
-                    <Card className="lg:col-span-2">
-                        <CardHeader>
-                            <CardTitle className="flex items-center space-x-2">
-                                <ActivityIcon className="h-5 w-5" />
-                                <span>Recent Activity</span>
-                            </CardTitle>
-                            <CardDescription>
-                                Latest system activities and updates
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-4">
-                                {recentActivity.length > 0 ? (
-                                    recentActivity.slice(0, 6).map((activity) => (
-                                        <div key={`${activity.type}-${activity.id}`} className="flex items-center space-x-4">
-                                            {getActivityIcon(activity.type)}
-                                            <div className="flex-1 space-y-1">
-                                                <p className="text-sm font-medium leading-none">
-                                                    {getActivityDescription(activity)}
-                                                </p>
-                                                <p className="text-xs text-muted-foreground">
-                                                    {activity.created_at}
-                                                </p>
-                                            </div>
+                {/* Recent Activity */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center space-x-2">
+                            <ActivityIcon className="h-5 w-5" />
+                            <span>Recent Activity</span>
+                        </CardTitle>
+                        <CardDescription>
+                            Latest system activities and updates
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-4">
+                            {recentActivity.length > 0 ? (
+                                recentActivity.slice(0, 6).map((activity) => (
+                                    <div key={`${activity.type}-${activity.id}`} className="flex items-center space-x-4">
+                                        {getActivityIcon(activity.type)}
+                                        <div className="flex-1 space-y-1">
+                                            <p className="text-sm font-medium leading-none">
+                                                {getActivityDescription(activity)}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground">
+                                                {activity.created_at}
+                                            </p>
                                         </div>
-                                    ))
-                                ) : (
-                                    <p className="text-sm text-muted-foreground">No recent activity</p>
-                                )}
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    {/* Quick Actions */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Quick Actions</CardTitle>
-                            <CardDescription>
-                                Common administrative tasks
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-3">
-                                <Link
-                                    href="/student/list"
-                                    className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
-                                >
-                                    <UsersIcon className="h-5 w-5" />
-                                    <div>
-                                        <p className="text-sm font-medium">Manage Students</p>
-                                        <p className="text-xs text-muted-foreground">View and edit records</p>
                                     </div>
-                                </Link>
-
-                                <Link
-                                    href="/student/matched"
-                                    className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
-                                >
-                                    <TargetIcon className="h-5 w-5" />
-                                    <div>
-                                        <p className="text-sm font-medium">View Matches</p>
-                                        <p className="text-xs text-muted-foreground">Review matches</p>
-                                    </div>
-                                </Link>
-
-                                <Link
-                                    href="/hte"
-                                    className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
-                                >
-                                    <BuildingIcon className="h-5 w-5" />
-                                    <div>
-                                        <p className="text-sm font-medium">Manage HTEs</p>
-                                        <p className="text-xs text-muted-foreground">HTE information</p>
-                                    </div>
-                                </Link>
-
-                                <Link
-                                    href="/report"
-                                    className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
-                                >
-                                    <BarChart3Icon className="h-5 w-5" />
-                                    <div>
-                                        <p className="text-sm font-medium">Generate Reports</p>
-                                        <p className="text-xs text-muted-foreground">Create reports</p>
-                                    </div>
-                                </Link>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
+                                ))
+                            ) : (
+                                <p className="text-sm text-muted-foreground">No recent activity</p>
+                            )}
+                        </div>
+                    </CardContent>
+                </Card>
             </div>
         </AppLayout>
     );
