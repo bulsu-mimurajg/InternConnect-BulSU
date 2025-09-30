@@ -1,12 +1,15 @@
 import { type SharedData } from '@/types';
 import { Head, Link, usePage } from '@inertiajs/react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Users, Building2, Target, BarChart3, Shield, Zap } from 'lucide-react';
 
-export default function Welcome() {
+export default function About() {
     const { auth } = usePage<SharedData>().props;
 
     return (
         <>
-            <Head title="Welcome">
+            <Head title="About InternConnect BSIT">
                 <link rel="preconnect" href="https://fonts.bunny.net" />
                 <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600" rel="stylesheet" />
             </Head>
@@ -85,90 +88,157 @@ export default function Welcome() {
                     </div>
                 </header>
                 <div className="flex w-full items-center justify-center opacity-100 transition-opacity duration-750 lg:grow starting:opacity-0">
-                    <main className="flex w-full max-w-[335px] flex-col-reverse lg:max-w-5xl lg:flex-row">
-                        <div className="flex-1 rounded-br-lg rounded-bl-lg bg-white p-6 pb-12 text-[13px] leading-[20px] shadow-[inset_0px_0px_0px_1px_rgba(26,26,0,0.16)] lg:rounded-tl-lg lg:rounded-br-none lg:p-20 dark:bg-[#161615] dark:text-[#EDEDEC] dark:shadow-[inset_0px_0px_0px_1px_#fffaed2d]">
-                            <div className="mt-20">
-                                <h1 className="mb-1 text-xl font-bold">InternConnect BulSU</h1>
-                                <p className="mb-2 text-[#706f6c] dark:text-[#A1A09A]">
-                                    Capstone Project
-                                    <br />
-                                    Validex
+                    <main className="w-full max-w-[335px] lg:max-w-5xl">
+                        <div className="rounded-br-lg rounded-bl-lg bg-white p-6 pb-12 text-[13px] leading-[20px] shadow-[inset_0px_0px_0px_1px_rgba(26,26,0,0.16)] lg:rounded-lg lg:p-20 dark:bg-[#161615] dark:text-[#EDEDEC] dark:shadow-[inset_0px_0px_0px_1px_#fffaed2d]">
+                            {/* Hero Section */}
+                            <div className="text-center space-y-6 mb-12">
+                                <div className="space-y-2">
+                                    <h1 className="text-3xl md:text-4xl font-bold text-[#1b1b18] dark:text-[#EDEDEC]">
+                                        About InternConnect BSIT
+                                    </h1>
+                                    <p className="text-[#706f6c] dark:text-[#A1A09A] text-lg">
+                                        Capstone Project
+                                    </p>
+                                </div>
+                                
+                                <p className="text-md leading-relaxed text-center text-[#1b1b18] dark:text-[#EDEDEC]">
+                                    InternConnect BulSU is an internship skills matching system designed to streamline 
+                                    the process of matching Bachelor of Science in Information Technology students with Host Training Establishments (HTEs).
                                 </p>
-                                <p className="my-3">
-                                    A web app made to assess student competencies and match them with our partner Host Training Establishments (HTEs)
+                                <p className="text-md leading-relaxed text-center text-[#1b1b18] dark:text-[#EDEDEC]">
+                                    Our platform facilitates student assessments, SIP endorsements, and HTE placements for the College of Information and Communications Technology at Bulacan State University.
                                 </p>
-                                <ul className="mb-4 flex flex-col lg:mb-6">
-                                    <li className="relative flex items-center gap-4 py-2 before:absolute before:top-1/2 before:bottom-0 before:left-[0.4rem] before:border-l before:border-[#e3e3e0] dark:before:border-[#3E3E3A]">
-                                        <span className="relative bg-white py-1 dark:bg-[#161615]">
-                                            <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full border border-[#e3e3e0] bg-[#FDFDFC] shadow-[0px_0px_1px_0px_rgba(0,0,0,0.03),0px_1px_2px_0px_rgba(0,0,0,0.06)] dark:border-[#3E3E3A] dark:bg-[#161615]">
-                                                <span className="h-1.5 w-1.5 rounded-full bg-[#dbdbd7] dark:bg-[#3E3E3A]" />
-                                            </span>
-                                        </span>
-                                        <span>
-                                            Visit the github
-                                            <a
-                                                href="https://github.com/bulsu-mimurajg/InternConnect-BulSU"
-                                                target="_blank"
-                                                className="ml-1 inline-flex items-center space-x-1 font-medium text-[#f53003] underline underline-offset-4 dark:text-[#FF4433]"
-                                            >
-                                                <span>Repository</span>
-                                                <svg
-                                                    width={10}
-                                                    height={11}
-                                                    viewBox="0 0 10 11"
-                                                    fill="none"
-                                                    xmlns="http://www.w3.org/2000/svg"
-                                                    className="h-2.5 w-2.5"
-                                                >
-                                                    <path
-                                                        d="M7.70833 6.95834V2.79167H3.54167M2.5 8L7.5 3.00001"
-                                                        stroke="currentColor"
-                                                        strokeLinecap="square"
-                                                    />
-                                                </svg>
-                                            </a>
-                                        </span>
-                                    </li>
-                                    <li className="relative flex items-center gap-4 py-2 before:absolute before:top-0 before:bottom-1/2 before:left-[0.4rem] before:border-l before:border-[#e3e3e0] dark:before:border-[#3E3E3A]">
-                                        <span className="relative bg-white py-1 dark:bg-[#161615]">
-                                            <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full border border-[#e3e3e0] bg-[#FDFDFC] shadow-[0px_0px_1px_0px_rgba(0,0,0,0.03),0px_1px_2px_0px_rgba(0,0,0,0.06)] dark:border-[#3E3E3A] dark:bg-[#161615]">
-                                                <span className="h-1.5 w-1.5 rounded-full bg-[#dbdbd7] dark:bg-[#3E3E3A]" />
-                                            </span>
-                                        </span>
-                                        <span>
-                                            Visit the university website at
-                                            <a
-                                                href="https://bulsu.edu.ph/"
-                                                target="_blank"
-                                                className="ml-1 inline-flex items-center space-x-1 font-medium text-[#f53003] underline underline-offset-4 dark:text-[#FF4433]"
-                                            >
-                                                <span>Bulacan State University</span>
-                                                <svg
-                                                    width={10}
-                                                    height={11}
-                                                    viewBox="0 0 10 11"
-                                                    fill="none"
-                                                    xmlns="http://www.w3.org/2000/svg"
-                                                    className="h-2.5 w-2.5"
-                                                >
-                                                    <path
-                                                        d="M7.70833 6.95834V2.79167H3.54167M2.5 8L7.5 3.00001"
-                                                        stroke="currentColor"
-                                                        strokeLinecap="square"
-                                                    />
-                                                </svg>
-                                            </a>
-                                        </span>
-                                    </li>
-                                </ul>
+
+                                <div className="flex flex-wrap gap-4 justify-center">
+                                    <a 
+                                        href="https://bulsu.edu.ph/" 
+                                        target="_blank" 
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center space-x-1 font-medium text-[#f53003] underline underline-offset-4 dark:text-[#FF4433]"
+                                    >
+                                        <span>Visit BulSU</span>
+                                        <svg
+                                            width={10}
+                                            height={11}
+                                            viewBox="0 0 10 11"
+                                            fill="none"
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            className="h-2.5 w-2.5"
+                                        >
+                                            <path
+                                                d="M7.70833 6.95834V2.79167H3.54167M2.5 8L7.5 3.00001"
+                                                stroke="currentColor"
+                                                strokeLinecap="square"
+                                            />
+                                        </svg>
+                                    </a>
+                                </div>
                             </div>
-                        </div>
-                        <div className="relative -mb-px aspect-[335/376] w-full shrink-0 overflow-hidden rounded-t-lg bg-[#fff2f2] lg:mb-0 lg:-ml-px lg:aspect-auto lg:w-[438px] lg:rounded-t-none lg:rounded-r-lg dark:bg-[#1D0002]">
-                            <img src="/images/about/pimentel.png" alt="Pimentel - CICT Building" />
+
+                            {/* Features Section */}
+                            <div className="space-y-8">
+                                <div className="text-center space-y-4">
+                                    <h2 className="text-2xl md:text-3xl font-bold text-[#1b1b18] dark:text-[#EDEDEC]">Key Features</h2>
+                                    <p className="text-[#706f6c] dark:text-[#A1A09A] max-w-xxl mx-auto">
+                                        Equipping SIP Coordinators, HTEs, Advisers, and Students with tools to streamline the internship process
+                                    </p>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    <Card className="bg-white dark:bg-[#161615] border-[#e3e3e0] dark:border-[#3E3E3A]">
+                                        <CardHeader className="pb-3">
+                                            <div className="h-10 w-10 rounded-lg bg-[#f53003]/10 dark:bg-[#FF4433]/10 flex items-center justify-center mb-3">
+                                                <Users className="h-5 w-5 text-[#f53003] dark:text-[#FF4433]" />
+                                            </div>
+                                            <CardTitle className="text-lg text-[#1b1b18] dark:text-[#EDEDEC]">Student Management</CardTitle>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <CardDescription className="text-[#706f6c] dark:text-[#A1A09A]">
+                                                Comprehensive student profiles with competency tracking, 
+                                                academic records, and internship history management.
+                                            </CardDescription>
+                                        </CardContent>
+                                    </Card>
+
+                                    <Card className="bg-white dark:bg-[#161615] border-[#e3e3e0] dark:border-[#3E3E3A]">
+                                        <CardHeader className="pb-3">
+                                            <div className="h-10 w-10 rounded-lg bg-[#f53003]/10 dark:bg-[#FF4433]/10 flex items-center justify-center mb-3">
+                                                <Building2 className="h-5 w-5 text-[#f53003] dark:text-[#FF4433]" />
+                                            </div>
+                                            <CardTitle className="text-lg text-[#1b1b18] dark:text-[#EDEDEC]">HTE Integration</CardTitle>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <CardDescription className="text-[#706f6c] dark:text-[#A1A09A]">
+                                                Seamless integration with Host Training Establishments 
+                                                for posting opportunities and managing student placements.
+                                            </CardDescription>
+                                        </CardContent>
+                                    </Card>
+
+                                    <Card className="bg-white dark:bg-[#161615] border-[#e3e3e0] dark:border-[#3E3E3A]">
+                                        <CardHeader className="pb-3">
+                                            <div className="h-10 w-10 rounded-lg bg-[#f53003]/10 dark:bg-[#FF4433]/10 flex items-center justify-center mb-3">
+                                                <Target className="h-5 w-5 text-[#f53003] dark:text-[#FF4433]" />
+                                            </div>
+                                            <CardTitle className="text-lg text-[#1b1b18] dark:text-[#EDEDEC]">Smart Matching</CardTitle>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <CardDescription className="text-[#706f6c] dark:text-[#A1A09A]">
+                                                AI-powered matching algorithm that connects students 
+                                                with the most suitable internship opportunities.
+                                            </CardDescription>
+                                        </CardContent>
+                                    </Card>
+
+                                    <Card className="bg-white dark:bg-[#161615] border-[#e3e3e0] dark:border-[#3E3E3A]">
+                                        <CardHeader className="pb-3">
+                                            <div className="h-10 w-10 rounded-lg bg-[#f53003]/10 dark:bg-[#FF4433]/10 flex items-center justify-center mb-3">
+                                                <BarChart3 className="h-5 w-5 text-[#f53003] dark:text-[#FF4433]" />
+                                            </div>
+                                            <CardTitle className="text-lg text-[#1b1b18] dark:text-[#EDEDEC]">Analytics Dashboard</CardTitle>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <CardDescription className="text-[#706f6c] dark:text-[#A1A09A]">
+                                                Real-time analytics and reporting for tracking 
+                                                internship success rates and student performance.
+                                            </CardDescription>
+                                        </CardContent>
+                                    </Card>
+
+                                    <Card className="bg-white dark:bg-[#161615] border-[#e3e3e0] dark:border-[#3E3E3A]">
+                                        <CardHeader className="pb-3">
+                                            <div className="h-10 w-10 rounded-lg bg-[#f53003]/10 dark:bg-[#FF4433]/10 flex items-center justify-center mb-3">
+                                                <Shield className="h-5 w-5 text-[#f53003] dark:text-[#FF4433]" />
+                                            </div>
+                                            <CardTitle className="text-lg text-[#1b1b18] dark:text-[#EDEDEC]">Secure Platform</CardTitle>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <CardDescription className="text-[#706f6c] dark:text-[#A1A09A]">
+                                                Enterprise-grade security with role-based access control 
+                                                and data protection measures.
+                                            </CardDescription>
+                                        </CardContent>
+                                    </Card>
+
+                                    <Card className="bg-white dark:bg-[#161615] border-[#e3e3e0] dark:border-[#3E3E3A]">
+                                        <CardHeader className="pb-3">
+                                            <div className="h-10 w-10 rounded-lg bg-[#f53003]/10 dark:bg-[#FF4433]/10 flex items-center justify-center mb-3">
+                                                <Zap className="h-5 w-5 text-[#f53003] dark:text-[#FF4433]" />
+                                            </div>
+                                            <CardTitle className="text-lg text-[#1b1b18] dark:text-[#EDEDEC]">Real-time Updates</CardTitle>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <CardDescription className="text-[#706f6c] dark:text-[#A1A09A]">
+                                                Instant notifications and updates for all stakeholders 
+                                                throughout the internship process.
+                                            </CardDescription>
+                                        </CardContent>
+                                    </Card>
+                                </div>
+                            </div>
                         </div>
                     </main>
                 </div>
-                {/*<div className="hidden h-14.5 lg:block"></div>*/}
             </div>
         </>
     );
