@@ -42,8 +42,8 @@ class EndorsementPlacementSeeder extends Seeder
             return;
         }
 
-        // Get subcategories for assessment scores
-        $subCategories = \App\Models\SubCategory::take(5)->get();
+        // Get all subcategories for assessment scores
+        $subCategories = \App\Models\SubCategory::all();
         if ($subCategories->isEmpty()) {
             $this->command->warn('No subcategories found. Please run CategorySeeder first.');
             return;
@@ -138,13 +138,19 @@ class EndorsementPlacementSeeder extends Seeder
                 'section_id' => $student->section_id,
             ]);
 
-            // Create assessment scores for all students
+            // Create assessment scores for all students (1-5 scale)
             foreach ($subCategories as $subCategory) {
-                \App\Models\StudentScore::create([
-                    'student_id' => $student->id,
-                    'sub_category_id' => $subCategory->id,
-                    'score' => rand(75, 95),
-                ]);
+                // Generate score between 1-5 with decimal precision
+                $score = round(mt_rand(100, 500) / 100, 2);
+                \App\Models\StudentScore::updateOrCreate(
+                    [
+                        'student_id' => $student->id,
+                        'sub_category_id' => $subCategory->id,
+                    ],
+                    [
+                        'score' => $score,
+                    ]
+                );
             }
 
             $createdStudents[] = $student;

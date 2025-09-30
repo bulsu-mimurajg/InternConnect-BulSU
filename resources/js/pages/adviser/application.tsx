@@ -304,9 +304,9 @@ export default function Application({ pendingStudents, verifiedStudents, adviser
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center justify-between mb-2">
                                                 <p className="text-sm font-medium truncate">
-                                                    {student.username} | {student.student?.first_name && student.student?.last_name 
-                                                        ? `${student.student.first_name} ${student.student.last_name}`
-                                                        : 'Pending'
+                                                    {student.username} {student.student?.first_name && student.student?.last_name 
+                                                        ? ''
+                                                        : '| New Student'
                                                     }
                                                 </p>
                                             </div>
@@ -425,7 +425,7 @@ export default function Application({ pendingStudents, verifiedStudents, adviser
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center justify-between mb-2">
                                                     <p className="text-sm font-medium truncate">
-                                                        {student.username} | {student.student?.first_name} {student.student?.last_name}
+                                                        {student.username}
                                                     </p>
                                                     <div className="flex items-center gap-2">
                                                         <Badge variant="secondary" className="text-xs">

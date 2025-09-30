@@ -223,7 +223,7 @@ export default function AdviserDashboard({ stats, recentAssessments, placementOv
                                                         {assessment.name}
                                                     </p>
                                                     <Badge variant="secondary" className="text-xs">
-                                                        {assessment.percentage}%
+                                                        {assessment.percentage}% Score
                                                     </Badge>
                                                 </div>
                                                 <p className="text-xs text-muted-foreground mb-2">

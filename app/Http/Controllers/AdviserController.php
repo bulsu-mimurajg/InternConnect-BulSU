@@ -232,8 +232,19 @@ class AdviserController extends Controller
             ->map(function ($user) {
                 $student = $user->student;
                 $totalScore = $student->scores->sum('score');
-                $maxPossibleScore = $student->scores->count() * 5; // Assuming 5 is max score per question
-                $percentage = $maxPossibleScore > 0 ? round(($totalScore / $maxPossibleScore) * 100, 1) : 0;
+                $scoreCount = $student->scores->count();
+                
+                // Check if scores are stored as percentages (51-100) instead of 1-5 scale
+                $hasHighScores = $student->scores->where('score', '>', 10)->count() > 0;
+                
+                if ($hasHighScores) {
+                    // Scores are already in percentage format, just average them
+                    $percentage = $scoreCount > 0 ? round($totalScore / $scoreCount, 1) : 0;
+                } else {
+                    // Scores are in 1-5 scale, convert to percentage
+                    $maxPossibleScore = $scoreCount * 5;
+                    $percentage = $maxPossibleScore > 0 ? round(($totalScore / $maxPossibleScore) * 100, 1) : 0;
+                }
                 
                 return [
                     'id' => $user->id,
@@ -312,7 +323,7 @@ class AdviserController extends Controller
                     'section' => $user->academeAccounts->first()->section->section_name ?? 'Unknown',
                     'isPlaced' => true,
                     'topMatch' => [
-                        'position' => $topMatch->internship->position ?? 'N/A',
+                        'position' => $topMatch->internship->position_title ?? 'N/A',
                         'company' => $topMatch->internship->hte->company_name ?? 'N/A',
                         'compatibilityScore' => round($topMatch->compatibility_score, 1),
                         'rank' => 1, // This could be calculated based on score ranking

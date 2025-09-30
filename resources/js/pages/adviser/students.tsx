@@ -126,28 +126,28 @@ export default function AdviserStudents({ students, adviserSection, adviserSecti
     const getStatusBadge = (status: string) => {
         switch (status) {
             case 'verified':
-                return <Badge variant="default" className="bg-green-100 text-green-800">Verified</Badge>;
+                return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Verified</Badge>;
             case 'unverified':
-                return <Badge variant="secondary">Unverified</Badge>;
+                return <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">Unverified</Badge>;
             case 'archived':
-                return <Badge variant="destructive">Archived</Badge>;
+                return <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Archived</Badge>;
             default:
-                return <Badge variant="outline">{status}</Badge>;
+                return <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">{status}</Badge>;
         }
     };
 
     const getAssessmentBadge = (hasAssessment: boolean) => {
         if (hasAssessment) {
-            return <Badge variant="default" className="bg-blue-100 text-blue-800">Completed</Badge>;
+            return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Completed</Badge>;
         }
-        return <Badge variant="secondary">Pending</Badge>;
+        return <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">Pending</Badge>;
     };
 
     const getPlacementBadge = (isPlaced: boolean) => {
         if (isPlaced) {
-            return <Badge variant="default" className="bg-green-100 text-green-800">Placed</Badge>;
+            return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">Placed</Badge>;
         }
-        return <Badge variant="outline">Unplaced</Badge>;
+        return <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">Unplaced</Badge>;
     };
 
     return (
