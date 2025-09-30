@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Head, useForm, router } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
@@ -26,8 +26,18 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, MoreHorizontal, Edit, Archive, Eye, ArchiveRestore, Filter, ChevronDown, ChevronUp, ArrowUpDown, Search, BriefcaseBusinessIcon } from 'lucide-react';
+import { Plus, MoreHorizontal, Edit, Archive, Eye, ArchiveRestore, Filter, ChevronRight, ChevronDown, ArrowUpDown, Search, BriefcaseBusinessIcon, Building2Icon, UserIcon, MailIcon, PhoneIcon, MapPinIcon, CalendarIcon, BriefcaseIcon } from 'lucide-react';
 import { type BreadcrumbItem } from '@/types';
+
+interface Internship {
+    id: number;
+    position_title: string;
+    department: string;
+    placement_description: string;
+    slot_count: number;
+    is_active: boolean;
+    created_at: string;
+}
 
 interface HTE {
     id: number;
@@ -45,6 +55,7 @@ interface HTE {
     is_submit: boolean;
     created_at: string;
     updated_at: string;
+    internships: Internship[];
 }
 
 interface Props {
@@ -70,6 +81,7 @@ export default function HTEManagement({ htes, showArchived = false, filters = {}
     const [selectedHTE, setSelectedHTE] = useState<HTE | null>(null);
     const [showArchivedHTEs, setShowArchivedHTEs] = useState(showArchived);
     const [showFilters, setShowFilters] = useState(false);
+    const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
     const [localFilters, setLocalFilters] = useState({
         search: filters.search || '',
         status: filters.status || 'all',
@@ -210,6 +222,16 @@ export default function HTEManagement({ htes, showArchived = false, filters = {}
         });
     };
 
+    const toggleRow = (hteId: number) => {
+        const newExpandedRows = new Set(expandedRows);
+        if (newExpandedRows.has(hteId)) {
+            newExpandedRows.delete(hteId);
+        } else {
+            newExpandedRows.add(hteId);
+        }
+        setExpandedRows(newExpandedRows);
+    };
+
     const filteredHTEs = htes.filter(hte => {
         const matchesSearch = hte.username.toLowerCase().includes(localFilters.search.toLowerCase()) ||
                             hte.email.toLowerCase().includes(localFilters.search.toLowerCase()) ||
@@ -246,6 +268,120 @@ export default function HTEManagement({ htes, showArchived = false, filters = {}
             default:
                 return <Badge variant="outline">{status}</Badge>;
         }
+    };
+
+    const renderHTEDetails = (hte: HTE) => {
+        return (
+            <div className="p-4 bg-muted/30 border-t">
+                <Card className="p-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* Company Information */}
+                        <div className="space-y-4">
+                            <h4 className="text-sm font-medium flex items-center gap-2">
+                                <Building2Icon className="h-4 w-4" />
+                                Company Information
+                            </h4>
+                            <div className="space-y-3">
+                                <div className="flex items-start gap-3">
+                                    <Building2Icon className="h-4 w-4 text-muted-foreground mt-0.5" />
+                                    <div>
+                                        <div className="text-xs font-medium text-muted-foreground">Company Name</div>
+                                        <div className="text-sm">{hte.company_name || 'Not provided'}</div>
+                                    </div>
+                                </div>
+                                <div className="flex items-start gap-3">
+                                    <MapPinIcon className="h-4 w-4 text-muted-foreground mt-0.5" />
+                                    <div>
+                                        <div className="text-xs font-medium text-muted-foreground">Address</div>
+                                        <div className="text-sm">{hte.company_address || 'Not provided'}</div>
+                                    </div>
+                                </div>
+                                <div className="flex items-start gap-3">
+                                    <MailIcon className="h-4 w-4 text-muted-foreground mt-0.5" />
+                                    <div>
+                                        <div className="text-xs font-medium text-muted-foreground">Company Email</div>
+                                        <div className="text-sm">{hte.company_email || 'Not provided'}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Contact Information */}
+                        <div className="space-y-4">
+                            <h4 className="text-sm font-medium flex items-center gap-2">
+                                <UserIcon className="h-4 w-4" />
+                                Contact Information
+                            </h4>
+                            <div className="space-y-3">
+                                <div className="flex items-start gap-3">
+                                    <UserIcon className="h-4 w-4 text-muted-foreground mt-0.5" />
+                                    <div>
+                                        <div className="text-xs font-medium text-muted-foreground">Contact Person</div>
+                                        <div className="text-sm">{hte.contact_person || 'Not provided'}</div>
+                                    </div>
+                                </div>
+                                <div className="flex items-start gap-3">
+                                    <BriefcaseIcon className="h-4 w-4 text-muted-foreground mt-0.5" />
+                                    <div>
+                                        <div className="text-xs font-medium text-muted-foreground">Position</div>
+                                        <div className="text-sm">{hte.contact_position || 'Not provided'}</div>
+                                    </div>
+                                </div>
+                                <div className="flex items-start gap-3">
+                                    <PhoneIcon className="h-4 w-4 text-muted-foreground mt-0.5" />
+                                    <div>
+                                        <div className="text-xs font-medium text-muted-foreground">Contact Number</div>
+                                        <div className="text-sm">{hte.contact_number || 'Not provided'}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Internships Section */}
+                    <div className="mt-6">
+                        <h4 className="text-sm font-medium flex items-center gap-2 mb-4">
+                            <BriefcaseIcon className="h-4 w-4" />
+                            Internships ({hte.internships.length})
+                        </h4>
+                        {hte.internships.length === 0 ? (
+                            <div className="text-center py-6 text-muted-foreground">
+                                <BriefcaseIcon className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                                <p className="text-sm">No internships created yet</p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {hte.internships.map((internship) => (
+                                    <Card key={internship.id} className="p-4">
+                                        <div className="space-y-2">
+                                            <div className="flex items-center justify-between">
+                                                <h5 className="font-medium text-sm">{internship.position_title}</h5>
+                                                <Badge variant={internship.is_active ? "default" : "secondary"}>
+                                                    {internship.is_active ? 'Active' : 'Inactive'}
+                                                </Badge>
+                                            </div>
+                                            <div className="text-xs text-muted-foreground">
+                                                {internship.department}
+                                            </div>
+                                            <div className="text-xs text-muted-foreground">
+                                                {internship.slot_count} slot{internship.slot_count !== 1 ? 's' : ''}
+                                            </div>
+                                            <div className="text-xs text-muted-foreground line-clamp-2">
+                                                {internship.placement_description}
+                                            </div>
+                                            <div className="text-xs text-muted-foreground flex items-center gap-1">
+                                                <CalendarIcon className="h-3 w-3" />
+                                                Created {internship.created_at}
+                                            </div>
+                                        </div>
+                                    </Card>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </Card>
+            </div>
+        );
     };
 
     return (
@@ -523,64 +659,100 @@ export default function HTEManagement({ htes, showArchived = false, filters = {}
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {htePagination.paginatedData.map((hte, index) => (
-                                            <tr key={hte.id} className={`border-b hover:bg-muted/50 transition-colors ${hte.status === 'archived' ? 'opacity-75' : ''}`}>
-                                                <td className="text-center py-3 px-4 font-mono text-sm text-muted-foreground">
-                                                    {getRowNumber(htePagination.currentPage, 10, index)}
-                                                </td>
-                                                <td className="py-3 px-4 font-medium">
-                                                    {hte.username}
-                                                </td>
-                                                <td className="py-3 px-4 text-sm text-muted-foreground">{hte.email}</td>
-                                                <td className="py-3 px-4">{getStatusBadge(hte.status)}</td>
-                                                <td className="py-3 px-4 text-sm text-muted-foreground">
-                                                    {hte.company_name || 'Not provided'}
-                                                </td>
-                                                <td className="py-3 px-4 text-sm text-muted-foreground">
-                                                    {hte.contact_person || 'Not provided'}
-                                                </td>
-                                                <td className="py-3 px-4">
-                                                    <Badge variant={hte.is_submit ? "default" : "outline"}>
-                                                        {hte.is_submit ? 'Submitted' : 'Not Submitted'}
-                                                    </Badge>
-                                                </td>
-                                                <td className="py-3 px-4 text-sm text-muted-foreground">
-                                                    {new Date(hte.created_at).toLocaleDateString()}
-                                                </td>
-                                                <td className="py-3 px-4 text-right">
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                                                <MoreHorizontal className="h-4 w-4" />
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="end">
-                                                            <DropdownMenuItem onClick={() => handleEdit(hte)}>
-                                                                <Edit className="mr-2 h-4 w-4" />
-                                                                Edit
-                                                            </DropdownMenuItem>
-                                                            {hte.status === 'archived' ? (
-                                                                <DropdownMenuItem 
-                                                                    onClick={() => handleUnarchive(hte)}
-                                                                    className="text-green-600 focus:text-green-600"
-                                                                >
-                                                                    <ArchiveRestore className="mr-2 h-4 w-4" />
-                                                                    Unarchive
-                                                                </DropdownMenuItem>
-                                                            ) : (
-                                                                <DropdownMenuItem 
-                                                                    onClick={() => handleArchive(hte)}
-                                                                    className="text-destructive focus:text-destructive"
-                                                                >
-                                                                    <Archive className="mr-2 h-4 w-4" />
-                                                                    Archive
-                                                                </DropdownMenuItem>
-                                                            )}
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
-                                                </td>
-                                            </tr>
-                                        ))}
+                                        {htePagination.paginatedData.map((hte, index) => {
+                                            const isExpanded = expandedRows.has(hte.id);
+                                            const hasDetails = hte.internships.length > 0 || hte.company_name || hte.contact_person;
+                                            
+                                            return (
+                                                <React.Fragment key={hte.id}>
+                                                    <tr 
+                                                        className={`border-b hover:bg-muted/50 transition-colors ${hte.status === 'archived' ? 'opacity-75' : ''} ${hasDetails ? 'cursor-pointer' : ''}`}
+                                                        onClick={() => hasDetails && toggleRow(hte.id)}
+                                                    >
+                                                        <td className="text-center py-3 px-4 font-mono text-sm text-muted-foreground">
+                                                            {getRowNumber(htePagination.currentPage, 10, index)}
+                                                        </td>
+                                                        <td className="py-3 px-4 font-medium">
+                                                            <div className="space-y-1">
+                                                                <div>{hte.username}</div>
+                                                                {hasDetails && (
+                                                                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                                                        {isExpanded ? (
+                                                                            <ChevronDown className="h-3 w-3" />
+                                                                        ) : (
+                                                                            <ChevronRight className="h-3 w-3" />
+                                                                        )}
+                                                                        <Badge variant="outline" className="text-xs">
+                                                                            {hte.internships.length} internship{hte.internships.length !== 1 ? 's' : ''}
+                                                                        </Badge>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </td>
+                                                        <td className="py-3 px-4 text-sm text-muted-foreground">{hte.email}</td>
+                                                        <td className="py-3 px-4">{getStatusBadge(hte.status)}</td>
+                                                        <td className="py-3 px-4 text-sm text-muted-foreground">
+                                                            {hte.company_name || 'Not provided'}
+                                                        </td>
+                                                        <td className="py-3 px-4 text-sm text-muted-foreground">
+                                                            {hte.contact_person || 'Not provided'}
+                                                        </td>
+                                                        <td className="py-3 px-4">
+                                                            <Badge variant={hte.is_submit ? "default" : "outline"}>
+                                                                {hte.is_submit ? 'Submitted' : 'Not Submitted'}
+                                                            </Badge>
+                                                        </td>
+                                                        <td className="py-3 px-4 text-sm text-muted-foreground">
+                                                            {new Date(hte.created_at).toLocaleDateString()}
+                                                        </td>
+                                                        <td className="py-3 px-4 text-right">
+                                                            <DropdownMenu>
+                                                                <DropdownMenuTrigger asChild>
+                                                                    <Button 
+                                                                        variant="ghost" 
+                                                                        size="sm" 
+                                                                        className="h-8 w-8 p-0"
+                                                                        onClick={(e) => e.stopPropagation()}
+                                                                    >
+                                                                        <MoreHorizontal className="h-4 w-4" />
+                                                                    </Button>
+                                                                </DropdownMenuTrigger>
+                                                                <DropdownMenuContent align="end">
+                                                                    <DropdownMenuItem onClick={() => handleEdit(hte)}>
+                                                                        <Edit className="mr-2 h-4 w-4" />
+                                                                        Edit
+                                                                    </DropdownMenuItem>
+                                                                    {hte.status === 'archived' ? (
+                                                                        <DropdownMenuItem 
+                                                                            onClick={() => handleUnarchive(hte)}
+                                                                            className="text-green-600 focus:text-green-600"
+                                                                        >
+                                                                            <ArchiveRestore className="mr-2 h-4 w-4" />
+                                                                            Unarchive
+                                                                        </DropdownMenuItem>
+                                                                    ) : (
+                                                                        <DropdownMenuItem 
+                                                                            onClick={() => handleArchive(hte)}
+                                                                            className="text-destructive focus:text-destructive"
+                                                                        >
+                                                                            <Archive className="mr-2 h-4 w-4" />
+                                                                            Archive
+                                                                        </DropdownMenuItem>
+                                                                    )}
+                                                                </DropdownMenuContent>
+                                                            </DropdownMenu>
+                                                        </td>
+                                                    </tr>
+                                                    {isExpanded && hasDetails && (
+                                                        <tr>
+                                                            <td colSpan={9} className="p-0">
+                                                                {renderHTEDetails(hte)}
+                                                            </td>
+                                                        </tr>
+                                                    )}
+                                                </React.Fragment>
+                                            );
+                                        })}
                                     </tbody>
                                 </table>
                             </div>

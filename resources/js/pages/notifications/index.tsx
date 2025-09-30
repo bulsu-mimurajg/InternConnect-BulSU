@@ -1,10 +1,20 @@
 import { Head, router } from '@inertiajs/react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { BellIcon, CheckIcon } from 'lucide-react';
+import { 
+    BellIcon, 
+    CheckIcon, 
+    FileTextIcon, 
+    TargetIcon, 
+    CalendarIcon, 
+    UsersIcon, 
+    ClockIcon, 
+    CheckCircleIcon,
+    MoreHorizontalIcon
+} from 'lucide-react';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
+import { cn } from '@/lib/utils';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -73,94 +83,94 @@ export default function NotificationsIndex({ notifications, unreadCount }: Props
     };
 
     const getNotificationIcon = (type: string) => {
+        const iconClass = "h-4 w-4";
         switch (type) {
             case 'student_assessment_pending':
             case 'hte_assessment_pending':
-                return '📝';
+                return <FileTextIcon className={iconClass} />;
             case 'student_match_found':
-                return '🎯';
+                return <TargetIcon className={iconClass} />;
             case 'deadline_released':
-                return '📅';
+                return <CalendarIcon className={iconClass} />;
             case 'student_verification_pending':
-                return '👥';
+                return <UsersIcon className={iconClass} />;
             case 'deadline_expired':
-                return '⏰';
+                return <ClockIcon className={iconClass} />;
             case 'student_approval_needed':
-                return '✅';
+                return <CheckCircleIcon className={iconClass} />;
             default:
-                return '🔔';
+                return <BellIcon className={iconClass} />;
         }
     };
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Notifications" />
-            <div className="space-y-6">
+            <div className="space-y-4">
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-3xl font-bold tracking-tight">Notifications</h1>
-                        <p className="text-muted-foreground">
-                            Stay updated with your latest notifications
-                        </p>
+                        <h1 className="text-xl font-semibold">Notifications</h1>
+                        {unreadCount > 0 && (
+                            <p className="text-sm text-muted-foreground">
+                                {unreadCount} unread
+                            </p>
+                        )}
                     </div>
                     {unreadCount > 0 && (
-                        <Button onClick={markAllAsRead} className="flex items-center gap-2">
-                            <CheckIcon className="h-4 w-4" />
-                            Mark all as read
+                        <Button onClick={markAllAsRead} variant="ghost" size="sm">
+                            <CheckIcon className="h-4 w-4 mr-1" />
+                            Mark all read
                         </Button>
                     )}
                 </div>
 
                 {/* Notifications List */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <BellIcon className="h-5 w-5" />
-                            All Notifications
-                            {unreadCount > 0 && (
-                                <Badge variant="destructive" className="ml-2">
-                                    {unreadCount} unread
-                                </Badge>
-                            )}
-                        </CardTitle>
-                        <CardDescription>
-                            Your notification history
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        {notifications.length === 0 ? (
-                            <div className="text-center py-8">
-                                <BellIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                                <h3 className="text-lg font-medium mb-2">No notifications</h3>
-                                <p className="text-muted-foreground">
-                                    You don't have any notifications yet.
-                                </p>
+                {notifications.length === 0 ? (
+                    <Card>
+                        <CardContent className="flex flex-col items-center justify-center py-16">
+                            <div className="rounded-full bg-muted p-3 mb-4">
+                                <BellIcon className="h-6 w-6 text-muted-foreground" />
                             </div>
-                        ) : (
-                            <div className="space-y-4">
-                                {notifications.map((notification) => (
-                                    <div
-                                        key={notification.id}
-                                        className={`flex items-start gap-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors ${
-                                            !notification.is_read ? 'bg-blue-50 border-blue-200' : ''
-                                        }`}
-                                    >
-                                        <div className="text-2xl">
+                            <h3 className="font-medium mb-1">No notifications</h3>
+                            <p className="text-sm text-muted-foreground text-center">
+                                You're all caught up
+                            </p>
+                        </CardContent>
+                    </Card>
+                ) : (
+                    <div className="space-y-1">
+                        {notifications.map((notification) => (
+                            <Card 
+                                key={notification.id}
+                                className={cn(
+                                    "transition-all duration-200 hover:shadow-sm",
+                                    !notification.is_read && "border-l-4 border-l-primary bg-primary/5"
+                                )}
+                            >
+                                <CardContent className="p-4">
+                                    <div className="flex items-start gap-3">
+                                        <div className={cn(
+                                            "flex-shrink-0 rounded-full p-2",
+                                            !notification.is_read 
+                                                ? "bg-primary/10 text-primary" 
+                                                : "bg-muted text-muted-foreground"
+                                        )}>
                                             {getNotificationIcon(notification.type)}
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <div className="flex items-start justify-between">
-                                                <div className="flex-1">
-                                                    <h3 className={`font-medium ${
-                                                        !notification.is_read ? 'text-gray-900' : 'text-gray-700'
-                                                    }`}>
+                                            <div className="flex items-start justify-between gap-2">
+                                                <div className="flex-1 min-w-0">
+                                                    <h3 className={cn(
+                                                        "font-medium text-sm leading-tight",
+                                                        !notification.is_read ? "text-foreground" : "text-muted-foreground"
+                                                    )}>
                                                         {notification.title}
                                                     </h3>
-                                                    <p className="text-sm text-gray-600 mt-1">
+                                                    <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
                                                         {notification.message}
                                                     </p>
-                                                    <p className="text-xs text-gray-400 mt-2">
+                                                    <p className="text-xs text-muted-foreground mt-2">
                                                         {formatTimeAgo(notification.created_at)}
                                                     </p>
                                                 </div>
@@ -169,7 +179,7 @@ export default function NotificationsIndex({ notifications, unreadCount }: Props
                                                         variant="ghost"
                                                         size="sm"
                                                         onClick={() => markAsRead(notification.id)}
-                                                        className="ml-2"
+                                                        className="h-8 w-8 p-0 hover:bg-primary/10"
                                                     >
                                                         <CheckIcon className="h-4 w-4" />
                                                     </Button>
@@ -177,11 +187,11 @@ export default function NotificationsIndex({ notifications, unreadCount }: Props
                                             </div>
                                         </div>
                                     </div>
-                                ))}
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </div>
+                )}
             </div>
         </AppLayout>
     );

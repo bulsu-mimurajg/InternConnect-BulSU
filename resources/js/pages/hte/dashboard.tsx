@@ -151,10 +151,10 @@ export default function HTEDashboardPage() {
                                     </Badge>
                                 </div>
                                 <div className="flex items-center justify-between py-2">
-                                    <span className="text-sm font-medium text-muted-foreground">Company Status</span>
-                                    <Badge variant={hte.is_active ? "default" : "destructive"}>
-                                        {hte.is_active ? "Active" : "Inactive"}
-                                    </Badge>
+                                    <span className="text-sm font-medium text-muted-foreground">Internship offers</span>
+                                    <span className="text-sm font-medium text-primary">
+                                        {hte.internships.length}
+                                    </span>
                                 </div>
                                 <div className="flex items-center justify-between py-2">
                                     <span className="text-sm font-medium text-muted-foreground">Registration Date</span>

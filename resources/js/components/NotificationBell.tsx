@@ -1,8 +1,24 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { BellIcon, CheckIcon, ClockIcon, UsersIcon, AlertCircleIcon, BriefcaseIcon, CalendarIcon, RotateCcwIcon, ListIcon, MailIcon } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import {
+    BellIcon,
+    CheckIcon,
+    ClockIcon,
+    UsersIcon,
+    AlertCircleIcon,
+    BriefcaseIcon,
+    CalendarIcon,
+    RotateCcwIcon,
+    ListIcon,
+    MailIcon,
+    FileTextIcon,
+    TargetIcon,
+    CheckCircleIcon
+} from 'lucide-react';
 import { router, usePage } from '@inertiajs/react';
+import { cn } from '@/lib/utils';
 
 interface Notification {
     id: number;
@@ -34,28 +50,28 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
             const response = await fetch('/notifications/get');
             const data = await response.json();
             const serverNotifications = data.notifications || [];
-            
+
             // Preserve local changes by merging with server data
             setNotifications(prev => {
                 const merged = serverNotifications.map((serverNotif: Notification) => {
                     const localTimestamp = lastLocalUpdate[serverNotif.id];
                     const serverTimestamp = new Date(serverNotif.updated_at).getTime();
-                    
+
                     // If we have a local update that's more recent, preserve the local state
                     if (localTimestamp && localTimestamp > serverTimestamp) {
                         const localNotif = prev.find(p => p.id === serverNotif.id);
                         return localNotif || serverNotif;
                     }
-                    
+
                     return serverNotif;
                 });
-                
+
                 // Sort by created_at date (newest first)
-                return merged.sort((a, b) => 
+                return merged.sort((a, b) =>
                     new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
                 );
             });
-            
+
             setUnreadCount(data.unreadCount || 0);
         } catch (error) {
             console.error('Failed to fetch notifications:', error);
@@ -66,49 +82,81 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
 
     const markAsRead = async (notificationId: number) => {
         try {
-            await fetch(`/notifications/${notificationId}/mark-read`, {
+            const response = await fetch(`/notifications/${notificationId}/mark-read`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
                 },
             });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const result = await response.json();
             
-            // Record local update timestamp
-            const now = Date.now();
-            setLastLocalUpdate(prev => ({
-                ...prev,
-                [notificationId]: now
-            }));
-            
-            // Update local state
-            setNotifications(prev => 
-                prev.map(notif => 
+            if (result.success) {
+                // Record local update timestamp
+                const now = Date.now();
+                setLastLocalUpdate(prev => ({
+                    ...prev,
+                    [notificationId]: now
+                }));
+
+                // Update local state
+                setNotifications(prev =>
+                    prev.map(notif =>
+                        notif.id === notificationId ? { ...notif, is_read: true } : notif
+                    )
+                );
+                setUnreadCount(prev => Math.max(0, prev - 1));
+            } else {
+                console.error('Server returned error:', result);
+            }
+        } catch (error) {
+            console.error('Failed to mark notification as read:', error);
+            // Still update UI optimistically
+            setNotifications(prev =>
+                prev.map(notif =>
                     notif.id === notificationId ? { ...notif, is_read: true } : notif
                 )
             );
             setUnreadCount(prev => Math.max(0, prev - 1));
-        } catch (error) {
-            console.error('Failed to mark notification as read:', error);
         }
     };
 
     const markAllAsRead = async () => {
         try {
-            await fetch('/notifications/mark-all-read', {
+            const response = await fetch('/notifications/mark-all-read', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
                 },
             });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const result = await response.json();
             
-            setNotifications(prev => 
+            if (result.success) {
+                setNotifications(prev =>
+                    prev.map(notif => ({ ...notif, is_read: true }))
+                );
+                setUnreadCount(0);
+            } else {
+                console.error('Server returned error:', result);
+            }
+        } catch (error) {
+            console.error('Failed to mark all notifications as read:', error);
+            // Still update UI optimistically
+            setNotifications(prev =>
                 prev.map(notif => ({ ...notif, is_read: true }))
             );
             setUnreadCount(0);
-        } catch (error) {
-            console.error('Failed to mark all notifications as read:', error);
         }
     };
 
@@ -121,17 +169,17 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
                 },
             });
-            
+
             // Record local update timestamp
             const now = Date.now();
             setLastLocalUpdate(prev => ({
                 ...prev,
                 [notificationId]: now
             }));
-            
+
             // Update local state
-            setNotifications(prev => 
-                prev.map(notif => 
+            setNotifications(prev =>
+                prev.map(notif =>
                     notif.id === notificationId ? { ...notif, is_read: false } : notif
                 )
             );
@@ -143,29 +191,29 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
 
     const getFilteredNotifications = () => {
         let filtered = notifications;
-        
+
         // Filter by type
         switch (filter) {
             case 'endorsement':
                 filtered = filtered.filter(n => n.type === 'hte_endorsement');
                 break;
             case 'deadline':
-                filtered = filtered.filter(n => 
-                    n.type === 'hte_deadline' || 
+                filtered = filtered.filter(n =>
+                    n.type === 'hte_deadline' ||
                     n.type === 'student_deadline' ||
                     n.type === 'deadline_released' ||
                     n.type === 'deadline_expired'
                 );
                 break;
             case 'placement':
-                filtered = filtered.filter(n => 
-                    n.type === 'student_placement' || 
+                filtered = filtered.filter(n =>
+                    n.type === 'student_placement' ||
                     n.type === 'student_placement_status'
                 );
                 break;
             case 'approval':
-                filtered = filtered.filter(n => 
-                    n.type === 'student_approval_request' || 
+                filtered = filtered.filter(n =>
+                    n.type === 'student_approval_request' ||
                     n.type === 'student_status_change'
                 );
                 break;
@@ -173,13 +221,13 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                 // Keep all notifications
                 break;
         }
-        
+
         // Filter by read/unread status
         if (!showRead) {
             filtered = filtered.filter(n => !n.is_read);
         }
         // If showRead is true, show all notifications (both read and unread)
-        
+
         return filtered;
     };
 
@@ -199,10 +247,10 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
         console.log('Has adviser role (old):', auth.user?.roles?.includes('adviser'));
         console.log('Has adviser role (new):', hasRole('adviser'));
         console.log('==========================');
-        
+
         // Mark as read when clicked (regardless of current status)
         markAsRead(notification.id);
-        
+
         // Reset filters to show all notifications
         setFilter('all');
         setShowRead(true);
@@ -230,7 +278,7 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
             if (notification.data?.category === 'student_placements') {
                 // Navigate based on user role
                 if (hasRole('admin')) {
-                    router.visit('/placement');
+                    router.visit('/student/placed');
                 } else {
                     router.visit('/student/dashboard');
                 }
@@ -241,7 +289,7 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
         } else if (notification.type === 'student_placement' || notification.type === 'student_placement_status') {
             // Navigate based on user role
             if (hasRole('admin')) {
-                router.visit('/placement');
+                router.visit('/student/placed');
             } else {
                 router.visit('/student/dashboard');
             }
@@ -259,12 +307,12 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
             console.warn('Unknown notification type:', notification.type);
             console.log('Available user roles:', auth.user?.roles);
             console.log('Notification data:', notification.data);
-            
+
             // Default navigation based on user role
             if (hasRole('adviser')) {
                 router.visit('/adviser/dashboard');
             } else if (hasRole('admin')) {
-                router.visit('/admin/dashboard');
+                router.visit('/admin-dashboard');
             } else if (hasRole('hte')) {
                 router.visit('/hte/dashboard');
             } else {
@@ -275,7 +323,7 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
 
     useEffect(() => {
         fetchNotifications();
-        
+
         // Poll for new notifications every 30 seconds
         const interval = setInterval(fetchNotifications, 30000);
         return () => clearInterval(interval);
@@ -293,7 +341,7 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
         const date = new Date(dateString);
         const now = new Date();
         const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-        
+
         if (diffInSeconds < 60) return 'Just now';
         if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
         if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
@@ -301,30 +349,31 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
     };
 
     const getNotificationIcon = (type: string) => {
+        const iconClass = "h-4 w-4";
         switch (type) {
             case 'student_verification_pending':
             case 'student_approval_needed':
-                return <UsersIcon className="h-4 w-4 text-amber-600" />;
+                return <UsersIcon className={iconClass} />;
             case 'student_assessment_pending':
             case 'hte_assessment_pending':
-                return <AlertCircleIcon className="h-4 w-4 text-yellow-600" />;
+                return <FileTextIcon className={iconClass} />;
             case 'student_match_found':
             case 'student_placement':
             case 'student_placement_status':
-                return <BriefcaseIcon className="h-4 w-4 text-green-600" />;
+                return <TargetIcon className={iconClass} />;
             case 'deadline_released':
             case 'deadline_expired':
-                return <CalendarIcon className="h-4 w-4 text-blue-600" />;
+                return <CalendarIcon className={iconClass} />;
             case 'hte_endorsement':
-                return <CheckIcon className="h-4 w-4 text-purple-600" />;
+                return <CheckCircleIcon className={iconClass} />;
             case 'hte_deadline':
             case 'student_deadline':
-                return <ClockIcon className="h-4 w-4 text-red-600" />;
+                return <ClockIcon className={iconClass} />;
             case 'student_approval_request':
             case 'student_status_change':
-                return <UsersIcon className="h-4 w-4 text-blue-600" />;
+                return <UsersIcon className={iconClass} />;
             default:
-                return <BellIcon className="h-4 w-4 text-gray-600" />;
+                return <BellIcon className={iconClass} />;
         }
     };
 
@@ -333,7 +382,7 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
         const hasRole = (roleName: string) => {
             return auth.user?.roles?.some((role: any) => role.name === roleName) || false;
         };
-        
+
         if (hasRole('student')) {
             // Students only see: All, Placement, Deadline
             return [
@@ -363,7 +412,7 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                 { key: 'deadline', label: 'Deadline' }
             ];
         }
-        
+
         // Default fallback
         return [
             { key: 'all', label: 'All' }
@@ -385,8 +434,8 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
             >
                 <BellIcon className="h-5 w-5" />
                 {unreadCount > 0 && (
-                    <Badge 
-                        variant="destructive" 
+                    <Badge
+                        variant="destructive"
                         className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs"
                     >
                         {unreadCount > 99 ? '99+' : unreadCount}
@@ -395,154 +444,156 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
             </Button>
 
             {isOpen && (
-                <div className="absolute right-0 top-full mt-2 w-96 bg-white border border-gray-200 rounded-lg shadow-xl z-50">
-                    <div className="p-4 border-b border-gray-200 bg-gray-50">
-                        <div className="flex items-center justify-between">
-                            <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                                <BellIcon className="h-4 w-4" />
-                                Notifications
-                                {unreadCount > 0 && (
-                                    <Badge variant="destructive" className="text-xs">
-                                        {unreadCount} new
-                                    </Badge>
-                                )}
-                            </h3>
-                            <div className="flex gap-2">
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => setShowRead(!showRead)}
-                                    className={`h-7 w-7 p-0 ${
-                                        showRead 
-                                            ? 'text-gray-600 hover:border hover:border-gray-500 hover:bg-white hover:text-gray-900' 
-                                            : 'bg-blue-600 text-white hover:bg-blue-700'
-                                    }`}
-                                    title={showRead ? 'Show unread notifications' : 'Show all notifications'}
-                                >
-                                    {showRead ? <ListIcon className="h-3 w-3" /> : <MailIcon className="h-3 w-3" />}
-                                </Button>
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={markAllAsRead}
-                                    className={`text-xs h-7 px-2 ${
-                                        unreadCount === 0 
-                                            ? 'border border-gray-500 bg-white text-gray-500 hover:bg-gray-50' 
-                                            : 'text-gray-600 hover:text-white hover:bg-blue-600'
-                                    }`}
-                                >
-                                    <CheckIcon className="h-3 w-3 mr-1" />
-                                    Mark all read
-                                </Button>
+                <Card className="absolute right-0 top-full mt-2 w-96 shadow-xl z-50 py-0">
+                    <CardContent className="p-0">
+                        <div className="px-4 py-2 border-b">
+                            <div className="flex items-center justify-between">
+                                <h3 className="font-semibold text-foreground flex items-center gap-2">
+                                    <BellIcon className="h-4 w-4" />
+                                    Notifications
+                                    {unreadCount > 0 && (
+                                        <Badge variant="destructive" className="text-xs">
+                                            {unreadCount}
+                                        </Badge>
+                                    )}
+                                </h3>
+                                <div className="flex gap-2">
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => setShowRead(!showRead)}
+                                        className="h-8 w-8 p-0"
+                                        title={showRead ? 'Show unread only' : 'Show all notifications'}
+                                    >
+                                        {showRead ? <ListIcon className="h-4 w-4" /> : <MailIcon className="h-4 w-4" />}
+                                    </Button>
+                                    {unreadCount > 0 && (
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={markAllAsRead}
+                                            className="h-8 px-2 text-xs"
+                                        >
+                                            <CheckIcon className="h-4 w-4 mr-1" />
+                                            Mark all read
+                                        </Button>
+                                    )}
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    
-                    {/* Filter Buttons */}
-                    <div className="p-3 border-b border-gray-200 bg-gray-50">
-                        <div className="flex justify-center gap-1">
-                            {getFilterButtons().map((button) => (
-                                <Button
-                                    key={button.key}
-                                    variant={filter === button.key ? 'default' : 'ghost'}
-                                    size="sm"
-                                    onClick={() => setFilter(button.key as any)}
-                                    className={`h-8 px-3 text-xs ${
-                                        filter === button.key 
-                                            ? 'bg-blue-600 text-white hover:bg-blue-700' 
-                                            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                                    }`}
-                                >
-                                    {button.label}
-                                </Button>
-                            ))}
+
+                        {/* Filter Buttons */}
+                        <div className="p-3 border-b">
+                            <div className="flex justify-center gap-1">
+                                {getFilterButtons().map((button) => (
+                                    <Button
+                                        key={button.key}
+                                        variant={filter === button.key ? 'default' : 'ghost'}
+                                        size="sm"
+                                        onClick={() => setFilter(button.key as any)}
+                                        className="h-8 px-3 text-xs"
+                                    >
+                                        {button.label}
+                                    </Button>
+                                ))}
+                            </div>
                         </div>
-                    </div>
-                    
-                    <div className="max-h-96 overflow-y-auto pb-6 mb-2">
-                        {isLoading ? (
-                            <div className="p-6 text-center text-gray-500">
-                                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 mx-auto mb-2"></div>
-                                Loading notifications...
-                            </div>
-                        ) : getFilteredNotifications().length === 0 ? (
-                            <div className="p-6 text-center text-gray-500">
-                                <BellIcon className="h-8 w-8 mx-auto mb-2 text-gray-300" />
-                                <p className="text-sm">
-                                    No {showRead ? '' : 'unread'} {filter === 'all' ? '' : filter} notifications
-                                </p>
-                                <p className="text-xs text-gray-400 mt-1">You're all caught up!</p>
-                            </div>
-                        ) : (
-                            getFilteredNotifications().map((notification) => (
-                                <div
-                                    key={notification.id}
-                                    className={`p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors group cursor-pointer ${
-                                        !notification.is_read ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''
-                                    }`}
-                                    onClick={() => handleNotificationClick(notification)}
-                                >
-                                    <div className="flex items-start gap-3">
-                                        <div className="flex-shrink-0 mt-0.5">
-                                            {getNotificationIcon(notification.type)}
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-start justify-between">
-                                            <p className={`text-sm font-medium ${
-                                                !notification.is_read ? 'text-gray-900' : 'text-gray-700'
-                                            }`}>
-                                                {notification.title}
-                                            </p>
-                                                <div className="flex items-center gap-2">
-                                                    {!notification.is_read && (
-                                                        <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0" />
-                                                    )}
-                                                    <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        {notification.is_read ? (
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    markAsUnread(notification.id);
-                                                                }}
-                                                                className="h-6 w-6 p-0 text-gray-400 hover:text-gray-600"
-                                                                title="Mark as unread"
-                                                            >
-                                                                <RotateCcwIcon className="h-3 w-3" />
-                                                            </Button>
-                                                        ) : (
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    markAsRead(notification.id);
-                                                                }}
-                                                                className="h-6 w-6 p-0 text-gray-400 hover:text-gray-600"
-                                                                title="Mark as read"
-                                                            >
-                                                                <CheckIcon className="h-3 w-3" />
-                                                            </Button>
-                                                        )}
+
+                        <div className="max-h-96 overflow-y-auto">
+                            {isLoading ? (
+                                <div className="p-6 text-center text-muted-foreground">
+                                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-2"></div>
+                                    Loading notifications...
+                                </div>
+                            ) : getFilteredNotifications().length === 0 ? (
+                                <div className="p-6 text-center text-muted-foreground">
+                                    <div className="rounded-full bg-muted p-3 mb-3 mx-auto w-fit">
+                                        <BellIcon className="h-6 w-6" />
+                                    </div>
+                                    <h3 className="font-medium mb-1">No notifications</h3>
+                                    <p className="text-sm text-muted-foreground">
+                                        You're all caught up
+                                    </p>
+                                </div>
+                            ) : (
+                                <div className="space-y-1">
+                                    {getFilteredNotifications().map((notification) => (
+                                        <div
+                                            key={notification.id}
+                                            className={cn(
+                                                "p-4 hover:bg-accent/50 transition-colors group cursor-pointer border-b border-border/50 last:border-b-0",
+                                                !notification.is_read && "bg-primary/5 border-l-4 border-l-primary"
+                                            )}
+                                            onClick={() => handleNotificationClick(notification)}
+                                        >
+                                            <div className="flex items-start gap-3">
+                                                <div className={cn(
+                                                    "flex-shrink-0 rounded-full p-2.5 mt-0.5 shadow-sm",
+                                                    !notification.is_read
+                                                        ? "bg-primary text-primary-foreground shadow-primary/20"
+                                                        : "bg-accent text-accent-foreground"
+                                                )}>
+                                                    {getNotificationIcon(notification.type)}
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-start justify-between gap-2">
+                                                        <p className={cn(
+                                                            "text-sm font-semibold leading-tight",
+                                                            !notification.is_read ? "text-foreground" : "text-foreground/80"
+                                                        )}>
+                                                            {notification.title}
+                                                        </p>
+                                                        <div className="flex items-center gap-2">
+                                                            {!notification.is_read && (
+                                                                <div className="w-2.5 h-2.5 bg-primary rounded-full flex-shrink-0 shadow-sm" />
+                                                            )}
+                                                            <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                {notification.is_read ? (
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="sm"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            markAsUnread(notification.id);
+                                                                        }}
+                                                                        className="h-6 w-6 p-0 hover:bg-accent"
+                                                                        title="Mark as unread"
+                                                                    >
+                                                                        <RotateCcwIcon className="h-3 w-3" />
+                                                                    </Button>
+                                                                ) : (
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="sm"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            markAsRead(notification.id);
+                                                                        }}
+                                                                        className="h-6 w-6 p-0 hover:bg-accent"
+                                                                        title="Mark as read"
+                                                                    >
+                                                                        <CheckIcon className="h-3 w-3" />
+                                                                    </Button>
+                                                                )}
+                                                            </div>
+                                                        </div>
                                                     </div>
+                                                    <p className="text-sm text-foreground/70 mt-1.5 line-clamp-2 leading-relaxed">
+                                                        {notification.message}
+                                                    </p>
+                                                    <p className="text-xs text-muted-foreground mt-2.5 flex items-center gap-1.5 font-medium">
+                                                        <ClockIcon className="h-3 w-3" />
+                                                        {formatTimeAgo(notification.created_at)}
+                                                    </p>
                                                 </div>
                                             </div>
-                                            <p className="text-xs text-gray-600 mt-1 line-clamp-2">
-                                                {notification.message}
-                                            </p>
-                                            <p className="text-xs text-gray-400 mt-2 flex items-center gap-1">
-                                                <ClockIcon className="h-3 w-3" />
-                                                {formatTimeAgo(notification.created_at)}
-                                            </p>
                                         </div>
-                                    </div>
+                                    ))}
                                 </div>
-                            ))
-                        )}
-                    </div>
-                    
-                </div>
+                            )}
+                        </div>
+                    </CardContent>
+                </Card>
             )}
         </div>
     );

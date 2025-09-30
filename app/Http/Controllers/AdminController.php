@@ -909,7 +909,7 @@ class AdminController extends Controller
      */
     public function hteManagement(): Response
     {
-        $htes = HTE::with('user')
+        $htes = HTE::with(['user', 'internships'])
             ->whereHas('user', function($q) {
                 $q->where('status', '!=', 'archived');
             })
@@ -932,6 +932,17 @@ class AdminController extends Controller
                     'is_submit' => $hte->is_submit,
                     'created_at' => $hte->created_at->format('M d, Y'),
                     'updated_at' => $hte->updated_at->format('M d, Y'),
+                    'internships' => $hte->internships->map(function ($internship) {
+                        return [
+                            'id' => $internship->id,
+                            'position_title' => $internship->position_title,
+                            'department' => $internship->department,
+                            'placement_description' => $internship->placement_description,
+                            'slot_count' => $internship->slot_count,
+                            'is_active' => $internship->is_active,
+                            'created_at' => $internship->created_at->format('M d, Y'),
+                        ];
+                    }),
                 ];
             });
 
@@ -952,7 +963,7 @@ class AdminController extends Controller
      */
     public function archivedHTEManagement(): Response
     {
-        $htes = HTE::with('user')
+        $htes = HTE::with(['user', 'internships'])
             ->whereHas('user', function ($query) {
                 $query->where('status', 'archived');
             })
@@ -975,6 +986,17 @@ class AdminController extends Controller
                     'is_submit' => $hte->is_submit,
                     'created_at' => $hte->created_at->format('M d, Y'),
                     'updated_at' => $hte->updated_at->format('M d, Y'),
+                    'internships' => $hte->internships->map(function ($internship) {
+                        return [
+                            'id' => $internship->id,
+                            'position_title' => $internship->position_title,
+                            'department' => $internship->department,
+                            'placement_description' => $internship->placement_description,
+                            'slot_count' => $internship->slot_count,
+                            'is_active' => $internship->is_active,
+                            'created_at' => $internship->created_at->format('M d, Y'),
+                        ];
+                    }),
                 ];
             });
 
