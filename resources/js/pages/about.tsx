@@ -106,33 +106,8 @@ export default function About() {
                                     the process of matching Bachelor of Science in Information Technology students with Host Training Establishments (HTEs).
                                 </p>
                                 <p className="text-md leading-relaxed text-center text-[#1b1b18] dark:text-[#EDEDEC]">
-                                    Our platform facilitates student assessments, SIP endorsements, and HTE placements for the College of Information and Communications Technology at Bulacan State University.
+                                    Our platform facilitates student assessments, SIP endorsements, and HTE placements for the college of Bachelor of Science in Information Technology at Bulacan State University.
                                 </p>
-
-                                <div className="flex flex-wrap gap-4 justify-center">
-                                    <a 
-                                        href="https://bulsu.edu.ph/" 
-                                        target="_blank" 
-                                        rel="noopener noreferrer"
-                                        className="inline-flex items-center space-x-1 font-medium text-[#f53003] underline underline-offset-4 dark:text-[#FF4433]"
-                                    >
-                                        <span>Visit BulSU</span>
-                                        <svg
-                                            width={10}
-                                            height={11}
-                                            viewBox="0 0 10 11"
-                                            fill="none"
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            className="h-2.5 w-2.5"
-                                        >
-                                            <path
-                                                d="M7.70833 6.95834V2.79167H3.54167M2.5 8L7.5 3.00001"
-                                                stroke="currentColor"
-                                                strokeLinecap="square"
-                                            />
-                                        </svg>
-                                    </a>
-                                </div>
                             </div>
 
                             {/* Features Section */}
