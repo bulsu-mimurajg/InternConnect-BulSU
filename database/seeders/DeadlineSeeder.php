@@ -17,8 +17,7 @@ class DeadlineSeeder extends Seeder
             'student_verification',
             'student_assessment_form', 
             'hte_assessment_form',
-            'sip_endorsement',
-            'student_placements_by_hte'
+            'internship_placement'
         ];
 
         $now = Carbon::now();
@@ -56,8 +55,7 @@ class DeadlineSeeder extends Seeder
             'student_verification' => 'Student Verification Deadline',
             'student_assessment_form' => 'Student Assessment Form Submission Deadline',
             'hte_assessment_form' => 'HTE Assessment Form Submission Deadline',
-            'sip_endorsement' => 'SIP Endorsement Deadline',
-            'student_placements_by_hte' => 'Student Placements by HTE Deadline',
+            'internship_placement' => 'Internship Placement Deadline',
             default => ucwords(str_replace('_', ' ', $category)) . ' Deadline',
         };
     }
@@ -72,8 +70,7 @@ class DeadlineSeeder extends Seeder
             'student_verification',
             'student_assessment_form', 
             'hte_assessment_form',
-            'sip_endorsement',
-            'student_placements_by_hte'
+            'internship_placement'
         ];
 
         $now = Carbon::now();

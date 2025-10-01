@@ -25,8 +25,12 @@ class AutomaticPlacementService
         ];
 
         try {
-            // Check if HTE placement deadline has passed or is about to expire (1 minute before)
-            $deadline = Deadline::where('category', 'student_placements_by_hte')
+            // Check if internship placement deadline has passed or is about to expire (1 minute before)
+            // Also check legacy student_placements_by_hte category for backward compatibility
+            $deadline = Deadline::where(function($query) {
+                    $query->where('category', 'internship_placement')
+                        ->orWhere('category', 'student_placements_by_hte');
+                })
                 ->where(function($query) {
                     $query->where('status', 'expired')
                         ->orWhere(function($q) {
@@ -37,11 +41,11 @@ class AutomaticPlacementService
                 ->first();
 
             if (!$deadline) {
-                Log::info('HTE placement deadline not found, not expired, or not about to expire');
+                Log::info('Internship placement deadline not found, not expired, or not about to expire');
                 return $results;
             }
 
-            Log::info('HTE placement deadline expired, processing automatic placements');
+            Log::info('Internship placement deadline expired, processing automatic placements');
 
             // Get all endorsed students who haven't been placed yet
             $endorsedStudents = Endorsement::with(['student', 'internship.hte'])

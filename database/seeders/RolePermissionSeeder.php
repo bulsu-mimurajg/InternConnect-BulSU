@@ -14,11 +14,12 @@ class RolePermissionSeeder extends Seeder
      */
     public function run(): void
     {
-        Role::create(['name' => 'student']);
-        Role::create(['name' => 'hte']);
-        Role::create(['name' => 'admin']);
-        Role::create(['name' => 'adviser']);
-        Role::create(['name' => 'guest']);
+        // Create roles if they don't exist
+        Role::firstOrCreate(['name' => 'student']);
+        Role::firstOrCreate(['name' => 'hte']);
+        Role::firstOrCreate(['name' => 'admin']);
+        Role::firstOrCreate(['name' => 'adviser']);
+        Role::firstOrCreate(['name' => 'guest']);
 
         $permissions = [
             'manage users',           // C1: SIP Coordinator manages accounts
@@ -39,8 +40,9 @@ class RolePermissionSeeder extends Seeder
             'view student applications', // A1: Adviser views student applications
         ];
 
+        // Create permissions if they don't exist
         foreach ($permissions as $permission) {
-            Permission::create(['name' => $permission]);
+            Permission::firstOrCreate(['name' => $permission]);
         }
 
         Role::findByName('admin')->givePermissionTo([

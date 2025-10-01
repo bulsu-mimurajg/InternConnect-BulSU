@@ -1861,8 +1861,9 @@ class AdminController extends Controller
         try {
             $nowPlusOneMinute = now()->addMinute();
 
-            // Auto-run SIP endorsements when deadline expired or within 1 minute to expiry
-            $sipAutoTrigger = \App\Models\Deadline::where('category', 'sip_endorsement')
+            // Auto-run internship placement processing when deadline expired or within 1 minute to expiry
+            // This handles both SIP endorsements and HTE placements
+            $placementAutoTrigger = \App\Models\Deadline::where('category', 'internship_placement')
                 ->where(function($query) use ($nowPlusOneMinute) {
                     $query->where('status', 'expired')
                         ->orWhere(function($q) use ($nowPlusOneMinute) {
@@ -1872,36 +1873,40 @@ class AdminController extends Controller
                 })
                 ->exists();
 
-            if ($sipAutoTrigger) {
+            // Also check for legacy categories for backward compatibility
+            $legacySipTrigger = \App\Models\Deadline::where('category', 'sip_endorsement')
+                ->where(function($query) use ($nowPlusOneMinute) {
+                    $query->where('status', 'expired')
+                        ->orWhere(function($q) use ($nowPlusOneMinute) {
+                            $q->where('status', 'active')
+                                ->where('end_date', '<=', $nowPlusOneMinute);
+                        });
+                })
+                ->exists();
+
+            $legacyHteTrigger = \App\Models\Deadline::where('category', 'student_placements_by_hte')
+                ->where(function($query) use ($nowPlusOneMinute) {
+                    $query->where('status', 'expired')
+                        ->orWhere(function($q) use ($nowPlusOneMinute) {
+                            $q->where('status', 'active')
+                                ->where('end_date', '<=', $nowPlusOneMinute);
+                        });
+                })
+                ->exists();
+
+            if ($placementAutoTrigger || $legacySipTrigger || $legacyHteTrigger) {
                 // Ensure this only runs once per minute
-                if (\Illuminate\Support\Facades\Cache::lock('auto-process-sip', 60)->get()) {
+                if (\Illuminate\Support\Facades\Cache::lock('auto-process-placement', 60)->get()) {
                     try {
-                        $service = new \App\Services\AutomaticEndorsementService();
-                        $service->processSipEndorsements();
+                        // Run endorsements first
+                        $endorsementService = new \App\Services\AutomaticEndorsementService();
+                        $endorsementService->processSipEndorsements();
+                        
+                        // Then run placements
+                        $placementService = new \App\Services\AutomaticPlacementService();
+                        $placementService->processHtePlacements();
                     } finally {
-                        \Illuminate\Support\Facades\Cache::lock('auto-process-sip', 60)->release();
-                    }
-                }
-            }
-
-            // Auto-run HTE placements when deadline expired or within 1 minute to expiry
-            $hteAutoTrigger = \App\Models\Deadline::where('category', 'student_placements_by_hte')
-                ->where(function($query) use ($nowPlusOneMinute) {
-                    $query->where('status', 'expired')
-                        ->orWhere(function($q) use ($nowPlusOneMinute) {
-                            $q->where('status', 'active')
-                                ->where('end_date', '<=', $nowPlusOneMinute);
-                        });
-                })
-                ->exists();
-
-            if ($hteAutoTrigger) {
-                if (\Illuminate\Support\Facades\Cache::lock('auto-process-hte', 60)->get()) {
-                    try {
-                        $service = new \App\Services\AutomaticPlacementService();
-                        $service->processHtePlacements();
-                    } finally {
-                        \Illuminate\Support\Facades\Cache::lock('auto-process-hte', 60)->release();
+                        \Illuminate\Support\Facades\Cache::lock('auto-process-placement', 60)->release();
                     }
                 }
             }
@@ -1952,8 +1957,7 @@ class AdminController extends Controller
             ['value' => 'student_verification', 'label' => 'Student Verification (Adviser Side)'],
             ['value' => 'student_assessment_form', 'label' => 'Student Assessment Form (Student Side)'],
             ['value' => 'hte_assessment_form', 'label' => 'HTE Assessment Form (HTE Side)'],
-            ['value' => 'sip_endorsement', 'label' => 'SIP Endorsement (Admin Side)'],
-            ['value' => 'student_placements_by_hte', 'label' => 'Student Placements by HTE (HTE Side)'],
+            ['value' => 'internship_placement', 'label' => 'Internship Placement (Endorsement & HTE Placement)'],
         ];
 
         return Inertia::render('admin/events', [
@@ -1980,7 +1984,7 @@ class AdminController extends Controller
         try {
             $request->validate([
                 'title' => 'required|string|max:255',
-                'category' => 'required|in:student_verification,student_assessment_form,hte_assessment_form,sip_endorsement,student_placements_by_hte',
+                'category' => 'required|in:student_verification,student_assessment_form,hte_assessment_form,internship_placement',
                 'start_date' => 'required|date',
                 'end_date' => 'required|date|after:start_date',
             ]);
@@ -2058,7 +2062,7 @@ class AdminController extends Controller
     {
         $request->validate([
             'title' => 'required|string|max:255',
-            'category' => 'required|in:student_verification,student_assessment_form,hte_assessment_form,sip_endorsement,student_placements_by_hte',
+            'category' => 'required|in:student_verification,student_assessment_form,hte_assessment_form,internship_placement',
             'start_date' => 'required|date',
             'end_date' => 'required|date|after:start_date',
         ]);
@@ -2222,78 +2226,26 @@ class AdminController extends Controller
     }
 
     /**
-     * Process automatic SIP endorsements
+     * Process internship placements (both endorsements and HTE placements)
      */
-    public function processSipEndorsements()
+    public function processInternshipPlacements()
     {
         try {
-            $service = new AutomaticEndorsementService();
-            $results = $service->processSipEndorsements();
+            $endorsementService = new AutomaticEndorsementService();
+            $placementService = new AutomaticPlacementService();
 
-            $message = "SIP Endorsements processed successfully. ";
-            $message .= "Endorsed: {$results['endorsed_count']} students, ";
-            $message .= "Skipped: {$results['skipped_count']} students";
+            // First, process SIP endorsements
+            $endorsementResults = $endorsementService->processSipEndorsements();
+            
+            // Then, process HTE placements
+            $placementResults = $placementService->processHtePlacements();
 
-            if (!empty($results['errors'])) {
-                $message .= ". Errors: " . count($results['errors']);
-            }
+            $message = "Internship placements processed successfully. ";
+            $message .= "Endorsed: {$endorsementResults['endorsed_count']} students, ";
+            $message .= "Placed: {$placementResults['placed_count']} students, ";
+            $message .= "Skipped: " . ($endorsementResults['skipped_count'] + $placementResults['skipped_count']) . " students";
 
-            return redirect()->back()->with('success', $message);
-
-        } catch (\Exception $e) {
-            Log::error('SIP Endorsement Processing Error:', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-            return redirect()->back()->withErrors(['error' => 'Failed to process SIP endorsements: ' . $e->getMessage()]);
-        }
-    }
-
-    /**
-     * Process automatic HTE placements
-     */
-    public function processHtePlacements()
-    {
-        try {
-            $service = new AutomaticPlacementService();
-            $results = $service->processHtePlacements();
-
-            $message = "HTE Placements processed successfully. ";
-            $message .= "Placed: {$results['placed_count']} students, ";
-            $message .= "Skipped: {$results['skipped_count']} students";
-
-            if (!empty($results['errors'])) {
-                $message .= ". Errors: " . count($results['errors']);
-            }
-
-            return redirect()->back()->with('success', $message);
-
-        } catch (\Exception $e) {
-            Log::error('HTE Placement Processing Error:', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-            return redirect()->back()->withErrors(['error' => 'Failed to process HTE placements: ' . $e->getMessage()]);
-        }
-    }
-
-    /**
-     * Process all automatic deadlines
-     */
-    public function processAllDeadlines()
-    {
-        try {
-            $sipService = new AutomaticEndorsementService();
-            $hteService = new AutomaticPlacementService();
-
-            $sipResults = $sipService->processSipEndorsements();
-            $hteResults = $hteService->processHtePlacements();
-
-            $message = "All deadlines processed successfully. ";
-            $message .= "SIP Endorsed: {$sipResults['endorsed_count']} students, ";
-            $message .= "HTE Placed: {$hteResults['placed_count']} students";
-
-            $totalErrors = count($sipResults['errors']) + count($hteResults['errors']);
+            $totalErrors = count($endorsementResults['errors']) + count($placementResults['errors']);
             if ($totalErrors > 0) {
                 $message .= ". Total Errors: {$totalErrors}";
             }
@@ -2301,11 +2253,11 @@ class AdminController extends Controller
             return redirect()->back()->with('success', $message);
 
         } catch (\Exception $e) {
-            Log::error('All Deadlines Processing Error:', [
+            Log::error('Internship Placement Processing Error:', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            return redirect()->back()->withErrors(['error' => 'Failed to process deadlines: ' . $e->getMessage()]);
+            return redirect()->back()->withErrors(['error' => 'Failed to process internship placements: ' . $e->getMessage()]);
         }
     }
 

@@ -216,6 +216,8 @@ class UnifiedDeadlineNotification extends Notification implements ShouldQueue
             'student_verification' => 'Student Verification',
             'student_assessment_form' => 'Student Assessment Form',
             'hte_assessment_form' => 'HTE Assessment Form',
+            'internship_placement' => 'Internship Placement',
+            // Legacy support
             'sip_endorsement' => 'SIP Endorsement',
             'student_placements_by_hte' => 'Student Placements',
             default => 'Assessment Form',
@@ -253,12 +255,12 @@ class UnifiedDeadlineNotification extends Notification implements ShouldQueue
     {
         return match([$this->userRole, $this->deadline->category]) {
             ['admin', 'student_verification'] => 'Please review and verify student applications.',
-            ['admin', 'sip_endorsement'] => 'Please process SIP endorsements for students.',
+            ['admin', 'internship_placement'], ['admin', 'sip_endorsement'] => 'Please process internship placements for students.',
             ['adviser', 'student_verification'] => 'Please verify your assigned students.',
             ['student', 'student_assessment_form'] => 'Please complete your assessment form.',
-            ['student', 'student_placements_by_hte'] => 'Please check your placement status.',
+            ['student', 'internship_placement'], ['student', 'student_placements_by_hte'] => 'Please check your placement status.',
             ['hte', 'hte_assessment_form'] => 'Please complete your HTE assessment form.',
-            ['hte', 'student_placements_by_hte'] => 'Please complete student placements.',
+            ['hte', 'internship_placement'], ['hte', 'student_placements_by_hte'] => 'Please complete student placements.',
             default => 'Please complete the required actions for this deadline.',
         };
     }
@@ -298,15 +300,15 @@ class UnifiedDeadlineNotification extends Notification implements ShouldQueue
     {
         return match([$this->userRole, $this->deadline->category]) {
             ['admin', 'student_verification'] => 'As an administrator, you need to review and verify student applications.',
-            ['admin', 'sip_endorsement'] => 'As an administrator, you need to process SIP endorsements for students.',
+            ['admin', 'internship_placement'], ['admin', 'sip_endorsement'] => 'As an administrator, you need to process internship placements for students. This includes both endorsements and final placements.',
             ['admin', 'student_assessment_form'] => 'Monitor student assessment completion and provide support as needed.',
             ['admin', 'hte_assessment_form'] => 'Monitor HTE assessment completion and provide support as needed.',
             ['admin', 'student_placements_by_hte'] => 'Monitor the placement process and ensure all deadlines are met.',
             ['adviser', 'student_verification'] => 'As an adviser, you need to verify your assigned students.',
             ['student', 'student_assessment_form'] => 'Complete your self-assessment to help us match you with the best internship opportunities.',
-            ['student', 'student_placements_by_hte'] => 'Check your dashboard to see your placement status and any required actions.',
+            ['student', 'internship_placement'], ['student', 'student_placements_by_hte'] => 'Check your dashboard to see your placement status and any required actions.',
             ['hte', 'hte_assessment_form'] => 'Complete your HTE assessment form to provide internship opportunities for students.',
-            ['hte', 'student_placements_by_hte'] => 'Complete student placements to finalize the internship matching process.',
+            ['hte', 'internship_placement'], ['hte', 'student_placements_by_hte'] => 'Complete student placements to finalize the internship matching process.',
             default => null,
         };
     }

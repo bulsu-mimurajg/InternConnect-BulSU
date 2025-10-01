@@ -18,17 +18,9 @@ class AdditionalInfoSeeder extends Seeder
                 'is_active' => true,
             ],
             [
-                'info_name' => 'Portfolio Website',
-                'is_active' => true,
-            ],
-            [
                 'info_name' => 'Resume Link',
                 'is_active' => true,
-            ],
-            [
-                'info_name' => 'Personal Website',
-                'is_active' => true,
-            ],
+            ]
         ];
 
         foreach ($additionalInfos as $info) {

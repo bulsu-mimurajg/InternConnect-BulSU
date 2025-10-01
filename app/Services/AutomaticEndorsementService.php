@@ -24,8 +24,12 @@ class AutomaticEndorsementService
         ];
 
         try {
-            // Check if SIP endorsement deadline has passed or is about to expire (1 minute before)
-            $deadline = Deadline::where('category', 'sip_endorsement')
+            // Check if internship placement deadline has passed or is about to expire (1 minute before)
+            // Also check legacy sip_endorsement category for backward compatibility
+            $deadline = Deadline::where(function($query) {
+                    $query->where('category', 'internship_placement')
+                        ->orWhere('category', 'sip_endorsement');
+                })
                 ->where(function($query) {
                     $query->where('status', 'expired')
                         ->orWhere(function($q) {
@@ -36,11 +40,11 @@ class AutomaticEndorsementService
                 ->first();
 
             if (!$deadline) {
-                Log::info('SIP endorsement deadline not found, not expired, or not about to expire');
+                Log::info('Internship placement deadline not found, not expired, or not about to expire');
                 return $results;
             }
 
-            Log::info('SIP endorsement deadline expired, processing automatic endorsements');
+            Log::info('Internship placement deadline expired, processing automatic endorsements');
 
             // Get all students who have submitted assessments and are not yet placed
             $students = Student::with(['compatibilityScores.internship.hte'])

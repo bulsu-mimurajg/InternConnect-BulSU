@@ -20,9 +20,11 @@ class CentralizedDeadlineNotificationService
     private const ROLE_DEADLINE_MAPPING = [
         'admin' => [
             'student_verification',
-            'sip_endorsement',
             'student_assessment_form',
             'hte_assessment_form',
+            'internship_placement',
+            // Legacy support
+            'sip_endorsement',
             'student_placements_by_hte',
         ],
         'adviser' => [
@@ -30,10 +32,12 @@ class CentralizedDeadlineNotificationService
         ],
         'student' => [
             'student_assessment_form',
-            'student_placements_by_hte',
+            // Students do NOT receive internship_placement emails
         ],
         'hte' => [
             'hte_assessment_form',
+            'internship_placement',
+            // Legacy support
             'student_placements_by_hte',
         ],
     ];
@@ -202,22 +206,20 @@ class CentralizedDeadlineNotificationService
                 })
                 ->get();
                 break;
-            case 'sip_endorsement':
-                $users = User::whereHas('roles', function ($query) {
-                    $query->where('name', 'admin');
-                })
-                ->where('status', '!=', 'archived')
-                ->get();
-                break;
-            case 'student_placements_by_hte':
+            case 'internship_placement':
+            case 'sip_endorsement': // Legacy support
+            case 'student_placements_by_hte': // Legacy support
+                // Only notify admin and HTE - students get notified when actually placed
                 $users = User::whereHas('roles', function ($query) {
                     $query->whereIn('name', ['admin', 'hte']);
                 })
                 ->where('status', '!=', 'archived')
                 ->where(function ($query) {
+                    // Admins always get notifications
                     $query->whereHas('roles', function ($roleQuery) {
                         $roleQuery->where('name', 'admin');
                     })
+                    // Active HTEs get notifications
                     ->orWhere(function ($subQuery) {
                         $subQuery->whereHas('roles', function ($roleQuery) {
                             $roleQuery->where('name', 'hte');
@@ -407,26 +409,14 @@ class CentralizedDeadlineNotificationService
                     return $shouldReceive;
                 }
                 
-                // For placement-related deadlines, only notify students who are actually placed
-                // or have endorsed matches (not just endorsement records that might be inconsistent)
-                if ($deadline->category === 'student_placements_by_hte') {
-                    $isPlaced = $user->student && $user->student->is_placed;
-                    
-                    // Check if student has any matches that are actually endorsed (not just endorsement records)
-                    $hasEndorsedMatches = $user->student && $user->student->matches()
-                        ->where('endorsement_status', 'endorsed')
-                        ->exists();
-                    
-                    $shouldReceive = $isPlaced || $hasEndorsedMatches;
-                    
-                    Log::info("Student user {$user->id} should receive placement notification: " . ($shouldReceive ? 'YES' : 'NO'), [
+                // Students do NOT receive internship_placement deadline emails
+                // They get notified separately when they are actually placed (via NotificationService)
+                if (in_array($deadline->category, ['internship_placement', 'sip_endorsement', 'student_placements_by_hte'])) {
+                    Log::info("Student user {$user->id} should NOT receive placement deadline notification (they get notified when placed)", [
                         'deadline_category' => $deadline->category,
                         'user_id' => $user->id,
-                        'has_student_record' => $user->student ? 'YES' : 'NO',
-                        'is_placed' => $isPlaced,
-                        'has_endorsed_matches' => $hasEndorsedMatches,
                     ]);
-                    return $shouldReceive;
+                    return false; // Students don't get placement deadline emails
                 }
                 
                 Log::info("Student user {$user->id} should receive notification: YES (default)", [
@@ -598,6 +588,8 @@ class CentralizedDeadlineNotificationService
             'student_verification' => 'Student Verification',
             'student_assessment_form' => 'Student Assessment Form',
             'hte_assessment_form' => 'HTE Assessment Form',
+            'internship_placement' => 'Internship Placement',
+            // Legacy support
             'sip_endorsement' => 'SIP Endorsement',
             'student_placements_by_hte' => 'Student Placements',
             default => 'Assessment Form',

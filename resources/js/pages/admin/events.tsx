@@ -256,43 +256,17 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
                         {/* Automation Section */}
                         <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                                 <Button
-                                    variant="secondary"
-                                    onClick={() => {
-                                        if (confirm('Process SIP endorsements automatically? This will endorse students based on their highest compatibility scores.')) {
-                                            post('/admin/deadlines/process-sip');
-                                        }
-                                    }}
-                                    className="flex items-center gap-2 h-9 text-sm"
-                                >
-                                    <ClockIcon className="h-4 w-4" />
-                                    <span className="hidden sm:inline">Process SIP Endorsements</span>
-                                    <span className="sm:hidden">Process SIP</span>
-                                </Button>
-                                <Button
-                                    variant="secondary"
-                                    onClick={() => {
-                                        if (confirm('Process HTE placements automatically? This will place students based on their ranking and available slots.')) {
-                                            post('/admin/deadlines/process-hte');
-                                        }
-                                    }}
-                                    className="flex items-center gap-2 h-9 text-sm"
-                                >
-                                    <ClockIcon className="h-4 w-4" />
-                                    <span className="hidden sm:inline">Process HTE Placements</span>
-                                    <span className="sm:hidden">Process HTE</span>
-                                </Button>
-                                <Button
                                     variant="default"
                                     onClick={() => {
-                                        if (confirm('Process all automatic deadlines? This will run both SIP endorsements and HTE placements.')) {
-                                            post('/admin/deadlines/process-all');
+                                        if (confirm('Process internship placements? This will endorse students based on compatibility and place them according to HTE rankings.')) {
+                                            post('/admin/deadlines/process-placement');
                                         }
                                     }}
                                     className="flex items-center gap-2 h-9 text-sm"
                                 >
                                     <ClockIcon className="h-4 w-4" />
-                                    <span className="hidden sm:inline">Process All Deadlines</span>
-                                    <span className="sm:hidden">Process All</span>
+                                    <span className="hidden sm:inline">Process Internship Placements</span>
+                                    <span className="sm:hidden">Process Placements</span>
                                 </Button>
                         </div>
                     </div>
