@@ -1,6 +1,21 @@
+import { ImgHTMLAttributes } from 'react';
+
+export default function AppLogoIcon({ className, ...props }: ImgHTMLAttributes<HTMLImageElement>) {
+    return (
+        <img 
+            src="/logo_mockup_4.svg" 
+            alt="InternConnect BSIT Logo"
+            className={className}
+            {...props}
+        />
+    );
+}
+
+// Old SVG version - replaced with logo_mockup_4.svg
+
 import { SVGAttributes } from 'react';
 
-export default function AppLogoIcon(props: SVGAttributes<SVGElement>) {
+export function CictLogoIcon(props: SVGAttributes<SVGElement>) {
     return (
             <svg {...props} viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg">
                   <path fill="#898A8E" d="M233 11c2.6-.304 4.96-.42 7.563-.398l2.263-.01c1.58-.001 3.161.004 4.741.017 2.424.016 4.846 0 7.269-.02 1.534.003 3.068.007 4.601.013l2.204-.019c2.043.029 2.043.029 5.359.417 2.092 3.138 2.47 4.812 3.035 8.473"/>

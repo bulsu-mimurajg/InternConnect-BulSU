@@ -1,4 +1,4 @@
-import AppLogoIcon from '@/components/app-logo-icon';
+import { CictLogoIcon } from '@/components/app-logo-icon';
 import { Link } from '@inertiajs/react';
 import { type PropsWithChildren } from 'react';
 
@@ -22,7 +22,7 @@ export default function AuthSimpleLayout({ children, title, description, wide = 
                                     alt="BulSU Logo" 
                                     className="h-22 w-auto"
                                 />
-                                <AppLogoIcon className="size-22 fill-current text-[var(--foreground)] dark:text-white" />
+                                <CictLogoIcon className="size-22 fill-current text-[var(--foreground)] dark:text-white" />
                             </div>
                             <span className="sr-only">{title}</span>
                         </Link>
