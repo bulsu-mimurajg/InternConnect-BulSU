@@ -1857,20 +1857,32 @@ class AdminController extends Controller
      */
     public function eventsManagement(): Response
     {
-        // Proactively process deadlines if expired or about to expire (1 minute window)
+        // Proactively process deadlines with 3-tier automatic placement system
         try {
             $nowPlusOneMinute = now()->addMinute();
+            $nowPlusTenMinutes = now()->addMinutes(10);
+            $nowPlusTwentyMinutes = now()->addMinutes(20);
+            $nowPlusThirtyMinutes = now()->addMinutes(30);
 
-            // Auto-run internship placement processing when deadline expired or within 1 minute to expiry
-            // This handles both SIP endorsements and HTE placements
-            $placementAutoTrigger = \App\Models\Deadline::where('category', 'internship_placement')
-                ->where(function($query) use ($nowPlusOneMinute) {
-                    $query->where('status', 'expired')
-                        ->orWhere(function($q) use ($nowPlusOneMinute) {
-                            $q->where('status', 'active')
-                                ->where('end_date', '<=', $nowPlusOneMinute);
-                        });
-                })
+            // Tier 1: Place already-endorsed students (30 minutes before deadline - HIGHEST PRIORITY)
+            $tier1Trigger = \App\Models\Deadline::where('category', 'internship_placement')
+                ->where('status', 'active')
+                ->where('end_date', '<=', $nowPlusThirtyMinutes)
+                ->where('end_date', '>', now())
+                ->exists();
+
+            // Tier 2: Auto-endorse matched students (20 minutes before deadline)
+            $tier2Trigger = \App\Models\Deadline::where('category', 'internship_placement')
+                ->where('status', 'active')
+                ->where('end_date', '<=', $nowPlusTwentyMinutes)
+                ->where('end_date', '>', now())
+                ->exists();
+
+            // Tier 3: Emergency placement for students with no fallbacks (10 minutes before deadline)
+            $tier3Trigger = \App\Models\Deadline::where('category', 'internship_placement')
+                ->where('status', 'active')
+                ->where('end_date', '<=', $nowPlusTenMinutes)
+                ->where('end_date', '>', now())
                 ->exists();
 
             // Also check for legacy categories for backward compatibility
@@ -1894,9 +1906,67 @@ class AdminController extends Controller
                 })
                 ->exists();
 
-            if ($placementAutoTrigger || $legacySipTrigger || $legacyHteTrigger) {
-                // Ensure this only runs once per minute
-                if (\Illuminate\Support\Facades\Cache::lock('auto-process-placement', 60)->get()) {
+            // Tier 1: Process already-endorsed students (30 minutes before - HIGHEST PRIORITY)
+            if ($tier1Trigger) {
+                // Ensure this only runs once per 5 minutes
+                if (\Illuminate\Support\Facades\Cache::lock('auto-endorsed-placement', 300)->get()) {
+                    try {
+                        $placementService = new \App\Services\AutomaticPlacementService();
+                        $endorsedResults = $placementService->processEndorsedStudentsPlacements();
+                        
+                        if ($endorsedResults['endorsed_placed_count'] > 0) {
+                            \Illuminate\Support\Facades\Log::info('Endorsed students placements processed', [
+                                'placed_count' => $endorsedResults['endorsed_placed_count'],
+                                'errors_count' => count($endorsedResults['errors']),
+                            ]);
+                        }
+                    } finally {
+                        \Illuminate\Support\Facades\Cache::lock('auto-endorsed-placement', 300)->release();
+                    }
+                }
+            }
+            // Tier 2: Auto-endorse matched students (20 minutes before)
+            elseif ($tier2Trigger && !$tier1Trigger) {
+                // Ensure this only runs once per 5 minutes
+                if (\Illuminate\Support\Facades\Cache::lock('auto-matched-placement', 300)->get()) {
+                    try {
+                        $placementService = new \App\Services\AutomaticPlacementService();
+                        $matchedResults = $placementService->processMatchedStudentsPlacements();
+                        
+                        if ($matchedResults['matched_placed_count'] > 0) {
+                            \Illuminate\Support\Facades\Log::info('Matched students auto-placements processed', [
+                                'placed_count' => $matchedResults['matched_placed_count'],
+                                'errors_count' => count($matchedResults['errors']),
+                            ]);
+                        }
+                    } finally {
+                        \Illuminate\Support\Facades\Cache::lock('auto-matched-placement', 300)->release();
+                    }
+                }
+            }
+            // Tier 3: Emergency placement for students with no fallbacks (10 minutes before)
+            elseif ($tier3Trigger && !$tier2Trigger && !$tier1Trigger) {
+                // Ensure this only runs once per 5 minutes
+                if (\Illuminate\Support\Facades\Cache::lock('auto-emergency-placement', 300)->get()) {
+                    try {
+                        $placementService = new \App\Services\AutomaticPlacementService();
+                        $emergencyResults = $placementService->processEmergencyPlacements();
+                        
+                        if ($emergencyResults['emergency_placed_count'] > 0) {
+                            \Illuminate\Support\Facades\Log::info('Emergency placements processed', [
+                                'placed_count' => $emergencyResults['emergency_placed_count'],
+                                'errors_count' => count($emergencyResults['errors']),
+                            ]);
+                        }
+                    } finally {
+                        \Illuminate\Support\Facades\Cache::lock('auto-emergency-placement', 300)->release();
+                    }
+                }
+            }
+            
+            // Also handle legacy SIP endorsement and HTE placement triggers at T-1 minute for backward compatibility
+            if ($legacySipTrigger || $legacyHteTrigger) {
+                if (\Illuminate\Support\Facades\Cache::lock('auto-legacy-placement', 60)->get()) {
                     try {
                         // Run endorsements first
                         $endorsementService = new \App\Services\AutomaticEndorsementService();
@@ -1906,7 +1976,7 @@ class AdminController extends Controller
                         $placementService = new \App\Services\AutomaticPlacementService();
                         $placementService->processHtePlacements();
                     } finally {
-                        \Illuminate\Support\Facades\Cache::lock('auto-process-placement', 60)->release();
+                        \Illuminate\Support\Facades\Cache::lock('auto-legacy-placement', 60)->release();
                     }
                 }
             }
@@ -2241,13 +2311,26 @@ class AdminController extends Controller
             // First, process SIP endorsements
             $endorsementResults = $endorsementService->processSipEndorsements();
             
-            // Then, process HTE placements
+            // Then, process HTE placements (includes emergency placements)
             $placementResults = $placementService->processHtePlacements();
 
             $message = "Internship placements processed successfully. ";
             $message .= "Endorsed: {$endorsementResults['endorsed_count']} students, ";
-            $message .= "Placed: {$placementResults['placed_count']} students, ";
-            $message .= "Skipped: " . ($endorsementResults['skipped_count'] + $placementResults['skipped_count']) . " students";
+            $message .= "Placed: {$placementResults['placed_count']} students";
+            
+            // Add breakdown of placement types
+            $breakdown = [];
+            if (isset($placementResults['matched_placed_count']) && $placementResults['matched_placed_count'] > 0) {
+                $breakdown[] = "{$placementResults['matched_placed_count']} auto-endorsed from matched page";
+            }
+            if (isset($placementResults['emergency_placed_count']) && $placementResults['emergency_placed_count'] > 0) {
+                $breakdown[] = "{$placementResults['emergency_placed_count']} emergency placements";
+            }
+            if (!empty($breakdown)) {
+                $message .= " (including " . implode(", ", $breakdown) . ")";
+            }
+            
+            $message .= ", Skipped: " . ($endorsementResults['skipped_count'] + $placementResults['skipped_count']) . " students";
 
             $totalErrors = count($endorsementResults['errors']) + count($placementResults['errors']);
             if ($totalErrors > 0) {

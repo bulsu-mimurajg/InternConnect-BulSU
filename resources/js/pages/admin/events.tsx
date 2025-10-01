@@ -252,25 +252,38 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
                                 {showArchived ? 'Show Active' : 'Show Expired'}
                             </Button>
                         </div>
-
-                        {/* Automation Section */}
-                        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-                                <Button
-                                    variant="default"
-                                    onClick={() => {
-                                        if (confirm('Process internship placements? This will endorse students based on compatibility and place them according to HTE rankings.')) {
-                                            post('/admin/deadlines/process-placement');
-                                        }
-                                    }}
-                                    className="flex items-center gap-2 h-9 text-sm"
-                                >
-                                    <ClockIcon className="h-4 w-4" />
-                                    <span className="hidden sm:inline">Process Internship Placements</span>
-                                    <span className="sm:hidden">Process Placements</span>
-                                </Button>
-                        </div>
                     </div>
                 </div>
+
+                {/* 3-Tier Automatic Placement Info Card */}
+                <Card className="border-l-4 border-l-blue-500 bg-blue-50 dark:bg-blue-900/20">
+                    <CardContent className="p-4">
+                        <div className="flex items-center gap-6">
+                            <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center flex-shrink-0">
+                                <ClockIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                            </div>
+                            <div className="space-y-3 flex-1">
+                                <h3 className="font-semibold text-blue-800 dark:text-blue-200">
+                                    3-Tier Automatic Internship Placement System
+                                </h3>
+                                <div className="text-sm text-blue-700 dark:text-blue-300 space-y-2">
+                                    <div className="flex items-start gap-2">
+                                        <span className="font-semibold min-w-[140px]">Tier 1 (T-30 min):</span>
+                                        <span>Place already-endorsed students according to compatibility rankings and available slots</span>
+                                    </div>
+                                    <div className="flex items-start gap-2">
+                                        <span className="font-semibold min-w-[140px]">Tier 2 (T-20 min):</span>
+                                        <span>Auto-endorse and place students from matched page (students with valid matches but not yet endorsed) by compatibility</span>
+                                    </div>
+                                    <div className="flex items-start gap-2">
+                                        <span className="font-semibold min-w-[140px]">Tier 3 (T-10 min):</span>
+                                        <span>Emergency placement for students with no remaining fallback options into any available internship slots</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
 
                 {/* Add Form */}
                 {showForm && (
