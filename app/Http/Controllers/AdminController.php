@@ -2005,7 +2005,9 @@ class AdminController extends Controller
                 ->first();
 
             if ($existingDeadline) {
-                return redirect()->back()->withErrors(['error' => 'There is already an active deadline for this category. Please extend or update the existing deadline instead.']);
+                return redirect()->back()
+                    ->withErrors(['category' => 'There is already an active deadline for this category. Please extend or update the existing deadline instead.'])
+                    ->withInput();
             }
 
             $deadline = Deadline::create([
@@ -2077,7 +2079,9 @@ class AdminController extends Controller
                     ->first();
 
                 if ($existingDeadline) {
-                    return redirect()->back()->withErrors(['error' => 'There is already an active deadline for this category. Please extend or update the existing deadline instead.']);
+                    return redirect()->back()
+                        ->withErrors(['category' => 'There is already an active deadline for this category. Please extend or update the existing deadline instead.'])
+                        ->withInput();
                 }
             }
 

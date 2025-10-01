@@ -360,18 +360,6 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
                                     </div>
                                 </div>
 
-                                {/* Display general errors */}
-                                {Object.keys(errors).length > 0 && (
-                                    <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-lg">
-                                        <p className="font-medium text-sm">Please fix the following errors:</p>
-                                        <ul className="list-disc list-inside mt-2 text-sm space-y-1">
-                                            {Object.entries(errors).map(([field, error]) => (
-                                                <li key={field}>{field}: {String(error)}</li>
-                                            ))}
-                                        </ul>
-                                    </div>
-                                )}
-
                                 <div className="flex flex-col sm:flex-row gap-3 pt-4">
                                     <Button
                                         type="submit"
@@ -544,18 +532,6 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
                                 </div>
                             </div>
 
-                            {/* Display general errors */}
-                            {Object.keys(extendErrors).length > 0 && (
-                                <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-lg">
-                                    <p className="font-medium text-sm">Please fix the following errors:</p>
-                                    <ul className="list-disc list-inside mt-2 text-sm space-y-1">
-                                        {Object.entries(extendErrors).map(([field, error]) => (
-                                            <li key={field}>{field}: {String(error)}</li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            )}
-
                             <div className="flex flex-col sm:flex-row gap-3">
                                 <Button
                                     onClick={handleExtendSubmit}
@@ -664,18 +640,6 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
                                         </div>
                                     </div>
                                 </div>
-
-                                {/* Display general errors */}
-                                {Object.keys(errors).length > 0 && (
-                                    <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-lg">
-                                        <p className="font-medium text-sm">Please fix the following errors:</p>
-                                        <ul className="list-disc list-inside mt-2 text-sm space-y-1">
-                                            {Object.entries(errors).map(([field, error]) => (
-                                                <li key={field}>{field}: {String(error)}</li>
-                                            ))}
-                                        </ul>
-                                    </div>
-                                )}
 
                                 <div className="flex flex-col sm:flex-row gap-3">
                                     <Button
