@@ -338,63 +338,63 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
             if (notification.data?.student_id) {
                 // If we have student_id, navigate with highlighting
                 const studentId = notification.data.student_id as number;
-                router.visit(`/hte/endorsement-table?highlightStudent=${studentId}&highlightDuration=1500`);
+                window.location.href = `/hte/endorsement-table?highlightStudent=${studentId}&highlightDuration=1500`;
             } else {
                 // If no student_id, just navigate to the table
-                router.visit('/hte/endorsement-table');
+                window.location.href = '/hte/endorsement-table';
             }
         } else if (notification.type === 'hte_deadline') {
             // Navigate based on deadline category
             if (notification.data?.category === 'student_placements_by_hte') {
-                router.visit('/hte/endorsement-table');
+                window.location.href = '/hte/endorsement-table';
             } else {
-                router.visit('/form');
+                window.location.href = '/form';
             }
         } else if (notification.type === 'student_deadline' || notification.type === 'unified_deadline') {
             // Navigate based on deadline category and user role
             if (notification.data?.category === 'student_verification' && hasRole('adviser')) {
                 // Only student verification deadlines redirect advisers to verification page
-                router.visit('/student-verification');
+                window.location.href = '/student-verification';
             } else if (notification.data?.category === 'student_placements') {
                 // Navigate based on user role
                 if (hasRole('admin')) {
-                    router.visit('/student/placed');
+                    window.location.href = '/student/placed';
                 } else {
-                    router.visit('/student/dashboard');
+                    window.location.href = '/student/dashboard';
                 }
             } else if (notification.data?.category === 'student_assessment_form') {
                 // Navigate to assessment for students
-                router.visit('/assessment');
+                window.location.href = '/assessment';
             } else if (notification.data?.category === 'hte_assessment_form') {
                 // Navigate to form for HTE users
-                router.visit('/form');
+                window.location.href = '/form';
             } else if (notification.data?.category === 'internship_placement') {
                 // Navigate based on user role for internship placement
                 if (hasRole('admin')) {
-                    router.visit('/student/placed');
+                    window.location.href = '/student/placed';
                 } else if (hasRole('hte')) {
-                    router.visit('/hte/endorsement-table');
+                    window.location.href = '/hte/endorsement-table';
                 } else {
-                    router.visit('/student/dashboard');
+                    window.location.href = '/student/dashboard';
                 }
             } else {
                 // Default fallback for other deadline types
                 if (hasRole('admin')) {
-                    router.visit('/admin/dashboard');
+                    window.location.href = '/admin/dashboard';
                 } else if (hasRole('adviser')) {
-                    router.visit('/adviser/dashboard');
+                    window.location.href = '/adviser/dashboard';
                 } else if (hasRole('hte')) {
-                    router.visit('/hte/dashboard');
+                    window.location.href = '/hte/dashboard';
                 } else {
-                    router.visit('/student/dashboard');
+                    window.location.href = '/student/dashboard';
                 }
             }
         } else if (notification.type === 'student_placement' || notification.type === 'student_placement_status') {
             // Navigate based on user role
             if (hasRole('admin')) {
-                router.visit('/student/placed');
+                window.location.href = '/student/placed';
             } else {
-                router.visit('/student/dashboard');
+                window.location.href = '/student/dashboard';
             }
         } else if (notification.type === 'student_approval_request' || notification.type === 'student_status_change' || notification.type === 'student_registration_pending') {
             // Navigate based on user role
@@ -403,12 +403,12 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                 if (notification.data?.redirect_url && typeof notification.data.redirect_url === 'string') {
                     window.location.href = notification.data.redirect_url;
                 } else {
-                    router.visit('/student-verification');
+                    window.location.href = '/student-verification';
                 }
             } else if (hasRole('admin')) {
-                router.visit('/student/list');
+                window.location.href = '/student/list';
             } else {
-                router.visit('/student/dashboard');
+                window.location.href = '/student/dashboard';
             }
         } else {
             // Default fallback - log unknown notification type
@@ -418,13 +418,13 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
 
             // Default navigation based on user role
             if (hasRole('adviser')) {
-                router.visit('/adviser/dashboard');
+                window.location.href = '/adviser/dashboard';
             } else if (hasRole('admin')) {
-                router.visit('/admin-dashboard');
+                window.location.href = '/admin-dashboard';
             } else if (hasRole('hte')) {
-                router.visit('/hte/dashboard');
+                window.location.href = '/hte/dashboard';
             } else {
-                router.visit('/student/dashboard');
+                window.location.href = '/student/dashboard';
             }
         }
     };
