@@ -172,8 +172,8 @@ export default function StudentForm() {
                 <FormStepCounter steps={steps} currentStep={currentStep} />
             </div>
             <div className="relative min-h-[100vh] flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 md:min-h-min dark:border-sidebar-border">
-                <div className="p-4">
-                    <div className="">
+                <div className="flex flex-col h-full">
+                    <div className="flex-1 p-4 overflow-y-auto">
                         <Form {...form}>
                             <form onSubmit={form.handleSubmit(onSubmit)}>
                                 {currentStep === 0 && <PersonalInfo />}
@@ -189,26 +189,34 @@ export default function StudentForm() {
                             </form>
                         </Form>
                     </div>
-                    <div className="mt-4 flex justify-between items-center">
+                    <div className="border-t border-border bg-background p-4 flex justify-between items-center">
                         <div className="text-sm text-gray-600">
                             {currentStep < steps.length - 1 && (
                                 <span>Please complete all required fields before proceeding</span>
                             )}
                         </div>
-                        <div className="flex gap-2">
-                            <Button onClick={prev} disabled={currentStep === 0}>
-                                Previous
-                            </Button>
-                            {currentStep === steps.length - 1 ? (
-                                <Button type="submit" disabled={isSubmitting} onClick={form.handleSubmit(onSubmit)}>
-                                    {isSubmitting ? 'Submitting...' : 'Submit'}
-                                </Button>
-                            ) : (
+                        {currentStep < steps.length - 1 && (
+                            <div className="flex gap-2">
+                                {currentStep > 0 && (
+                                    <Button onClick={prev} variant="outline">
+                                        Previous
+                                    </Button>
+                                )}
                                 <Button onClick={next}>
                                     Next
                                 </Button>
-                            )}
-                        </div>
+                            </div>
+                        )}
+                        {currentStep === steps.length - 1 && (
+                            <div className="flex gap-2">
+                                <Button onClick={prev} variant="outline">
+                                    Previous
+                                </Button>
+                                <Button type="submit" disabled={isSubmitting} onClick={form.handleSubmit(onSubmit)}>
+                                    {isSubmitting ? 'Submitting...' : 'Submit'}
+                                </Button>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
