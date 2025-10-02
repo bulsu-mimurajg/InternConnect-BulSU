@@ -56,6 +56,7 @@ interface Section {
 interface Props {
     pendingStudents: Student[];
     verifiedStudents: Student[];
+    rejectedStudents: Student[];
     adviserSection: string | null;
     adviserSections: Section[];
     currentSectionId: number | null;
@@ -63,27 +64,17 @@ interface Props {
     deadlineInfo: DeadlineInfo | null;
 }
 
-export default function Application({ pendingStudents, verifiedStudents, adviserSection, adviserSections, currentSectionId, deadlineActive, deadlineInfo }: Props) {
+export default function Application({ pendingStudents, verifiedStudents, rejectedStudents, adviserSection, adviserSections, currentSectionId, deadlineActive, deadlineInfo }: Props) {
     const [selectedStudents, setSelectedStudents] = useState<number[]>([]);
     const [selectedVerifiedStudents, setSelectedVerifiedStudents] = useState<number[]>([]);
+    const [selectedRejectedStudents, setSelectedRejectedStudents] = useState<number[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
     const [showUndoDialog, setShowUndoDialog] = useState(false);
     const [lastAction, setLastAction] = useState<{
-        type: 'approve' | 'reject' | 'remove';
+        type: 'approve' | 'reject' | 'remove' | 'restore';
         studentIds: number[];
         count: number;
     } | null>(null);
-    const [showSuccessMessage, setShowSuccessMessage] = useState(false);
-
-    // Auto-hide success message after 5 seconds
-    useEffect(() => {
-        if (showSuccessMessage) {
-            const timer = setTimeout(() => {
-                setShowSuccessMessage(false);
-            }, 5000);
-            return () => clearTimeout(timer);
-        }
-    }, [showSuccessMessage]);
 
     const handleSelectAll = (checked: boolean) => {
         if (checked) {
@@ -125,81 +116,106 @@ export default function Application({ pendingStudents, verifiedStudents, adviser
         }
     };
 
+    const handleSelectRejectedStudent = (studentId: number, checked: boolean) => {
+        if (checked) {
+            setSelectedRejectedStudents(prev => [...prev, studentId]);
+        } else {
+            setSelectedRejectedStudents(prev => prev.filter(id => id !== studentId));
+        }
+    };
+
+    const handleSelectAllRejected = (checked: boolean) => {
+        if (checked) {
+            setSelectedRejectedStudents(rejectedStudents.map(student => student.id));
+        } else {
+            setSelectedRejectedStudents([]);
+        }
+    };
+
     const handleApprove = () => {
         if (selectedStudents.length === 0) return;
 
-        setIsProcessing(true);
-        router.post(route('application.approve'), {
-            studentIds: selectedStudents
-        }, {
-            onFinish: () => {
-                setIsProcessing(false);
-                setLastAction({
-                    type: 'approve',
-                    studentIds: selectedStudents,
-                    count: selectedStudents.length
-                });
-                setSelectedStudents([]);
-                setShowUndoDialog(true);
-            }
+        setLastAction({
+            type: 'approve',
+            studentIds: selectedStudents,
+            count: selectedStudents.length
         });
+        setShowUndoDialog(true);
     };
 
     const handleReject = () => {
         if (selectedStudents.length === 0) return;
 
-        setIsProcessing(true);
-        router.post(route('application.reject'), {
-            studentIds: selectedStudents
-        }, {
-            onFinish: () => {
-                setIsProcessing(false);
-                setLastAction({
-                    type: 'reject',
-                    studentIds: selectedStudents,
-                    count: selectedStudents.length
-                });
-                setSelectedStudents([]);
-                setShowUndoDialog(true);
-            }
+        setLastAction({
+            type: 'reject',
+            studentIds: selectedStudents,
+            count: selectedStudents.length
         });
+        setShowUndoDialog(true);
     };
 
     const handleRemoveAccess = () => {
         if (selectedVerifiedStudents.length === 0) return;
 
-        setIsProcessing(true);
-        router.post(route('application.remove-access'), {
-            studentIds: selectedVerifiedStudents
-        }, {
-            onFinish: () => {
-                setIsProcessing(false);
-                setLastAction({
-                    type: 'remove',
-                    studentIds: selectedVerifiedStudents,
-                    count: selectedVerifiedStudents.length
-                });
-                setSelectedVerifiedStudents([]);
-                setShowUndoDialog(true);
-            }
+        setLastAction({
+            type: 'remove',
+            studentIds: selectedVerifiedStudents,
+            count: selectedVerifiedStudents.length
         });
+        setShowUndoDialog(true);
     };
 
-    const handleUndo = () => {
+    const handleRestoreStudents = () => {
+        if (selectedRejectedStudents.length === 0) return;
+
+        setLastAction({
+            type: 'restore',
+            studentIds: selectedRejectedStudents,
+            count: selectedRejectedStudents.length
+        });
+        setShowUndoDialog(true);
+    };
+
+    const handleContinue = () => {
         if (!lastAction) return;
 
         setIsProcessing(true);
-        router.post(route('application.undo'), {
-            action: lastAction.type,
+        
+        // Execute the original action based on the type
+        let routeName = '';
+        switch (lastAction.type) {
+            case 'approve':
+                routeName = route('application.approve');
+                break;
+            case 'reject':
+                routeName = route('application.reject');
+                break;
+            case 'remove':
+                routeName = route('application.remove-access');
+                break;
+            case 'restore':
+                routeName = route('application.restore');
+                break;
+        }
+
+        router.post(routeName, {
             studentIds: lastAction.studentIds
         }, {
             onFinish: () => {
                 setIsProcessing(false);
                 setShowUndoDialog(false);
                 setLastAction(null);
-                setShowSuccessMessage(true);
+                // Clear the selected students
+                setSelectedStudents([]);
+                setSelectedVerifiedStudents([]);
+                setSelectedRejectedStudents([]);
             }
         });
+    };
+
+    const handleCancel = () => {
+        setShowUndoDialog(false);
+        setLastAction(null);
     };
 
     const closeUndoDialog = () => {
@@ -232,13 +248,6 @@ export default function Application({ pendingStudents, verifiedStudents, adviser
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Application" />
             <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
-                {/* Success Message */}
-                {showSuccessMessage && (
-                    <div className="fixed top-4 right-4 z-50 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
-                        Action undone successfully!
-                    </div>
-                )}
-
                 {/* Section Info */}
                 <Card>
                     <CardHeader>
@@ -475,23 +484,123 @@ export default function Application({ pendingStudents, verifiedStudents, adviser
                         )}
                     </CardContent>
                 </Card>
+
+                {/* Rejected Students */}
+                <Card>
+                    <CardHeader>
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <CardTitle className="flex items-center gap-2">
+                                    <UserXIcon className="h-5 w-5" />
+                                    Rejected Students ({rejectedStudents.length})
+                                </CardTitle>
+                                <CardDescription>
+                                    Students who have been rejected and can be restored to pending status
+                                </CardDescription>
+                            </div>
+                            {rejectedStudents.length > 0 && (
+                                <div className="flex items-center gap-2">
+                                    <Checkbox
+                                        checked={selectedRejectedStudents.length === rejectedStudents.length}
+                                        onCheckedChange={handleSelectAllRejected}
+                                    />
+                                    <span className="text-sm text-muted-foreground">Select All</span>
+                                </div>
+                            )}
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        {rejectedStudents.length === 0 ? (
+                            <div className="text-center py-8 text-muted-foreground">
+                                No rejected students found
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {rejectedStudents.map((student) => (
+                                        <div
+                                            key={student.id}
+                                            className="flex items-center space-x-3 p-3 border rounded-lg bg-red-50"
+                                        >
+                                            <Checkbox
+                                                checked={selectedRejectedStudents.includes(student.id)}
+                                                onCheckedChange={(checked) =>
+                                                    handleSelectRejectedStudent(student.id, checked as boolean)
+                                                }
+                                            />
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <p className="text-sm font-medium truncate">
+                                                        {student.username} {(() => {
+                                                            const firstName = student.registration_data?.first_name;
+                                                            const lastName = student.registration_data?.last_name;
+                                                            
+                                                            if (firstName && lastName) {
+                                                                return `| ${firstName} ${lastName}`;
+                                                            }
+                                                            return '| Rejected Student';
+                                                        })()}
+                                                    </p>
+                                                    <div className="flex items-center gap-2">
+                                                        <Badge variant="destructive" className="text-xs">
+                                                            Rejected
+                                                        </Badge>
+                                                    </div>
+                                                </div>
+                                                <p className="text-xs text-muted-foreground truncate mb-2">
+                                                    {student.email}
+                                                </p>
+                                                {currentSectionId === null && student.academe_accounts && student.academe_accounts.length > 0 && (
+                                                    <p className="text-xs text-blue-600 truncate mb-2">
+                                                        {student.academe_accounts[0].section.section_name}
+                                                    </p>
+                                                )}
+                                                <p className="text-xs text-red-600">
+                                                    Rejected: {(student as any).rejected_at || 'Unknown'}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {selectedRejectedStudents.length > 0 && (
+                                    <div className="flex items-center gap-2 pt-4 border-t">
+                                        <Button
+                                            onClick={handleRestoreStudents}
+                                            disabled={isProcessing}
+                                            className="flex items-center gap-2"
+                                        >
+                                            <RotateCcwIcon className="h-4 w-4" />
+                                            Restore to Pending ({selectedRejectedStudents.length})
+                                        </Button>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
             </div>
 
-            {/* Undo Dialog */}
-            <Dialog open={showUndoDialog} onOpenChange={setShowUndoDialog}>
-                <DialogContent>
+            {/* Confirmation Dialog */}
+            <Dialog open={showUndoDialog} onOpenChange={() => {}}>
+                <DialogContent className="sm:max-w-[425px] [&>button]:hidden">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
-                            <RotateCcwIcon className="h-5 w-5" />
-                            Undo Action
+                            <CheckIcon className="h-5 w-5" />
+                            Confirm Action
                         </DialogTitle>
                         <DialogDescription>
                             {lastAction && (
                                 <>
-                                    You just {lastAction.type === 'approve' ? 'approved' :
-                                               lastAction.type === 'reject' ? 'rejected' :
-                                               'removed access for'} {lastAction.count} student{lastAction.count > 1 ? 's' : ''}.
-                                    Would you like to undo this action?
+                                    Are you sure you want to {lastAction.type === 'approve' ? 'approve' :
+                                               lastAction.type === 'reject' ? 'reject' :
+                                               lastAction.type === 'remove' ? 'remove access for' :
+                                               'restore'} {lastAction.count} student{lastAction.count > 1 ? 's' : ''}?
+                                    {lastAction.type === 'approve' && !deadlineActive && (
+                                        <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
+                                            <strong>Warning:</strong> Student verification deadline has expired. You cannot approve students at this time.
+                                        </div>
+                                    )}
                                 </>
                             )}
                         </DialogDescription>
@@ -499,18 +608,18 @@ export default function Application({ pendingStudents, verifiedStudents, adviser
                     <DialogFooter>
                         <Button
                             variant="outline"
-                            onClick={closeUndoDialog}
+                            onClick={handleCancel}
                             disabled={isProcessing}
                         >
                             Cancel
                         </Button>
                         <Button
-                            onClick={handleUndo}
-                            disabled={isProcessing}
+                            onClick={handleContinue}
+                            disabled={isProcessing || (lastAction?.type === 'approve' && !deadlineActive)}
                             className="flex items-center gap-2"
                         >
-                            <RotateCcwIcon className="h-4 w-4" />
-                            Undo Action
+                            <CheckIcon className="h-4 w-4" />
+                            Continue
                         </Button>
                     </DialogFooter>
                 </DialogContent>

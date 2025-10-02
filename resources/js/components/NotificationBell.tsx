@@ -54,6 +54,7 @@ interface SharedData {
         user: AuthUser;
         role: string;
     };
+    csrf_token?: string;
     [key: string]: unknown;
 }
 
@@ -63,7 +64,7 @@ interface FilterButton {
 }
 
 export default function NotificationBell({ initialCount = 0 }: NotificationBellProps) {
-    const { auth } = usePage<SharedData>().props;
+    const { auth, csrf_token } = usePage<SharedData>().props;
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [unreadCount, setUnreadCount] = useState(initialCount);
     const [isOpen, setIsOpen] = useState(false);
@@ -81,6 +82,54 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
         from: 0,
         to: 0,
     });
+    
+
+    // Helper function to refresh CSRF token from server
+    const refreshCsrfToken = async (): Promise<string> => {
+        try {
+            const response = await fetch('/csrf-token', {
+                method: 'GET',
+                credentials: 'same-origin',
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                return data.token || '';
+            }
+        } catch (error) {
+            console.error('Failed to refresh CSRF token:', error);
+        }
+        return '';
+    };
+
+    // Helper function to get CSRF token from multiple sources
+    const getCsrfToken = (): string => {
+        // Try Inertia props first (most reliable)
+        if (csrf_token) {
+            return csrf_token;
+        }
+        
+        // Try meta tag
+        const metaToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        if (metaToken) {
+            return metaToken;
+        }
+        
+        // Try to get from window object (Laravel sometimes puts it there)
+        const windowToken = (window as any).Laravel?.csrfToken;
+        if (windowToken) {
+            return windowToken;
+        }
+        
+        // Try to get from cookies
+        const cookies = document.cookie.split(';');
+        const csrfCookie = cookies.find(cookie => cookie.trim().startsWith('XSRF-TOKEN='));
+        if (csrfCookie) {
+            return decodeURIComponent(csrfCookie.split('=')[1]);
+        }
+        
+        return '';
+    };
 
     const fetchNotifications = async (page = pagination.current_page, filterToUse = filter, showReadToUse = showRead) => {
         setIsLoading(true);
@@ -136,8 +185,13 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
 
     const markAsRead = async (notificationId: number): Promise<boolean> => {
         try {
-            // Get CSRF token from meta tag
-            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+            // Get CSRF token using helper function
+            const csrfToken = getCsrfToken();
+            
+            if (!csrfToken) {
+                console.error('CSRF token not found in any source');
+                return false;
+            }
             
             const response = await fetch(`/notifications/${notificationId}/mark-read`, {
                 method: 'POST',
@@ -145,12 +199,58 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': csrfToken,
                     'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json',
                 },
                 credentials: 'same-origin',
             });
 
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                const errorText = await response.text();
+                console.error(`HTTP error! status: ${response.status}, response: ${errorText}`);
+                
+                // If it's a CSRF token mismatch (419), try to refresh the token and retry
+                if (response.status === 419) {
+                    const newToken = await refreshCsrfToken();
+                    if (newToken) {
+                        const retryResponse = await fetch(`/notifications/${notificationId}/mark-read`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': newToken,
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'Accept': 'application/json',
+                            },
+                            credentials: 'same-origin',
+                        });
+                        
+                        if (retryResponse.ok) {
+                            const retryResult = await retryResponse.json();
+                            if (retryResult.success) {
+                                // Update local state
+                                setNotifications(prev =>
+                                    prev.map(notif =>
+                                        notif.id === notificationId ? { ...notif, is_read: true } : notif
+                                    )
+                                );
+                                setUnreadCount(prev => Math.max(0, prev - 1));
+                                
+                                // If showing unread only, remove the notification from the list
+                                if (!showRead) {
+                                    setNotifications(prev => prev.filter(notif => notif.id !== notificationId));
+                                    setPagination(prev => ({ 
+                                        ...prev, 
+                                        total: Math.max(0, prev.total - 1),
+                                        from: Math.max(1, prev.from - 1),
+                                        to: Math.max(0, prev.to - 1)
+                                    }));
+                                }
+                                return true;
+                            }
+                        }
+                    }
+                }
+                
+                return false;
             }
 
             const result = await response.json();
@@ -188,21 +288,20 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
             }
         } catch (error) {
             console.error('Failed to mark notification as read:', error);
-            // Still update UI optimistically
-            setNotifications(prev =>
-                prev.map(notif =>
-                    notif.id === notificationId ? { ...notif, is_read: true } : notif
-                )
-            );
-            setUnreadCount(prev => Math.max(0, prev - 1));
+            // Don't update UI optimistically on network errors to avoid inconsistent state
             return false;
         }
     };
 
     const markAllAsRead = async () => {
         try {
-            // Get CSRF token from meta tag
-            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+            // Get CSRF token using helper function
+            const csrfToken = getCsrfToken();
+            
+            if (!csrfToken) {
+                console.error('CSRF token not found');
+                return;
+            }
             
             const response = await fetch('/notifications/mark-all-read', {
                 method: 'POST',
@@ -210,6 +309,7 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': csrfToken,
                     'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json',
                 },
                 credentials: 'same-origin',
             });
@@ -391,108 +491,126 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
             // Mark as read when clicked (regardless of current status) and wait for completion
             const markReadSuccess = await markAsRead(notification.id);
             
-            // Small delay to ensure the API call completes and UI updates
-            if (markReadSuccess) {
-                await new Promise(resolve => setTimeout(resolve, 200));
+            // Ensure the API call has completed before proceeding with navigation
+            if (!markReadSuccess) {
+                // Still update UI optimistically to provide immediate feedback
+                setNotifications(prev =>
+                    prev.map(notif =>
+                        notif.id === notification.id ? { ...notif, is_read: true } : notif
+                    )
+                );
+                setUnreadCount(prev => Math.max(0, prev - 1));
             }
+
+            // Add a delay to ensure the API call has fully completed before navigation
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // Close the notification dropdown before navigation
+            setIsOpen(false);
 
             // Don't reset filters - keep current filter state to prevent jittering
 
-            // Handle navigation based on notification type
-            if (notification.type === 'hte_endorsement') {
+            // Handle navigation based on notification type using Inertia.js
+            try {
+                if (notification.type === 'hte_endorsement') {
                 // Navigate to HTE endorsement table
                 if (notification.data?.student_id) {
                     // If we have student_id, navigate with highlighting
                     const studentId = notification.data.student_id as number;
-                    window.location.href = `/hte/endorsement-table?highlightStudent=${studentId}&highlightDuration=1500`;
+                    router.get(`/hte/endorsement-table?highlightStudent=${studentId}&highlightDuration=1500`);
                 } else {
                     // If no student_id, just navigate to the table
-                    window.location.href = '/hte/endorsement-table';
+                    router.get('/hte/endorsement-table');
                 }
             } else if (notification.type === 'hte_deadline') {
                 // Navigate based on deadline category
                 if (notification.data?.category === 'student_placements_by_hte') {
-                    window.location.href = '/hte/endorsement-table';
+                    router.get('/hte/endorsement-table');
                 } else {
-                    window.location.href = '/form';
+                    router.get('/form');
                 }
             } else if (notification.type === 'student_deadline' || notification.type === 'unified_deadline' || notification.type === 'deadline_released' || notification.type === 'deadline_expired') {
                 // Navigate based on deadline category and user role
                 if (notification.data?.category === 'student_verification' && hasRole('adviser')) {
                     // Only student verification deadlines redirect advisers to verification page
                     try {
-                        window.location.href = '/student-verification';
+                        router.get('/student-verification');
                     } catch (error) {
                         console.error('Failed to redirect to student verification page:', error);
                         // Fallback to dashboard
-                        window.location.href = '/adviser/dashboard';
+                        router.get('/adviser/dashboard');
                     }
                 } else if (notification.data?.category === 'student_placements') {
                     // Navigate based on user role
                     if (hasRole('admin')) {
-                        window.location.href = '/student/placed';
+                        router.get('/student/placed');
                     } else {
-                        window.location.href = '/student/dashboard';
+                        router.get('/student/dashboard');
                     }
                 } else if (notification.data?.category === 'student_assessment_form') {
                     // Navigate to assessment for students
-                    window.location.href = '/assessment';
+                    router.get('/assessment');
                 } else if (notification.data?.category === 'hte_assessment_form') {
                     // Navigate to form for HTE users
-                    window.location.href = '/form';
+                    router.get('/form');
                 } else if (notification.data?.category === 'internship_placement') {
                     // Navigate based on user role for internship placement
                     if (hasRole('admin')) {
-                        window.location.href = '/student/placed';
+                        router.get('/student/placed');
                     } else if (hasRole('hte')) {
-                        window.location.href = '/hte/endorsement-table';
+                        router.get('/hte/endorsement-table');
                     } else {
-                        window.location.href = '/student/dashboard';
+                        router.get('/student/dashboard');
                     }
                 } else {
                     // Default fallback for other deadline types
                     if (hasRole('admin')) {
-                        window.location.href = '/admin/dashboard';
+                        router.get('/admin/dashboard');
                     } else if (hasRole('adviser')) {
-                        window.location.href = '/adviser/dashboard';
+                        router.get('/adviser/dashboard');
                     } else if (hasRole('hte')) {
-                        window.location.href = '/hte/dashboard';
+                        router.get('/hte/dashboard');
                     } else {
-                        window.location.href = '/student/dashboard';
+                        router.get('/student/dashboard');
                     }
                 }
             } else if (notification.type === 'student_placement' || notification.type === 'student_placement_status') {
                 // Navigate based on user role
                 if (hasRole('admin')) {
-                    window.location.href = '/student/placed';
+                    router.get('/student/placed');
                 } else {
-                    window.location.href = '/student/dashboard';
+                    router.get('/student/dashboard');
                 }
             } else if (notification.type === 'student_approval_request' || notification.type === 'student_status_change' || notification.type === 'student_registration_pending' || notification.type === 'new_student_registration' || notification.type === 'student_verification_pending' || notification.type === 'student_approved' || notification.type === 'student_approval_needed') {
                 // Navigate based on user role
                 if (hasRole('adviser')) {
                     // Use redirect_url if available, otherwise default to student-verification
                     if (notification.data?.redirect_url && typeof notification.data.redirect_url === 'string') {
-                        window.location.href = notification.data.redirect_url;
+                        router.get(notification.data.redirect_url);
                     } else {
-                        window.location.href = '/student-verification';
+                        router.get('/student-verification');
                     }
                 } else if (hasRole('admin')) {
-                    window.location.href = '/student/list';
+                    router.get('/student/list');
                 } else {
-                    window.location.href = '/student/dashboard';
+                    router.get('/student/dashboard');
                 }
             } else {
                 // Default navigation based on user role
                 if (hasRole('adviser')) {
-                    window.location.href = '/adviser/dashboard';
+                    router.get('/adviser/dashboard');
                 } else if (hasRole('admin')) {
-                    window.location.href = '/admin-dashboard';
+                    router.get('/admin-dashboard');
                 } else if (hasRole('hte')) {
-                    window.location.href = '/hte/dashboard';
+                    router.get('/hte/dashboard');
                 } else {
-                    window.location.href = '/student/dashboard';
+                    router.get('/student/dashboard');
                 }
+            }
+            } catch (navigationError) {
+                console.error('Error during navigation:', navigationError);
+                // Fallback to dashboard if navigation fails
+                router.get('/dashboard');
             }
         } catch (error) {
             console.error('Error handling notification click:', error);
@@ -508,6 +626,13 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
         const interval = setInterval(() => fetchNotifications(1, filter, showRead), 30000);
         return () => clearInterval(interval);
     }, []);
+
+    // Refresh notifications when the dropdown is opened
+    useEffect(() => {
+        if (isOpen) {
+            fetchNotifications(1, filter, showRead);
+        }
+    }, [isOpen]);
 
     // Reset filter to 'all' when component mounts to ensure it's valid for user's role
     useEffect(() => {
@@ -560,9 +685,7 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
             case 'student_status_change':
             case 'student_registration_pending':
             case 'new_student_registration':
-            case 'student_verification_pending':
             case 'student_approved':
-            case 'student_approval_needed':
                 return <UsersIcon className={iconClass} />;
             default:
                 return <BellIcon className={iconClass} />;

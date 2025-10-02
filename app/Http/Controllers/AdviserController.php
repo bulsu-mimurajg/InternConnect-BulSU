@@ -417,6 +417,13 @@ class AdviserController extends Controller
             ->where('status', '!=', 'archived')
             ->with(['academeAccounts.section', 'student']);
 
+        // Build query for rejected students (archived status)
+        $rejectedQuery = User::whereHas('roles', function ($query) {
+                $query->where('name', 'student');
+            })
+            ->where('status', 'archived')
+            ->with(['academeAccounts.section', 'student']);
+
         // Apply section filter
         if ($currentSectionId === null) {
             // All sections
@@ -427,12 +434,18 @@ class AdviserController extends Controller
             $verifiedQuery->whereHas('academeAccounts', function ($query) use ($sectionIds) {
                 $query->whereIn('section_id', $sectionIds);
             });
+            $rejectedQuery->whereHas('academeAccounts', function ($query) use ($sectionIds) {
+                $query->whereIn('section_id', $sectionIds);
+            });
         } else {
             // Single section
             $pendingQuery->whereHas('academeAccounts', function ($query) use ($currentSectionId) {
                 $query->where('section_id', $currentSectionId);
             });
             $verifiedQuery->whereHas('academeAccounts', function ($query) use ($currentSectionId) {
+                $query->where('section_id', $currentSectionId);
+            });
+            $rejectedQuery->whereHas('academeAccounts', function ($query) use ($currentSectionId) {
                 $query->where('section_id', $currentSectionId);
             });
         }
@@ -495,6 +508,43 @@ class AdviserController extends Controller
                 ];
             });
 
+        // Get rejected students
+        $rejectedStudents = $rejectedQuery->get()
+            ->map(function ($user) {
+                // Get cached registration data for rejected students
+                $registrationData = Cache::get("registration_data_{$user->email}");
+                
+                // If no cached data, check if there's a student record (in case they were approved then rejected)
+                $studentData = null;
+                if (!$registrationData && $user->student) {
+                    $studentData = [
+                        'first_name' => $user->student->first_name,
+                        'last_name' => $user->student->last_name,
+                        'middle_name' => $user->student->middle_name ?? '',
+                    ];
+                }
+                
+                return [
+                    'id' => $user->id,
+                    'username' => $user->username,
+                    'email' => $user->email,
+                    'academe_accounts' => $user->academeAccounts->map(function ($account) {
+                        return [
+                            'section' => [
+                                'section_id' => $account->section->section_id,
+                                'section_name' => $account->section->section_name,
+                            ]
+                        ];
+                    })->toArray(),
+                    'registration_data' => $registrationData ? [
+                        'first_name' => $registrationData['first_name'],
+                        'last_name' => $registrationData['last_name'],
+                        'middle_name' => $registrationData['middle_name'] ?? '',
+                    ] : $studentData,
+                    'rejected_at' => $user->updated_at->format('M d, Y'),
+                ];
+            });
+
         // Check deadline status for student verification
         $deadlineActive = \App\Models\Deadline::isActiveForCategory('student_verification');
         $deadlineInfo = null;
@@ -505,6 +555,7 @@ class AdviserController extends Controller
         return Inertia::render('adviser/application', [
             'pendingStudents' => $pendingStudents,
             'verifiedStudents' => $verifiedStudents,
+            'rejectedStudents' => $rejectedStudents,
             'adviserSection' => $currentSection ? $currentSection->section_name : ($adviserSections->count() > 1 ? 'All Sections' : $adviserSections->first()->section_name),
             'adviserSections' => $adviserSections->map(function ($section) {
                 return [
@@ -705,12 +756,52 @@ class AdviserController extends Controller
     }
 
     /**
+     * Restore rejected students back to pending status.
+     */
+    public function restoreStudents(Request $request)
+    {
+        $request->validate([
+            'studentIds' => 'required|array',
+            'studentIds.*' => 'exists:users,id'
+        ]);
+
+        $restoredCount = 0;
+        $errors = [];
+
+        foreach ($request->studentIds as $userId) {
+            try {
+                $user = User::findOrFail($userId);
+                
+                // Only restore if user is archived (rejected)
+                if ($user->status !== 'archived') {
+                    $errors[] = "User {$user->username} is not in rejected status.";
+                    continue;
+                }
+                
+                // Set status back to unverified
+                $user->update(['status' => 'unverified']);
+                
+                $restoredCount++;
+            } catch (\Exception $e) {
+                $errors[] = "Error processing user {$user->username}: " . $e->getMessage();
+            }
+        }
+
+        $message = "Successfully restored {$restoredCount} student(s) to pending status.";
+        if (!empty($errors)) {
+            $message .= " Errors: " . implode(', ', $errors);
+        }
+
+        return back()->with('success', $message);
+    }
+
+    /**
      * Undo the last action (approve/reject/remove).
      */
     public function undoAction(Request $request)
     {
         $request->validate([
-            'action' => 'required|in:approve,reject,remove',
+            'action' => 'required|in:approve,reject,remove,restore',
             'studentIds' => 'required|array',
             'studentIds.*' => 'exists:users,id'
         ]);
@@ -739,6 +830,11 @@ class AdviserController extends Controller
                     case 'remove':
                         // Restore status to verified
                         $user->update(['status' => 'verified']);
+                        break;
+                        
+                    case 'restore':
+                        // Set status back to archived
+                        $user->update(['status' => 'archived']);
                         break;
                 }
                 
