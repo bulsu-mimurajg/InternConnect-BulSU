@@ -1,6 +1,9 @@
 import EditInternshipForm from '@/components/form/hte/edit-internship-form';
 import AppLayout from '@/layouts/app-layout';
-import { Head, usePage } from '@inertiajs/react';
+import { Head, usePage, Link } from '@inertiajs/react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { AlertCircle } from 'lucide-react';
 
 interface EditInternshipProps {
     hte: {
@@ -34,6 +37,11 @@ interface EditInternshipProps {
         is_active: boolean;
     };
     existingWeights: Record<string, number>;
+    studentAssessmentDeadlineActive: boolean;
+    studentAssessmentDeadline?: {
+        title: string;
+        end_date: string;
+    };
 }
 
 interface PageProps {
@@ -47,7 +55,42 @@ const breadcrumbs = [
 ];
 
 export default function EditInternshipPage() {
-    const { hte, categories, internship, existingWeights } = usePage<PageProps>().props;
+    const { hte, categories, internship, existingWeights, studentAssessmentDeadlineActive, studentAssessmentDeadline } = usePage<PageProps>().props;
+
+    // Show deadline warning if student assessment period is active
+    if (studentAssessmentDeadlineActive) {
+        return (
+            <AppLayout breadcrumbs={breadcrumbs}>
+                <Head title="Edit Internship" />
+                <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
+                    <Card>
+                        <CardContent className="p-6">
+                            <div className="text-center">
+                                <AlertCircle className="mx-auto h-12 w-12 text-amber-500 mb-4" />
+                                <h2 className="text-xl font-semibold mb-2">Student Assessment Period Active</h2>
+                                <p className="text-muted-foreground mb-4">
+                                    {studentAssessmentDeadline?.title} is currently active (ends {studentAssessmentDeadline?.end_date}).
+                                    <br />You cannot edit internships during this period.
+                                </p>
+                                <div className="flex justify-center gap-3">
+                                    <Button variant="outline" asChild>
+                                        <Link href="/hte/profile">
+                                            Back to Profile
+                                        </Link>
+                                    </Button>
+                                    <Button variant="outline" asChild>
+                                        <Link href="/hte/dashboard">
+                                            Go to Dashboard
+                                        </Link>
+                                    </Button>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            </AppLayout>
+        );
+    }
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>

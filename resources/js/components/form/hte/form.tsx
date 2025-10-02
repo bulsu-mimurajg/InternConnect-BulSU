@@ -69,6 +69,7 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
     const [categoriesLoading, setCategoriesLoading] = useState(true);
     const [dataFetched, setDataFetched] = useState(false);
     const [showValidationErrors, setShowValidationErrors] = useState(false);
+    const [lockedSubcategories, setLockedSubcategories] = useState<Set<number>>(new Set());
 
     const steps = [
         { id: 'Step 1', name: 'Basic Information' },
@@ -173,7 +174,7 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
 
     const [currentStep, setCurrentStep] = useState(0);
 
-    // Check if all categories have valid weights (total 100% and no unset weights)
+    // Check if all categories have valid weights (total 100% and no unset weights for unlocked subcategories)
     const areAllWeightsValid = useMemo(() => {
         if (currentStep !== 2 || categories.length === 0) return true;
         
@@ -189,10 +190,32 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
             });
             const totalWeight = categoryWeights.reduce((sum, weight) => sum + weight, 0);
             
-            // Check if total is 100% AND no weights are unset (0)
-            const hasUnsetWeights = categoryWeights.some(weight => weight === 0);
+            // Check if total is 100% AND no unlocked weights are unset (0)
+            const hasUnsetUnlockedWeights = category.subCategories.some((subcat, index) => {
+                const weight = categoryWeights[index];
+                return !lockedSubcategories.has(subcat.id) && weight === 0;
+            });
             
-            return totalWeight === 100 && !hasUnsetWeights;
+            return totalWeight === 100 && !hasUnsetUnlockedWeights;
+        });
+    }, [currentStep, categories, form.watch('subcategoryWeights'), lockedSubcategories]);
+
+    // Check if all categories total 100% (allows navigation even with unset weights)
+    const areAllCategoriesAt100Percent = useMemo(() => {
+        if (currentStep !== 2 || categories.length === 0) return true;
+        
+        const weights = form.watch('subcategoryWeights') || {};
+        
+        return categories.every((category) => {
+            if (!category.subCategories || category.subCategories.length === 0) return true;
+            
+            const categoryWeights = category.subCategories.map((subcat) => {
+                const weight = weights[subcat.id];
+                return (weight !== undefined && weight !== null && !isNaN(Number(weight))) ? Number(weight) : 0;
+            });
+            const totalWeight = categoryWeights.reduce((sum, weight) => sum + weight, 0);
+            
+            return totalWeight === 100;
         });
     }, [currentStep, categories, form.watch('subcategoryWeights')]);
 
@@ -209,6 +232,18 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
         }
     };
 
+    const toggleSubcategoryLock = useCallback((subcategoryId: number) => {
+        setLockedSubcategories((prev) => {
+            const newLocked = new Set(prev);
+            if (newLocked.has(subcategoryId)) {
+                newLocked.delete(subcategoryId);
+            } else {
+                newLocked.add(subcategoryId);
+            }
+            return newLocked;
+        });
+    }, []);
+
     const next = async () => {
         let fieldsToValidate: Path<FormData>[] = [];
         
@@ -222,54 +257,51 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
             case 2: { // Criteria
                 fieldsToValidate = ['subcategoryWeights'];
                 
-                // Additional validation for criteria step
+                // Check if each category totals 100%
                 const weights = form.watch('subcategoryWeights') || {};
-                const weightKeys = Object.keys(weights);
+                const categoriesWithInvalidTotals: Array<{name: string, total: number, missing: number}> = [];
+                const categoriesWithUnsetWeights: Array<{name: string, unsetSubcategories: Array<{id: number, name: string}>}> = [];
                 
-                if (weightKeys.length === 0) {
-                    setShowValidationErrors(true);
-                    return;
-                }
-                
-                // Check if any weights are missing or unset
-                const missingWeights = weightKeys.filter(key => {
-                    const weight = weights[key];
-                    return weight === undefined || weight === null || isNaN(Number(weight)) || Number(weight) <= 0;
-                });
-                
-                if (missingWeights.length > 0) {
-                    setShowValidationErrors(true);
-                    return;
-                }
-
-                // Check if each category totals 100% and has no unset weights
-                const categoriesWithInvalidWeights: Array<{name: string, total: number, missing: number, hasUnset: boolean}> = [];
                 categories.forEach((category) => {
                     if (category.subCategories && category.subCategories.length > 0) {
                         const categoryWeights = category.subCategories.map((subcat) => {
                             const weight = weights[subcat.id];
-                            return (weight !== undefined && weight !== null && !isNaN(Number(weight)) && Number(weight) > 0) ? Number(weight) : 0;
+                            return (weight !== undefined && weight !== null && !isNaN(Number(weight))) ? Number(weight) : 0;
                         });
                         const totalWeight = categoryWeights.reduce((sum, weight) => sum + weight, 0);
-                        const hasUnsetWeights = categoryWeights.some(weight => weight === 0);
                         
-                        if (totalWeight !== 100 || hasUnsetWeights) {
-                            categoriesWithInvalidWeights.push({
+                        // Check if total is not 100%
+                        if (totalWeight !== 100) {
+                            categoriesWithInvalidTotals.push({
                                 name: category.category_name,
                                 total: totalWeight,
-                                missing: 100 - totalWeight,
-                                hasUnset: hasUnsetWeights
+                                missing: 100 - totalWeight
+                            });
+                        }
+                        
+                        // Check for unset unlocked subcategories
+                        const unsetSubcategories = category.subCategories.filter((subcat, index) => {
+                            const weight = categoryWeights[index];
+                            return !lockedSubcategories.has(subcat.id) && (weight === 0 || weight === undefined || weight === null);
+                        });
+                        
+                        if (unsetSubcategories.length > 0) {
+                            categoriesWithUnsetWeights.push({
+                                name: category.category_name,
+                                unsetSubcategories: unsetSubcategories.map(subcat => ({
+                                    id: subcat.id,
+                                    name: subcat.subcategory_name
+                                }))
                             });
                         }
                     }
                 });
 
-                if (categoriesWithInvalidWeights.length > 0) {
-                    // Show validation errors and highlight invalid cards
+                // If totals are not 100%, show validation errors and focus on first invalid category
+                if (categoriesWithInvalidTotals.length > 0) {
                     setShowValidationErrors(true);
                     
-                    // Focus on the first invalid category card
-                    const firstInvalidCategory = categoriesWithInvalidWeights[0];
+                    const firstInvalidCategory = categoriesWithInvalidTotals[0];
                     setTimeout(() => {
                         const categoryCard = document.getElementById(`category-card-${firstInvalidCategory.name.toLowerCase().replace(/\s+/g, '-')}`);
                         if (categoryCard) {
@@ -277,6 +309,22 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
                                 behavior: 'smooth', 
                                 block: 'center' 
                             });
+                        }
+                    }, 100);
+                    
+                    return;
+                }
+                
+                // If totals are 100% but there are unset subcategories, focus on the first unset one
+                if (categoriesWithUnsetWeights.length > 0) {
+                    const firstCategoryWithUnset = categoriesWithUnsetWeights[0];
+                    const firstUnsetSubcategory = firstCategoryWithUnset.unsetSubcategories[0];
+                    
+                    setTimeout(() => {
+                        const inputElement = document.getElementById(`weight-${firstUnsetSubcategory.id}`) as HTMLInputElement;
+                        if (inputElement) {
+                            inputElement.focus();
+                            inputElement.select();
                         }
                     }, 100);
                     
@@ -374,6 +422,8 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
                                         setExpandedSubcategories={setExpandedSubcategories}
                                         setExpandedQuestions={setExpandedQuestions}
                                         highlightInvalidCategories={showValidationErrors}
+                                        lockedSubcategories={lockedSubcategories}
+                                        onToggleSubcategoryLock={toggleSubcategoryLock}
                                     />
                                 )}
                                 {currentStep === 3 && (
@@ -404,8 +454,10 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
                         <div className="text-sm text-gray-600">
                             {currentStep < steps.length - 1 && (
                                 <span>
-                                    {currentStep === 2 && !areAllWeightsValid 
-                                        ? "All subcategories must have weights assigned and total 100% before proceeding" 
+                                    {currentStep === 2 && !areAllCategoriesAt100Percent 
+                                        ? "All categories must total 100% before proceeding" 
+                                        : currentStep === 2 && !areAllWeightsValid
+                                        ? "Some subcategories need weights assigned - click Next to focus on them"
                                         : "Please complete all required fields before proceeding"
                                     }
                                 </span>
@@ -418,8 +470,8 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
                                 </Button>
                                 <Button 
                                     onClick={next} 
-                                    disabled={currentStep === steps.length - 1 || (currentStep === 2 && !areAllWeightsValid)}
-                                    className={currentStep === 2 && !areAllWeightsValid ? "opacity-50" : ""}
+                                    disabled={currentStep === steps.length - 1 || (currentStep === 2 && !areAllCategoriesAt100Percent)}
+                                    className={currentStep === 2 && !areAllCategoriesAt100Percent ? "opacity-50" : ""}
                                 >
                                     Next
                                 </Button>

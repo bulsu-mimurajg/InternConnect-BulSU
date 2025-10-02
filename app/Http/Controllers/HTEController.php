@@ -572,6 +572,14 @@ class HTEController extends Controller
             return redirect()->route('form')->with('warning', 'Please complete the assessment form first before editing internships.');
         }
 
+        // Check if there's an active student assessment deadline
+        $studentAssessmentDeadlineActive = \App\Models\Deadline::isActiveForCategory('student_assessment_form');
+        $studentAssessmentDeadline = null;
+
+        if ($studentAssessmentDeadlineActive) {
+            $studentAssessmentDeadline = \App\Models\Deadline::getActiveForCategory('student_assessment_form');
+        }
+
         // Get the internship with its weights
         $internship = Internship::with(['subcategoryWeights.subcategory.category'])
             ->where('id', $id)
@@ -640,7 +648,12 @@ class HTEController extends Controller
             'hte' => $hte,
             'categories' => $transformedCategories,
             'internship' => $internshipData,
-            'existingWeights' => $existingWeights
+            'existingWeights' => $existingWeights,
+            'studentAssessmentDeadlineActive' => $studentAssessmentDeadlineActive,
+            'studentAssessmentDeadline' => $studentAssessmentDeadline ? [
+                'title' => $studentAssessmentDeadline->title,
+                'end_date' => $studentAssessmentDeadline->end_date->format('M d, Y H:i'),
+            ] : null
         ]);
     }
 

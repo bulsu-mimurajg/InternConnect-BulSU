@@ -701,12 +701,27 @@ export default function HTEProfilePage() {
                                                 
                                                 {/* Action Buttons moved to header */}
                                                 <div className="flex gap-2">
-                                                    <Link href={`/hte/edit-internship/${selectedInternship.id}`}>
-                                                        <Button variant="outline" className="gap-2 px-4 py-2 text-sm font-semibold">
+                                                    {studentAssessmentDeadlineActive ? (
+                                                        <Button 
+                                                            variant="outline" 
+                                                            className="gap-2 px-4 py-2 text-sm font-semibold"
+                                                            disabled={true}
+                                                            title="Cannot edit during student assessment period"
+                                                        >
                                                             <EditIcon className="h-6 w-6 mr-2" />
                                                             Edit
                                                         </Button>
-                                                    </Link>
+                                                    ) : (
+                                                        <Link href={`/hte/edit-internship/${selectedInternship.id}`}>
+                                                            <Button 
+                                                                variant="outline" 
+                                                                className="gap-2 px-4 py-2 text-sm font-semibold"
+                                                            >
+                                                                <EditIcon className="h-6 w-6 mr-2" />
+                                                                Edit
+                                                            </Button>
+                                                        </Link>
+                                                    )}
                                                     {selectedInternship.is_active ? (
                                                         <Button 
                                                             variant="destructive" 

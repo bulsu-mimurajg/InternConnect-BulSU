@@ -46,6 +46,8 @@ interface CriteriaProps {
     setExpandedSubcategories: React.Dispatch<React.SetStateAction<Set<number>>>;
     setExpandedQuestions: React.Dispatch<React.SetStateAction<Set<number>>>;
     highlightInvalidCategories?: boolean;
+    lockedSubcategories: Set<number>;
+    onToggleSubcategoryLock: (subcategoryId: number) => void;
 }
 
 export default function Criteria({
@@ -58,6 +60,8 @@ export default function Criteria({
     setExpandedSubcategories,
     setExpandedQuestions,
     highlightInvalidCategories = false,
+    lockedSubcategories,
+    onToggleSubcategoryLock,
 }: CriteriaProps) {
     const { control, watch, setValue } = useFormContext();
     const { auth } = usePage<SharedData>().props;
@@ -87,11 +91,17 @@ export default function Criteria({
 
     const handleWeightChange = useCallback(
         (categoryId: number, subcategoryId: number, newWeight: number) => {
+            // Prevent weight changes if subcategory is locked
+            if (lockedSubcategories.has(subcategoryId)) return;
+            
             const category = categories.find((cat) => cat.id === categoryId);
             if (!category || !category.subCategories) return;
 
             const clampedWeight = Math.max(0, Math.min(100, newWeight));
             const subcategories = category.subCategories;
+            
+            // Minimum weight threshold to prevent subcategories from going to 0%
+            const MIN_WEIGHT_THRESHOLD = 1;
             
             // If only one subcategory, set it to the weight
             if (subcategories.length === 1) {
@@ -99,72 +109,106 @@ export default function Criteria({
                 return;
             }
 
-            // Get other subcategories (excluding the one being changed)
-            const otherSubcategories = subcategories.filter((subcat) => subcat.id !== subcategoryId);
+            // Get other unlocked subcategories (excluding the one being changed and locked ones)
+            const otherUnlockedSubcategories = subcategories.filter((subcat) => 
+                subcat.id !== subcategoryId && !lockedSubcategories.has(subcat.id)
+            );
             
-            // Calculate total weight of other subcategories
-            const otherSubcategoriesTotal = otherSubcategories.reduce((sum, subcat) => {
+            // Calculate total weight of ALL locked subcategories (excluding the one being changed)
+            const lockedSubcategoriesTotal = subcategories
+                .filter((subcat) => subcat.id !== subcategoryId && lockedSubcategories.has(subcat.id))
+                .reduce((sum, subcat) => sum + (subcategoryWeights[subcat.id] || 0), 0);
+            
+            // Calculate total weight of other unlocked subcategories
+            const otherUnlockedSubcategoriesTotal = otherUnlockedSubcategories.reduce((sum, subcat) => {
                 return sum + (subcategoryWeights[subcat.id] || 0);
             }, 0);
 
-            // Calculate remaining weight to distribute
-            const remainingWeight = 100 - clampedWeight;
+            // Calculate remaining weight to distribute among unlocked subcategories
+            // This is: 100% - (new weight + all locked weights)
+            const remainingWeight = 100 - clampedWeight - lockedSubcategoriesTotal;
             
+            // If there are no unlocked subcategories to redistribute to, just set the weight
+            if (otherUnlockedSubcategories.length === 0) {
+                setValue(`subcategoryWeights.${subcategoryId}`, clampedWeight);
+                return;
+            }
+            
+            // Check if the change would cause any unlocked subcategory to go below minimum threshold
+            const minRequiredWeight = otherUnlockedSubcategories.length * MIN_WEIGHT_THRESHOLD;
+            if (remainingWeight < minRequiredWeight) {
+                // Calculate the maximum allowed weight for the current subcategory
+                const maxAllowedWeight = 100 - lockedSubcategoriesTotal - minRequiredWeight;
+                if (maxAllowedWeight < 0) {
+                    // If even the minimum threshold can't be met, don't allow the change
+                    return;
+                }
+                // Clamp the weight to the maximum allowed
+                const adjustedWeight = Math.min(clampedWeight, maxAllowedWeight);
+                setValue(`subcategoryWeights.${subcategoryId}`, adjustedWeight);
+                return;
+            }
+            
+            // If remaining weight is negative or zero, set all unlocked others to 0
             if (remainingWeight <= 0) {
-                // If the new weight is 100 or more, set all others to 0
-                otherSubcategories.forEach((subcat) => {
+                otherUnlockedSubcategories.forEach((subcat) => {
                     setValue(`subcategoryWeights.${subcat.id}`, 0);
                 });
                 setValue(`subcategoryWeights.${subcategoryId}`, clampedWeight);
                 return;
             }
 
-            if (otherSubcategoriesTotal === 0) {
-                // If other subcategories have no weight, distribute remaining weight equally
-                const equalWeight = Math.floor(remainingWeight / otherSubcategories.length);
-                const remainder = remainingWeight % otherSubcategories.length;
+            if (otherUnlockedSubcategoriesTotal === 0) {
+                // If other unlocked subcategories have no weight, distribute remaining weight equally
+                // Ensure each gets at least the minimum threshold
+                const equalWeight = Math.floor(remainingWeight / otherUnlockedSubcategories.length);
+                const remainder = remainingWeight % otherUnlockedSubcategories.length;
                 
-                otherSubcategories.forEach((subcat, index) => {
-                    const weight = equalWeight + (index < remainder ? 1 : 0);
+                otherUnlockedSubcategories.forEach((subcat, index) => {
+                    const baseWeight = equalWeight + (index < remainder ? 1 : 0);
+                    const weight = Math.max(MIN_WEIGHT_THRESHOLD, baseWeight);
                     setValue(`subcategoryWeights.${subcat.id}`, weight);
                 });
             } else {
-                // Distribute remaining weight proportionally based on current weights
-                otherSubcategories.forEach((subcat) => {
+                // Distribute remaining weight proportionally based on current weights of unlocked subcategories
+                // Ensure each gets at least the minimum threshold
+                otherUnlockedSubcategories.forEach((subcat) => {
                     const currentWeight = subcategoryWeights[subcat.id] || 0;
-                    const proportionalWeight = Math.round((currentWeight / otherSubcategoriesTotal) * remainingWeight);
-                    setValue(`subcategoryWeights.${subcat.id}`, proportionalWeight);
+                    const proportionalWeight = Math.round((currentWeight / otherUnlockedSubcategoriesTotal) * remainingWeight);
+                    const weight = Math.max(MIN_WEIGHT_THRESHOLD, proportionalWeight);
+                    setValue(`subcategoryWeights.${subcat.id}`, weight);
                 });
                 
                 // Adjust for rounding errors to ensure total is exactly 100
-                // We need to calculate the new total after setting the proportional weights
-                const newOtherTotal = otherSubcategories.reduce((sum, subcat) => {
+                // Calculate the new total: new weight + locked weights + redistributed unlocked weights
+                const newUnlockedTotal = otherUnlockedSubcategories.reduce((sum, subcat) => {
                     const currentWeight = subcategoryWeights[subcat.id] || 0;
-                    const proportionalWeight = Math.round((currentWeight / otherSubcategoriesTotal) * remainingWeight);
-                    return sum + proportionalWeight;
+                    const proportionalWeight = Math.round((currentWeight / otherUnlockedSubcategoriesTotal) * remainingWeight);
+                    const weight = Math.max(MIN_WEIGHT_THRESHOLD, proportionalWeight);
+                    return sum + weight;
                 }, 0);
                 
-                const newTotal = clampedWeight + newOtherTotal;
+                const newTotal = clampedWeight + lockedSubcategoriesTotal + newUnlockedTotal;
                 
                 if (newTotal !== 100) {
                     const difference = 100 - newTotal;
-                    // Apply difference to the largest other subcategory
-                    const largestOther = otherSubcategories.reduce((largest, current) => {
+                    // Apply difference to the largest unlocked subcategory
+                    const largestOther = otherUnlockedSubcategories.reduce((largest, current) => {
                         const currentWeight = subcategoryWeights[current.id] || 0;
                         const largestWeight = subcategoryWeights[largest.id] || 0;
                         return currentWeight > largestWeight ? current : largest;
                     });
                     
                     const currentWeight = subcategoryWeights[largestOther.id] || 0;
-                    const proportionalWeight = Math.round((currentWeight / otherSubcategoriesTotal) * remainingWeight);
-                    const adjustedWeight = Math.max(0, proportionalWeight + difference);
+                    const proportionalWeight = Math.round((currentWeight / otherUnlockedSubcategoriesTotal) * remainingWeight);
+                    const adjustedWeight = Math.max(MIN_WEIGHT_THRESHOLD, proportionalWeight + difference);
                     setValue(`subcategoryWeights.${largestOther.id}`, adjustedWeight);
                 }
             }
 
             setValue(`subcategoryWeights.${subcategoryId}`, clampedWeight);
         },
-        [categories, subcategoryWeights, setValue],
+        [categories, subcategoryWeights, setValue, lockedSubcategories],
     );
 
     const resetToEqualWeights = useCallback(
@@ -172,17 +216,25 @@ export default function Criteria({
             const category = categories.find((cat) => cat.id === categoryId);
             if (!category || !category.subCategories) return;
 
+            // First, unlock all subcategories in this category
+            const categorySubcategoryIds = category.subCategories.map(subcat => subcat.id);
+            categorySubcategoryIds.forEach(subcatId => {
+                if (lockedSubcategories.has(subcatId)) {
+                    onToggleSubcategoryLock(subcatId);
+                }
+            });
+
+            // Then distribute weights evenly among all subcategories
             const subcategoryCount = category.subCategories.length;
             const baseWeight = Math.floor(100 / subcategoryCount);
             const remainder = 100 % subcategoryCount;
 
-            // Distribute weights evenly, with remainder distributed to first subcategories
             category.subCategories.forEach((subcat: SubCategory, index: number) => {
                 const weight = index < remainder ? baseWeight + 1 : baseWeight;
                 setValue(`subcategoryWeights.${subcat.id}`, weight);
             });
         },
-        [categories, setValue],
+        [categories, setValue, lockedSubcategories, onToggleSubcategoryLock],
     );
 
     const ensureAllWeightsSet = useCallback(() => {
@@ -251,9 +303,9 @@ export default function Criteria({
                     validationErrors.push(`Category "${category.category_name}" weights must total 100% (currently ${totalWeight}%)`);
                 }
 
-                // Check if any subcategory is missing a weight
+                // Check if any unlocked subcategory is missing a weight
                 category.subCategories.forEach((subcat) => {
-                    if (weights[subcat.id] === undefined || weights[subcat.id] === null) {
+                    if (!lockedSubcategories.has(subcat.id) && (weights[subcat.id] === undefined || weights[subcat.id] === null)) {
                         validationErrors.push(`Subcategory "${subcat.subcategory_name}" is missing a weight`);
                     }
                 });
@@ -261,16 +313,17 @@ export default function Criteria({
         });
 
         return validationErrors;
-    }, [categories, watch]);
+    }, [categories, watch, lockedSubcategories]);
 
 
-    // Calculate overall weight status
+    // Calculate overall weight status and find unset subcategories
     const overallStatus = useMemo(() => {
         const weights = watch('subcategoryWeights') || {};
         let totalSubcategories = 0;
         let subcategoriesWithWeights = 0;
         let categoriesWithValidWeights = 0;
         let totalCategories = 0;
+        const unsetSubcategories: Array<{categoryId: number, subcategoryId: number}> = [];
 
         categories.forEach((category) => {
             if (category.subCategories && category.subCategories.length > 0) {
@@ -284,7 +337,20 @@ export default function Criteria({
                     categoriesWithValidWeights++;
                 }
 
-                subcategoriesWithWeights += categoryWeights.filter((weight) => weight > 0).length;
+                category.subCategories.forEach((subcat, index) => {
+                    const weight = categoryWeights[index];
+                    if (weight > 0) {
+                        subcategoriesWithWeights++;
+                    } else {
+                        // Only add to unset if it's not locked (locked subcategories can have 0% if user wants)
+                        if (!lockedSubcategories.has(subcat.id)) {
+                            unsetSubcategories.push({
+                                categoryId: category.id,
+                                subcategoryId: subcat.id
+                            });
+                        }
+                    }
+                });
             }
         });
 
@@ -294,8 +360,24 @@ export default function Criteria({
             categoriesWithValidWeights,
             totalCategories,
             isComplete: subcategoriesWithWeights === totalSubcategories && categoriesWithValidWeights === totalCategories,
+            unsetSubcategories,
         };
-    }, [categories, watch]);
+    }, [categories, watch, lockedSubcategories]);
+
+    // Auto-focus on first unset subcategory
+    React.useEffect(() => {
+        if (overallStatus.unsetSubcategories.length > 0) {
+            const firstUnset = overallStatus.unsetSubcategories[0];
+            const inputElement = document.getElementById(`weight-${firstUnset.subcategoryId}`) as HTMLInputElement;
+            if (inputElement) {
+                // Small delay to ensure the element is rendered
+                setTimeout(() => {
+                    inputElement.focus();
+                    inputElement.select();
+                }, 100);
+            }
+        }
+    }, [overallStatus.unsetSubcategories]);
 
     if (loading) {
         return (
@@ -531,40 +613,43 @@ export default function Criteria({
                                                 </div>
                                             </div>
 
-                                            {/* Reset Button */}
-                                            <div className="pt-1">
-                                                <Button 
-                                                    type="button"
-                                                    variant="outline" 
-                                                    size="sm" 
-                                                    className="w-full text-xs"
-                                                    onClick={(e) => {
-                                                        e.preventDefault();
-                                                        resetToEqualWeights(category.id);
-                                                    }}
-                                                >
-                                                    Reset to Equal
-                                                </Button>
-                                            </div>
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* Compact Weight Inputs */}
                                 <div className="space-y-3">
-                                    <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Set Weights</h4>
+                                    <div className="flex items-center justify-between">
+                                        <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Set Weights</h4>
+                                        <div className="text-xs text-muted-foreground">
+                                            Min: 1% per subcategory
+                                        </div>
+                                    </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
                                         {category.subCategories.map((subcategory) => {
                                             const isQuestionsExpanded = expandedQuestions.has(subcategory.id);
                                             const subcategoryWeight = subcategoryWeights[subcategory.id] || 0;
                                             const questionCount = subcategory.questions ? subcategory.questions.length : 0;
 
+                                            const isUnset = (subcategoryWeight === 0 || subcategoryWeight === undefined || subcategoryWeight === null) && !lockedSubcategories.has(subcategory.id);
+                                            
                                             return (
-                                                <div key={subcategory.id} className="bg-muted/30 rounded-lg p-3 border border-border/50 hover:bg-muted/50 transition-colors">
+                                                <div key={subcategory.id} className={`bg-muted/30 rounded-lg p-3 border border-border/50 transition-colors ${
+                                                    lockedSubcategories.has(subcategory.id) 
+                                                        ? 'bg-blue-50/50 border-blue-200/50' 
+                                                        : isUnset
+                                                        ? 'bg-yellow-50/50 border-yellow-200/50 ring-1 ring-yellow-200/50'
+                                                        : 'hover:bg-muted/50'
+                                                }`}>
                                                     <div className="flex items-center justify-between mb-2 gap-2">
                                                         <div className="flex-1 min-w-0">
-                                                            <h5 className="font-medium text-foreground text-sm truncate" title={subcategory.subcategory_name}>
+                                                            <h5 className="font-medium text-foreground text-sm truncate flex items-center gap-1" title={subcategory.subcategory_name}>
                                                                 {subcategory.subcategory_name}
+                                                                {isUnset && (
+                                                                    <span className="text-yellow-600 text-xs" title="This subcategory needs a weight">
+                                                                        *
+                                                                    </span>
+                                                                )}
                                                             </h5>
                                                             <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
                                                                 <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
@@ -580,27 +665,56 @@ export default function Criteria({
                                                             </div>
                                                         </div>
                                                         <div className="flex items-center gap-1 flex-shrink-0">
-                                                            <Input
-                                                                id={`weight-${subcategory.id}`}
-                                                                type="number"
-                                                                min="0"
-                                                                max="100"
-                                                                value={subcategoryWeight || ''}
-                                                                onChange={(e) => {
-                                                                    const value = e.target.value;
-                                                                    if (value === '') {
-                                                                        handleWeightChange(category.id, subcategory.id, 0);
-                                                                    } else {
-                                                                        const numValue = Number(value);
-                                                                        if (!isNaN(numValue)) {
-                                                                            handleWeightChange(category.id, subcategory.id, numValue);
+                                                            <div className="relative">
+                                                                <Input
+                                                                    id={`weight-${subcategory.id}`}
+                                                                    type="number"
+                                                                    min="0"
+                                                                    max="100"
+                                                                    value={subcategoryWeight || ''}
+                                                                    onChange={(e) => {
+                                                                        const value = e.target.value;
+                                                                        if (value === '') {
+                                                                            handleWeightChange(category.id, subcategory.id, 0);
+                                                                        } else {
+                                                                            const numValue = Number(value);
+                                                                            if (!isNaN(numValue)) {
+                                                                                handleWeightChange(category.id, subcategory.id, numValue);
+                                                                            }
                                                                         }
-                                                                    }
+                                                                    }}
+                                                                    onFocus={(e) => e.target.select()}
+                                                                    disabled={lockedSubcategories.has(subcategory.id)}
+                                                                    title={lockedSubcategories.has(subcategory.id) ? 'This subcategory is locked. Unlock to edit weight.' : ''}
+                                                                    className={`w-16 h-7 text-center text-xs pr-6 pl-1 ${
+                                                                        lockedSubcategories.has(subcategory.id) 
+                                                                            ? 'bg-muted text-muted-foreground cursor-not-allowed' 
+                                                                            : ''
+                                                                    }`}
+                                                                />
+                                                                <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">%</span>
+                                                            </div>
+                                                            <Button
+                                                                type="button"
+                                                                variant={lockedSubcategories.has(subcategory.id) ? "default" : "outline"}
+                                                                size="sm"
+                                                                onClick={(e) => {
+                                                                    e.preventDefault();
+                                                                    onToggleSubcategoryLock(subcategory.id);
                                                                 }}
-                                                                onFocus={(e) => e.target.select()}
-                                                                className="w-14 h-7 text-center text-xs px-1"
-                                                            />
-                                                            <span className="text-xs text-muted-foreground">%</span>
+                                                                className="h-7 w-7 p-0 flex items-center justify-center"
+                                                                title={lockedSubcategories.has(subcategory.id) ? 'Unlock this subcategory' : 'Lock this subcategory'}
+                                                            >
+                                                                {lockedSubcategories.has(subcategory.id) ? (
+                                                                    <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                                                    </svg>
+                                                                ) : (
+                                                                    <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                                                                    </svg>
+                                                                )}
+                                                            </Button>
                                                         </div>
                                                     </div>
 
