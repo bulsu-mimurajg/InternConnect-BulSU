@@ -107,6 +107,9 @@ class EmailVerificationController extends Controller
                 'section_id' => $registrationData['section_id'],
             ]);
 
+            // Notify advisers about new student registration (waiting for approval)
+            $this->notifyAdvisersOfNewRegistration($user, $registrationData);
+
             DB::commit();
 
             // Remove the token-based cache but keep email-based cache for adviser approval
@@ -124,6 +127,59 @@ class EmailVerificationController extends Controller
             return redirect()->route('login')->withErrors([
                 'verification' => 'Failed to complete registration. Please try again or contact support.'
             ]);
+        }
+    }
+
+    /**
+     * Notify advisers about new student registration waiting for approval
+     */
+    private function notifyAdvisersOfNewRegistration($user, $registrationData)
+    {
+        try {
+            // Get the section for the student
+            $section = \App\Models\Section::find($registrationData['section_id']);
+            if (!$section) {
+                \Log::warning("Section not found for student registration: {$registrationData['section_id']}");
+                return;
+            }
+
+            // Get all advisers for this section
+            $advisers = \App\Models\User::role('adviser')
+                ->where('status', 'verified')
+                ->whereHas('adviser.sections', function($query) use ($registrationData) {
+                    $query->where('sections.section_id', $registrationData['section_id']);
+                })
+                ->get();
+
+            if ($advisers->isEmpty()) {
+                \Log::warning("No advisers found for section {$registrationData['section_id']}");
+                return;
+            }
+
+            // Create notification for each adviser
+            foreach ($advisers as $adviser) {
+                \App\Models\Notification::create([
+                    'user_id' => $adviser->id,
+                    'type' => 'student_registration_pending',
+                    'title' => 'New Student Registration',
+                    'message' => "A new student {$registrationData['first_name']} {$registrationData['last_name']} ({$registrationData['username']}) has registered and is waiting for approval in section {$section->section_name}.",
+                    'data' => [
+                        'user_id' => $user->id,
+                        'student_number' => $registrationData['username'],
+                        'student_name' => "{$registrationData['first_name']} {$registrationData['last_name']}",
+                        'section_id' => $registrationData['section_id'],
+                        'section_name' => $section->section_name,
+                        'registration_date' => now()->format('M d, Y \a\t g:i A'),
+                        'status' => 'pending_approval',
+                        'redirect_url' => route('student-verification'),
+                    ],
+                    'is_read' => false,
+                ]);
+            }
+
+            \Log::info("Created pending approval notifications for " . $advisers->count() . " advisers for student {$user->id}");
+        } catch (\Exception $e) {
+            \Log::error("Failed to create pending approval notification: " . $e->getMessage());
         }
     }
 }

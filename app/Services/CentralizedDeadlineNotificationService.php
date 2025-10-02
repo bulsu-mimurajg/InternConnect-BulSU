@@ -705,29 +705,20 @@ class CentralizedDeadlineNotificationService
             // Send notification using custom EmailService
             $notification->sendCustomEmail($user);
 
-            // Create or update database notification
+            // Always create new notification for deadline updates to ensure advisers see changes
+            Notification::create([
+                'user_id' => $user->id,
+                'type' => 'unified_deadline',
+                'title' => $notificationData['title'],
+                'message' => $notificationData['message'],
+                'data' => $notificationData['data'],
+                'read_at' => null,
+            ]);
+            
             if ($isNewNotification) {
-                Notification::create([
-                    'user_id' => $user->id,
-                    'type' => 'unified_deadline',
-                    'title' => $notificationData['title'],
-                    'message' => $notificationData['message'],
-                    'data' => $notificationData['data'],
-                    'read_at' => null,
-                ]);
-                
                 Log::info("Created new deadline notification for user {$user->id} ({$role}) for deadline {$deadline->id}");
             } else {
-                // Always update existing notification with new time information
-                $existingNotification->update([
-                    'title' => $notificationData['title'],
-                    'message' => $notificationData['message'],
-                    'data' => $notificationData['data'],
-                    'read_at' => null, // Mark as unread when updated
-                    'updated_at' => now(), // Update timestamp
-                ]);
-                
-                Log::info("Updated deadline notification for user {$user->id} ({$role}) for deadline {$deadline->id} with new time information");
+                Log::info("Created updated deadline notification for user {$user->id} ({$role}) for deadline {$deadline->id} (deadline was updated)");
             }
 
         } catch (\Exception $e) {

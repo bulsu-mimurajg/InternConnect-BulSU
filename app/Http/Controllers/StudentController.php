@@ -74,6 +74,13 @@ class StudentController extends Controller
             'is_active' => true,
         ]);
 
+        // Load the section relationship for the notification
+        $student->load('section');
+
+        // Notify advisers about the new student registration
+        $adviserNotificationService = new AdviserNotificationService();
+        $adviserNotificationService->notifyAdviserForNewStudentRegistration($student);
+
         return redirect()->route('student.dashboard')->with('success', 'Student account created successfully!');
     }
 

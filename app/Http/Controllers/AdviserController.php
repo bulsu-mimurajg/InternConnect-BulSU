@@ -440,6 +440,9 @@ class AdviserController extends Controller
         // Get pending students
         $pendingStudents = $pendingQuery->get()
             ->map(function ($user) {
+                // Get cached registration data for pending students
+                $registrationData = Cache::get("registration_data_{$user->email}");
+                
                 return [
                     'id' => $user->id,
                     'username' => $user->username,
@@ -458,6 +461,11 @@ class AdviserController extends Controller
                         'first_name' => $user->student->first_name,
                         'last_name' => $user->student->last_name,
                         'is_submit' => $user->student->is_submit,
+                    ] : null,
+                    'registration_data' => $registrationData ? [
+                        'first_name' => $registrationData['first_name'],
+                        'last_name' => $registrationData['last_name'],
+                        'middle_name' => $registrationData['middle_name'] ?? '',
                     ] : null,
                 ];
             });
@@ -580,7 +588,7 @@ class AdviserController extends Controller
                     $registrationData = Cache::get("registration_data_{$user->email}");
                     
                     // Create student record with registration data
-                    Student::create([
+                    $student = Student::create([
                         'user_id' => $user->id,
                         'student_number' => $user->username,
                         'first_name' => $registrationData ? $registrationData['first_name'] : 'Pending',
@@ -593,6 +601,9 @@ class AdviserController extends Controller
                         'is_submit' => false,
                         'is_placed' => false,
                     ]);
+
+                    // Load the section relationship
+                    $student->load('section');
 
                     // Clean up the cached registration data after creating student record
                     Cache::forget("registration_data_{$user->email}");

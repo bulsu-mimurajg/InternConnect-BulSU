@@ -34,6 +34,11 @@ interface Student {
         last_name: string;
         is_submit: boolean;
     };
+    registration_data?: {
+        first_name: string;
+        last_name: string;
+        middle_name?: string;
+    };
 }
 
 interface DeadlineInfo {
@@ -304,10 +309,16 @@ export default function Application({ pendingStudents, verifiedStudents, adviser
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center justify-between mb-2">
                                                 <p className="text-sm font-medium truncate">
-                                                    {student.username} {student.student?.first_name && student.student?.last_name 
-                                                        ? ''
-                                                        : '| New Student'
-                                                    }
+                                                    {student.username} {(() => {
+                                                        // Use student data if available, otherwise use registration data
+                                                        const firstName = student.student?.first_name || student.registration_data?.first_name;
+                                                        const lastName = student.student?.last_name || student.registration_data?.last_name;
+                                                        
+                                                        if (firstName && lastName) {
+                                                            return `| ${firstName} ${lastName}`;
+                                                        }
+                                                        return '| New Student';
+                                                    })()}
                                                 </p>
                                             </div>
                                             <p className="text-xs text-muted-foreground truncate mb-2">
@@ -317,16 +328,6 @@ export default function Application({ pendingStudents, verifiedStudents, adviser
                                                 <p className="text-xs text-blue-600 truncate mb-2">
                                                     {student.academe_accounts[0].section.section_name}
                                                 </p>
-                                            )}
-                                            {student.student && (
-                                                <div className="space-y-1">
-                                                    <p className="text-xs">
-                                                        <span className="font-medium">Name:</span> {student.student.first_name} {student.student.last_name}
-                                                    </p>
-                                                    <p className="text-xs">
-                                                        <span className="font-medium">Assessment:</span> {student.student.is_submit ? 'Completed' : 'Pending'}
-                                                    </p>
-                                                </div>
                                             )}
                                         </div>
                                     </div>

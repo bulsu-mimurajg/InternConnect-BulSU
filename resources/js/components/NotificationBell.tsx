@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { Pagination } from '@/components/ui/pagination';
+import { usePagination } from '@/hooks/usePagination';
 import {
     BellIcon,
     CheckIcon,
@@ -13,7 +15,9 @@ import {
     MailIcon,
     FileTextIcon,
     TargetIcon,
-    CheckCircleIcon
+    CheckCircleIcon,
+    ChevronLeft,
+    ChevronRight
 } from 'lucide-react';
 import { router, usePage } from '@inertiajs/react';
 import { cn } from '@/lib/utils';
@@ -67,12 +71,30 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
     const [filter, setFilter] = useState<'all' | 'endorsement' | 'deadline' | 'placement' | 'approval'>('all');
     const [showRead, setShowRead] = useState(true);
     const [lastLocalUpdate, setLastLocalUpdate] = useState<{[key: number]: number}>({});
+    const [pagination, setPagination] = useState({
+        current_page: 1,
+        per_page: 10,
+        total: 0,
+        last_page: 1,
+        from: 0,
+        to: 0,
+    });
 
-    const fetchNotifications = async () => {
+    const fetchNotifications = async (page = pagination.current_page) => {
+        console.log('fetchNotifications called with page:', page, 'default was:', pagination.current_page);
         setIsLoading(true);
         try {
-            const response = await fetch('/notifications/get');
+            const params = new URLSearchParams({
+                page: page.toString(),
+                per_page: pagination.per_page.toString(),
+                filter: filter,
+                show_read: showRead.toString(),
+            });
+            
+            console.log('Fetching notifications with params:', params.toString());
+            const response = await fetch(`/notifications/get?${params}`);
             const data = await response.json();
+            console.log('Received data:', data);
             const serverNotifications = data.notifications || [];
 
             // Preserve local changes by merging with server data
@@ -90,13 +112,23 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                     return serverNotif;
                 });
 
-                // Sort by created_at date (newest first)
-                return merged.sort((a: Notification, b: Notification) =>
-                    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-                );
+                return merged;
             });
 
             setUnreadCount(data.unreadCount || 0);
+            
+            // Validate pagination data from server
+            const serverPagination = data.pagination || pagination;
+            const validatedPagination = {
+                ...serverPagination,
+                current_page: Math.max(1, Math.min(serverPagination.current_page || 1, serverPagination.last_page || 1)),
+                last_page: Math.max(1, serverPagination.last_page || 1),
+                per_page: Math.max(1, serverPagination.per_page || 10),
+                total: Math.max(0, serverPagination.total || 0),
+            };
+            
+            console.log('Setting validated pagination:', validatedPagination);
+            setPagination(validatedPagination);
         } catch (error) {
             console.error('Failed to fetch notifications:', error);
         } finally {
@@ -106,12 +138,17 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
 
     const markAsRead = async (notificationId: number) => {
         try {
+            // Get CSRF token from meta tag
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+            
             const response = await fetch(`/notifications/${notificationId}/mark-read`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest',
                 },
+                credentials: 'same-origin',
             });
 
             if (!response.ok) {
@@ -152,12 +189,17 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
 
     const markAllAsRead = async () => {
         try {
+            // Get CSRF token from meta tag
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+            
             const response = await fetch('/notifications/mark-all-read', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest',
                 },
+                credentials: 'same-origin',
             });
 
             if (!response.ok) {
@@ -186,73 +228,95 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
 
     const markAsUnread = async (notificationId: number) => {
         try {
-            await fetch(`/notifications/${notificationId}/mark-unread`, {
+            // Get CSRF token from meta tag
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+            
+            const response = await fetch(`/notifications/${notificationId}/mark-unread`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest',
                 },
+                credentials: 'same-origin',
             });
 
-            // Record local update timestamp
-            const now = Date.now();
-            setLastLocalUpdate(prev => ({
-                ...prev,
-                [notificationId]: now
-            }));
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
 
-            // Update local state
-            setNotifications(prev =>
-                prev.map(notif =>
-                    notif.id === notificationId ? { ...notif, is_read: false } : notif
-                )
-            );
-            setUnreadCount(prev => prev + 1);
+            const result = await response.json();
+
+            if (result.success) {
+                // Record local update timestamp
+                const now = Date.now();
+                setLastLocalUpdate(prev => ({
+                    ...prev,
+                    [notificationId]: now
+                }));
+
+                // Update local state
+                setNotifications(prev =>
+                    prev.map(notif =>
+                        notif.id === notificationId ? { ...notif, is_read: false } : notif
+                    )
+                );
+                setUnreadCount(prev => prev + 1);
+            } else {
+                console.error('Server returned error:', result);
+            }
         } catch (error) {
             console.error('Failed to mark notification as unread:', error);
         }
     };
 
+    // Handle pagination changes
+    const handlePageChange = (page: number) => {
+        console.log('handlePageChange called with page:', page);
+        console.log('Current pagination state:', pagination);
+        
+        // Validate page bounds
+        if (page < 1) {
+            console.log('Page too low, setting to 1');
+            page = 1;
+        }
+        if (page > pagination.last_page) {
+            console.log('Page too high, setting to', pagination.last_page);
+            page = pagination.last_page;
+        }
+        
+        // Only proceed if page is valid and different from current
+        if (page === pagination.current_page) {
+            console.log('Page is same as current, skipping');
+            return;
+        }
+        
+        // Update pagination state first
+        setPagination(prev => {
+            console.log('Updating pagination from', prev, 'to page', page);
+            return { ...prev, current_page: page };
+        });
+        
+        fetchNotifications(page);
+    };
+
+    // Handle filter changes
+    const handleFilterChange = (newFilter: 'all' | 'endorsement' | 'deadline' | 'placement' | 'approval') => {
+        setFilter(newFilter);
+        setPagination(prev => ({ ...prev, current_page: 1 }));
+        fetchNotifications(1);
+    };
+
+    // Handle show read toggle
+    const handleShowReadToggle = () => {
+        setShowRead(!showRead);
+        setPagination(prev => ({ ...prev, current_page: 1 }));
+        fetchNotifications(1);
+    };
+
     const getFilteredNotifications = () => {
-        let filtered = notifications;
-
-        // Filter by type
-        switch (filter) {
-            case 'endorsement':
-                filtered = filtered.filter(n => n.type === 'hte_endorsement');
-                break;
-            case 'deadline':
-                filtered = filtered.filter(n =>
-                    n.type === 'hte_deadline' ||
-                    n.type === 'student_deadline' ||
-                    n.type === 'deadline_released' ||
-                    n.type === 'deadline_expired'
-                );
-                break;
-            case 'placement':
-                filtered = filtered.filter(n =>
-                    n.type === 'student_placement' ||
-                    n.type === 'student_placement_status'
-                );
-                break;
-            case 'approval':
-                filtered = filtered.filter(n =>
-                    n.type === 'student_approval_request' ||
-                    n.type === 'student_status_change'
-                );
-                break;
-            default:
-                // Keep all notifications
-                break;
-        }
-
-        // Filter by read/unread status
-        if (!showRead) {
-            filtered = filtered.filter(n => !n.is_read);
-        }
-        // If showRead is true, show all notifications (both read and unread)
-
-        return filtered;
+        // Since we're now using server-side filtering, we just return the notifications as-is
+        return notifications;
     };
 
     const handleNotificationClick = (notification: Notification) => {
@@ -286,18 +350,44 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
             } else {
                 router.visit('/form');
             }
-        } else if (notification.type === 'student_deadline') {
-            // Navigate to student assessment or placement based on category and user role
-            if (notification.data?.category === 'student_placements') {
+        } else if (notification.type === 'student_deadline' || notification.type === 'unified_deadline') {
+            // Navigate based on deadline category and user role
+            if (notification.data?.category === 'student_verification' && hasRole('adviser')) {
+                // Only student verification deadlines redirect advisers to verification page
+                router.visit('/student-verification');
+            } else if (notification.data?.category === 'student_placements') {
                 // Navigate based on user role
                 if (hasRole('admin')) {
                     router.visit('/student/placed');
                 } else {
                     router.visit('/student/dashboard');
                 }
-            } else {
-                // Navigate to assessment (available for students)
+            } else if (notification.data?.category === 'student_assessment_form') {
+                // Navigate to assessment for students
                 router.visit('/assessment');
+            } else if (notification.data?.category === 'hte_assessment_form') {
+                // Navigate to form for HTE users
+                router.visit('/form');
+            } else if (notification.data?.category === 'internship_placement') {
+                // Navigate based on user role for internship placement
+                if (hasRole('admin')) {
+                    router.visit('/student/placed');
+                } else if (hasRole('hte')) {
+                    router.visit('/hte/endorsement-table');
+                } else {
+                    router.visit('/student/dashboard');
+                }
+            } else {
+                // Default fallback for other deadline types
+                if (hasRole('admin')) {
+                    router.visit('/admin/dashboard');
+                } else if (hasRole('adviser')) {
+                    router.visit('/adviser/dashboard');
+                } else if (hasRole('hte')) {
+                    router.visit('/hte/dashboard');
+                } else {
+                    router.visit('/student/dashboard');
+                }
             }
         } else if (notification.type === 'student_placement' || notification.type === 'student_placement_status') {
             // Navigate based on user role
@@ -306,10 +396,15 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
             } else {
                 router.visit('/student/dashboard');
             }
-        } else if (notification.type === 'student_approval_request' || notification.type === 'student_status_change') {
+        } else if (notification.type === 'student_approval_request' || notification.type === 'student_status_change' || notification.type === 'student_registration_pending') {
             // Navigate based on user role
             if (hasRole('adviser')) {
-                router.visit('/student-verification');
+                // Use redirect_url if available, otherwise default to student-verification
+                if (notification.data?.redirect_url && typeof notification.data.redirect_url === 'string') {
+                    window.location.href = notification.data.redirect_url;
+                } else {
+                    router.visit('/student-verification');
+                }
             } else if (hasRole('admin')) {
                 router.visit('/student/list');
             } else {
@@ -349,6 +444,13 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
             setFilter('all');
         }
     }, []);
+
+    // Refetch notifications when filter or showRead changes
+    useEffect(() => {
+        if (isOpen) {
+            fetchNotifications(1);
+        }
+    }, [filter, showRead]);
 
     const formatTimeAgo = (dateString: string) => {
         const date = new Date(dateString);
@@ -474,7 +576,7 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                                     <Button
                                         variant="ghost"
                                         size="sm"
-                                        onClick={() => setShowRead(!showRead)}
+                                        onClick={handleShowReadToggle}
                                         className="h-8 w-8 p-0"
                                         title={showRead ? 'Show unread only' : 'Show all notifications'}
                                     >
@@ -503,7 +605,7 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                                         key={button.key}
                                         variant={filter === button.key ? 'default' : 'ghost'}
                                         size="sm"
-                                        onClick={() => setFilter(button.key)}
+                                        onClick={() => handleFilterChange(button.key)}
                                         className="h-8 px-3 text-xs"
                                     >
                                         {button.label}
@@ -616,6 +718,94 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                                             </div>
                                         </div>
                                     ))}
+                                </div>
+                            )}
+                            
+                            {/* Pagination */}
+                            {pagination.last_page > 1 && (
+                                <div className="border-t border-border/50 p-3">
+                                    <div className="flex items-center justify-between">
+                                        {/* Summary */}
+                                        <div className="text-xs text-muted-foreground">
+                                            Showing {pagination.from}-{pagination.to} of {pagination.total}
+                                        </div>
+                                        
+                                        {/* Page Navigation */}
+                                        <div className="flex items-center gap-1">
+                                            {/* Previous Button */}
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => {
+                                                    const prevPage = Math.max(1, pagination.current_page - 1);
+                                                    console.log('Previous clicked, current page:', pagination.current_page, 'going to page:', prevPage);
+                                                    if (prevPage !== pagination.current_page) {
+                                                        handlePageChange(prevPage);
+                                                    }
+                                                }}
+                                                disabled={pagination.current_page <= 1}
+                                                className="h-7 w-7 p-0 hover:bg-accent"
+                                            >
+                                                <ChevronLeft className="h-3 w-3" />
+                                            </Button>
+                                            
+                                            {/* Page Numbers */}
+                                            <div className="flex items-center gap-1">
+                                                {Array.from({ length: pagination.last_page }, (_, i) => i + 1).map((page) => {
+                                                    // Show first page, last page, current page, and pages around current page
+                                                    const showPage = 
+                                                        page === 1 || 
+                                                        page === pagination.last_page || 
+                                                        Math.abs(page - pagination.current_page) <= 1;
+                                                    
+                                                    if (!showPage) {
+                                                        // Show ellipsis for gaps
+                                                        if (page === 2 && pagination.current_page > 4) {
+                                                            return <span key={`ellipsis-start`} className="px-1 text-xs text-muted-foreground">...</span>;
+                                                        }
+                                                        if (page === pagination.last_page - 1 && pagination.current_page < pagination.last_page - 3) {
+                                                            return <span key={`ellipsis-end`} className="px-1 text-xs text-muted-foreground">...</span>;
+                                                        }
+                                                        return null;
+                                                    }
+                                                    
+                                                    return (
+                                                        <Button
+                                                            key={page}
+                                                            variant={page === pagination.current_page ? "default" : "ghost"}
+                                                            size="sm"
+                                                            onClick={() => {
+                                                                console.log('Page number clicked:', page, 'current page:', pagination.current_page);
+                                                                if (page !== pagination.current_page && page >= 1 && page <= pagination.last_page) {
+                                                                    handlePageChange(page);
+                                                                }
+                                                            }}
+                                                            className="h-7 w-7 p-0 text-xs hover:bg-accent"
+                                                        >
+                                                            {page}
+                                                        </Button>
+                                                    );
+                                                })}
+                                            </div>
+                                            
+                                            {/* Next Button */}
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => {
+                                                    const nextPage = Math.min(pagination.last_page, pagination.current_page + 1);
+                                                    console.log('Next clicked, current page:', pagination.current_page, 'going to page:', nextPage);
+                                                    if (nextPage !== pagination.current_page) {
+                                                        handlePageChange(nextPage);
+                                                    }
+                                                }}
+                                                disabled={pagination.current_page >= pagination.last_page}
+                                                className="h-7 w-7 p-0 hover:bg-accent"
+                                            >
+                                                <ChevronRight className="h-3 w-3" />
+                                            </Button>
+                                        </div>
+                                    </div>
                                 </div>
                             )}
                         </div>

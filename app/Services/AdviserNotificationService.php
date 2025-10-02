@@ -10,9 +10,88 @@ use Illuminate\Support\Facades\Log;
 class AdviserNotificationService
 {
     /**
-     * Notify adviser when a student registers and needs approval
+     * Notify adviser when a new student registers in their section
+     */
+    public function notifyAdviserForNewStudentRegistration(Student $student): void
+    {
+        try {
+            // Get all advisers for the student's section
+            $advisers = $this->getAdvisersForSection($student->section_id);
+            
+            if ($advisers->isEmpty()) {
+                Log::warning("No advisers found for section {$student->section_id}");
+                return;
+            }
+
+            // Create notification for each adviser
+            foreach ($advisers as $adviser) {
+                Notification::create([
+                    'user_id' => $adviser->id,
+                    'type' => 'new_student_registration',
+                    'title' => 'New Student Registered',
+                    'message' => "A new student {$student->first_name} {$student->last_name} ({$student->student_number}) has registered in section {$student->section->section_name}.",
+                    'data' => [
+                        'student_id' => $student->id,
+                        'student_number' => $student->student_number,
+                        'student_name' => "{$student->first_name} {$student->last_name}",
+                        'section_id' => $student->section_id,
+                        'section_name' => $student->section->section_name ?? 'Unknown Section',
+                        'registration_date' => $student->created_at->format('M d, Y \a\t g:i A'),
+                    ],
+                    'is_read' => false,
+                ]);
+            }
+
+            Log::info("Created new student registration notifications for " . $advisers->count() . " advisers for student {$student->id}");
+        } catch (\Exception $e) {
+            Log::error("Failed to create new student registration notification: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Notify adviser when a student is approved
      */
     public function notifyAdviserForStudentApproval(Student $student): void
+    {
+        try {
+            // Get all advisers for the student's section
+            $advisers = $this->getAdvisersForSection($student->section_id);
+            
+            if ($advisers->isEmpty()) {
+                Log::warning("No advisers found for section {$student->section_id}");
+                return;
+            }
+
+            // Create notification for each adviser
+            foreach ($advisers as $adviser) {
+                Notification::create([
+                    'user_id' => $adviser->id,
+                    'type' => 'student_approved',
+                    'title' => 'Student Approved',
+                    'message' => "Student {$student->first_name} {$student->last_name} ({$student->student_number}) has been approved and is now active in section {$student->section->section_name}.",
+                    'data' => [
+                        'student_id' => $student->id,
+                        'student_number' => $student->student_number,
+                        'student_name' => "{$student->first_name} {$student->last_name}",
+                        'section_id' => $student->section_id,
+                        'section_name' => $student->section->section_name ?? 'Unknown Section',
+                        'approval_date' => now()->format('M d, Y \a\t g:i A'),
+                        'status' => 'approved',
+                    ],
+                    'is_read' => false,
+                ]);
+            }
+
+            Log::info("Created student approval notifications for " . $advisers->count() . " advisers for student {$student->id}");
+        } catch (\Exception $e) {
+            Log::error("Failed to create student approval notification: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Notify adviser when a student registers and needs approval (legacy method)
+     */
+    public function notifyAdviserForStudentApprovalLegacy(Student $student): void
     {
         try {
             // Get the adviser for the student's section
@@ -93,15 +172,28 @@ class AdviserNotificationService
     }
 
     /**
+     * Get all advisers for a specific section
+     */
+    private function getAdvisersForSection(int $sectionId): \Illuminate\Database\Eloquent\Collection
+    {
+        return User::role('adviser')
+            ->where('status', 'verified')
+            ->whereHas('adviser.sections', function($query) use ($sectionId) {
+                $query->where('sections.section_id', $sectionId);
+            })
+            ->get();
+    }
+
+    /**
      * Get adviser for a specific section
      */
     private function getAdviserForSection(int $sectionId): ?User
     {
-        // Try to find adviser by section relationship
+        // Try to find adviser by section relationship through the many-to-many relationship
         $adviser = User::role('adviser')
             ->where('status', 'verified')
-            ->whereHas('adviser', function($query) use ($sectionId) {
-                $query->where('section_id', $sectionId);
+            ->whereHas('adviser.sections', function($query) use ($sectionId) {
+                $query->where('sections.section_id', $sectionId);
             })
             ->first();
 

@@ -51,6 +51,8 @@ interface HTE {
     contact_person: string | null;
     contact_position: string | null;
     contact_number: string | null;
+    cperson_fname: string | null;
+    cperson_lname: string | null;
     is_active: boolean;
     is_submit: boolean;
     created_at: string;
@@ -147,8 +149,8 @@ export default function HTEManagement({ htes, showArchived = false, filters = {}
             company_name: hte.company_name || '',
             company_address: hte.company_address || '',
             company_email: hte.company_email || '',
-            cperson_fname: hte.contact_person?.split(' ')[0] || '',
-            cperson_lname: hte.contact_person?.split(' ').slice(1).join(' ') || '',
+            cperson_fname: hte.cperson_fname || '',
+            cperson_lname: hte.cperson_lname || '',
             cperson_position: hte.contact_position || '',
             cperson_contactnum: hte.contact_number || '',
         });
@@ -233,10 +235,13 @@ export default function HTEManagement({ htes, showArchived = false, filters = {}
     };
 
     const filteredHTEs = htes.filter(hte => {
+        const fullName = `${hte.cperson_fname || ''} ${hte.cperson_lname || ''}`.trim();
         const matchesSearch = hte.username.toLowerCase().includes(localFilters.search.toLowerCase()) ||
                             hte.email.toLowerCase().includes(localFilters.search.toLowerCase()) ||
                             (hte.company_name && hte.company_name.toLowerCase().includes(localFilters.search.toLowerCase())) ||
-                            (hte.contact_person && hte.contact_person.toLowerCase().includes(localFilters.search.toLowerCase()));
+                            (fullName && fullName.toLowerCase().includes(localFilters.search.toLowerCase())) ||
+                            (hte.cperson_fname && hte.cperson_fname.toLowerCase().includes(localFilters.search.toLowerCase())) ||
+                            (hte.cperson_lname && hte.cperson_lname.toLowerCase().includes(localFilters.search.toLowerCase()));
         const matchesStatus = localFilters.status === 'all' || hte.status === localFilters.status;
         const matchesSubmission = localFilters.submission === 'all' || 
                                 (localFilters.submission === 'submitted' && hte.is_submit) ||
@@ -293,7 +298,7 @@ export default function HTEManagement({ htes, showArchived = false, filters = {}
                                     <MapPinIcon className="h-4 w-4 text-muted-foreground mt-0.5" />
                                     <div>
                                         <div className="text-xs font-medium text-muted-foreground">Address</div>
-                                        <div className="text-sm">{hte.company_address || 'Not provided'}</div>
+                                        <div className="text-sm">{hte.company_address && hte.company_address.trim() ? hte.company_address : 'Not provided'}</div>
                                     </div>
                                 </div>
                                 <div className="flex items-start gap-3">
@@ -317,7 +322,12 @@ export default function HTEManagement({ htes, showArchived = false, filters = {}
                                     <UserIcon className="h-4 w-4 text-muted-foreground mt-0.5" />
                                     <div>
                                         <div className="text-xs font-medium text-muted-foreground">Contact Person</div>
-                                        <div className="text-sm">{hte.contact_person || 'Not provided'}</div>
+                                        <div className="text-sm">
+                                            {(hte.cperson_fname || hte.cperson_lname) ? 
+                                                `${hte.cperson_fname || ''} ${hte.cperson_lname || ''}`.trim() : 
+                                                'Not provided'
+                                            }
+                                        </div>
                                     </div>
                                 </div>
                                 <div className="flex items-start gap-3">
@@ -695,7 +705,10 @@ export default function HTEManagement({ htes, showArchived = false, filters = {}
                                                             {hte.company_name || 'Not provided'}
                                                         </td>
                                                         <td className="py-3 px-4 text-sm text-muted-foreground">
-                                                            {hte.contact_person || 'Not provided'}
+                                                            {(hte.cperson_fname || hte.cperson_lname) ? 
+                                                                `${hte.cperson_fname || ''} ${hte.cperson_lname || ''}`.trim() : 
+                                                                'Not provided'
+                                                            }
                                                         </td>
                                                         <td className="py-3 px-4">
                                                             <Badge variant={hte.is_submit ? "default" : "outline"}>
