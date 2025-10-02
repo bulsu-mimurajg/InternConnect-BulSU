@@ -31,7 +31,7 @@ return response()->json(['token' => csrf_token()]);
 
 
 
-Route::middleware(['auth', 'verified', 'role:admin'])->group(function () {
+Route::middleware(['auth', 'verified', 'role_redirect:admin'])->group(function () {
     Route::get('admin-dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard');
 
     // HTE Management routes
@@ -142,7 +142,7 @@ Route::middleware(['auth', 'verified', 'role:admin'])->group(function () {
     })->name('admin.email-test');
 });
 
-Route::middleware(['auth', 'verified', 'role:hte'])->group(function () {
+Route::middleware(['auth', 'verified', 'role_redirect:hte'])->group(function () {
     Route::get('form', [App\Http\Controllers\HTEController::class, 'showForm'])->name('form');
     Route::post('hte/submit', [App\Http\Controllers\HTEController::class, 'submit'])->name('hte.submit');
     Route::get('hte/categories', [App\Http\Controllers\HTEController::class, 'getCategoriesForCriteria'])->name('hte.categories');
@@ -193,7 +193,7 @@ Route::middleware(['auth', 'verified', 'role:hte'])->group(function () {
 
 
 
-Route::middleware(['auth', 'verified', 'role:adviser'])->group(function () {
+Route::middleware(['auth', 'verified', 'role_redirect:adviser'])->group(function () {
     Route::get('adviser/dashboard', [AdviserController::class, 'dashboard'])->name('adviser.dashboard');
     Route::get('adviser/student-list', [AdviserController::class, 'getStudents'])->name('adviser.student-list');
     Route::get('student-verification', [AdviserController::class, 'index'])->name('student-verification');
@@ -208,7 +208,7 @@ Route::middleware(['auth', 'verified', 'role:adviser'])->group(function () {
     Route::post('adviser/switch-section/{sectionId}', [AdviserController::class, 'switchSection'])->name('adviser.switch-section');
 });
 
-Route::group(['middleware' => ['auth', 'verified', 'role:student']], function () {
+Route::group(['middleware' => ['auth', 'verified', 'role_redirect:student']], function () {
     Route::get('student/dashboard', function () {
         $user = Auth::user();
         $student = $user->student;
