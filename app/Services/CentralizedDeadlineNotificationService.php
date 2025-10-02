@@ -19,7 +19,6 @@ class CentralizedDeadlineNotificationService
      */
     private const ROLE_DEADLINE_MAPPING = [
         'admin' => [
-            'student_verification',
             'student_assessment_form',
             'hte_assessment_form',
             'internship_placement',
@@ -292,8 +291,8 @@ class CentralizedDeadlineNotificationService
         $deadlineDate = Carbon::parse($deadline->end_date);
         
         // Calculate time remaining
-        $timeRemaining = $now->diffInHours($deadlineDate, false);
-        $daysRemaining = round($now->diffInDays($deadlineDate, false));
+        $timeRemaining = (int) $now->diffInHours($deadlineDate, false);
+        $daysRemaining = (int) round($now->diffInDays($deadlineDate, false));
         
         // Only process if deadline is in the future
         if ($timeRemaining <= 0) {
@@ -655,8 +654,8 @@ class CentralizedDeadlineNotificationService
         $deadlineDate = Carbon::parse($deadline->end_date);
         
         // Calculate time remaining
-        $timeRemaining = $now->diffInHours($deadlineDate, false);
-        $daysRemaining = round($now->diffInDays($deadlineDate, false));
+        $timeRemaining = (int) $now->diffInHours($deadlineDate, false);
+        $daysRemaining = (int) round($now->diffInDays($deadlineDate, false));
         
         // Only process if deadline is in the future
         if ($timeRemaining <= 0) {

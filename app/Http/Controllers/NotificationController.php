@@ -92,7 +92,15 @@ class NotificationController extends Controller
                     $query->whereIn('type', ['student_placement', 'student_placement_status']);
                     break;
                 case 'approval':
-                    $query->whereIn('type', ['student_approval_request', 'student_status_change', 'student_registration_pending']);
+                    $query->whereIn('type', [
+                        'student_approval_request', 
+                        'student_status_change', 
+                        'student_registration_pending',
+                        'new_student_registration',
+                        'student_verification_pending',
+                        'student_approved',
+                        'student_approval_needed'
+                    ]);
                     break;
             }
         }
@@ -117,6 +125,6 @@ class NotificationController extends Controller
                 'from' => $totalCount > 0 ? (($page - 1) * $perPage) + 1 : 0,
                 'to' => min($page * $perPage, $totalCount),
             ],
-        ]);
+        ])->header('Content-Type', 'application/json');
     }
 }

@@ -68,6 +68,8 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
     const [unreadCount, setUnreadCount] = useState(initialCount);
     const [isOpen, setIsOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [isProcessing, setIsProcessing] = useState(false);
+    const [isFiltering, setIsFiltering] = useState(false);
     const [filter, setFilter] = useState<'all' | 'endorsement' | 'deadline' | 'placement' | 'approval'>('all');
     const [showRead, setShowRead] = useState(true);
     const [lastLocalUpdate, setLastLocalUpdate] = useState<{[key: number]: number}>({});
@@ -80,21 +82,18 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
         to: 0,
     });
 
-    const fetchNotifications = async (page = pagination.current_page) => {
-        console.log('fetchNotifications called with page:', page, 'default was:', pagination.current_page);
+    const fetchNotifications = async (page = pagination.current_page, filterToUse = filter, showReadToUse = showRead) => {
         setIsLoading(true);
         try {
             const params = new URLSearchParams({
                 page: page.toString(),
                 per_page: pagination.per_page.toString(),
-                filter: filter,
-                show_read: showRead.toString(),
+                filter: filterToUse,
+                show_read: showReadToUse.toString(),
             });
             
-            console.log('Fetching notifications with params:', params.toString());
             const response = await fetch(`/notifications/get?${params}`);
             const data = await response.json();
-            console.log('Received data:', data);
             const serverNotifications = data.notifications || [];
 
             // Preserve local changes by merging with server data
@@ -127,7 +126,6 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                 total: Math.max(0, serverPagination.total || 0),
             };
             
-            console.log('Setting validated pagination:', validatedPagination);
             setPagination(validatedPagination);
         } catch (error) {
             console.error('Failed to fetch notifications:', error);
@@ -136,7 +134,7 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
         }
     };
 
-    const markAsRead = async (notificationId: number) => {
+    const markAsRead = async (notificationId: number): Promise<boolean> => {
         try {
             // Get CSRF token from meta tag
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
@@ -172,8 +170,21 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                     )
                 );
                 setUnreadCount(prev => Math.max(0, prev - 1));
+                
+                // If showing unread only, remove the notification from the list
+                if (!showRead) {
+                    setNotifications(prev => prev.filter(notif => notif.id !== notificationId));
+                    setPagination(prev => ({ 
+                        ...prev, 
+                        total: Math.max(0, prev.total - 1),
+                        from: Math.max(1, prev.from - 1),
+                        to: Math.max(0, prev.to - 1)
+                    }));
+                }
+                return true;
             } else {
                 console.error('Server returned error:', result);
+                return false;
             }
         } catch (error) {
             console.error('Failed to mark notification as read:', error);
@@ -184,6 +195,7 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                 )
             );
             setUnreadCount(prev => Math.max(0, prev - 1));
+            return false;
         }
     };
 
@@ -213,6 +225,12 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                     prev.map(notif => ({ ...notif, is_read: true }))
                 );
                 setUnreadCount(0);
+                
+                // If showing unread only, clear the list since all are now read
+                if (!showRead) {
+                    setNotifications([]);
+                    setPagination(prev => ({ ...prev, total: 0, last_page: 1 }));
+                }
             } else {
                 console.error('Server returned error:', result);
             }
@@ -262,6 +280,11 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                     )
                 );
                 setUnreadCount(prev => prev + 1);
+                
+                // If showing unread only, refetch to ensure proper filtering
+                if (!showRead) {
+                    fetchNotifications(pagination.current_page, filter, false);
+                }
             } else {
                 console.error('Server returned error:', result);
             }
@@ -272,168 +295,217 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
 
     // Handle pagination changes
     const handlePageChange = (page: number) => {
-        console.log('handlePageChange called with page:', page);
-        console.log('Current pagination state:', pagination);
-        
         // Validate page bounds
         if (page < 1) {
-            console.log('Page too low, setting to 1');
             page = 1;
         }
         if (page > pagination.last_page) {
-            console.log('Page too high, setting to', pagination.last_page);
             page = pagination.last_page;
         }
         
         // Only proceed if page is valid and different from current
         if (page === pagination.current_page) {
-            console.log('Page is same as current, skipping');
             return;
         }
         
         // Update pagination state first
-        setPagination(prev => {
-            console.log('Updating pagination from', prev, 'to page', page);
-            return { ...prev, current_page: page };
-        });
+        setPagination(prev => ({ ...prev, current_page: page }));
         
-        fetchNotifications(page);
+        fetchNotifications(page, filter, showRead);
     };
 
-    // Handle filter changes
+    // Handle filter changes with debouncing
     const handleFilterChange = (newFilter: 'all' | 'endorsement' | 'deadline' | 'placement' | 'approval') => {
+        // Prevent multiple filter changes
+        if (isFiltering || newFilter === filter) {
+            return;
+        }
+        
+        setIsFiltering(true);
         setFilter(newFilter);
         setPagination(prev => ({ ...prev, current_page: 1 }));
-        fetchNotifications(1);
+        
+        // Clear notifications immediately to prevent showing wrong notifications
+        setNotifications([]);
+        setIsLoading(true);
+        
+        // Debounce the API call to prevent jittering
+        setTimeout(() => {
+            fetchNotifications(1, newFilter, showRead).finally(() => {
+                setIsFiltering(false);
+            });
+        }, 150);
     };
 
-    // Handle show read toggle
+    // Handle show read toggle with debouncing
     const handleShowReadToggle = () => {
-        setShowRead(!showRead);
+        if (isFiltering) {
+            return;
+        }
+        
+        setIsFiltering(true);
+        const newShowRead = !showRead;
+        setShowRead(newShowRead);
         setPagination(prev => ({ ...prev, current_page: 1 }));
-        fetchNotifications(1);
+        
+        // Apply immediate client-side filtering for instant UI feedback
+        if (newShowRead) {
+            // Show all notifications (no filtering needed)
+            setNotifications(prev => prev);
+        } else {
+            // Show only unread notifications immediately
+            setNotifications(prev => prev.filter(notification => !notification.is_read));
+        }
+        setIsLoading(true);
+        
+        // Debounce the API call to prevent jittering
+        setTimeout(() => {
+            fetchNotifications(1, filter, newShowRead).finally(() => {
+                setIsFiltering(false);
+            });
+        }, 150);
     };
 
     const getFilteredNotifications = () => {
-        // Since we're now using server-side filtering, we just return the notifications as-is
+        // Apply client-side filtering as a fallback for immediate UI updates
+        if (!showRead) {
+            return notifications.filter(notification => !notification.is_read);
+        }
         return notifications;
     };
 
-    const handleNotificationClick = (notification: Notification) => {
-        // Helper function to check if user has a specific role
-        const hasRole = (roleName: string): boolean => {
-            return auth.user?.roles?.some((role: UserRole) => role.name === roleName) || false;
-        };
+    const handleNotificationClick = async (notification: Notification) => {
+        // Prevent multiple clicks during processing
+        if (isProcessing) {
+            return;
+        }
 
-        // Mark as read when clicked (regardless of current status)
-        markAsRead(notification.id);
+        setIsProcessing(true);
 
-        // Reset filters to show all notifications
-        setFilter('all');
-        setShowRead(true);
+        try {
+            // Helper function to check if user has a specific role
+            const hasRole = (roleName: string): boolean => {
+                return auth.user?.roles?.some((role: UserRole) => role.name === roleName) || false;
+            };
 
-        // Handle navigation based on notification type
-        if (notification.type === 'hte_endorsement') {
-            // Navigate to HTE endorsement table
-            if (notification.data?.student_id) {
-                // If we have student_id, navigate with highlighting
-                const studentId = notification.data.student_id as number;
-                window.location.href = `/hte/endorsement-table?highlightStudent=${studentId}&highlightDuration=1500`;
-            } else {
-                // If no student_id, just navigate to the table
-                window.location.href = '/hte/endorsement-table';
+            // Mark as read when clicked (regardless of current status) and wait for completion
+            const markReadSuccess = await markAsRead(notification.id);
+            
+            // Small delay to ensure the API call completes and UI updates
+            if (markReadSuccess) {
+                await new Promise(resolve => setTimeout(resolve, 200));
             }
-        } else if (notification.type === 'hte_deadline') {
-            // Navigate based on deadline category
-            if (notification.data?.category === 'student_placements_by_hte') {
-                window.location.href = '/hte/endorsement-table';
-            } else {
-                window.location.href = '/form';
-            }
-        } else if (notification.type === 'student_deadline' || notification.type === 'unified_deadline') {
-            // Navigate based on deadline category and user role
-            if (notification.data?.category === 'student_verification' && hasRole('adviser')) {
-                // Only student verification deadlines redirect advisers to verification page
-                window.location.href = '/student-verification';
-            } else if (notification.data?.category === 'student_placements') {
+
+            // Don't reset filters - keep current filter state to prevent jittering
+
+            // Handle navigation based on notification type
+            if (notification.type === 'hte_endorsement') {
+                // Navigate to HTE endorsement table
+                if (notification.data?.student_id) {
+                    // If we have student_id, navigate with highlighting
+                    const studentId = notification.data.student_id as number;
+                    window.location.href = `/hte/endorsement-table?highlightStudent=${studentId}&highlightDuration=1500`;
+                } else {
+                    // If no student_id, just navigate to the table
+                    window.location.href = '/hte/endorsement-table';
+                }
+            } else if (notification.type === 'hte_deadline') {
+                // Navigate based on deadline category
+                if (notification.data?.category === 'student_placements_by_hte') {
+                    window.location.href = '/hte/endorsement-table';
+                } else {
+                    window.location.href = '/form';
+                }
+            } else if (notification.type === 'student_deadline' || notification.type === 'unified_deadline' || notification.type === 'deadline_released' || notification.type === 'deadline_expired') {
+                // Navigate based on deadline category and user role
+                if (notification.data?.category === 'student_verification' && hasRole('adviser')) {
+                    // Only student verification deadlines redirect advisers to verification page
+                    try {
+                        window.location.href = '/student-verification';
+                    } catch (error) {
+                        console.error('Failed to redirect to student verification page:', error);
+                        // Fallback to dashboard
+                        window.location.href = '/adviser/dashboard';
+                    }
+                } else if (notification.data?.category === 'student_placements') {
+                    // Navigate based on user role
+                    if (hasRole('admin')) {
+                        window.location.href = '/student/placed';
+                    } else {
+                        window.location.href = '/student/dashboard';
+                    }
+                } else if (notification.data?.category === 'student_assessment_form') {
+                    // Navigate to assessment for students
+                    window.location.href = '/assessment';
+                } else if (notification.data?.category === 'hte_assessment_form') {
+                    // Navigate to form for HTE users
+                    window.location.href = '/form';
+                } else if (notification.data?.category === 'internship_placement') {
+                    // Navigate based on user role for internship placement
+                    if (hasRole('admin')) {
+                        window.location.href = '/student/placed';
+                    } else if (hasRole('hte')) {
+                        window.location.href = '/hte/endorsement-table';
+                    } else {
+                        window.location.href = '/student/dashboard';
+                    }
+                } else {
+                    // Default fallback for other deadline types
+                    if (hasRole('admin')) {
+                        window.location.href = '/admin/dashboard';
+                    } else if (hasRole('adviser')) {
+                        window.location.href = '/adviser/dashboard';
+                    } else if (hasRole('hte')) {
+                        window.location.href = '/hte/dashboard';
+                    } else {
+                        window.location.href = '/student/dashboard';
+                    }
+                }
+            } else if (notification.type === 'student_placement' || notification.type === 'student_placement_status') {
                 // Navigate based on user role
                 if (hasRole('admin')) {
                     window.location.href = '/student/placed';
                 } else {
                     window.location.href = '/student/dashboard';
                 }
-            } else if (notification.data?.category === 'student_assessment_form') {
-                // Navigate to assessment for students
-                window.location.href = '/assessment';
-            } else if (notification.data?.category === 'hte_assessment_form') {
-                // Navigate to form for HTE users
-                window.location.href = '/form';
-            } else if (notification.data?.category === 'internship_placement') {
-                // Navigate based on user role for internship placement
-                if (hasRole('admin')) {
-                    window.location.href = '/student/placed';
-                } else if (hasRole('hte')) {
-                    window.location.href = '/hte/endorsement-table';
+            } else if (notification.type === 'student_approval_request' || notification.type === 'student_status_change' || notification.type === 'student_registration_pending' || notification.type === 'new_student_registration' || notification.type === 'student_verification_pending' || notification.type === 'student_approved' || notification.type === 'student_approval_needed') {
+                // Navigate based on user role
+                if (hasRole('adviser')) {
+                    // Use redirect_url if available, otherwise default to student-verification
+                    if (notification.data?.redirect_url && typeof notification.data.redirect_url === 'string') {
+                        window.location.href = notification.data.redirect_url;
+                    } else {
+                        window.location.href = '/student-verification';
+                    }
+                } else if (hasRole('admin')) {
+                    window.location.href = '/student/list';
                 } else {
                     window.location.href = '/student/dashboard';
                 }
             } else {
-                // Default fallback for other deadline types
-                if (hasRole('admin')) {
-                    window.location.href = '/admin/dashboard';
-                } else if (hasRole('adviser')) {
+                // Default navigation based on user role
+                if (hasRole('adviser')) {
                     window.location.href = '/adviser/dashboard';
+                } else if (hasRole('admin')) {
+                    window.location.href = '/admin-dashboard';
                 } else if (hasRole('hte')) {
                     window.location.href = '/hte/dashboard';
                 } else {
                     window.location.href = '/student/dashboard';
                 }
             }
-        } else if (notification.type === 'student_placement' || notification.type === 'student_placement_status') {
-            // Navigate based on user role
-            if (hasRole('admin')) {
-                window.location.href = '/student/placed';
-            } else {
-                window.location.href = '/student/dashboard';
-            }
-        } else if (notification.type === 'student_approval_request' || notification.type === 'student_status_change' || notification.type === 'student_registration_pending') {
-            // Navigate based on user role
-            if (hasRole('adviser')) {
-                // Use redirect_url if available, otherwise default to student-verification
-                if (notification.data?.redirect_url && typeof notification.data.redirect_url === 'string') {
-                    window.location.href = notification.data.redirect_url;
-                } else {
-                    window.location.href = '/student-verification';
-                }
-            } else if (hasRole('admin')) {
-                window.location.href = '/student/list';
-            } else {
-                window.location.href = '/student/dashboard';
-            }
-        } else {
-            // Default fallback - log unknown notification type
-            console.warn('Unknown notification type:', notification.type);
-            console.log('Available user roles:', auth.user?.roles);
-            console.log('Notification data:', notification.data);
-
-            // Default navigation based on user role
-            if (hasRole('adviser')) {
-                window.location.href = '/adviser/dashboard';
-            } else if (hasRole('admin')) {
-                window.location.href = '/admin-dashboard';
-            } else if (hasRole('hte')) {
-                window.location.href = '/hte/dashboard';
-            } else {
-                window.location.href = '/student/dashboard';
-            }
+        } catch (error) {
+            console.error('Error handling notification click:', error);
+        } finally {
+            setIsProcessing(false);
         }
     };
 
     useEffect(() => {
-        fetchNotifications();
+        fetchNotifications(1, filter, showRead);
 
         // Poll for new notifications every 30 seconds
-        const interval = setInterval(fetchNotifications, 30000);
+        const interval = setInterval(() => fetchNotifications(1, filter, showRead), 30000);
         return () => clearInterval(interval);
     }, []);
 
@@ -448,7 +520,7 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
     // Refetch notifications when filter or showRead changes
     useEffect(() => {
         if (isOpen) {
-            fetchNotifications(1);
+            fetchNotifications(1, filter, showRead);
         }
     }, [filter, showRead]);
 
@@ -486,6 +558,11 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                 return <ClockIcon className={iconClass} />;
             case 'student_approval_request':
             case 'student_status_change':
+            case 'student_registration_pending':
+            case 'new_student_registration':
+            case 'student_verification_pending':
+            case 'student_approved':
+            case 'student_approval_needed':
                 return <UsersIcon className={iconClass} />;
             default:
                 return <BellIcon className={iconClass} />;
@@ -542,7 +619,7 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                 onClick={() => {
                     setIsOpen(!isOpen);
                     if (!isOpen) {
-                        fetchNotifications();
+                        fetchNotifications(1, filter, showRead);
                     }
                 }}
                 className="relative"
@@ -606,33 +683,51 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                                         variant={filter === button.key ? 'default' : 'ghost'}
                                         size="sm"
                                         onClick={() => handleFilterChange(button.key)}
-                                        className="h-8 px-3 text-xs"
+                                        className={cn(
+                                            "h-8 px-3 text-xs transition-all duration-200",
+                                            filter === button.key && "ring-2 ring-primary/20"
+                                        )}
+                                        disabled={isLoading || isFiltering}
                                     >
                                         {button.label}
                                     </Button>
                                 ))}
                             </div>
+                            {(isLoading || isFiltering) && (
+                                <div className="text-center text-xs text-muted-foreground mt-2">
+                                    {isFiltering ? 'Switching filters...' : `Loading ${filter} notifications...`}
+                                </div>
+                            )}
                         </div>
 
                         <div className="max-h-96 overflow-y-auto">
-                            {isLoading ? (
+                            {(isLoading || isFiltering) ? (
                                 <div className="p-4">
-                                    <div className="flex items-start gap-3">
-                                        <div className="flex-shrink-0 rounded-full p-2.5 bg-muted animate-pulse">
-                                            <BellIcon className="h-4 w-4 text-muted-foreground" />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <div className="space-y-2">
-                                                <div className="h-4 bg-muted rounded animate-pulse w-3/4"></div>
-                                                <div className="h-3 bg-muted rounded animate-pulse w-full"></div>
-                                                <div className="h-3 bg-muted rounded animate-pulse w-2/3"></div>
-                                            </div>
-                                            <div className="flex items-center gap-1.5 mt-3">
-                                                <div className="h-3 w-3 bg-muted rounded animate-pulse"></div>
-                                                <div className="h-3 bg-muted rounded animate-pulse w-16"></div>
+                                    {isFiltering ? (
+                                        <div className="flex items-center justify-center py-8">
+                                            <div className="flex items-center gap-2 text-muted-foreground">
+                                                <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent"></div>
+                                                <span className="text-sm">Switching to {filter} notifications...</span>
                                             </div>
                                         </div>
-                                    </div>
+                                    ) : (
+                                        <div className="flex items-start gap-3">
+                                            <div className="flex-shrink-0 rounded-full p-2.5 bg-muted animate-pulse">
+                                                <BellIcon className="h-4 w-4 text-muted-foreground" />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="space-y-2">
+                                                    <div className="h-4 bg-muted rounded animate-pulse w-3/4"></div>
+                                                    <div className="h-3 bg-muted rounded animate-pulse w-full"></div>
+                                                    <div className="h-3 bg-muted rounded animate-pulse w-2/3"></div>
+                                                </div>
+                                                <div className="flex items-center gap-1.5 mt-3">
+                                                    <div className="h-3 w-3 bg-muted rounded animate-pulse"></div>
+                                                    <div className="h-3 bg-muted rounded animate-pulse w-16"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             ) : getFilteredNotifications().length === 0 ? (
                                 <div className="p-6 text-center text-muted-foreground">
@@ -651,7 +746,8 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                                             key={notification.id}
                                             className={cn(
                                                 "p-4 hover:bg-accent/50 transition-colors group cursor-pointer border-b border-border/50 last:border-b-0",
-                                                !notification.is_read && "bg-primary/5 border-l-4 border-l-primary"
+                                                !notification.is_read && "bg-primary/5 border-l-4 border-l-primary",
+                                                isProcessing && "opacity-50 cursor-not-allowed"
                                             )}
                                             onClick={() => handleNotificationClick(notification)}
                                         >
@@ -738,7 +834,6 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                                                 size="sm"
                                                 onClick={() => {
                                                     const prevPage = Math.max(1, pagination.current_page - 1);
-                                                    console.log('Previous clicked, current page:', pagination.current_page, 'going to page:', prevPage);
                                                     if (prevPage !== pagination.current_page) {
                                                         handlePageChange(prevPage);
                                                     }
@@ -775,7 +870,6 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                                                             variant={page === pagination.current_page ? "default" : "ghost"}
                                                             size="sm"
                                                             onClick={() => {
-                                                                console.log('Page number clicked:', page, 'current page:', pagination.current_page);
                                                                 if (page !== pagination.current_page && page >= 1 && page <= pagination.last_page) {
                                                                     handlePageChange(page);
                                                                 }
@@ -794,7 +888,6 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                                                 size="sm"
                                                 onClick={() => {
                                                     const nextPage = Math.min(pagination.last_page, pagination.current_page + 1);
-                                                    console.log('Next clicked, current page:', pagination.current_page, 'going to page:', nextPage);
                                                     if (nextPage !== pagination.current_page) {
                                                         handlePageChange(nextPage);
                                                     }
