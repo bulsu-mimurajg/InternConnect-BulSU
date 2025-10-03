@@ -205,17 +205,66 @@ class StudentSeeder extends Seeder
                 'specialization' => 'WMAD',
                 'is_submit' => false,
             ],
-            // Student requiring manual intervention
+            // Students requiring manual intervention (various scenarios)
             [
                 'student_number' => '2022100118',
-                'first_name' => 'Manual',
-                'middle_name' => 'Intervention',
-                'last_name' => 'Student',
+                'first_name' => 'Alice',
+                'middle_name' => 'Marie',
+                'last_name' => 'Johnson',
                 'phone' => '09123456807',
                 'section_name' => 'BSIT-4A',
                 'specialization' => 'WMAD',
                 'is_submit' => true,
                 'requires_manual_intervention' => true,
+                'unplaced_reason' => 'All matches have no available slots',
+            ],
+            [
+                'student_number' => '2022100119',
+                'first_name' => 'Robert',
+                'middle_name' => 'James',
+                'last_name' => 'Chen',
+                'phone' => '09123456808',
+                'section_name' => 'BSIT-4B',
+                'specialization' => 'WMAD',
+                'is_submit' => true,
+                'requires_manual_intervention' => true,
+                'unplaced_reason' => 'All matches were rejected by HTEs',
+            ],
+            [
+                'student_number' => '2022100120',
+                'first_name' => 'Maria',
+                'middle_name' => 'Elena',
+                'last_name' => 'Rodriguez',
+                'phone' => '09123456809',
+                'section_name' => 'BSIT-4C',
+                'specialization' => 'WMAD',
+                'is_submit' => true,
+                'requires_manual_intervention' => false,
+                'unplaced_reason' => 'All matches have no available slots',
+            ],
+            [
+                'student_number' => '2022100121',
+                'first_name' => 'David',
+                'middle_name' => 'Kumar',
+                'last_name' => 'Patel',
+                'phone' => '09123456810',
+                'section_name' => 'BSIT-4A',
+                'specialization' => 'WMAD',
+                'is_submit' => true,
+                'requires_manual_intervention' => false,
+                'unplaced_reason' => 'All matches have no available slots',
+            ],
+            [
+                'student_number' => '2022100122',
+                'first_name' => 'Jennifer',
+                'middle_name' => 'Lynn',
+                'last_name' => 'Kim',
+                'phone' => '09123456811',
+                'section_name' => 'BSIT-4B',
+                'specialization' => 'WMAD',
+                'is_submit' => true,
+                'requires_manual_intervention' => true,
+                'unplaced_reason' => 'All matches have no available slots',
             ],
         ];
 
@@ -267,13 +316,12 @@ class StudentSeeder extends Seeder
                 'is_active' => true,
             ]);
 
-            // Create UnplacedStudent record if this student requires manual intervention
-            if (isset($studentData['requires_manual_intervention']) && $studentData['requires_manual_intervention']) {
+            // Create UnplacedStudent record for unplaced students
+            if (isset($studentData['unplaced_reason'])) {
                 \App\Models\UnplacedStudent::create([
                     'student_id' => $student->id,
-                    'reason' => 'No available internship slots',
-                    'requires_manual_intervention' => true,
-                    'notes' => 'This student was created for testing the manual intervention feature. All internship slots are currently occupied.',
+                    'reason' => $studentData['unplaced_reason'],
+                    'requires_manual_intervention' => $studentData['requires_manual_intervention'] ?? false,
                 ]);
             }
 

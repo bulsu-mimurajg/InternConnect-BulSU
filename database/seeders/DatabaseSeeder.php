@@ -118,6 +118,7 @@ class DatabaseSeeder extends Seeder
         $this->call(InternshipCriteriaSeeder::class);
         $this->call(StudentScoreSeeder::class);
         $this->call(StudentMatchSeeder::class);
+        $this->call(UnplacedStudentDemoSeeder::class);
         $this->call(PlacementSeeder::class);
         $this->call(AdviserSeeder::class);
         $this->call(EndorsementPlacementSeeder::class);

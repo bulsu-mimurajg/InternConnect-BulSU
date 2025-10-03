@@ -93,19 +93,29 @@ export default function StudentDetailsModal({
     console.log('Scores breakdown:', student.scores_breakdown);
     console.log('Best match:', student.best_match);
     console.log('Subcategory weights:', student.best_match?.internship?.subcategory_weights);
+    
+    // Additional debugging
+    console.log('Scores breakdown length:', student.scores_breakdown?.length);
+    console.log('Best match internship:', student.best_match?.internship);
+    console.log('Best match subcategory weights:', student.best_match?.internship?.subcategory_weights?.length);
 
     // Group student scores by category for better organization
-    const scoresByCategory = student.scores_breakdown?.reduce((acc: Record<string, ScoreBreakdown[]>, score: ScoreBreakdown) => {
-        if (!acc[score.category]) {
-            acc[score.category] = [];
+    const scoresByCategory = student.scores_breakdown?.filter(score => 
+        score && score.category && score.subcategory && score.score !== null
+    ).reduce((acc: Record<string, ScoreBreakdown[]>, score: ScoreBreakdown) => {
+        const categoryName = score.category || 'Uncategorized';
+        if (!acc[categoryName]) {
+            acc[categoryName] = [];
         }
-        acc[score.category].push(score);
+        acc[categoryName].push(score);
         return acc;
     }, {}) || {};
 
     // Get internship criteria (weights) grouped by category
-    const criteriaByCategory = student.best_match?.internship?.subcategory_weights?.reduce((acc: Record<string, SubcategoryWeight[]>, weight: SubcategoryWeight) => {
-        const categoryName = weight.subcategory?.category?.name || 'Uncategorized';
+    const criteriaByCategory = student.best_match?.internship?.subcategory_weights?.filter(weight => 
+        weight && weight.subcategory && weight.subcategory.subcategory_name && weight.weight !== null
+    ).reduce((acc: Record<string, SubcategoryWeight[]>, weight: SubcategoryWeight) => {
+        const categoryName = weight.subcategory?.category?.category_name || 'General Requirements';
         if (!acc[categoryName]) {
             acc[categoryName] = [];
         }
@@ -115,6 +125,8 @@ export default function StudentDetailsModal({
 
     console.log('Scores by category:', scoresByCategory);
     console.log('Criteria by category:', criteriaByCategory);
+    console.log('Raw subcategory weights:', student.best_match?.internship?.subcategory_weights);
+    console.log('First weight category:', student.best_match?.internship?.subcategory_weights?.[0]?.subcategory?.category);
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
@@ -188,37 +200,44 @@ export default function StudentDetailsModal({
                                     </CardDescription>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
-                                    {Object.keys(scoresByCategory).length > 0 ? (
-                                        Object.entries(scoresByCategory).map(([category, scores]: [string, ScoreBreakdown[]]) => (
-                                            <div key={category} className="border rounded-lg p-4">
-                                                <h4 className="font-semibold text-gray-900 mb-3 text-blue-700">
-                                                    {category || 'Uncategorized'}
-                                                </h4>
-                                                <div className="space-y-3">
-                                                    {scores.map((score: ScoreBreakdown, index: number) => (
-                                                        <div key={index} className="space-y-2">
-                                                            <div className="flex justify-between items-center">
-                                                                <span className="text-sm font-medium text-gray-700">
-                                                                    {score.subcategory || 'Unknown Subcategory'}
-                                                                </span>
-                                                                <div className="text-right">
-                                                                    <div className="text-sm font-bold text-blue-600">
-                                                                        {score.score}/5
-                                                                    </div>
-                                                                    <div className="text-xs text-gray-500">
-                                                                        {score.score_percentage}%
+                                    {student.scores_breakdown && student.scores_breakdown.length > 0 ? (
+                                        Object.keys(scoresByCategory).length > 0 ? (
+                                            Object.entries(scoresByCategory).map(([category, scores]: [string, ScoreBreakdown[]]) => (
+                                                <div key={category} className="border rounded-lg p-4">
+                                                    <h4 className="font-semibold text-gray-900 mb-3 text-blue-700">
+                                                        {category}
+                                                    </h4>
+                                                    <div className="space-y-3">
+                                                        {scores.map((score: ScoreBreakdown, index: number) => (
+                                                            <div key={index} className="space-y-2">
+                                                                <div className="flex justify-between items-center">
+                                                                    <span className="text-sm font-medium text-gray-700">
+                                                                        {score.subcategory}
+                                                                    </span>
+                                                                    <div className="text-right">
+                                                                        <div className="text-sm font-bold text-blue-600">
+                                                                            {score.score}/5
+                                                                        </div>
+                                                                        <div className="text-xs text-gray-500">
+                                                                            {Math.round(score.score_percentage)}%
+                                                                        </div>
                                                                     </div>
                                                                 </div>
+                                                                <Progress 
+                                                                    value={score.score_percentage} 
+                                                                    className="h-2" 
+                                                                />
                                                             </div>
-                                                            <Progress 
-                                                                value={score.score_percentage} 
-                                                                className="h-2" 
-                                                            />
-                                                        </div>
-                                                    ))}
+                                                        ))}
+                                                    </div>
                                                 </div>
+                                            ))
+                                        ) : (
+                                            <div className="text-center py-8 text-muted-foreground">
+                                                <p>Assessment scores found but missing category information.</p>
+                                                <p className="text-sm">Please check the assessment data structure.</p>
                                             </div>
-                                        ))
+                                        )
                                     ) : (
                                         <div className="text-center py-8 text-muted-foreground">
                                             <p>No assessment scores found.</p>
@@ -240,37 +259,45 @@ export default function StudentDetailsModal({
                                     </CardDescription>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
-                                    {Object.keys(criteriaByCategory).length > 0 ? (
-                                        Object.entries(criteriaByCategory).map(([category, weights]: [string, SubcategoryWeight[]]) => (
-                                            <div key={category} className="border rounded-lg p-4">
-                                                <h4 className="font-semibold text-gray-900 mb-3 text-green-700">
-                                                    {category || 'Uncategorized'}
-                                                </h4>
-                                                <div className="space-y-3">
-                                                    {weights.map((weight: SubcategoryWeight, index: number) => (
-                                                        <div key={index} className="space-y-2">
-                                                            <div className="flex justify-between items-center">
-                                                                <span className="text-sm font-medium text-gray-700">
-                                                                    {weight.subcategory?.subcategory_name || 'Unknown Subcategory'}
-                                                                </span>
-                                                                <div className="text-right">
-                                                                    <Badge className={getWeightColor(weight.weight)}>
-                                                                        {weight.weight}%
-                                                                    </Badge>
-                                                                    <div className="text-xs text-gray-500 mt-1">
-                                                                        Importance
+                                    {student.best_match?.internship?.subcategory_weights && student.best_match.internship.subcategory_weights.length > 0 ? (
+                                        Object.keys(criteriaByCategory).length > 0 ? (
+                                                        Object.entries(criteriaByCategory).map(([category, weights]: [string, SubcategoryWeight[]]) => (
+                                                <div key={category} className="border rounded-lg p-4">
+                                                    <h4 className="font-semibold text-gray-900 mb-3 text-green-700">
+                                                        {category === 'Uncategorized' ? 'General Requirements' : category}
+                                                    </h4>
+                                                    <div className="space-y-3">
+                                                        {weights.map((weight: SubcategoryWeight, index: number) => (
+                                                            <div key={index} className="space-y-2">
+                                                                <div className="flex justify-between items-center">
+                                                                    <span className="text-sm font-medium text-gray-700">
+                                                                        {weight.subcategory.subcategory_name}
+                                                                    </span>
+                                                                    <div className="text-right">
+                                                                        <Badge className={getWeightColor(weight.weight)}>
+                                                                            {weight.weight}%
+                                                                        </Badge>
+                                                                        <div className="text-xs text-gray-500 mt-1">
+                                                                            Importance
+                                                                        </div>
                                                                     </div>
                                                                 </div>
+                                                                <Progress 
+                                                                    value={weight.weight} 
+                                                                    className="h-2 bg-gray-200" 
+                                                                />
                                                             </div>
-                                                            <Progress 
-                                                                value={weight.weight} 
-                                                                className="h-2 bg-gray-200" 
-                                                            />
-                                                        </div>
-                                                    ))}
+                                                        ))}
+                                                    </div>
                                                 </div>
+                                            ))
+                                        ) : (
+                                            <div className="text-center py-8 text-muted-foreground">
+                                                <p>Internship criteria found but missing category information.</p>
+                                                <p className="text-sm">Debug: {JSON.stringify(Object.keys(criteriaByCategory))}</p>
+                                                <p className="text-sm">Please check the internship criteria data structure.</p>
                                             </div>
-                                        ))
+                                        )
                                     ) : (
                                         <div className="text-center py-8 text-muted-foreground">
                                             <p>No internship criteria found.</p>
@@ -382,42 +409,6 @@ export default function StudentDetailsModal({
                             </Card>
                         )}
 
-                        {/* Assessment Scores Breakdown */}
-                        {student.scores_breakdown && student.scores_breakdown.length > 0 && (
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="text-lg">Assessment Scores Breakdown</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="space-y-4">
-                                        {student.scores_breakdown.map((score: ScoreBreakdown, index: number) => (
-                                            <div key={index} className="border rounded-lg p-4">
-                                                <div className="flex justify-between items-center mb-2">
-                                                    <div>
-                                                        <h4 className="font-medium text-gray-900">{score.category}</h4>
-                                                        <p className="text-sm text-gray-500">{score.subcategory}</p>
-                                                    </div>
-                                                    <div className="text-right">
-                                                        <div className="text-lg font-bold text-gray-900">
-                                                            {score.score}/5
-                                                        </div>
-                                                        <div className="text-sm text-gray-500">
-                                                            {score.score_percentage}%
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div className="w-full bg-gray-200 rounded-full h-2">
-                                                    <div 
-                                                        className="bg-blue-600 h-2 rounded-full" 
-                                                        style={{ width: `${score.score_percentage}%` }}
-                                                    ></div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        )}
                     </TabsContent>
                 </Tabs>
             </DialogContent>

@@ -740,7 +740,6 @@ class StudentController extends Controller
                 'requires_manual_intervention' => $requiresManualIntervention,
                 'total_matches' => $student->compatibilityScores()->count(),
                 'rejected_matches' => $student->compatibilityScores()->where('endorsement_status', 'rejected')->count(),
-                'notes' => $unplacedRecord?->notes,
             ];
         })->filter(function ($student) {
             // Only include students who truly couldn't be placed
@@ -863,11 +862,14 @@ class StudentController extends Controller
         // Get detailed scores breakdown
         $scoresBreakdown = $student->scores->map(function ($score) {
             return [
-                'category' => $score->subcategory->category->name,
-                'subcategory' => $score->subcategory->name,
+                'category' => $score->subcategory->category->category_name ?? 'Uncategorized',
+                'subcategory' => $score->subcategory->subcategory_name ?? 'Unknown Subcategory',
                 'score' => $score->score,
                 'score_percentage' => ($score->score / 5) * 100,
             ];
+        })->filter(function ($score) {
+            // Filter out any scores that might have null subcategory relationships
+            return $score['subcategory'] !== 'Unknown Subcategory';
         });
 
         return response()->json([

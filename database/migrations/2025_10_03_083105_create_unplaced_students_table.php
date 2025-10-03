@@ -16,7 +16,6 @@ return new class extends Migration
             $table->foreignId('student_id')->constrained()->onDelete('cascade');
             $table->string('reason');
             $table->boolean('requires_manual_intervention')->default(false);
-            $table->text('notes')->nullable();
             $table->timestamp('resolved_at')->nullable();
             $table->timestamps();
             

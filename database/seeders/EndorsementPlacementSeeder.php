@@ -56,7 +56,7 @@ class EndorsementPlacementSeeder extends Seeder
             // Student 1: Basic student for list.tsx (no special status)
             [
                 'student_number' => '2022100201',
-                'first_name' => 'Alice',
+                'first_name' => 'Alex',
                 'last_name' => 'Johnson',
                 'middle_name' => 'A',
                 'specialization' => 'BA',

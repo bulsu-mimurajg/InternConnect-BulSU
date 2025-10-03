@@ -102,7 +102,6 @@ interface UnplacedStudent {
     requires_manual_intervention: boolean;
     total_matches: number;
     rejected_matches: number;
-    notes?: string;
 }
 
 interface Props {
@@ -131,6 +130,9 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
         internship: filters.currentInternship || 'all',
         search: filters.currentSearch || '',
     });
+
+    // Determine if the "Students Without Matches" card should be shown
+    const showStudentsWithoutMatchesCard = (statistics?.students_without_matches || 0) > 0;
 
     // Function to get fresh CSRF token
     const getFreshCsrfToken = () => {
@@ -202,26 +204,6 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
         }>;
     } | null>(null);
 
-    // Debug logging to see what data is received
-    useEffect(() => {
-        console.log('Received filters:', filters);
-        console.log('Received matchedStudents:', matchedStudents);
-        console.log('Received unplacedStudents:', unplacedStudents);
-        console.log('Filters sections:', filters.sections);
-        console.log('Filters internships:', filters.internships);
-        
-        // Debug slot information for each student
-        matchedStudents.forEach((student, index) => {
-            if (student.best_match?.internship) {
-                console.log(`Student ${index + 1} (${student.first_name} ${student.last_name}):`, {
-                    position: student.best_match.internship.position_title,
-                    total_slots: student.best_match.internship.slot_count,
-                    available_slots: student.best_match.internship.available_slots,
-                    occupied_slots: student.best_match.internship.occupied_slots
-                });
-            }
-        });
-    }, [filters, matchedStudents]);
 
     // Update local filters when props change
     useEffect(() => {
@@ -350,7 +332,6 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
             setErrorMessage(null);
             setErrorType(null);
             
-            console.log('Approving student:', student.id, 'for internship:', student.best_match.internship.id);
             
             const response = await fetch(`/student/${student.id}/endorse`, {
                 method: 'POST',
@@ -365,11 +346,9 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                 }),
             });
             
-            console.log('Response status:', response.status);
             
             // Handle CSRF token mismatch
             if (response.status === 419) {
-                console.log('CSRF token mismatch detected, refreshing token...');
                 csrfToken = await refreshCsrfToken();
                 
                 // Retry the request with fresh token
@@ -415,7 +394,6 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
             }
             
             const result = await response.json();
-            console.log('Response data:', result);
             
             if (response.ok) {
                 setErrorMessage('Student placement approved successfully!');
@@ -458,7 +436,6 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
             setErrorMessage(null);
             setErrorType(null);
             
-            console.log('Rejecting student:', student.id, 'for internship:', student.best_match.internship.id);
             
             const response = await fetch(`/student/${student.id}/reject-placement`, {
                 method: 'POST',
@@ -473,11 +450,9 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                 }),
             });
             
-            console.log('Response status:', response.status);
             
             // Handle CSRF token mismatch
             if (response.status === 419) {
-                console.log('CSRF token mismatch detected, refreshing token...');
                 csrfToken = await refreshCsrfToken();
                 
                 // Retry the request with fresh token
@@ -527,7 +502,6 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
             }
             
             const result = await response.json();
-            console.log('Response data:', result);
             
             if (response.ok) {
                 if (result.fallback) {
@@ -602,7 +576,6 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
             setErrorMessage(null);
             setErrorType(null);
             
-            console.log('Checking for slot conflicts before batch approval for students:', Array.from(selectedStudents));
             
             // First, check for slot conflicts
             const conflictResponse = await fetch('/student/check-batch-conflicts', {
@@ -643,7 +616,6 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
 
     const proceedWithBatchApproval = async (csrfToken: string) => {
         try {
-            console.log('Proceeding with batch approval for students:', Array.from(selectedStudents));
             
             // Use the new batch approval endpoint
             const response = await fetch('/student/batch-endorse', {
@@ -659,12 +631,9 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                 }),
             });
             
-            console.log('Response status:', response.status);
-            console.log('Response headers:', Object.fromEntries(response.headers.entries()));
             
             // Handle CSRF token mismatch
             if (response.status === 419) {
-                console.log('CSRF token mismatch detected, refreshing token...');
                 csrfToken = await refreshCsrfToken();
                 
                 // Retry the request with fresh token
@@ -720,7 +689,6 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
             }
             
             const result = await response.json();
-            console.log('Response data:', result);
             
             if (response.ok) {
                 // Success
@@ -793,7 +761,6 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                     
                     // Handle CSRF token mismatch
                     if (response.status === 419) {
-                        console.log('CSRF token mismatch detected, refreshing token...');
                         csrfToken = await refreshCsrfToken();
                         
                         // Retry the request with fresh token
@@ -1061,7 +1028,7 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                     {activeTab === 'matched' ? (
                         <>
                             {/* Summary Cards */}
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div className={`grid grid-cols-1 md:grid-cols-${showStudentsWithoutMatchesCard ? 4 : 3} gap-4`}>
                         <Card>
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                 <CardTitle className="text-sm font-medium">Students with Matches</CardTitle>
@@ -1075,14 +1042,14 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                             </CardContent>
                         </Card>
 
-                        {statistics && statistics.students_without_matches > 0 && (
+                        {showStudentsWithoutMatchesCard && (
                             <Card className="border-orange-200 bg-orange-50 dark:bg-orange-900/20">
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                     <CardTitle className="text-sm font-medium text-orange-800 dark:text-orange-200">No Matches Available</CardTitle>
                                     <AlertTriangleIcon className="h-4 w-4 text-orange-600 dark:text-orange-400" />
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="text-2xl font-bold text-orange-800 dark:text-orange-200">{statistics.students_without_matches}</div>
+                                    <div className="text-2xl font-bold text-orange-800 dark:text-orange-200">{statistics?.students_without_matches || 0}</div>
                                     <p className="text-xs text-orange-700 dark:text-orange-300">
                                         Students with no available slots
                                     </p>
@@ -1251,115 +1218,196 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                                     </p>
                                 </div>
                             ) : (
-                                <div className="overflow-x-auto">
-                                    <table className="w-full">
-                                        <thead>
-                                            <tr className="border-b">
-                                                <th className="text-center p-3 font-medium text-muted-foreground w-16">#</th>
-                                                <th className="text-left p-3 font-medium text-muted-foreground">
-                                                    <div className="flex items-center gap-2">
+                                <>
+                                    {/* Mobile Card Layout */}
+                                    <div className="block md:hidden space-y-3">
+                                        {matchedPagination.paginatedData.map((student, index) => (
+                                            <Card key={student.id} className="p-4">
+                                                <div className="space-y-3">
+                                                    {/* Header with selection and row number */}
+                                                    <div className="flex items-start justify-between">
+                                                        <div className="flex items-center gap-3">
+                                                            <Checkbox
+                                                                checked={selectedStudents.has(student.id)}
+                                                                onCheckedChange={(checked) => handleSelectStudent(student.id, checked as boolean)}
+                                                            />
+                                                            <span className="text-xs text-muted-foreground font-mono">
+                                                                #{getRowNumber(matchedPagination.currentPage, 10, index)}
+                                                            </span>
+                                                        </div>
+                                                        <Badge 
+                                                            className={getScoreColor(student.best_match?.compatibility_score || 0)}
+                                                        >
+                                                            {Math.round(student.best_match?.compatibility_score || 0)}%
+                                                        </Badge>
+                                                    </div>
+
+                                                    {/* Student Info */}
+                                                    <div>
+                                                        <div className="font-medium text-base">
+                                                            {student.last_name}, {student.first_name}
+                                                        </div>
+                                                        <div className="text-sm text-muted-foreground">
+                                                            {student.student_number}
+                                                        </div>
+                                                        <div className="flex items-center gap-2 mt-1">
+                                                            <Badge variant="outline" className="text-xs">{student.section}</Badge>
+                                                            {student.specialization && (
+                                                                <span className="text-xs text-muted-foreground">
+                                                                    {student.specialization}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Internship Match */}
+                                                    <div className="border-l-2 border-primary/20 pl-3">
+                                                        <div className="font-medium text-sm">
+                                                            {student.best_match?.internship?.position_title || 'Unknown Position'}
+                                                        </div>
+                                                        <div className="text-xs text-muted-foreground">
+                                                            {student.best_match?.internship?.hte?.company_name || 'Unknown Company'}
+                                                        </div>
+                                                        <div className="text-xs text-muted-foreground">
+                                                            {student.best_match?.internship?.department || 'Unknown Department'}
+                                                        </div>
+                                                        {student.best_match?.internship?.available_slots !== undefined && (
+                                                            <div className="text-xs text-blue-600 font-medium mt-1">
+                                                                {student.best_match.internship.available_slots} slot{student.best_match.internship.available_slots !== 1 ? 's' : ''} available
+                                                            </div>
+                                                        )}
+                                                        {localFilters.internship !== 'all' && student.best_match?.status && (
+                                                            <div className="mt-2">
+                                                                {getStatusBadge(student.best_match.status)}
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Actions */}
+                                                    <div className="flex gap-2 pt-2">
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => handleViewDetails(student)}
+                                                            disabled={isLoading}
+                                                            className="flex-1"
+                                                        >
+                                                            <EyeIcon className="h-4 w-4 mr-1" />
+                                                            View
+                                                        </Button>
+                                                        <Button
+                                                            variant="default"
+                                                            size="sm"
+                                                            onClick={() => handleSingleApprove(student)}
+                                                            disabled={isLoading}
+                                                            className="bg-green-600 hover:bg-green-700 flex-1"
+                                                        >
+                                                            <CheckCircleIcon className="h-4 w-4 mr-1" />
+                                                            Endorse
+                                                        </Button>
+                                                        <Button
+                                                            variant="destructive"
+                                                            size="sm"
+                                                            onClick={() => handleSingleReject(student)}
+                                                            disabled={isLoading}
+                                                            className="flex-1"
+                                                        >
+                                                            <XCircleIcon className="h-4 w-4 mr-1" />
+                                                            Reject
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            </Card>
+                                        ))}
+                                    </div>
+
+                                    {/* Desktop Table Layout */}
+                                    <div className="hidden md:block">
+                                        <div className="mb-4 flex items-center gap-2">
                                                         <Checkbox
                                                             checked={matchedPagination.paginatedData.length > 0 && matchedPagination.paginatedData.every(student => selectedStudents.has(student.id))}
                                                             onCheckedChange={handleSelectAll}
                                                         />
+                                            <span className="text-sm text-muted-foreground">
                                                         Select All ({matchedPagination.paginatedData.length})
+                                            </span>
                                                     </div>
-                                                </th>
-                                                <th className="text-left p-3 font-medium text-muted-foreground">Student</th>
-                                                <th className="text-left p-3 font-medium text-muted-foreground">Section</th>
-                                                <th className="text-left p-3 font-medium text-muted-foreground">Best Match</th>
-                                                <th className="text-left p-3 font-medium text-muted-foreground">Compatibility</th>
-                                                <th className="text-right p-3 font-medium text-muted-foreground">Actions</th>
+                                        
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-sm">
+                                                <thead>
+                                                    <tr className="border-b">
+                                                        <th className="text-center p-2 font-medium text-muted-foreground w-12">#</th>
+                                                        <th className="text-left p-2 font-medium text-muted-foreground w-8"></th>
+                                                        <th className="text-left p-2 font-medium text-muted-foreground">Student</th>
+                                                        <th className="text-left p-2 font-medium text-muted-foreground w-20">Section</th>
+                                                        <th className="text-left p-2 font-medium text-muted-foreground">Best Match</th>
+                                                        <th className="text-center p-2 font-medium text-muted-foreground w-24">Score</th>
+                                                        <th className="text-right p-2 font-medium text-muted-foreground w-48">Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {matchedPagination.paginatedData.map((student, index) => (
                                                 <tr key={student.id} className="border-b hover:bg-muted/50 transition-colors">
-                                                    <td className="text-center p-3 font-mono text-sm text-muted-foreground">
+                                                            <td className="text-center p-2 font-mono text-xs text-muted-foreground">
                                                         {getRowNumber(matchedPagination.currentPage, 10, index)}
                                                     </td>
-                                                    <td className="p-3">
+                                                            <td className="p-2">
                                                         <Checkbox
                                                             checked={selectedStudents.has(student.id)}
                                                             onCheckedChange={(checked) => handleSelectStudent(student.id, checked as boolean)}
                                                         />
                                                     </td>
-                                                    <td className="p-3">
+                                                            <td className="p-2">
                                                         <div>
-                                                            <div className="font-medium">
+                                                                    <div className="font-medium text-sm">
                                                                 {student.last_name}, {student.first_name}
                                                             </div>
-                                                            <div className="text-sm text-muted-foreground">
+                                                                    <div className="text-xs text-muted-foreground">
                                                                 {student.student_number}
                                                             </div>
-                                                            {student.middle_name && (
-                                                                <div className="text-xs text-muted-foreground">
-                                                                    {student.middle_name}
-                                                                </div>
-                                                            )}
                                                         </div>
                                                     </td>
-                                                    <td className="p-3">
-                                                        <div>
-                                                            <Badge variant="outline">{student.section}</Badge>
-                                                            {student.specialization && (
-                                                                <div className="text-xs text-muted-foreground mt-1">
-                                                                    {student.specialization}
-                                                                </div>
-                                                            )}
-                                                        </div>
+                                                            <td className="p-2">
+                                                                <Badge variant="outline" className="text-xs">{student.section}</Badge>
                                                     </td>
-                                                    <td className="p-3">
+                                                            <td className="p-2">
                                                         <div>
-                                                            <div className="font-medium">
+                                                                    <div className="font-medium text-sm">
                                                                 {student.best_match?.internship?.position_title || 'Unknown Position'}
                                                             </div>
-                                                            <div className="text-sm text-muted-foreground">
+                                                                    <div className="text-xs text-muted-foreground">
                                                                 {student.best_match?.internship?.hte?.company_name || 'Unknown Company'}
                                                             </div>
-                                                            <div className="text-xs text-muted-foreground">
-                                                                {student.best_match?.internship?.department || 'Unknown Department'}
-                                                            </div>
                                                             {student.best_match?.internship?.available_slots !== undefined && (
-                                                                <div className="text-xs text-blue-600 font-medium mt-1">
-                                                                    {student.best_match.internship.available_slots} slot{student.best_match.internship.available_slots !== 1 ? 's' : ''} available
+                                                                        <div className="text-xs text-blue-600 font-medium">
+                                                                            {student.best_match.internship.available_slots} slot{student.best_match.internship.available_slots !== 1 ? 's' : ''} left
                                                                 </div>
                                                             )}
-                                                            {student.best_match?.internship?.slot_count !== undefined && (
-                                                                <div className="text-xs text-muted-foreground mt-1">
-                                                                    Total: {student.best_match.internship.slot_count} slot{student.best_match.internship.slot_count !== 1 ? 's' : ''}
-                                                                </div>
-                                                            )}
-                                                            {/* Show status badge when viewing specific internship */}
                                                             {localFilters.internship !== 'all' && student.best_match?.status && (
-                                                                <div className="mt-2">
+                                                                        <div className="mt-1">
                                                                     {getStatusBadge(student.best_match.status)}
                                                                 </div>
                                                             )}
                                                         </div>
                                                     </td>
-                                                    <td className="p-3">
-                                                        <div className="flex items-center gap-2">
+                                                            <td className="p-2 text-center">
                                                             <Badge 
                                                                 className={getScoreColor(student.best_match?.compatibility_score || 0)}
                                                             >
                                                                 {Math.round(student.best_match?.compatibility_score || 0)}%
                                                             </Badge>
-                                                            <span className="text-xs text-muted-foreground">
-                                                                {getScoreLabel(student.best_match?.compatibility_score || 0)}
-                                                            </span>
-                                                        </div>
                                                     </td>
-                                                    <td className="p-3 text-right">
-                                                        <div className="flex items-center justify-end gap-2">
+                                                            <td className="p-2 text-right">
+                                                                <div className="flex items-center justify-end gap-1">
                                                             <Button
                                                                 variant="outline"
                                                                 size="sm"
                                                                 onClick={() => handleViewDetails(student)}
                                                                 disabled={isLoading}
+                                                                        className="h-8 px-2"
                                                             >
-                                                                <EyeIcon className="h-4 w-4 mr-2" />
-                                                                View Details
+                                                                        <EyeIcon className="h-3 w-3" />
                                                             </Button>
                                                             
                                                             <Button
@@ -1367,10 +1415,9 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                                                                 size="sm"
                                                                 onClick={() => handleSingleApprove(student)}
                                                                 disabled={isLoading}
-                                                                className="bg-green-600 hover:bg-green-700"
+                                                                        className="bg-green-600 hover:bg-green-700 h-8 px-2"
                                                             >
-                                                                <CheckCircleIcon className="h-4 w-4 mr-2" />
-                                                                Endorse
+                                                                        <CheckCircleIcon className="h-3 w-3" />
                                                             </Button>
                                                             
                                                             <Button
@@ -1378,9 +1425,9 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                                                                 size="sm"
                                                                 onClick={() => handleSingleReject(student)}
                                                                 disabled={isLoading}
+                                                                        className="h-8 px-2"
                                                             >
-                                                                <XCircleIcon className="h-4 w-4 mr-2" />
-                                                                Reject
+                                                                        <XCircleIcon className="h-3 w-3" />
                                                             </Button>
                                                         </div>
                                                     </td>
@@ -1389,6 +1436,8 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                                         </tbody>
                                     </table>
                                 </div>
+                                    </div>
+                                </>
                             )}
                         </CardContent>
                     </Card>
@@ -1475,83 +1524,146 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                                                 </p>
                                             </div>
                                         ) : (
+                                            <>
+                                                {/* Mobile Card Layout for Unplaced Students */}
+                                                <div className="block md:hidden space-y-3">
+                                                    {Array.isArray(unplacedStudents) && unplacedStudents.map((student) => (
+                                                        <Card key={student.id} className="p-4">
+                                                            <div className="space-y-3">
+                                                                {/* Student Info */}
+                                                                <div>
+                                                                    <div className="font-medium text-base">
+                                                                        {student.last_name}, {student.first_name}
+                                                                    </div>
+                                                                    <div className="text-sm text-muted-foreground">
+                                                                        {student.student_number}
+                                                                    </div>
+                                                                    <div className="flex items-center gap-2 mt-1">
+                                                                        <Badge variant="outline" className="text-xs">{student.section}</Badge>
+                                                                        {student.specialization && (
+                                                                            <span className="text-xs text-muted-foreground">
+                                                                                {student.specialization}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* Status and Reason */}
+                                                                <div className="space-y-2">
+                                                                    <div className="flex items-center gap-2">
+                                                                        {student.requires_manual_intervention ? (
+                                                                            <Badge variant="destructive" className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 text-xs">
+                                                                                Auto-Placement Failed
+                                                                            </Badge>
+                                                                        ) : (
+                                                                            <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 text-xs">
+                                                                                Awaiting Auto-Placement
+                                                                            </Badge>
+                                                                        )}
+                                                                    </div>
+                                                                    <div className="text-sm text-muted-foreground">
+                                                                        <strong>Reason:</strong> {student.reason}
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* Match Statistics */}
+                                                                <div className="bg-muted/50 rounded-lg p-3">
+                                                                    <div className="text-sm font-medium mb-1">Match Statistics</div>
+                                                                    <div className="grid grid-cols-2 gap-2 text-xs">
+                                                                        <div>
+                                                                            <span className="text-muted-foreground">Total Matches:</span>
+                                                                            <span className="ml-1 font-medium">{student.total_matches}</span>
+                                                                        </div>
+                                                                        <div>
+                                                                            <span className="text-muted-foreground">Rejected:</span>
+                                                                            <span className="ml-1 font-medium">{student.rejected_matches}</span>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* Action Required */}
+                                                                <div className="border-l-2 border-orange-200 pl-3">
+                                                                    {student.requires_manual_intervention ? (
+                                                                        <div>
+                                                                            <Badge variant="destructive" className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 text-xs mb-1">
+                                                                                Manual Intervention Required
+                                                                            </Badge>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 text-xs">
+                                                                            Await deadline for Auto-Placement
+                                                                        </Badge>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </Card>
+                                                    ))}
+                                                </div>
+
+                                                {/* Desktop Table Layout for Unplaced Students */}
+                                                <div className="hidden md:block">
                                             <div className="overflow-x-auto">
-                                                <table className="w-full">
+                                                        <table className="w-full text-sm">
                                                     <thead>
                                                         <tr className="border-b">
-                                                            <th className="text-left p-3 font-medium text-muted-foreground">Student</th>
-                                                            <th className="text-left p-3 font-medium text-muted-foreground">Section</th>
-                                                            <th className="text-left p-3 font-medium text-muted-foreground">Reason</th>
-                                                            <th className="text-left p-3 font-medium text-muted-foreground">Matches</th>
-                                                            <th className="text-left p-3 font-medium text-muted-foreground">Status</th>
-                                                            <th className="text-left p-3 font-medium text-muted-foreground">Action Required</th>
+                                                                    <th className="text-left p-2 font-medium text-muted-foreground">Student</th>
+                                                                    <th className="text-left p-2 font-medium text-muted-foreground w-20">Section</th>
+                                                                    <th className="text-left p-2 font-medium text-muted-foreground">Reason</th>
+                                                                    <th className="text-center p-2 font-medium text-muted-foreground w-24">Matches</th>
+                                                                    <th className="text-center p-2 font-medium text-muted-foreground w-32">Status</th>
+                                                                    <th className="text-left p-2 font-medium text-muted-foreground">Action Required</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody>
                                                         {Array.isArray(unplacedStudents) && unplacedStudents.map((student) => (
                                                             <tr key={student.id} className="border-b hover:bg-muted/50 transition-colors">
-                                                                <td className="p-3">
+                                                                        <td className="p-2">
                                                                     <div>
-                                                                        <div className="font-medium">
+                                                                                <div className="font-medium text-sm">
                                                                             {student.last_name}, {student.first_name}
                                                                         </div>
-                                                                        <div className="text-sm text-muted-foreground">
+                                                                                <div className="text-xs text-muted-foreground">
                                                                             {student.student_number}
                                                                         </div>
-                                                                        {student.middle_name && (
-                                                                            <div className="text-xs text-muted-foreground">
-                                                                                {student.middle_name}
-                                                                            </div>
-                                                                        )}
                                                                     </div>
                                                                 </td>
-                                                                <td className="p-3">
-                                                                    <Badge variant="outline">{student.section}</Badge>
-                                                                    {student.specialization && (
-                                                                        <div className="text-xs text-muted-foreground mt-1">
-                                                                            {student.specialization}
-                                                                        </div>
-                                                                    )}
+                                                                        <td className="p-2">
+                                                                            <Badge variant="outline" className="text-xs">{student.section}</Badge>
                                                                 </td>
-                                                                <td className="p-3">
-                                                                    <div className="text-sm">
+                                                                        <td className="p-2">
+                                                                            <div className="text-sm max-w-xs truncate" title={student.reason}>
                                                                         {student.reason}
                                                                     </div>
                                                                 </td>
-                                                                <td className="p-3">
+                                                                        <td className="p-2 text-center">
                                                                     <div className="text-sm">
-                                                                        <div>Total: {student.total_matches}</div>
-                                                                        <div className="text-muted-foreground">
-                                                                            Rejected: {student.rejected_matches}
+                                                                                <div className="font-medium">{student.total_matches}</div>
+                                                                                <div className="text-xs text-muted-foreground">
+                                                                                    {student.rejected_matches} rejected
                                                                         </div>
                                                                     </div>
                                                                 </td>
-                                                                <td className="p-3">
+                                                                        <td className="p-2 text-center">
                                                                     {student.requires_manual_intervention ? (
-                                                                        <Badge variant="destructive" className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
+                                                                                <Badge variant="destructive" className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 text-xs">
                                                                             Auto-Placement Failed
                                                                         </Badge>
                                                                     ) : (
-                                                                        <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
+                                                                                <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 text-xs">
                                                                             Awaiting Auto-Placement
                                                                         </Badge>
                                                                     )}
                                                                 </td>
-                                                                <td className="p-3">
+                                                                        <td className="p-2">
                                                                     {student.requires_manual_intervention ? (
-                                                                        <div className="space-y-2">
-                                                                            <Badge variant="destructive" className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
+                                                                                <div className="space-y-1">
+                                                                                    <Badge variant="destructive" className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 text-xs">
                                                                                 Manual Intervention Required
                                                                             </Badge>
-                                                                            {student.notes && (
-                                                                                <div className="text-xs text-muted-foreground">
-                                                                                    {student.notes}
-                                                                                </div>
-                                                                            )}
                                                                         </div>
                                                                     ) : (
-                                                                        <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                                                                            Await  deadline for Auto-Placement
+                                                                                <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 text-xs">
+                                                                                    Await deadline for Auto-Placement
                                                                         </Badge>
                                                                     )}
                                                                 </td>
@@ -1560,6 +1672,8 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                                                     </tbody>
                                                 </table>
                                             </div>
+                                                </div>
+                                            </>
                                         )}
                                     </CardContent>
                                 </Card>

@@ -11,7 +11,6 @@ class UnplacedStudent extends Model
         'student_id',
         'reason',
         'requires_manual_intervention',
-        'notes',
         'resolved_at',
     ];
 
