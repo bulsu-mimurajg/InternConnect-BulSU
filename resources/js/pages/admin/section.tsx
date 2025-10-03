@@ -46,9 +46,39 @@ interface Section {
 interface Props {
     sections: Section[];
     showArchived?: boolean;
+    deadlineStatus?: {
+        student_assessment?: {
+            id: number;
+            title: string;
+            category: string;
+            end_date: string;
+            formatted_end_date: string;
+            time_remaining_hours: number;
+            time_remaining_days: number;
+            is_active: boolean;
+            is_expired: boolean;
+        };
+        internship_placement?: {
+            id: number;
+            title: string;
+            category: string;
+            end_date: string;
+            formatted_end_date: string;
+            time_remaining_hours: number;
+            time_remaining_days: number;
+            is_active: boolean;
+            is_expired: boolean;
+        };
+        restrictions: Array<{
+            type: string;
+            message: string;
+            deadline: any;
+            affected_functionality: string[];
+        }>;
+    };
 }
 
-export default function SectionManagement({ sections, showArchived = false }: Props) {
+export default function SectionManagement({ sections, showArchived = false, deadlineStatus }: Props) {
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [selectedSection, setSelectedSection] = useState<Section | null>(null);
@@ -123,10 +153,44 @@ export default function SectionManagement({ sections, showArchived = false }: Pr
         resetToFirstPage();
     }, [showArchivedSections, resetToFirstPage]);
 
+    // Check if section management is restricted due to deadlines
+    const isSectionManagementRestricted = useMemo(() => {
+        return deadlineStatus?.restrictions.some(restriction => 
+            restriction.affected_functionality.includes('section_management')
+        ) || false;
+    }, [deadlineStatus]);
+
+    // Get restriction message
+    const restrictionMessage = useMemo(() => {
+        const restriction = deadlineStatus?.restrictions.find(restriction => 
+            restriction.affected_functionality.includes('section_management')
+        );
+        return restriction?.message || '';
+    }, [deadlineStatus]);
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Section Management" />
             <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
+                {/* Deadline Restriction Alert */}
+                {isSectionManagementRestricted && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                        <div className="flex items-start">
+                            <div className="flex-shrink-0">
+                                <Archive className="h-5 w-5 text-amber-400" />
+                            </div>
+                            <div className="ml-3">
+                                <h3 className="text-sm font-medium text-amber-800">
+                                    Section Management Restricted
+                                </h3>
+                                <div className="mt-2 text-sm text-amber-700">
+                                    <p>{restrictionMessage}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* Header */}
                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                     <div>
@@ -139,6 +203,7 @@ export default function SectionManagement({ sections, showArchived = false }: Pr
                         <Button
                             variant="outline"
                             onClick={handleToggleArchived}
+                            disabled={isSectionManagementRestricted}
                         >
                             {showArchivedSections ? (
                                 <>
@@ -154,7 +219,10 @@ export default function SectionManagement({ sections, showArchived = false }: Pr
                         </Button>
                         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
                             <DialogTrigger asChild>
-                                <Button className="flex items-center gap-2">
+                                <Button 
+                                    className="flex items-center gap-2"
+                                    disabled={isSectionManagementRestricted}
+                                >
                                     <Plus className="h-4 w-4" />
                                     Add Section
                                 </Button>
@@ -274,7 +342,10 @@ export default function SectionManagement({ sections, showArchived = false }: Pr
                                                             </Button>
                                                         </DropdownMenuTrigger>
                                                         <DropdownMenuContent align="end">
-                                                            <DropdownMenuItem onClick={() => handleEditSection(section)}>
+                                                            <DropdownMenuItem 
+                                                                onClick={() => handleEditSection(section)}
+                                                                disabled={isSectionManagementRestricted}
+                                                            >
                                                                 <Edit className="mr-2 h-4 w-4" />
                                                                 Edit
                                                             </DropdownMenuItem>
@@ -282,6 +353,7 @@ export default function SectionManagement({ sections, showArchived = false }: Pr
                                                                 <DropdownMenuItem 
                                                                     onClick={() => handleRestoreSection(section.section_id)}
                                                                     className="text-green-600 focus:text-green-600"
+                                                                    disabled={isSectionManagementRestricted}
                                                                 >
                                                                     <ArchiveRestore className="mr-2 h-4 w-4" />
                                                                     Restore
@@ -290,6 +362,7 @@ export default function SectionManagement({ sections, showArchived = false }: Pr
                                                                 <DropdownMenuItem 
                                                                     onClick={() => handleArchiveSection(section.section_id)}
                                                                     className="text-destructive focus:text-destructive"
+                                                                    disabled={isSectionManagementRestricted}
                                                                 >
                                                                     <Archive className="mr-2 h-4 w-4" />
                                                                     Archive

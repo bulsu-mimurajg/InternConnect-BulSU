@@ -7,6 +7,7 @@ use Illuminate\Http\RedirectResponse;
 use App\Models\Question;
 use App\Models\Category;
 use App\Models\SubCategory;
+use App\Services\DeadlineStatusService;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -74,6 +75,10 @@ class QuestionController extends Controller
                 ];
             });
 
+        // Get deadline status for restrictions
+        $deadlineStatusService = new DeadlineStatusService();
+        $deadlineStatus = $deadlineStatusService->getAdminDeadlineStatus();
+
         return Inertia::render('admin/forms', [
             'questions' => $questions,
             'categories' => $categories,
@@ -83,6 +88,7 @@ class QuestionController extends Controller
                 'category_id' => $request->get('category_id', ''),
                 'subcategory_id' => $request->get('subcategory_id', ''),
             ],
+            'deadlineStatus' => $deadlineStatus,
         ]);
     }
 

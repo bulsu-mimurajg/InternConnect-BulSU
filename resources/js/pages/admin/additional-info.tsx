@@ -1,17 +1,34 @@
-import { useState } from 'react';
-import { Head, useForm, usePage, router } from '@inertiajs/react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useState, useCallback, useMemo } from 'react';
+import { Head, useForm, router } from '@inertiajs/react';
+import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { PlusIcon, EditIcon, ArchiveIcon, RotateCcwIcon, Eye, Archive } from 'lucide-react';
-import AppLayout from '@/layouts/app-layout';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Pagination } from '@/components/ui/pagination';
+import { usePagination } from '@/hooks/usePagination';
+import { Plus, MoreHorizontal, Edit, Archive, ArchiveRestore, Info, Eye } from 'lucide-react';
 import { type BreadcrumbItem } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
-        title: 'Additional Info',
+        title: 'Additional Info Management',
         href: '/forms/additional-info',
     },
 ];
@@ -24,121 +41,169 @@ interface AdditionalInfo {
     updated_at: string;
 }
 
-interface AdditionalInfoPageProps {
+interface Props {
     additionalInfos: AdditionalInfo[];
+    filters: {
+        search: string;
+    };
+    deadlineStatus?: {
+        student_assessment?: {
+            id: number;
+            title: string;
+            category: string;
+            end_date: string;
+            formatted_end_date: string;
+            time_remaining_hours: number;
+            time_remaining_days: number;
+            is_active: boolean;
+            is_expired: boolean;
+        };
+        internship_placement?: {
+            id: number;
+            title: string;
+            category: string;
+            end_date: string;
+            formatted_end_date: string;
+            time_remaining_hours: number;
+            time_remaining_days: number;
+            is_active: boolean;
+            is_expired: boolean;
+        };
+        restrictions: Array<{
+            type: string;
+            message: string;
+            deadline: any;
+            affected_functionality: string[];
+        }>;
+    };
 }
 
-export default function AdditionalInfoPage({ additionalInfos }: AdditionalInfoPageProps) {
-    const [showForm, setShowForm] = useState(false);
-    const [editingInfo, setEditingInfo] = useState<AdditionalInfo | null>(null);
+export default function AdditionalInfoManagement({ additionalInfos, filters, deadlineStatus }: Props) {
+    const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+    const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+    const [selectedAdditionalInfo, setSelectedAdditionalInfo] = useState<AdditionalInfo | null>(null);
     const [showArchived, setShowArchived] = useState(false);
-    const { flash } = usePage().props as { flash?: { success?: string; error?: string } };
 
-    const { data, setData, post, put, patch, processing, errors, reset } = useForm({
+    const createForm = useForm({
         info_name: '',
     });
 
-    // Filter additional infos based on archive status
-    const filteredInfos = additionalInfos.filter(info =>
-        showArchived ? !info.is_active : info.is_active
-    );
+    const editForm = useForm({
+        info_name: '',
+    });
 
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-
-        if (editingInfo) {
-            put(`/forms/additional-info/${editingInfo.id}`, {
-                onSuccess: () => {
-                    reset();
-                    setShowForm(false);
-                    setEditingInfo(null);
-                },
-                onError: (errors) => {
-                    console.error('Update errors:', errors);
-                },
-            });
-        } else {
-            post('/forms/additional-info', {
-                onSuccess: () => {
-                    reset();
-                    setShowForm(false);
-                },
-                onError: (errors) => {
-                    console.error('Creation errors:', errors);
-                },
-            });
-        }
-    };
-
-    const handleEdit = (info: AdditionalInfo) => {
-        setEditingInfo(info);
-        setData({
-            info_name: info.info_name,
+    const handleCreateAdditionalInfo = useCallback(() => {
+        createForm.post('/forms/additional-info', {
+            onSuccess: () => {
+                setIsCreateDialogOpen(false);
+                createForm.reset();
+            },
         });
-        setShowForm(true);
-    };
+    }, [createForm]);
 
-    const handleArchive = (id: number) => {
+    const handleEditAdditionalInfo = useCallback((additionalInfo: AdditionalInfo) => {
+        setSelectedAdditionalInfo(additionalInfo);
+        editForm.setData('info_name', additionalInfo.info_name);
+        setIsEditDialogOpen(true);
+    }, [editForm]);
+
+    const handleUpdateAdditionalInfo = useCallback(() => {
+        if (selectedAdditionalInfo) {
+            editForm.put(`/forms/additional-info/${selectedAdditionalInfo.id}`, {
+                onSuccess: () => {
+                    setIsEditDialogOpen(false);
+                    setSelectedAdditionalInfo(null);
+                    editForm.reset();
+                },
+            });
+        }
+    }, [editForm, selectedAdditionalInfo]);
+
+    const handleArchiveAdditionalInfo = useCallback((id: number) => {
         if (confirm('Are you sure you want to archive this additional info?')) {
-            patch(`/forms/additional-info/${id}/archive`);
+            router.patch(`/forms/additional-info/${id}/archive`);
         }
-    };
+    }, []);
 
-    const handleRestore = (id: number) => {
-        if (confirm('Are you sure you want to restore this additional info?')) {
-            patch(`/forms/additional-info/${id}/restore`);
-        }
-    };
+    const handleRestoreAdditionalInfo = useCallback((id: number) => {
+        router.patch(`/forms/additional-info/${id}/restore`);
+    }, []);
 
-    const handleCancel = () => {
-        reset();
-        setShowForm(false);
-        setEditingInfo(null);
-    };
+    const activeAdditionalInfos = additionalInfos.filter(info => info.is_active);
+    const archivedAdditionalInfos = additionalInfos.filter(info => !info.is_active);
 
-    const getStatusBadge = (isActive: boolean) => {
-        return isActive ? (
-            <Badge variant="default" className="bg-green-100 text-green-800">
-                Active
-            </Badge>
-        ) : (
-            <Badge variant="secondary" className="bg-gray-100 text-gray-800">
-                Archived
-            </Badge>
+    // Get current additional infos based on showArchived state
+    const currentAdditionalInfos = showArchived ? archivedAdditionalInfos : activeAdditionalInfos;
+
+    // Use pagination hook
+    const {
+        currentPage,
+        totalPages,
+        paginatedData: paginatedAdditionalInfos,
+        handlePageChange,
+        resetToFirstPage,
+    } = usePagination({
+        data: currentAdditionalInfos,
+        itemsPerPage: 10,
+    });
+
+    // Reset to page 1 when switching between active/archived additional infos
+    const handleToggleArchived = useCallback(() => {
+        setShowArchived(!showArchived);
+        resetToFirstPage();
+    }, [showArchived, resetToFirstPage]);
+
+    // Check if additional info management is restricted due to deadlines
+    const isAdditionalInfoManagementRestricted = useMemo(() => {
+        return deadlineStatus?.restrictions.some(restriction => 
+            restriction.affected_functionality.includes('additional_info_management')
+        ) || false;
+    }, [deadlineStatus]);
+
+    // Get restriction message
+    const restrictionMessage = useMemo(() => {
+        const restriction = deadlineStatus?.restrictions.find(restriction => 
+            restriction.affected_functionality.includes('additional_info_management')
         );
-    };
+        return restriction?.message || '';
+    }, [deadlineStatus]);
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Additional Info Management" />
             <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
-                {/* Success Message */}
-                {flash?.success && (
-                    <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
-                        {flash.success}
-                    </div>
-                )}
-
-                {/* Error Message */}
-                {flash?.error && (
-                    <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-                        {flash.error}
+                {/* Deadline Restriction Alert */}
+                {isAdditionalInfoManagementRestricted && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                        <div className="flex items-start">
+                            <div className="flex-shrink-0">
+                                <Info className="h-5 w-5 text-amber-400" />
+                            </div>
+                            <div className="ml-3">
+                                <h3 className="text-sm font-medium text-amber-800">
+                                    Additional Info Management Restricted
+                                </h3>
+                                <div className="mt-2 text-sm text-amber-700">
+                                    <p>{restrictionMessage}</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 )}
 
                 {/* Header */}
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-3xl font-bold tracking-tight">Additional Info Management</h1>
+                        <h1 className="text-2xl font-bold tracking-tight">Additional Info Management</h1>
                         <p className="text-muted-foreground">
                             Manage additional information fields for student forms
                         </p>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex items-center gap-2">
                         <Button
                             variant="outline"
-                            onClick={() => setShowArchived(!showArchived)}
+                            onClick={handleToggleArchived}
+                            disabled={isAdditionalInfoManagementRestricted}
                         >
                             {showArchived ? (
                                 <>
@@ -152,159 +217,209 @@ export default function AdditionalInfoPage({ additionalInfos }: AdditionalInfoPa
                                 </>
                             )}
                         </Button>
-                        <Button
-                            onClick={() => setShowForm(true)}
-                            className="flex items-center gap-2"
-                        >
-                            <PlusIcon className="h-4 w-4" />
-                            Add Field
-                        </Button>
+                        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+                            <DialogTrigger asChild>
+                                <Button 
+                                    className="flex items-center gap-2"
+                                    disabled={isAdditionalInfoManagementRestricted}
+                                >
+                                    <Plus className="h-4 w-4" />
+                                    Add Additional Info
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                                <DialogHeader>
+                                    <DialogTitle>Create New Additional Info</DialogTitle>
+                                    <DialogDescription>
+                                        Add a new additional information field.
+                                    </DialogDescription>
+                                </DialogHeader>
+                                <div className="space-y-4">
+                                    <div>
+                                        <Label htmlFor="info_name">Info Name</Label>
+                                        <Input
+                                            id="info_name"
+                                            value={createForm.data.info_name}
+                                            onChange={(e) => createForm.setData('info_name', e.target.value)}
+                                            className={createForm.errors.info_name ? 'border-red-500' : ''}
+                                            placeholder="e.g., Previous Work Experience, Skills"
+                                            required
+                                        />
+                                        {createForm.errors.info_name && (
+                                            <p className="text-red-500 text-xs mt-1">{createForm.errors.info_name}</p>
+                                        )}
+                                    </div>
+                                </div>
+                                <DialogFooter>
+                                    <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                                        Cancel
+                                    </Button>
+                                    <Button onClick={handleCreateAdditionalInfo} disabled={createForm.processing}>
+                                        {createForm.processing ? 'Creating...' : 'Create Additional Info'}
+                                    </Button>
+                                </DialogFooter>
+                            </DialogContent>
+                        </Dialog>
                     </div>
                 </div>
 
-
-                {/* Add/Edit Form */}
-                {showForm && (
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <PlusIcon className="h-5 w-5" />
-                                {editingInfo ? 'Edit Field' : 'Add New Field'}
-                            </CardTitle>
-                            <CardDescription>
-                                {editingInfo
-                                    ? 'Update the field information below.'
-                                    : 'Enter the field information below.'
-                                }
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <form onSubmit={handleSubmit} className="space-y-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="info_name">Field Name</Label>
-                                    <Input
-                                        id="info_name"
-                                        value={data.info_name}
-                                        onChange={(e) => setData('info_name', e.target.value)}
-                                        className={errors.info_name ? 'border-red-500' : ''}
-                                        placeholder="Enter the field name (e.g., LinkedIn Profile, GitHub Repository)"
-                                    />
-                                    {errors.info_name && (
-                                        <p className="text-sm text-red-500">{errors.info_name}</p>
-                                    )}
-                                </div>
-
-                                {/* Display general errors */}
-                                {Object.keys(errors).length > 0 && (
-                                    <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-                                        <p className="font-medium">Please fix the following errors:</p>
-                                        <ul className="list-disc list-inside mt-2">
-                                            {Object.entries(errors).map(([field, error]) => (
-                                                <li key={field}>{field}: {error}</li>
-                                            ))}
-                                        </ul>
-                                    </div>
-                                )}
-
-                                <div className="flex gap-2">
-                                    <Button type="submit" disabled={processing}>
-                                        {processing ? 'Saving...' : (editingInfo ? 'Update' : 'Create')}
-                                    </Button>
-                                    <Button type="button" variant="outline" onClick={handleCancel}>
-                                        Cancel
-                                    </Button>
-                                </div>
-                            </form>
-                        </CardContent>
-                    </Card>
-                )}
-
-                {/* Additional Info List */}
+                {/* Additional Infos Table */}
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
-                            <PlusIcon className="h-5 w-5" />
-                            {showArchived ? 'Archived Fields' : 'Active Fields'}
+                            <Info className="h-5 w-5"/>
+                            Additional Information Fields
                         </CardTitle>
                         <CardDescription>
-                            {showArchived
-                                ? 'Manage archived additional info fields'
-                                : 'Manage active additional info fields'
+                            {showArchived 
+                                ? 'Archived additional information fields' 
+                                : 'Active additional information fields'
                             }
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        {filteredInfos.length === 0 ? (
-                            <div className="text-center py-8">
-                                <PlusIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                                <h3 className="text-lg font-medium mb-2">
-                                    {showArchived ? 'No archived fields found' : 'No fields found'}
-                                </h3>
-                                <p className="text-muted-foreground mb-4">
-                                    {showArchived
-                                        ? 'No fields have been archived yet.'
-                                        : 'Get started by creating your first field.'
-                                    }
-                                </p>
-                                {!showArchived && (
-                                    <Button onClick={() => setShowForm(true)}>
-                                        <PlusIcon className="h-4 w-4 mr-2" />
-                                        Add Field
-                                    </Button>
-                                )}
+                        {currentAdditionalInfos.length === 0 ? (
+                            <div className="py-12 text-center">
+                                <div className="flex flex-col items-center space-y-4">
+                                    <Info className="h-12 w-12 text-muted-foreground" />
+                                    <div className="space-y-2">
+                                        <h3 className="text-lg font-medium">
+                                            {showArchived ? 'No archived additional info found' : 'No active additional info found'}
+                                        </h3>
+                                        <p className="text-muted-foreground">
+                                            {showArchived 
+                                                ? 'No additional info fields have been archived yet.' 
+                                                : 'Get started by creating your first additional info field.'
+                                            }
+                                        </p>
+                                    </div>
+                                    {!showArchived && (
+                                        <Button 
+                                            onClick={() => setIsCreateDialogOpen(true)}
+                                            disabled={isAdditionalInfoManagementRestricted}
+                                        >
+                                            <Plus className="h-4 w-4 mr-2" />
+                                            Add Additional Info
+                                        </Button>
+                                    )}
+                                </div>
                             </div>
                         ) : (
-                            <div className="space-y-4">
-                                {filteredInfos.map((info) => (
-                                    <div
-                                        key={info.id}
-                                        className="flex items-start justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                                    >
-                                        <div className="flex-1">
-                                            <div className="flex items-center gap-3 mb-2">
-                                                <h3 className="font-medium">{info.info_name}</h3>
-                                                {getStatusBadge(info.is_active)}
-                                            </div>
-                                            <div className="text-sm text-muted-foreground">
-                                                Created: {new Date(info.created_at).toLocaleDateString()}
-                                            </div>
-                                        </div>
-                                        <div className="flex gap-2">
-                                            {info.is_active ? (
-                                                <>
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        onClick={() => handleEdit(info)}
-                                                    >
-                                                        <EditIcon className="h-4 w-4" />
-                                                    </Button>
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        onClick={() => handleArchive(info.id)}
-                                                        className="text-orange-600 hover:text-orange-700"
-                                                    >
-                                                        <ArchiveIcon className="h-4 w-4" />
-                                                    </Button>
-                                                </>
-                                            ) : (
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() => handleRestore(info.id)}
-                                                    className="text-green-600 hover:text-green-700"
-                                                >
-                                                    <RotateCcwIcon className="h-4 w-4" />
-                                                </Button>
-                                            )}
-                                        </div>
-                                    </div>
-                                ))}
+                            <div className="overflow-x-auto">
+                                <table className="w-full">
+                                    <thead>
+                                        <tr className="border-b">
+                                            <th className="text-left py-3 px-4 font-semibold text-sm">Info Name</th>
+                                            <th className="text-left py-3 px-4 font-semibold text-sm">Status</th>
+                                            <th className="text-left py-3 px-4 font-semibold text-sm">Created</th>
+                                            <th className="text-right py-3 px-4 font-semibold text-sm">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {paginatedAdditionalInfos.map((additionalInfo) => (
+                                            <tr key={additionalInfo.id} className={`border-b hover:bg-muted/50 transition-colors ${!additionalInfo.is_active ? 'opacity-75' : ''}`}>
+                                                <td className="py-3 px-4 font-medium">
+                                                    {additionalInfo.info_name}
+                                                </td>
+                                                <td className="py-3 px-4">
+                                                    <Badge variant={additionalInfo.is_active ? 'default' : 'secondary'}>
+                                                        {additionalInfo.is_active ? 'Active' : 'Archived'}
+                                                    </Badge>
+                                                </td>
+                                                <td className="py-3 px-4 text-sm text-muted-foreground">
+                                                    {new Date(additionalInfo.created_at).toLocaleDateString()}
+                                                </td>
+                                                <td className="py-3 px-4 text-right">
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                                                <MoreHorizontal className="h-4 w-4" />
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                            <DropdownMenuItem 
+                                                                onClick={() => handleEditAdditionalInfo(additionalInfo)}
+                                                                disabled={isAdditionalInfoManagementRestricted}
+                                                            >
+                                                                <Edit className="mr-2 h-4 w-4" />
+                                                                Edit
+                                                            </DropdownMenuItem>
+                                                            {!additionalInfo.is_active ? (
+                                                                <DropdownMenuItem 
+                                                                    onClick={() => handleRestoreAdditionalInfo(additionalInfo.id)}
+                                                                    className="text-green-600 focus:text-green-600"
+                                                                    disabled={isAdditionalInfoManagementRestricted}
+                                                                >
+                                                                    <ArchiveRestore className="mr-2 h-4 w-4" />
+                                                                    Restore
+                                                                </DropdownMenuItem>
+                                                            ) : (
+                                                                <DropdownMenuItem 
+                                                                    onClick={() => handleArchiveAdditionalInfo(additionalInfo.id)}
+                                                                    className="text-destructive focus:text-destructive"
+                                                                    disabled={isAdditionalInfoManagementRestricted}
+                                                                >
+                                                                    <Archive className="mr-2 h-4 w-4" />
+                                                                    Archive
+                                                                </DropdownMenuItem>
+                                                            )}
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
                             </div>
                         )}
                     </CardContent>
                 </Card>
+
+                {/* Pagination */}
+                <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={handlePageChange}
+                    showSummary={true}
+                    totalItems={currentAdditionalInfos.length}
+                    itemsPerPage={10}
+                />
+
+                {/* Edit Dialog */}
+                <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Edit Additional Info</DialogTitle>
+                            <DialogDescription>
+                                Update the additional information field.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                            <div>
+                                <Label htmlFor="edit_info_name">Info Name</Label>
+                                <Input
+                                    id="edit_info_name"
+                                    value={editForm.data.info_name}
+                                    onChange={(e) => editForm.setData('info_name', e.target.value)}
+                                    className={editForm.errors.info_name ? 'border-red-500' : ''}
+                                    placeholder="e.g., Previous Work Experience, Skills"
+                                    required
+                                />
+                                {editForm.errors.info_name && (
+                                    <p className="text-red-500 text-xs mt-1">{editForm.errors.info_name}</p>
+                                )}
+                            </div>
+                        </div>
+                        <DialogFooter>
+                            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                                Cancel
+                            </Button>
+                            <Button onClick={handleUpdateAdditionalInfo} disabled={editForm.processing}>
+                                {editForm.processing ? 'Updating...' : 'Update Additional Info'}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
             </div>
         </AppLayout>
     );

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use App\Models\AdditionalInfo;
+use App\Services\DeadlineStatusService;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -28,11 +29,16 @@ class AdditionalInfoController extends Controller
 
         $additionalInfos = $query->get();
 
+        // Get deadline status for restrictions
+        $deadlineStatusService = new DeadlineStatusService();
+        $deadlineStatus = $deadlineStatusService->getAdminDeadlineStatus();
+
         return Inertia::render('admin/additional-info', [
             'additionalInfos' => $additionalInfos,
             'filters' => [
                 'search' => $request->get('search', ''),
             ],
+            'deadlineStatus' => $deadlineStatus,
         ]);
     }
 

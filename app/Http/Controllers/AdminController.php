@@ -19,6 +19,7 @@ use App\Services\NotificationService;
 use App\Services\AutomaticEndorsementService;
 use App\Services\AutomaticPlacementService;
 use App\Services\CentralizedDeadlineNotificationService;
+use App\Services\DeadlineStatusService;
 use App\Notifications\HTECredentialsNotification;
 use App\Notifications\AdviserCredentialsNotification;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -1671,9 +1672,14 @@ class AdminController extends Controller
                 ];
             });
 
+        // Get deadline status for restrictions
+        $deadlineStatusService = new DeadlineStatusService();
+        $deadlineStatus = $deadlineStatusService->getAdminDeadlineStatus();
+
         return Inertia::render('admin/section', [
             'sections' => $sections,
             'showArchived' => false,
+            'deadlineStatus' => $deadlineStatus,
         ]);
     }
 
@@ -1698,9 +1704,14 @@ class AdminController extends Controller
                 ];
             });
 
+        // Get deadline status for restrictions
+        $deadlineStatusService = new DeadlineStatusService();
+        $deadlineStatus = $deadlineStatusService->getAdminDeadlineStatus();
+
         return Inertia::render('admin/section', [
             'sections' => $sections,
             'showArchived' => true,
+            'deadlineStatus' => $deadlineStatus,
         ]);
     }
 

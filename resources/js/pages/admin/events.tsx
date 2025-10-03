@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Head, useForm, usePage } from '@inertiajs/react';
+import { Head, useForm, usePage, router } from '@inertiajs/react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { DateTimePicker } from '@/components/ui/date-time-picker';
 import { CalendarIcon, PlusIcon, EditIcon, TrashIcon } from 'lucide-react';
 import { ClockIcon } from 'lucide-react';
 import AppLayout from '@/layouts/app-layout';
@@ -58,8 +59,8 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
     const { data, setData, post, put, delete: destroy, processing, errors, reset } = useForm({
         title: '',
         category: '',
-        start_date: '',
-        end_date: '',
+        start_date: null as Date | null,
+        end_date: null as Date | null,
     });
 
     const { patch, processing: extending, errors: extendErrors, reset: resetExtend } = useForm({});
@@ -70,25 +71,32 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
+        // Convert Date objects to ISO strings for API
+        const submitData = {
+            ...data,
+            start_date: data.start_date ? data.start_date.toISOString() : '',
+            end_date: data.end_date ? data.end_date.toISOString() : '',
+        };
+
         if (editingDeadline) {
-            put(`/admin/deadlines/${editingDeadline.id}`, {
+            router.put(`/admin/deadlines/${editingDeadline.id}`, submitData, {
                 onSuccess: () => {
                     reset();
                     setShowForm(false);
                     setShowEditDialog(false);
                     setEditingDeadline(null);
                 },
-                onError: (errors) => {
+                onError: (errors: any) => {
                     console.error('Update errors:', errors);
                 },
             });
         } else {
-            post('/admin/deadlines', {
+            router.post('/admin/deadlines', submitData, {
                 onSuccess: () => {
                     reset();
                     setShowForm(false);
                 },
-                onError: (errors) => {
+                onError: (errors: any) => {
                     console.error('Creation errors:', errors);
                 },
             });
@@ -100,8 +108,8 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
         setData({
             title: deadline.title,
             category: deadline.category,
-            start_date: deadline.start_date,
-            end_date: deadline.end_date,
+            start_date: new Date(deadline.start_date),
+            end_date: new Date(deadline.end_date),
         });
         setShowEditDialog(true);
     };
@@ -343,12 +351,11 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
                                             <Label htmlFor="start_date" className="text-sm font-medium text-foreground">
                                                 Start Date & Time
                                             </Label>
-                                            <Input
-                                                id="start_date"
-                                                type="datetime-local"
+                                            <DateTimePicker
                                                 value={data.start_date}
-                                                onChange={(e) => setData('start_date', e.target.value)}
-                                                className={`h-10 ${errors.start_date ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                                                onChange={(date) => setData('start_date', date)}
+                                                placeholder="Select start date and time"
+                                                error={!!errors.start_date}
                                             />
                                             {errors.start_date && (
                                                 <p className="text-sm text-destructive">{errors.start_date}</p>
@@ -359,12 +366,11 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
                                             <Label htmlFor="end_date" className="text-sm font-medium text-foreground">
                                                 End Date & Time
                                             </Label>
-                                            <Input
-                                                id="end_date"
-                                                type="datetime-local"
+                                            <DateTimePicker
                                                 value={data.end_date}
-                                                onChange={(e) => setData('end_date', e.target.value)}
-                                                className={`h-10 ${errors.end_date ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                                                onChange={(date) => setData('end_date', date)}
+                                                placeholder="Select end date and time"
+                                                error={!!errors.end_date}
                                             />
                                             {errors.end_date && (
                                                 <p className="text-sm text-destructive">{errors.end_date}</p>
@@ -598,25 +604,17 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
                                         )}
                                     </div>
 
+                                    {/* Category display - read-only */}
                                     <div className="space-y-3">
-                                        <Label htmlFor="edit_category" className="text-sm font-medium text-foreground">
+                                        <Label className="text-sm font-medium text-foreground">
                                             Category
                                         </Label>
-                                        <Select value={data.category} onValueChange={(value) => setData('category', value)}>
-                                            <SelectTrigger className={`h-10 ${errors.category ? 'border-destructive focus-visible:ring-destructive' : ''}`}>
-                                                <SelectValue placeholder="Select a category" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {categoryOptions.map((option) => (
-                                                    <SelectItem key={option.value} value={option.value}>
-                                                        {option.label}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        {errors.category && (
-                                            <p className="text-sm text-destructive">{errors.category}</p>
-                                        )}
+                                        <div className="h-10 px-3 py-2 bg-muted text-muted-foreground rounded-md border border-input flex items-center">
+                                            {editingDeadline?.category_display || 'Unknown Category'}
+                                        </div>
+                                        <p className="text-xs text-muted-foreground">
+                                            Category cannot be changed when editing a deadline
+                                        </p>
                                     </div>
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
@@ -624,12 +622,11 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
                                             <Label htmlFor="edit_start_date" className="text-sm font-medium text-foreground">
                                                 Start Date & Time
                                             </Label>
-                                            <Input
-                                                id="edit_start_date"
-                                                type="datetime-local"
+                                            <DateTimePicker
                                                 value={data.start_date}
-                                                onChange={(e) => setData('start_date', e.target.value)}
-                                                className={`h-10 ${errors.start_date ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                                                onChange={(date) => setData('start_date', date)}
+                                                placeholder="Select start date and time"
+                                                error={!!errors.start_date}
                                             />
                                             {errors.start_date && (
                                                 <p className="text-sm text-destructive">{errors.start_date}</p>
@@ -640,12 +637,11 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
                                             <Label htmlFor="edit_end_date" className="text-sm font-medium text-foreground">
                                                 End Date & Time
                                             </Label>
-                                            <Input
-                                                id="edit_end_date"
-                                                type="datetime-local"
+                                            <DateTimePicker
                                                 value={data.end_date}
-                                                onChange={(e) => setData('end_date', e.target.value)}
-                                                className={`h-10 ${errors.end_date ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                                                onChange={(date) => setData('end_date', date)}
+                                                placeholder="Select end date and time"
+                                                error={!!errors.end_date}
                                             />
                                             {errors.end_date && (
                                                 <p className="text-sm text-destructive">{errors.end_date}</p>

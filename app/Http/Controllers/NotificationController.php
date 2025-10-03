@@ -62,7 +62,7 @@ class NotificationController extends Controller
     /**
      * Get notifications for AJAX (for dropdown)
      */
-    public function getNotifications(Request $request): \Illuminate\Http\JsonResponse
+    public function getNotifications(Request $request)
     {
         $user = Auth::user();
         
@@ -99,7 +99,8 @@ class NotificationController extends Controller
                         'new_student_registration',
                         'student_verification_pending',
                         'student_approved',
-                        'student_approval_needed'
+                        'student_approval_needed',
+                        'student_assessment_completed'
                     ]);
                     break;
             }
@@ -114,17 +115,23 @@ class NotificationController extends Controller
             ->take($perPage)
             ->get();
 
-        return response()->json([
-            'notifications' => $notifications,
-            'unreadCount' => Notification::getUnreadCount($user->id),
-            'pagination' => [
-                'current_page' => $page,
-                'per_page' => $perPage,
-                'total' => $totalCount,
-                'last_page' => ceil($totalCount / $perPage),
-                'from' => $totalCount > 0 ? (($page - 1) * $perPage) + 1 : 0,
-                'to' => min($page * $perPage, $totalCount),
-            ],
-        ])->header('Content-Type', 'application/json');
+        // Check if this is an AJAX request (not Inertia)
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'notifications' => $notifications,
+                'unreadCount' => Notification::getUnreadCount($user->id),
+                'pagination' => [
+                    'current_page' => $page,
+                    'per_page' => $perPage,
+                    'total' => $totalCount,
+                    'last_page' => ceil($totalCount / $perPage),
+                    'from' => $totalCount > 0 ? (($page - 1) * $perPage) + 1 : 0,
+                    'to' => min($page * $perPage, $totalCount),
+                ],
+            ]);
+        }
+
+        // For Inertia requests, redirect back to prevent JSON response error
+        return redirect()->back();
     }
 }

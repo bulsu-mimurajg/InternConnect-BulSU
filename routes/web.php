@@ -54,9 +54,9 @@ Route::middleware(['auth', 'verified', 'role_redirect:admin'])->group(function (
     Route::get('admin/section', [AdminController::class, 'sectionManagement'])->name('admin.section');
     Route::get('admin/section/archived', [AdminController::class, 'archivedSectionManagement'])->name('admin.section.archived');
     Route::post('admin/section', [AdminController::class, 'storeSection'])->name('admin.section.store');
-    Route::put('admin/section/{section}', [AdminController::class, 'updateSection'])->name('admin.section.update');
-    Route::patch('admin/section/{section}/archive', [AdminController::class, 'archiveSection'])->name('admin.section.archive');
-    Route::patch('admin/section/{section}/restore', [AdminController::class, 'restoreSection'])->name('admin.section.restore');
+    Route::put('admin/section/{section}', [AdminController::class, 'updateSection'])->middleware('deadline_restrictions:section_edit')->name('admin.section.update');
+    Route::patch('admin/section/{section}/archive', [AdminController::class, 'archiveSection'])->middleware('deadline_restrictions:section_archive')->name('admin.section.archive');
+    Route::patch('admin/section/{section}/restore', [AdminController::class, 'restoreSection'])->middleware('deadline_restrictions:section_restore')->name('admin.section.restore');
 
     // Events Management routes
     Route::get('admin/events', [AdminController::class, 'eventsManagement'])->name('admin.events');
@@ -71,17 +71,17 @@ Route::middleware(['auth', 'verified', 'role_redirect:admin'])->group(function (
     // Forms Management routes
     Route::get('forms/assessment', [App\Http\Controllers\QuestionController::class, 'index'])->name('admin.forms');
     Route::post('forms/questions', [App\Http\Controllers\QuestionController::class, 'store'])->name('admin.questions.store');
-    Route::put('forms/questions/{question}', [App\Http\Controllers\QuestionController::class, 'update'])->name('admin.questions.update');
-    Route::patch('forms/questions/{question}/archive', [App\Http\Controllers\QuestionController::class, 'archive'])->name('admin.questions.archive');
-    Route::patch('forms/questions/{question}/restore', [App\Http\Controllers\QuestionController::class, 'restore'])->name('admin.questions.restore');
+    Route::put('forms/questions/{question}', [App\Http\Controllers\QuestionController::class, 'update'])->middleware('deadline_restrictions:forms_edit')->name('admin.questions.update');
+    Route::patch('forms/questions/{question}/archive', [App\Http\Controllers\QuestionController::class, 'archive'])->middleware('deadline_restrictions:forms_archive')->name('admin.questions.archive');
+    Route::patch('forms/questions/{question}/restore', [App\Http\Controllers\QuestionController::class, 'restore'])->middleware('deadline_restrictions:forms_restore')->name('admin.questions.restore');
     Route::get('forms/categories/{category}/subcategories', [App\Http\Controllers\QuestionController::class, 'getSubcategories'])->name('admin.categories.subcategories');
 
     // Additional Info Management routes
     Route::get('forms/additional-info', [App\Http\Controllers\AdditionalInfoController::class, 'index'])->name('admin.additional-info');
     Route::post('forms/additional-info', [App\Http\Controllers\AdditionalInfoController::class, 'store'])->name('admin.additional-info.store');
-    Route::put('forms/additional-info/{additionalInfo}', [App\Http\Controllers\AdditionalInfoController::class, 'update'])->name('admin.additional-info.update');
-    Route::patch('forms/additional-info/{additionalInfo}/archive', [App\Http\Controllers\AdditionalInfoController::class, 'archive'])->name('admin.additional-info.archive');
-    Route::patch('forms/additional-info/{additionalInfo}/restore', [App\Http\Controllers\AdditionalInfoController::class, 'restore'])->name('admin.additional-info.restore');
+    Route::put('forms/additional-info/{additionalInfo}', [App\Http\Controllers\AdditionalInfoController::class, 'update'])->middleware('deadline_restrictions:additional_info_edit')->name('admin.additional-info.update');
+    Route::patch('forms/additional-info/{additionalInfo}/archive', [App\Http\Controllers\AdditionalInfoController::class, 'archive'])->middleware('deadline_restrictions:additional_info_archive')->name('admin.additional-info.archive');
+    Route::patch('forms/additional-info/{additionalInfo}/restore', [App\Http\Controllers\AdditionalInfoController::class, 'restore'])->middleware('deadline_restrictions:additional_info_restore')->name('admin.additional-info.restore');
     Route::get('api/additional-info/active', [App\Http\Controllers\AdditionalInfoController::class, 'getActive'])->name('api.additional-info.active');
 
     Route::get('student', function () {

@@ -30,9 +30,39 @@ interface FormsPageProps {
         category_id: string;
         subcategory_id: string;
     };
+    deadlineStatus?: {
+        student_assessment?: {
+            id: number;
+            title: string;
+            category: string;
+            end_date: string;
+            formatted_end_date: string;
+            time_remaining_hours: number;
+            time_remaining_days: number;
+            is_active: boolean;
+            is_expired: boolean;
+        };
+        internship_placement?: {
+            id: number;
+            title: string;
+            category: string;
+            end_date: string;
+            formatted_end_date: string;
+            time_remaining_hours: number;
+            time_remaining_days: number;
+            is_active: boolean;
+            is_expired: boolean;
+        };
+        restrictions: Array<{
+            type: string;
+            message: string;
+            deadline: any;
+            affected_functionality: string[];
+        }>;
+    };
 }
 
-export default function FormsPage({ questions, categories, subcategories, filters }: FormsPageProps) {
+export default function FormsPage({ questions, categories, subcategories, filters, deadlineStatus }: FormsPageProps) {
     const [showForm, setShowForm] = useState(false);
     const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
     const [selectedCategory, setSelectedCategory] = useState<string>('');
@@ -199,10 +229,44 @@ export default function FormsPage({ questions, categories, subcategories, filter
         );
     };
 
+    // Check if forms management is restricted due to deadlines
+    const isFormsManagementRestricted = useMemo(() => {
+        return deadlineStatus?.restrictions.some(restriction => 
+            restriction.affected_functionality.includes('forms_management')
+        ) || false;
+    }, [deadlineStatus]);
+
+    // Get restriction message
+    const restrictionMessage = useMemo(() => {
+        const restriction = deadlineStatus?.restrictions.find(restriction => 
+            restriction.affected_functionality.includes('forms_management')
+        );
+        return restriction?.message || '';
+    }, [deadlineStatus]);
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Forms Management" />
             <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
+                {/* Deadline Restriction Alert */}
+                {isFormsManagementRestricted && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                        <div className="flex items-start">
+                            <div className="flex-shrink-0">
+                                <FileTextIcon className="h-5 w-5 text-amber-400" />
+                            </div>
+                            <div className="ml-3">
+                                <h3 className="text-sm font-medium text-amber-800">
+                                    Forms Management Restricted
+                                </h3>
+                                <div className="mt-2 text-sm text-amber-700">
+                                    <p>{restrictionMessage}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* Success Message */}
                 {flash?.success && (
                     <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
@@ -237,6 +301,7 @@ export default function FormsPage({ questions, categories, subcategories, filter
                         <Button
                             variant="outline"
                             onClick={() => setShowArchived(!showArchived)}
+                            disabled={isFormsManagementRestricted}
                         >
                             {showArchived ? (
                                 <>
@@ -253,6 +318,7 @@ export default function FormsPage({ questions, categories, subcategories, filter
                         <Button
                             onClick={() => setShowForm(true)}
                             className="flex items-center gap-2"
+                            disabled={isFormsManagementRestricted}
                         >
                             <PlusIcon className="h-4 w-4" />
                             Add Question
@@ -520,6 +586,7 @@ export default function FormsPage({ questions, categories, subcategories, filter
                                                                     variant="outline"
                                                                     size="sm"
                                                                     onClick={() => handleEdit(question)}
+                                                                    disabled={isFormsManagementRestricted}
                                                                 >
                                                                     <EditIcon className="h-4 w-4" />
                                                                 </Button>
@@ -528,6 +595,7 @@ export default function FormsPage({ questions, categories, subcategories, filter
                                                                     size="sm"
                                                                     onClick={() => handleArchive(question.id)}
                                                                     className="text-orange-600 hover:text-orange-700"
+                                                                    disabled={isFormsManagementRestricted}
                                                                 >
                                                                     <ArchiveIcon className="h-4 w-4" />
                                                                 </Button>
@@ -538,6 +606,7 @@ export default function FormsPage({ questions, categories, subcategories, filter
                                                                 size="sm"
                                                                 onClick={() => handleRestore(question.id)}
                                                                 className="text-green-600 hover:text-green-700"
+                                                                disabled={isFormsManagementRestricted}
                                                             >
                                                                 <RotateCcwIcon className="h-4 w-4" />
                                                             </Button>

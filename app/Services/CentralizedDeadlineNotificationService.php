@@ -19,8 +19,6 @@ class CentralizedDeadlineNotificationService
      */
     private const ROLE_DEADLINE_MAPPING = [
         'admin' => [
-            'student_assessment_form',
-            'hte_assessment_form',
             'internship_placement',
             // Legacy support
             'sip_endorsement',

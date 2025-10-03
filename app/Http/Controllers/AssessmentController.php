@@ -14,6 +14,7 @@ use App\Models\Internship; // Added this import
 use App\Models\AdditionalInfo;
 use App\Models\StudentAdditionalInfo;
 use App\Services\MatchingService;
+use App\Services\NotificationService;
 use Inertia\Inertia;
 
 class AssessmentController extends Controller
@@ -207,6 +208,9 @@ class AssessmentController extends Controller
             // Update student's is_submit status to true
             \Log::info('Updating student submission status', ['student_id' => $student->id]);
             $student->update(['is_submit' => true]);
+
+            // Notify admins that student has completed assessment and is waiting for endorsement
+            $this->notifyAdminsForStudentAssessmentCompletion($student);
 
             // Store in session for now (you can modify this to store in database later)
             session(['assessment_data' => $assessmentData]);
@@ -599,6 +603,27 @@ class AssessmentController extends Controller
 
         } catch (\Exception $e) {
             return response()->json(['error' => 'Failed to retrieve dashboard data'], 500);
+        }
+    }
+
+    /**
+     * Notify admins when a student completes their assessment
+     */
+    private function notifyAdminsForStudentAssessmentCompletion(Student $student): void
+    {
+        try {
+            $notificationService = new NotificationService();
+            $notificationService->notifyAdminsForStudentAssessmentCompletion($student);
+            
+            \Log::info('Admin notification sent for student assessment completion', [
+                'student_id' => $student->id,
+                'student_name' => "{$student->first_name} {$student->last_name}"
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Failed to send admin notification for student assessment completion', [
+                'student_id' => $student->id,
+                'error' => $e->getMessage()
+            ]);
         }
     }
 }

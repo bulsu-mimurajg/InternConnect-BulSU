@@ -295,4 +295,37 @@ class NotificationService
         );
     }
 
+    /**
+     * Notify admins when a student completes their assessment and is waiting for endorsement
+     * This creates dashboard notifications only (no email)
+     */
+    public function notifyAdminsForStudentAssessmentCompletion(Student $student): void
+    {
+        $admins = User::whereHas('roles', function ($query) {
+            $query->where('name', 'admin');
+        })->get();
+
+        $studentName = "{$student->first_name} {$student->last_name}";
+        $studentNumber = $student->student_number;
+
+        foreach ($admins as $admin) {
+            // Create dashboard notification only (no email)
+            Notification::create([
+                'user_id' => $admin->id,
+                'type' => 'student_assessment_completed',
+                'title' => 'Student Assessment Completed',
+                'message' => "Student {$studentName} ({$studentNumber}) has completed their assessment and is waiting for endorsement.",
+                'data' => [
+                    'admin_id' => $admin->id,
+                    'student_id' => $student->id,
+                    'student_name' => $studentName,
+                    'student_number' => $studentNumber,
+                    'section_id' => $student->section_id
+                ],
+                'read_at' => null,
+                'is_read' => false,
+            ]);
+        }
+    }
+
 }

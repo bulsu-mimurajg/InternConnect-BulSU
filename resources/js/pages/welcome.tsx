@@ -13,7 +13,17 @@ export default function Welcome() {
                 <link rel="preconnect" href="https://fonts.bunny.net" />
                 <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600" rel="stylesheet" />
             </Head>
-            <div className="flex min-h-screen flex-col items-center bg-[#FDFDFC] p-6 text-[#1b1b18] lg:justify-center lg:p-8 dark:bg-[#0a0a0a]">
+            <div className="flex min-h-screen flex-col items-center relative">
+                {/* Background Image */}
+                <div 
+                    className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-50 dark:opacity-25" 
+                    style={{backgroundImage: 'url(/images/pimentel.jpg)'}} 
+                />
+                {/* Minimal Background Overlay */}
+                <div className="absolute inset-0 bg-[#FDFDFC]/75 dark:bg-[#0a0a0a]/80" />
+                
+                {/* Content Container */}
+                <div className="relative z-10 flex min-h-screen flex-col items-center p-6 text-[#1b1b18] lg:justify-center lg:p-8 w-full">
                 <header className="mb-6 w-full max-w-[335px] text-sm not-has-[nav]:hidden lg:max-w-5xl">
                     <div className="flex items-center justify-between">
                         <AppLogoIcon className="h-8 w-auto" />
@@ -89,7 +99,7 @@ export default function Welcome() {
                 </header>
                 <div className="flex w-full items-center justify-center opacity-100 transition-opacity duration-750 lg:grow starting:opacity-0">
                     <main className="w-full max-w-[335px] lg:max-w-5xl">
-                        <div className="rounded-br-lg rounded-bl-lg bg-white p-6 pb-12 text-[13px] leading-[20px] shadow-[inset_0px_0px_0px_1px_rgba(26,26,0,0.16)] lg:rounded-lg lg:p-20 dark:bg-[#161615] dark:text-[#EDEDEC] dark:shadow-[inset_0px_0px_0px_1px_#fffaed2d]">
+                        <div className="rounded-br-lg rounded-bl-lg bg-orange-50/10 backdrop-blur-sm p-6 pb-12 text-[13px] leading-[20px] shadow-[inset_0px_0px_0px_1px_rgba(26,26,0,0.16)] lg:rounded-lg lg:p-20 dark:bg-orange-950/8 dark:text-[#EDEDEC] dark:shadow-[inset_0px_0px_0px_1px_#fffaed2d]">
                             {/* Hero Section */}
                             <div className="text-center space-y-6 mb-12">
                                 <div className="space-y-2">
@@ -171,6 +181,7 @@ export default function Welcome() {
                             </div>
                         </div>
                     </main>
+                </div>
                 </div>
             </div>
         </>

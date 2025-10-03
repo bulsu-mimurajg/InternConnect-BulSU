@@ -27,6 +27,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'role_redirect' => \App\Http\Middleware\EnsureUserHasRoleRedirect::class,
             'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
             'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
+            'deadline_restrictions' => \App\Http\Middleware\CheckDeadlineRestrictions::class,
         ]);
     })
     ->withProviders([
