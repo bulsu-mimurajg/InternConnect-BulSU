@@ -205,6 +205,18 @@ class StudentSeeder extends Seeder
                 'specialization' => 'WMAD',
                 'is_submit' => false,
             ],
+            // Student requiring manual intervention
+            [
+                'student_number' => '2022100118',
+                'first_name' => 'Manual',
+                'middle_name' => 'Intervention',
+                'last_name' => 'Student',
+                'phone' => '09123456807',
+                'section_name' => 'BSIT-4A',
+                'specialization' => 'WMAD',
+                'is_submit' => true,
+                'requires_manual_intervention' => true,
+            ],
         ];
 
         $createdCount = 0;
@@ -241,7 +253,7 @@ class StudentSeeder extends Seeder
             $user->assignRole('student');
 
             // Create student record
-            Student::create([
+            $student = Student::create([
                 'user_id' => $user->id,
                 'student_number' => $studentData['student_number'],
                 'first_name' => $studentData['first_name'],
@@ -254,6 +266,16 @@ class StudentSeeder extends Seeder
                 'is_placed' => false,
                 'is_active' => true,
             ]);
+
+            // Create UnplacedStudent record if this student requires manual intervention
+            if (isset($studentData['requires_manual_intervention']) && $studentData['requires_manual_intervention']) {
+                \App\Models\UnplacedStudent::create([
+                    'student_id' => $student->id,
+                    'reason' => 'No available internship slots',
+                    'requires_manual_intervention' => true,
+                    'notes' => 'This student was created for testing the manual intervention feature. All internship slots are currently occupied.',
+                ]);
+            }
 
             $createdCount++;
         }

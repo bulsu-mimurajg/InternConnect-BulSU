@@ -406,6 +406,24 @@ class AutomaticPlacementService
 
                         if ($availableInternships->isEmpty()) {
                             Log::warning("No available internships for emergency placement for student {$student->id}");
+                            
+                            // Mark student as requiring manual intervention
+                            $student->update([
+                                'is_placed' => false,
+                                'placement_status' => 'requires_manual_intervention'
+                            ]);
+                            
+                            // Create a record for admin visibility
+                            \App\Models\UnplacedStudent::updateOrCreate(
+                                ['student_id' => $student->id],
+                                [
+                                    'reason' => 'No available internship slots',
+                                    'requires_manual_intervention' => true,
+                                    'created_at' => now(),
+                                    'updated_at' => now(),
+                                ]
+                            );
+                            
                             continue;
                         }
 

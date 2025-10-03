@@ -564,8 +564,19 @@ class StudentController extends Controller
             ];
         })
         ->filter(function ($student) {
-            // Only include students who have at least one match
-            return $student['has_matches'];
+            // Only include students who have at least one match with available slots
+            $hasValidMatch = $student['has_matches'] && $student['best_match'] !== null;
+            
+            // Log students who are being filtered out due to no available matches
+            if (!$hasValidMatch && $student['has_matches'] === false) {
+                \Log::info('Student filtered out - no available matches', [
+                    'student_id' => $student['id'],
+                    'student_name' => $student['first_name'] . ' ' . $student['last_name'],
+                    'student_number' => $student['student_number']
+                ]);
+            }
+            
+            return $hasValidMatch;
         });
 
         // Sort based on filter type
@@ -630,16 +641,111 @@ class StudentController extends Controller
                 ];
             });
 
+        // Get students who couldn't be placed (for admin visibility)
+        $unplacedStudents = $this->getUnplacedStudents($sectionFilter, $searchQuery);
+
+        // Calculate statistics for filtered students
+        $totalStudentsWithAssessments = $students->count();
+        $studentsWithMatches = $matchedStudents->count();
+        $studentsWithoutMatches = $unplacedStudents->count();
+
+
         return Inertia::render('admin/student/matched', [
             'matchedStudents' => $matchedStudents,
+            'unplacedStudents' => array_values($unplacedStudents->toArray()),
             'filters' => [
                 'sections' => $availableSections,
                 'internships' => $availableInternships,
                 'currentSection' => $sectionFilter,
                 'currentInternship' => $internshipFilter,
                 'currentSearch' => $searchQuery,
-            ]
+            ],
+            'statistics' => [
+                'total_students_with_assessments' => $totalStudentsWithAssessments,
+                'students_with_matches' => $studentsWithMatches,
+                'students_without_matches' => $studentsWithoutMatches,
+                'unplaced_students' => $unplacedStudents->count(),
+            ],
         ]);
+    }
+
+    /**
+     * Get students who couldn't be placed due to no available slots
+     */
+    private function getUnplacedStudents($sectionFilter = null, $searchQuery = null)
+    {
+        $query = Student::with(['section', 'user', 'compatibilityScores.internship.hte', 'compatibilityScores.internship.studentPlacements'])
+            ->where('is_submit', true)
+            ->where('is_active', true)
+            ->where('is_placed', false)
+            ->whereDoesntHave('endorsements', function($q) {
+                $q->where('status', 'endorsed');
+            });
+
+        // Apply section filter
+        if ($sectionFilter && $sectionFilter !== 'all') {
+            $query->whereHas('section', function($q) use ($sectionFilter) {
+                $q->where('section_name', $sectionFilter);
+            });
+        }
+
+        // Apply search filter
+        if ($searchQuery) {
+            $query->where(function ($q) use ($searchQuery) {
+                $q->where('first_name', 'like', "%{$searchQuery}%")
+                  ->orWhere('last_name', 'like', "%{$searchQuery}%")
+                  ->orWhere('student_number', 'like', "%{$searchQuery}%");
+            });
+        }
+
+        return $query->get()->map(function ($student) {
+            // Check if student has any pending matches with available slots
+            $hasAvailableMatches = $student->compatibilityScores()
+                ->where('endorsement_status', 'pending')
+                ->get()
+                ->filter(function ($match) {
+                    $availableSlots = $match->internship->slot_count - 
+                        $match->internship->studentPlacements()->where('status', 'approved')->count();
+                    return $availableSlots > 0;
+                })
+                ->isNotEmpty();
+
+            // Check if student requires manual intervention
+            $unplacedRecord = \App\Models\UnplacedStudent::where('student_id', $student->id)->first();
+            $requiresManualIntervention = $unplacedRecord && $unplacedRecord->requires_manual_intervention;
+
+            // Get the reason why student couldn't be placed
+            $reason = 'Unknown';
+            if ($unplacedRecord) {
+                $reason = $unplacedRecord->reason;
+            } elseif (!$hasAvailableMatches) {
+                $totalMatches = $student->compatibilityScores()->count();
+                if ($totalMatches === 0) {
+                    $reason = 'No compatibility matches found';
+                } else {
+                    $reason = 'All matches have no available slots';
+                }
+            }
+
+            return [
+                'id' => $student->id,
+                'student_number' => $student->student_number,
+                'first_name' => $student->first_name,
+                'last_name' => $student->last_name,
+                'middle_name' => $student->middle_name,
+                'section' => $student->section->section_name ?? '',
+                'specialization' => $student->specialization,
+                'reason' => $reason,
+                'has_available_matches' => $hasAvailableMatches,
+                'requires_manual_intervention' => $requiresManualIntervention,
+                'total_matches' => $student->compatibilityScores()->count(),
+                'rejected_matches' => $student->compatibilityScores()->where('endorsement_status', 'rejected')->count(),
+                'notes' => $unplacedRecord?->notes,
+            ];
+        })->filter(function ($student) {
+            // Only include students who truly couldn't be placed
+            return !$student['has_available_matches'];
+        });
     }
 
     /**

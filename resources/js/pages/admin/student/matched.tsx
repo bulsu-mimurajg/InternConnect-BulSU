@@ -89,12 +89,35 @@ interface Filters {
     currentSearch: string | null;
 }
 
-interface Props {
-    matchedStudents: MatchedStudent[];
-    filters: Filters;
+interface UnplacedStudent {
+    id: number;
+    student_number: string;
+    first_name: string;
+    last_name: string;
+    middle_name?: string;
+    section: string;
+    specialization?: string;
+    reason: string;
+    has_available_matches: boolean;
+    requires_manual_intervention: boolean;
+    total_matches: number;
+    rejected_matches: number;
+    notes?: string;
 }
 
-export default function StudentMatched({ matchedStudents, filters }: Props) {
+interface Props {
+    matchedStudents: MatchedStudent[];
+    unplacedStudents: UnplacedStudent[];
+    filters: Filters;
+    statistics?: {
+        total_students_with_assessments: number;
+        students_with_matches: number;
+        students_without_matches: number;
+        unplaced_students: number;
+    };
+}
+
+export default function StudentMatched({ matchedStudents, unplacedStudents = [], filters, statistics }: Props) {
     const { csrf_token } = usePage().props as { csrf_token?: string };
     const [selectedStudent, setSelectedStudent] = useState<MatchedStudent | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -102,6 +125,7 @@ export default function StudentMatched({ matchedStudents, filters }: Props) {
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [errorType, setErrorType] = useState<string | null>(null);
     const [showFilters, setShowFilters] = useState(false);
+    const [activeTab, setActiveTab] = useState<'matched' | 'unplaced'>('matched');
     const [localFilters, setLocalFilters] = useState({
         section: filters.currentSection || 'all',
         internship: filters.currentInternship || 'all',
@@ -182,6 +206,7 @@ export default function StudentMatched({ matchedStudents, filters }: Props) {
     useEffect(() => {
         console.log('Received filters:', filters);
         console.log('Received matchedStudents:', matchedStudents);
+        console.log('Received unplacedStudents:', unplacedStudents);
         console.log('Filters sections:', filters.sections);
         console.log('Filters internships:', filters.internships);
         
@@ -865,6 +890,26 @@ export default function StudentMatched({ matchedStudents, filters }: Props) {
                         </div>
                     </div>
 
+                    {/* Tab Navigation */}
+                    <div className="flex space-x-1 rounded-lg bg-muted p-1">
+                        <Button
+                            variant={activeTab === 'matched' ? 'default' : 'ghost'}
+                            onClick={() => setActiveTab('matched')}
+                            className="flex-1"
+                        >
+                            <UsersIcon className="h-4 w-4 mr-2" />
+                            Students with Matches ({matchedStudents.length})
+                        </Button>
+                        <Button
+                            variant={activeTab === 'unplaced' ? 'default' : 'ghost'}
+                            onClick={() => setActiveTab('unplaced')}
+                            className="flex-1"
+                        >
+                            <AlertTriangleIcon className="h-4 w-4 mr-2" />
+                            Students Without Matches ({Array.isArray(unplacedStudents) ? unplacedStudents.length : 0})
+                        </Button>
+                    </div>
+
 
 
 
@@ -1012,20 +1057,38 @@ export default function StudentMatched({ matchedStudents, filters }: Props) {
                     </Card>
                     )}
 
-                    {/* Summary Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* Content based on active tab */}
+                    {activeTab === 'matched' ? (
+                        <>
+                            {/* Summary Cards */}
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <Card>
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium">Total Students</CardTitle>
+                                <CardTitle className="text-sm font-medium">Students with Matches</CardTitle>
                                 <UsersIcon className="h-4 w-4 text-muted-foreground" />
                             </CardHeader>
                             <CardContent>
                                 <div className="text-2xl font-bold">{filteredMatchedStudents.length}</div>
                                 <p className="text-xs text-muted-foreground">
-                                    Students with completed assessments
+                                    Students with available matches
                                 </p>
                             </CardContent>
                         </Card>
+
+                        {statistics && statistics.students_without_matches > 0 && (
+                            <Card className="border-orange-200 bg-orange-50 dark:bg-orange-900/20">
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium text-orange-800 dark:text-orange-200">No Matches Available</CardTitle>
+                                    <AlertTriangleIcon className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-2xl font-bold text-orange-800 dark:text-orange-200">{statistics.students_without_matches}</div>
+                                    <p className="text-xs text-orange-700 dark:text-orange-300">
+                                        Students with no available slots
+                                    </p>
+                                </CardContent>
+                            </Card>
+                        )}
 
                         <Card>
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -1057,6 +1120,25 @@ export default function StudentMatched({ matchedStudents, filters }: Props) {
                             </CardContent>
                         </Card>
                     </div>
+
+                    {/* Students Without Matches Info */}
+                    {statistics && statistics.students_without_matches > 0 && (
+                        <Card className="border-l-4 border-l-orange-500 bg-orange-50 dark:bg-orange-900/20">
+                            <CardContent className="p-4">
+                                <div className="flex items-start gap-3">
+                                    <AlertTriangleIcon className="h-5 w-5 text-orange-600 mt-0.5 flex-shrink-0" />
+                                    <div className="flex-1">
+                                        <div className="font-medium text-orange-800 dark:text-orange-200">
+                                            Students Without Available Matches
+                                        </div>
+                                        <div className="mt-1 text-sm text-orange-700 dark:text-orange-300">
+                                            {statistics.students_without_matches} student{statistics.students_without_matches !== 1 ? 's' : ''} have exhausted all their internship matches and are not shown in the list below. These students will be automatically placed during the deadline automatic placement process if any slots become available.
+                                        </div>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
 
                     {/* Error Display */}
                     {errorMessage && (
@@ -1261,7 +1343,7 @@ export default function StudentMatched({ matchedStudents, filters }: Props) {
                                                             <Badge 
                                                                 className={getScoreColor(student.best_match?.compatibility_score || 0)}
                                                             >
-                                                                {student.best_match?.compatibility_score || 0}%
+                                                                {Math.round(student.best_match?.compatibility_score || 0)}%
                                                             </Badge>
                                                             <span className="text-xs text-muted-foreground">
                                                                 {getScoreLabel(student.best_match?.compatibility_score || 0)}
@@ -1311,15 +1393,179 @@ export default function StudentMatched({ matchedStudents, filters }: Props) {
                         </CardContent>
                     </Card>
 
-                    {/* Pagination */}
-                    <Pagination
-                        currentPage={matchedPagination.currentPage}
-                        totalPages={matchedPagination.totalPages}
-                        onPageChange={matchedPagination.handlePageChange}
-                        showSummary={true}
-                        totalItems={filteredMatchedStudents.length}
-                        itemsPerPage={10}
-                    />
+                            {/* Pagination */}
+                            <Pagination
+                                currentPage={matchedPagination.currentPage}
+                                totalPages={matchedPagination.totalPages}
+                                onPageChange={matchedPagination.handlePageChange}
+                                showSummary={true}
+                                totalItems={filteredMatchedStudents.length}
+                                itemsPerPage={10}
+                            />
+                        </>
+                    ) : (
+                        <>
+                            {/* Unplaced Students Section */}
+                            <div className="space-y-6">
+                                {/* Unplaced Students Summary */}
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <Card className="border-red-200 bg-red-50 dark:bg-red-900/20">
+                                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                            <CardTitle className="text-sm font-medium text-red-800 dark:text-red-200">Unplaced Students</CardTitle>
+                                            <AlertTriangleIcon className="h-4 w-4 text-red-600 dark:text-red-400" />
+                                        </CardHeader>
+                                        <CardContent>
+                                            <div className="text-2xl font-bold text-red-800 dark:text-red-200">{Array.isArray(unplacedStudents) ? unplacedStudents.length : 0}</div>
+                                            <p className="text-xs text-red-700 dark:text-red-300">
+                                                Students who couldn't be placed
+                                            </p>
+                                        </CardContent>
+                                    </Card>
+
+
+                                    <Card>
+                                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                            <CardTitle className="text-sm font-medium">No Available Slots</CardTitle>
+                                            <UsersIcon className="h-4 w-4 text-muted-foreground" />
+                                        </CardHeader>
+                                        <CardContent>
+                                            <div className="text-2xl font-bold">
+                                                {Array.isArray(unplacedStudents) ? unplacedStudents.filter(s => s.reason === 'All matches have no available slots').length : 0}
+                                            </div>
+                                            <p className="text-xs text-muted-foreground">
+                                                Students with exhausted matches
+                                            </p>
+                                        </CardContent>
+                                    </Card>
+
+                                    <Card className="border-orange-200 bg-orange-50 dark:bg-orange-900/20">
+                                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                            <CardTitle className="text-sm font-medium text-orange-800 dark:text-orange-200">Manual Intervention</CardTitle>
+                                            <AlertTriangleIcon className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                                        </CardHeader>
+                                        <CardContent>
+                                            <div className="text-2xl font-bold text-orange-800 dark:text-orange-200">
+                                                {Array.isArray(unplacedStudents) ? unplacedStudents.filter(s => s.requires_manual_intervention).length : 0}
+                                            </div>
+                                            <p className="text-xs text-orange-700 dark:text-orange-300">
+                                                Students requiring admin action
+                                            </p>
+                                        </CardContent>
+                                    </Card>
+                                </div>
+
+                                {/* Unplaced Students Table */}
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle className="flex items-center gap-2">
+                                            <AlertTriangleIcon className="h-5 w-5" />
+                                            Students Unable to be Placed
+                                        </CardTitle>
+                                        <CardDescription>
+                                            These students will be handled by the automatic placement system during deadline processing
+                                        </CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        {!Array.isArray(unplacedStudents) || unplacedStudents.length === 0 ? (
+                                            <div className="text-center py-12">
+                                                <CheckCircleIcon className="h-12 w-12 text-green-400 mx-auto mb-4" />
+                                                <h3 className="text-lg font-medium mb-2">All Students Have Matches</h3>
+                                                <p className="text-muted-foreground">
+                                                    Great! All students with assessments have available internship matches.
+                                                </p>
+                                            </div>
+                                        ) : (
+                                            <div className="overflow-x-auto">
+                                                <table className="w-full">
+                                                    <thead>
+                                                        <tr className="border-b">
+                                                            <th className="text-left p-3 font-medium text-muted-foreground">Student</th>
+                                                            <th className="text-left p-3 font-medium text-muted-foreground">Section</th>
+                                                            <th className="text-left p-3 font-medium text-muted-foreground">Reason</th>
+                                                            <th className="text-left p-3 font-medium text-muted-foreground">Matches</th>
+                                                            <th className="text-left p-3 font-medium text-muted-foreground">Status</th>
+                                                            <th className="text-left p-3 font-medium text-muted-foreground">Action Required</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {Array.isArray(unplacedStudents) && unplacedStudents.map((student) => (
+                                                            <tr key={student.id} className="border-b hover:bg-muted/50 transition-colors">
+                                                                <td className="p-3">
+                                                                    <div>
+                                                                        <div className="font-medium">
+                                                                            {student.last_name}, {student.first_name}
+                                                                        </div>
+                                                                        <div className="text-sm text-muted-foreground">
+                                                                            {student.student_number}
+                                                                        </div>
+                                                                        {student.middle_name && (
+                                                                            <div className="text-xs text-muted-foreground">
+                                                                                {student.middle_name}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                </td>
+                                                                <td className="p-3">
+                                                                    <Badge variant="outline">{student.section}</Badge>
+                                                                    {student.specialization && (
+                                                                        <div className="text-xs text-muted-foreground mt-1">
+                                                                            {student.specialization}
+                                                                        </div>
+                                                                    )}
+                                                                </td>
+                                                                <td className="p-3">
+                                                                    <div className="text-sm">
+                                                                        {student.reason}
+                                                                    </div>
+                                                                </td>
+                                                                <td className="p-3">
+                                                                    <div className="text-sm">
+                                                                        <div>Total: {student.total_matches}</div>
+                                                                        <div className="text-muted-foreground">
+                                                                            Rejected: {student.rejected_matches}
+                                                                        </div>
+                                                                    </div>
+                                                                </td>
+                                                                <td className="p-3">
+                                                                    {student.requires_manual_intervention ? (
+                                                                        <Badge variant="destructive" className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
+                                                                            Auto-Placement Failed
+                                                                        </Badge>
+                                                                    ) : (
+                                                                        <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
+                                                                            Awaiting Auto-Placement
+                                                                        </Badge>
+                                                                    )}
+                                                                </td>
+                                                                <td className="p-3">
+                                                                    {student.requires_manual_intervention ? (
+                                                                        <div className="space-y-2">
+                                                                            <Badge variant="destructive" className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
+                                                                                Manual Intervention Required
+                                                                            </Badge>
+                                                                            {student.notes && (
+                                                                                <div className="text-xs text-muted-foreground">
+                                                                                    {student.notes}
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    ) : (
+                                                                        <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                                                                            Await  deadline for Auto-Placement
+                                                                        </Badge>
+                                                                    )}
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            </div>
+                        </>
+                    )}
                 </div>
             </AdminLayout>
 
