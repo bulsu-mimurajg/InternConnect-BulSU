@@ -102,7 +102,7 @@ export default function About() {
                 </header>
                 <div className="flex w-full items-center justify-center opacity-100 transition-opacity duration-750 lg:grow starting:opacity-0">
                     <main className="w-full max-w-[335px] lg:max-w-5xl">
-                        <div className="rounded-br-lg rounded-bl-lg bg-orange-50/10 backdrop-blur-sm p-6 pb-12 text-[13px] leading-[20px] border border-orange-200/30 shadow-lg shadow-orange-200/20 lg:rounded-lg lg:p-20 dark:bg-orange-950/8 dark:border-orange-800/30 dark:text-[#EDEDEC] dark:shadow-orange-900/20">
+                        <div className="rounded-br-lg rounded-bl-lg bg-orange-50/10 backdrop-blur-sm p-6 pb-12 text-[13px] leading-[20px] shadow-[inset_0px_0px_0px_1px_rgba(26,26,0,0.16)] lg:rounded-lg lg:p-20 dark:bg-orange-950/8 dark:text-[#EDEDEC] dark:shadow-[inset_0px_0px_0px_1px_#fffaed2d]">
                             {/* Hero Section */}
                             <div className="text-center space-y-6 mb-12">
                                 <div className="space-y-2">
