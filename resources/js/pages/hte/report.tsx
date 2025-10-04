@@ -111,8 +111,7 @@ export default function HteReport({ internships, showSubmissionPrompt }: Props) 
 
     const exportFormats = [
         { value: 'pdf', label: 'PDF Document' },
-        { value: 'excel', label: 'Excel Spreadsheet' },
-        { value: 'csv', label: 'CSV File' }
+        { value: 'excel', label: 'Excel Spreadsheet' }
     ];
 
     const handleGenerateReport = () => {
@@ -135,7 +134,6 @@ export default function HteReport({ internships, showSubmissionPrompt }: Props) 
                     });
                     break;
                 case 'excel':
-                case 'csv':
                     exportRoute = route('hte.report.internship.export.excel', {
                         internshipId: selectedInternship,
                         reportType: selectedReportType
@@ -156,7 +154,6 @@ export default function HteReport({ internships, showSubmissionPrompt }: Props) 
                     });
                     break;
                 case 'excel':
-                case 'csv':
                     exportRoute = route('hte.report.general.export.excel', {
                         reportType: selectedReportType
                     });
@@ -236,7 +233,7 @@ export default function HteReport({ internships, showSubmissionPrompt }: Props) 
                 )}
 
                 {/* Report Generation Form */}
-                <div className="grid gap-6 md:grid-cols-2">
+                <div className="grid gap-6 grid-cols-1">
                     {/* Report Type Selection */}
                     <Card className="flex flex-col">
                         <CardHeader>
@@ -250,7 +247,7 @@ export default function HteReport({ internships, showSubmissionPrompt }: Props) 
                         </CardHeader>
                         <CardContent className="flex-1 flex flex-col justify-end">
                             <Select value={selectedReportType} onValueChange={setSelectedReportType}>
-                                <SelectTrigger className="h-12 text-base">
+                                <SelectTrigger className="h-10 text-sm">
                                     <SelectValue placeholder="Choose a report type" />
                                 </SelectTrigger>
                                 <SelectContent className="max-h-60">
@@ -303,7 +300,7 @@ export default function HteReport({ internships, showSubmissionPrompt }: Props) 
 
                 {/* Generate Report Button */}
                 <Card>
-                    <CardContent className="pt-4">
+                    <CardContent>
                         <div className="flex items-center justify-between">
                             <div>
                                 <h3 className="text-lg font-semibold">Ready to Generate Report</h3>

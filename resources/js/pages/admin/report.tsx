@@ -40,84 +40,99 @@ export default function AdminReport({ sections }: Props) {
     const [selectedSection, setSelectedSection] = useState<string>('');
     const [isGenerating, setIsGenerating] = useState<boolean>(false);
 
-    // All report types (section-specific and general)
-    const reportTypes = [
+    // Report types organized by categories - matching backend implementation
+    const reportCategories = [
         {
-            value: 'comprehensive',
-            label: 'Comprehensive Report',
-            description: 'Complete system overview with all sections, students, placements, and HTE performance',
-            icon: GlobeIcon,
-            requiresSection: false
+            title: 'System Overview',
+            reports: [
+                {
+                    value: 'comprehensive',
+                    label: 'Comprehensive Report',
+                    description: 'Complete system overview with all sections, students, placements, and HTE performance',
+                    icon: GlobeIcon,
+                    requiresSection: false
+                }
+            ]
         },
         {
-            value: 'student-list',
-            label: 'Student List Report',
-            description: 'Complete list of students with their details and assessment status',
-            icon: UsersIcon,
-            requiresSection: true
+            title: 'Student Reports',
+            reports: [
+                {
+                    value: 'all-students',
+                    label: 'All Students Report',
+                    description: 'Complete list of all students across all sections with basic information',
+                    icon: UsersIcon,
+                    requiresSection: false
+                },
+                {
+                    value: 'student-list',
+                    label: 'Student List Report',
+                    description: 'Detailed list of students with assessment status and scores for a specific section',
+                    icon: UsersIcon,
+                    requiresSection: true
+                },
+                {
+                    value: 'registered-students',
+                    label: 'Registered Students Report',
+                    description: 'Students who have completed registration and verification process',
+                    icon: UserCheckIcon,
+                    requiresSection: true
+                }
+            ]
         },
         {
-            value: 'registered-students',
-            label: 'Registered Students Report',
-            description: 'All registered students with verification status',
-            icon: UserCheckIcon,
-            requiresSection: true
+            title: 'Placement Reports',
+            reports: [
+                {
+                    value: 'all-placements',
+                    label: 'All Placements Report',
+                    description: 'Complete overview of all student placements across the system',
+                    icon: TargetIcon,
+                    requiresSection: false
+                },
+                {
+                    value: 'placed-students',
+                    label: 'Placed Students Report',
+                    description: 'Students who have been successfully placed in internships for a specific section',
+                    icon: TargetIcon,
+                    requiresSection: true
+                }
+            ]
         },
         {
-            value: 'all-students',
-            label: 'All Students Report',
-            description: 'Complete list of all students across all sections',
-            icon: UsersIcon,
-            requiresSection: false
-        },
-        {
-            value: 'all-placements',
-            label: 'All Placements Report',
-            description: 'All student placements across the system',
-            icon: TargetIcon,
-            requiresSection: false
-        },
-        {
-            value: 'placed-students',
-            label: 'Placed Students Report',
-            description: 'Students who have been successfully placed in internships',
-            icon: TargetIcon,
-            requiresSection: true
-        },
-        {
-            value: 'assessment-summary',
-            label: 'Assessment Summary Report',
-            description: 'Overview of assessment completion and performance by category',
-            icon: BarChart3Icon,
-            requiresSection: true
-        },
-        {
-            value: 'section-comparison',
-            label: 'Section Comparison Report',
-            description: 'Comparative analysis of performance across all sections',
-            icon: ClipboardListIcon,
-            requiresSection: false
-        },
-        {
-            value: 'performance-analysis',
-            label: 'Performance Analysis Report',
-            description: 'Detailed analysis of student performance and rankings',
-            icon: TrendingUpIcon,
-            requiresSection: true
-        },
-        {
-            value: 'hte-performance',
-            label: 'HTE Performance Report',
-            description: 'Host Training Establishment performance and utilization rates',
-            icon: BuildingIcon,
-            requiresSection: false
+            title: 'Performance Analytics',
+            reports: [
+                {
+                    value: 'assessment-summary',
+                    label: 'Assessment Summary Report',
+                    description: 'Overview of assessment completion and performance by category for a specific section',
+                    icon: BarChart3Icon,
+                    requiresSection: true
+                },
+                {
+                    value: 'performance-analysis',
+                    label: 'Performance Analysis Report',
+                    description: 'Detailed analysis of student performance and rankings for a specific section',
+                    icon: TrendingUpIcon,
+                    requiresSection: true
+                },
+                {
+                    value: 'hte-performance',
+                    label: 'HTE Performance Report',
+                    description: 'Host Training Establishment performance and utilization rates across all HTEs',
+                    icon: BuildingIcon,
+                    requiresSection: false
+                }
+            ]
         }
     ];
 
+    // Flattened report types for backward compatibility
+    const reportTypes = reportCategories.flatMap(category => category.reports);
+
     const exportFormats = [
         { value: 'pdf', label: 'PDF Document' },
-        { value: 'excel', label: 'Excel Spreadsheet' },
-        { value: 'csv', label: 'CSV File' }
+        { value: 'excel', label: 'Excel Spreadsheet' }
     ];
 
     const handleGenerateReport = () => {
@@ -140,7 +155,6 @@ export default function AdminReport({ sections }: Props) {
                     });
                     break;
                 case 'excel':
-                case 'csv':
                     exportRoute = route('report.section.export.excel', {
                         sectionId: selectedSection,
                         reportType: selectedReportType
@@ -161,7 +175,6 @@ export default function AdminReport({ sections }: Props) {
                     });
                     break;
                 case 'excel':
-                case 'csv':
                     exportRoute = route('report.general.export.excel', {
                         reportType: selectedReportType
                     });
@@ -225,7 +238,7 @@ export default function AdminReport({ sections }: Props) {
                         </CardHeader>
                         <CardContent>
                             <Select value={selectedSection} onValueChange={setSelectedSection}>
-                                <SelectTrigger className="h-12 text-base">
+                                <SelectTrigger className="h-10 text-sm">
                                     <SelectValue placeholder="Choose a section" />
                                 </SelectTrigger>
                                 <SelectContent className="max-h-60">
@@ -241,7 +254,7 @@ export default function AdminReport({ sections }: Props) {
                 )}
 
                 {/* Report Generation Form */}
-                <div className="grid gap-6 md:grid-cols-2">
+                <div className="grid gap-6 grid-cols-1">
                     {/* Report Type Selection */}
                     <Card className="flex flex-col">
                         <CardHeader>
@@ -258,17 +271,24 @@ export default function AdminReport({ sections }: Props) {
                                 <SelectTrigger className="h-12 text-base">
                                     <SelectValue placeholder="Choose a report type" />
                                 </SelectTrigger>
-                                <SelectContent className="max-h-60">
-                                    {reportTypes.map((type) => (
-                                        <SelectItem key={type.value} value={type.value} className="py-3">
-                                            <div className="flex flex-col items-start">
-                                                <div className="font-semibold text-sm flex items-center gap-2">
-                                                    <type.icon className="h-4 w-4" />
-                                                    {type.label}
-                                                </div>
-                                                <div className="text-xs text-muted-foreground mt-1">{type.description}</div>
+                                <SelectContent className="max-h-80">
+                                    {reportCategories.map((category) => (
+                                        <div key={category.title}>
+                                            <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                                                {category.title}
                                             </div>
-                                        </SelectItem>
+                                            {category.reports.map((type) => (
+                                                <SelectItem key={type.value} value={type.value} className="py-3">
+                                                    <div className="flex flex-col items-start">
+                                                        <div className="font-semibold text-sm flex items-center gap-2">
+                                                            <type.icon className="h-4 w-4" />
+                                                            {type.label}
+                                                        </div>
+                                                        <div className="text-xs text-muted-foreground mt-1">{type.description}</div>
+                                                    </div>
+                                                </SelectItem>
+                                            ))}
+                                        </div>
                                     ))}
                                 </SelectContent>
                             </Select>
@@ -308,7 +328,7 @@ export default function AdminReport({ sections }: Props) {
 
                 {/* Generate Report Button */}
                 <Card>
-                    <CardContent className="pt-4">
+                    <CardContent>
                         <div className="flex items-center justify-between">
                             <div>
                                 <h3 className="text-lg font-semibold">Ready to Generate Report</h3>

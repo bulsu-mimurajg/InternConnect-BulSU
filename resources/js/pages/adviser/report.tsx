@@ -8,7 +8,8 @@ import { Head } from '@inertiajs/react';
 import { useState } from 'react';
 import {
     FileTextIcon,
-    DownloadIcon
+    DownloadIcon,
+    UsersIcon
 } from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -36,6 +37,7 @@ export default function AdviserReport({
 }: Props) {
     const [selectedReportType, setSelectedReportType] = useState<string>('');
     const [selectedFormat, setSelectedFormat] = useState<string>('pdf');
+    const [selectedSection, setSelectedSection] = useState<string>(currentSectionId?.toString() || '');
     const [isGenerating, setIsGenerating] = useState<boolean>(false);
 
     const reportTypes = [
@@ -49,8 +51,7 @@ export default function AdviserReport({
 
     const exportFormats = [
         { value: 'pdf', label: 'PDF Document' },
-        { value: 'excel', label: 'Excel Spreadsheet' },
-        { value: 'csv', label: 'CSV File' }
+        { value: 'excel', label: 'Excel Spreadsheet' }
     ];
 
 
@@ -68,11 +69,8 @@ export default function AdviserReport({
             case 'excel':
                 exportRoute = route('adviser.report.export.excel', { reportType: selectedReportType });
                 break;
-            case 'csv':
-                exportRoute = route('adviser.report.export.csv', { reportType: selectedReportType });
-                break;
             default:
-                exportRoute = route('adviser.report.export.csv', { reportType: selectedReportType });
+                exportRoute = route('adviser.report.export.excel', { reportType: selectedReportType });
         }
 
         // Open the export URL in a new window/tab
@@ -111,23 +109,45 @@ export default function AdviserReport({
             <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
                 {/* Header */}
                 <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <div>
-                            <h1 className="text-3xl font-bold tracking-tight">Generate Reports</h1>
-                        </div>
-                        {adviserSections.length > 1 && (
-                            <SectionSwitcher 
-                                sections={adviserSections}
-                                currentSectionId={currentSectionId}
-                                showAllSections={true}
-                                className="ml-4"
-                            />
-                        )}
+                    <div>
+                        <h1 className="text-3xl font-bold tracking-tight">Generate Reports</h1>
                     </div>
                 </div>
 
+                {/* Section Selection - Only show if adviser has multiple sections */}
+                {adviserSections.length > 1 && (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <UsersIcon className="h-5 w-5" />
+                                Section Selection
+                            </CardTitle>
+                            <CardDescription>
+                                Select a section to generate section-specific reports
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <Select value={selectedSection} onValueChange={setSelectedSection}>
+                                <SelectTrigger className="h-10 text-sm">
+                                    <SelectValue placeholder="Choose a section" />
+                                </SelectTrigger>
+                                <SelectContent className="max-h-60">
+                                    <SelectItem value="all">
+                                        All Sections
+                                    </SelectItem>
+                                    {adviserSections.map((section) => (
+                                        <SelectItem key={section.section_id} value={section.section_id.toString()}>
+                                            {section.section_name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </CardContent>
+                    </Card>
+                )}
+
                 {/* Report Generation Form */}
-                <div className="grid gap-6 md:grid-cols-2">
+                <div className="grid gap-6 grid-cols-1">
                     {/* Report Type Selection */}
                     <Card className="flex flex-col">
                         <CardHeader>
@@ -192,20 +212,26 @@ export default function AdviserReport({
 
                 {/* Generate Report Button */}
                 <Card>
-                    <CardContent className="pt-4">
+                    <CardContent>
                         <div className="flex items-center justify-between">
                             <div>
                                 <h3 className="text-lg font-semibold">Ready to Generate Report</h3>
                                 <p className="text-sm text-muted-foreground">
                                     {selectedReportType ? 
-                                        `Generate ${reportTypes.find(t => t.value === selectedReportType)?.label} in ${exportFormats.find(f => f.value === selectedFormat)?.label} format` :
+                                        (adviserSections.length > 1 && selectedSection ?
+                                            (selectedSection === 'all' ?
+                                                `Generate ${reportTypes.find(t => t.value === selectedReportType)?.label} for all sections in ${exportFormats.find(f => f.value === selectedFormat)?.label} format` :
+                                                `Generate ${reportTypes.find(t => t.value === selectedReportType)?.label} for ${adviserSections.find(s => s.section_id.toString() === selectedSection)?.section_name} in ${exportFormats.find(f => f.value === selectedFormat)?.label} format`
+                                            ) :
+                                            `Generate ${reportTypes.find(t => t.value === selectedReportType)?.label} in ${exportFormats.find(f => f.value === selectedFormat)?.label} format`
+                                        ) :
                                         'Select a report type to continue'
                                     }
                                 </p>
                             </div>
                             <Button 
                                 onClick={handleGenerateReport}
-                                disabled={!selectedReportType || isGenerating}
+                                disabled={!selectedReportType || isGenerating || (adviserSections.length > 1 && !selectedSection)}
                                 className="flex items-center gap-2"
                             >
                                 <DownloadIcon className="h-4 w-4" />
