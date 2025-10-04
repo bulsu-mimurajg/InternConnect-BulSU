@@ -246,6 +246,19 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
         return 'Fair';
     };
 
+    const getGradePoint = (score: number) => {
+        if (score >= 96.50) return '1.00';
+        if (score >= 93.50) return '1.25';
+        if (score >= 90.50) return '1.50';
+        if (score >= 87.50) return '1.75';
+        if (score >= 84.50) return '2.00';
+        if (score >= 81.50) return '2.25';
+        if (score >= 78.50) return '2.50';
+        if (score >= 75.50) return '2.75';
+        if (score >= 75.00) return '3.00';
+        return '5.00';
+    };
+
     const getStatusBadge = (status?: string) => {
         if (!status || status === 'pending') return null;
         
@@ -894,7 +907,22 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                                 </CardDescription>
                             </CardHeader>
                         <CardContent>
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                {/* Search */}
+                                <div className="space-y-2">
+                                    <Label htmlFor="search">Search</Label>
+                                    <div className="relative">
+                                        <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                        <Input
+                                            id="search"
+                                            placeholder="Search students..."
+                                            value={localFilters.search}
+                                            onChange={(e) => handleFilterChange('search', e.target.value)}
+                                            className="pl-10"
+                                        />
+                                    </div>
+                                </div>
+
                                 {/* Section Filter */}
                                 <div className="space-y-2">
                                     <Label htmlFor="section-filter">Section</Label>
@@ -933,59 +961,6 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                                     </Select>
                                 </div>
 
-                                {/* Internship Filter */}
-                                <div className="space-y-2">
-                                    <Label htmlFor="internship-filter">Internship</Label>
-                                    <Select 
-                                        value={localFilters.internship} 
-                                        onValueChange={(value) => handleFilterChange('internship', value)}
-                                    >
-                                        <SelectTrigger id="internship-filter">
-                                            <SelectValue placeholder="Select internship" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="all">All Internships</SelectItem>
-                                            {filters.internships && Array.isArray(filters.internships) && filters.internships.map((internship) => {
-                                                // Handle both object and basic formats
-                                                if (typeof internship === 'object' && internship !== null) {
-                                                    return (
-                                                        <SelectItem key={internship.id} value={internship.id.toString()}>
-                                                            <div className="flex flex-col">
-                                                                <span className="font-medium">{internship.title || internship.position_title || 'Unknown Title'}</span>
-                                                                <span className="text-xs text-muted-foreground">
-                                                                    {internship.company || internship.hte?.company_name || 'Unknown Company'} • {internship.department || 'Unknown Department'}
-                                                                </span>
-                                                                {internship.total_slots !== undefined && (
-                                                                    <span className="text-xs text-muted-foreground">
-                                                                        {internship.occupied_slots || 0}/{internship.total_slots} slots occupied ({internship.occupancy_rate || 0}%)
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                        </SelectItem>
-                                                    );
-                                                }
-                                                
-                                                return null;
-                                            })}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-
-                                {/* Search */}
-                                <div className="space-y-2">
-                                    <Label htmlFor="search">Search</Label>
-                                    <div className="relative">
-                                        <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                        <Input
-                                            id="search"
-                                            placeholder="Search students..."
-                                            value={localFilters.search}
-                                            onChange={(e) => handleFilterChange('search', e.target.value)}
-                                            className="pl-10"
-                                        />
-                                    </div>
-                                </div>
-
                                 {/* Clear Filters */}
                                 <div className="space-y-2">
                                     <Label>&nbsp;</Label>
@@ -997,6 +972,40 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                                         Clear Filters
                                     </Button>
                                 </div>
+                            </div>
+
+                            {/* Internship Filter - Full Width */}
+                            <div className="space-y-2 mt-4">
+                                <Label htmlFor="internship-filter">Internship</Label>
+                                <Select 
+                                    value={localFilters.internship} 
+                                    onValueChange={(value) => handleFilterChange('internship', value)}
+                                >
+                                    <SelectTrigger id="internship-filter">
+                                        <SelectValue placeholder="Select internship" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">All Internships</SelectItem>
+                                        {filters.internships && Array.isArray(filters.internships) && filters.internships.map((internship) => {
+                                            // Handle both object and basic formats
+                                            if (typeof internship === 'object' && internship !== null) {
+                                                const company = internship.company || internship.hte?.company_name || 'Unknown Company';
+                                                const department = internship.department || 'Unknown Department';
+                                                const slotsInfo = internship.total_slots !== undefined ? ` (${internship.occupied_slots || 0}/${internship.total_slots})` : '';
+                                                
+                                                return (
+                                                    <SelectItem key={internship.id} value={internship.id.toString()}>
+                                                        <span className="truncate">
+                                                            {internship.title || internship.position_title || 'Unknown Title'} - {company} • {department}{slotsInfo}
+                                                        </span>
+                                                    </SelectItem>
+                                                );
+                                            }
+                                            
+                                            return null;
+                                        })}
+                                    </SelectContent>
+                                </Select>
                             </div>
 
                             {/* Filter Description */}
@@ -1238,7 +1247,7 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                                                         <Badge 
                                                             className={getScoreColor(student.best_match?.compatibility_score || 0)}
                                                         >
-                                                            {Math.round(student.best_match?.compatibility_score || 0)}%
+                                                            {Math.round(student.best_match?.compatibility_score || 0)}% | {getGradePoint(student.best_match?.compatibility_score || 0)}
                                                         </Badge>
                                                     </div>
 
@@ -1392,11 +1401,11 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                                                         </div>
                                                     </td>
                                                             <td className="p-2 text-center">
-                                                            <Badge 
-                                                                className={getScoreColor(student.best_match?.compatibility_score || 0)}
-                                                            >
-                                                                {Math.round(student.best_match?.compatibility_score || 0)}%
-                                                            </Badge>
+                                                                <Badge 
+                                                                    className={getScoreColor(student.best_match?.compatibility_score || 0)}
+                                                                >
+                                                                    {Math.round(student.best_match?.compatibility_score || 0)}% | {getGradePoint(student.best_match?.compatibility_score || 0)}
+                                                                </Badge>
                                                     </td>
                                                             <td className="p-2 text-right">
                                                                 <div className="flex items-center justify-end gap-1">

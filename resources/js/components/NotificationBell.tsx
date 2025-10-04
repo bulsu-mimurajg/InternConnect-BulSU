@@ -797,20 +797,21 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
             </Button>
 
             {isOpen && (
-                <Card className="absolute right-0 top-full mt-2 w-96 shadow-xl z-50 py-0">
+                <Card className="absolute right-0 top-full mt-2 w-80 sm:w-96 shadow-xl z-50 py-0">
                     <CardContent className="p-0">
-                        <div className="px-4 py-2 border-b">
+                        <div className="px-3 sm:px-4 py-3 sm:py-2 border-b">
                             <div className="flex items-center justify-between">
-                                <h3 className="font-semibold text-foreground flex items-center gap-2">
+                                <h3 className="font-semibold text-foreground flex items-center gap-2 text-sm sm:text-base">
                                     <BellIcon className="h-4 w-4" />
-                                    Notifications
+                                    <span className="hidden sm:inline">Notifications</span>
+                                    <span className="sm:hidden">Notifications</span>
                                     {unreadCount > 0 && (
                                         <Badge variant="destructive" className="text-xs">
                                             {unreadCount}
                                         </Badge>
                                     )}
                                 </h3>
-                                <div className="flex gap-2">
+                                <div className="flex gap-1 sm:gap-2">
                                     <Button
                                         variant="ghost"
                                         size="sm"
@@ -825,10 +826,11 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                                             variant="ghost"
                                             size="sm"
                                             onClick={markAllAsRead}
-                                            className="h-8 px-2 text-xs"
+                                            className="h-8 px-2 text-xs hidden sm:flex"
                                         >
                                             <CheckIcon className="h-4 w-4 mr-1" />
-                                            Mark all read
+                                            <span className="hidden lg:inline">Mark all read</span>
+                                            <span className="lg:hidden">Mark all</span>
                                         </Button>
                                     )}
                                 </div>
@@ -836,8 +838,8 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                         </div>
 
                         {/* Filter Buttons */}
-                        <div className="p-3 border-b">
-                            <div className="flex justify-center gap-1">
+                        <div className="p-3 sm:p-3 border-b">
+                            <div className="flex justify-center gap-1 flex-wrap">
                                 {getFilterButtons().map((button) => (
                                     <Button
                                         key={button.key}
@@ -845,12 +847,12 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                                         size="sm"
                                         onClick={() => handleFilterChange(button.key)}
                                         className={cn(
-                                            "h-8 px-3 text-xs transition-all duration-200",
+                                            "h-7 sm:h-8 px-2 sm:px-3 text-xs transition-all duration-200 flex-1 min-w-0",
                                             filter === button.key && "ring-2 ring-primary/20"
                                         )}
                                         disabled={isLoading || isFiltering}
                                     >
-                                        {button.label}
+                                        <span className="truncate">{button.label}</span>
                                     </Button>
                                 ))}
                             </div>
@@ -863,40 +865,40 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
 
                         <div className="max-h-96 overflow-y-auto">
                             {(isLoading || isFiltering) ? (
-                                <div className="p-4">
+                                <div className="p-3 sm:p-4">
                                     {isFiltering ? (
-                                        <div className="flex items-center justify-center py-8">
+                                        <div className="flex items-center justify-center py-6 sm:py-8">
                                             <div className="flex items-center gap-2 text-muted-foreground">
                                                 <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent"></div>
-                                                <span className="text-sm">Switching to {filter} notifications...</span>
+                                                <span className="text-xs sm:text-sm">Switching to {filter} notifications...</span>
                                             </div>
                                         </div>
                                     ) : (
-                                        <div className="flex items-start gap-3">
-                                            <div className="flex-shrink-0 rounded-full p-2.5 bg-muted animate-pulse">
+                                        <div className="flex items-start gap-2 sm:gap-3">
+                                            <div className="flex-shrink-0 rounded-full p-2 sm:p-2.5 bg-muted animate-pulse">
                                                 <BellIcon className="h-4 w-4 text-muted-foreground" />
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <div className="space-y-2">
-                                                    <div className="h-4 bg-muted rounded animate-pulse w-3/4"></div>
+                                                    <div className="h-3 sm:h-4 bg-muted rounded animate-pulse w-3/4"></div>
                                                     <div className="h-3 bg-muted rounded animate-pulse w-full"></div>
                                                     <div className="h-3 bg-muted rounded animate-pulse w-2/3"></div>
                                                 </div>
-                                                <div className="flex items-center gap-1.5 mt-3">
+                                                <div className="flex items-center gap-1 sm:gap-1.5 mt-2 sm:mt-3">
                                                     <div className="h-3 w-3 bg-muted rounded animate-pulse"></div>
-                                                    <div className="h-3 bg-muted rounded animate-pulse w-16"></div>
+                                                    <div className="h-3 bg-muted rounded animate-pulse w-12 sm:w-16"></div>
                                                 </div>
                                             </div>
                                         </div>
                                     )}
                                 </div>
                             ) : getFilteredNotifications().length === 0 ? (
-                                <div className="p-6 text-center text-muted-foreground">
-                                    <div className="rounded-full bg-muted p-3 mb-3 mx-auto w-fit">
-                                        <BellIcon className="h-6 w-6" />
+                                <div className="p-4 sm:p-6 text-center text-muted-foreground">
+                                    <div className="rounded-full bg-muted p-2 sm:p-3 mb-3 mx-auto w-fit">
+                                        <BellIcon className="h-5 w-5 sm:h-6 sm:w-6" />
                                     </div>
-                                    <h3 className="font-medium mb-1">No notifications</h3>
-                                    <p className="text-sm text-muted-foreground">
+                                    <h3 className="font-medium mb-1 text-sm sm:text-base">No notifications</h3>
+                                    <p className="text-xs sm:text-sm text-muted-foreground">
                                         You're all caught up
                                     </p>
                                 </div>
@@ -906,15 +908,15 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                                         <div
                                             key={notification.id}
                                             className={cn(
-                                                "p-4 hover:bg-accent/50 transition-colors group cursor-pointer border-b border-border/50 last:border-b-0",
+                                                "p-3 sm:p-4 hover:bg-accent/50 transition-colors group cursor-pointer border-b border-border/50 last:border-b-0",
                                                 !notification.is_read && "bg-primary/5 border-l-4 border-l-primary",
                                                 isProcessing && "opacity-50 cursor-not-allowed"
                                             )}
                                             onClick={() => handleNotificationClick(notification)}
                                         >
-                                            <div className="flex items-start gap-3">
+                                            <div className="flex items-start gap-2 sm:gap-3">
                                                 <div className={cn(
-                                                    "flex-shrink-0 rounded-full p-2.5 mt-0.5 shadow-sm",
+                                                    "flex-shrink-0 rounded-full p-2 sm:p-2.5 mt-0.5 shadow-sm",
                                                     !notification.is_read
                                                         ? "bg-primary text-primary-foreground shadow-primary/20"
                                                         : "bg-accent text-accent-foreground"
@@ -924,16 +926,16 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                                                 <div className="flex-1 min-w-0">
                                                     <div className="flex items-start justify-between gap-2">
                                                         <p className={cn(
-                                                            "text-sm font-semibold leading-tight",
+                                                            "text-xs sm:text-sm font-semibold leading-tight line-clamp-2",
                                                             !notification.is_read ? "text-foreground" : "text-foreground/80"
                                                         )}>
                                                             {notification.title}
                                                         </p>
-                                                        <div className="flex items-center gap-2">
+                                                        <div className="flex items-center gap-1 sm:gap-2 ml-2">
                                                             {!notification.is_read && (
-                                                                <div className="w-2.5 h-2.5 bg-primary rounded-full flex-shrink-0 shadow-sm" />
+                                                                <div className="w-2 sm:w-2.5 h-2 sm:h-2.5 bg-primary rounded-full flex-shrink-0 shadow-sm" />
                                                             )}
-                                                            <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <div className="opacity-0 sm:group-hover:opacity-100 transition-opacity">
                                                                 {notification.is_read ? (
                                                                     <Button
                                                                         variant="ghost"
@@ -942,7 +944,7 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                                                                             e.stopPropagation();
                                                                             markAsUnread(notification.id);
                                                                         }}
-                                                                        className="h-6 w-6 p-0 hover:bg-accent"
+                                                                        className="h-5 w-5 sm:h-6 sm:w-6 p-0 hover:bg-accent"
                                                                         title="Mark as unread"
                                                                     >
                                                                         <RotateCcwIcon className="h-3 w-3" />
@@ -955,7 +957,7 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                                                                             e.stopPropagation();
                                                                             markAsRead(notification.id);
                                                                         }}
-                                                                        className="h-6 w-6 p-0 hover:bg-accent"
+                                                                        className="h-5 w-5 sm:h-6 sm:w-6 p-0 hover:bg-accent"
                                                                         title="Mark as read"
                                                                     >
                                                                         <CheckIcon className="h-3 w-3" />
@@ -964,10 +966,10 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                                                             </div>
                                                         </div>
                                                     </div>
-                                                    <p className="text-sm text-foreground/70 mt-1.5 line-clamp-2 leading-relaxed">
+                                                    <p className="text-xs sm:text-sm text-foreground/70 mt-1 sm:mt-1.5 line-clamp-2 leading-relaxed">
                                                         {notification.message}
                                                     </p>
-                                                    <p className="text-xs text-muted-foreground mt-2.5 flex items-center gap-1.5 font-medium">
+                                                    <p className="text-xs text-muted-foreground mt-1.5 sm:mt-2.5 flex items-center gap-1 sm:gap-1.5 font-medium">
                                                         <ClockIcon className="h-3 w-3" />
                                                         {formatTimeAgo(notification.created_at)}
                                                     </p>
@@ -980,15 +982,15 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                             
                             {/* Pagination */}
                             {pagination.last_page > 1 && (
-                                <div className="border-t border-border/50 p-3">
-                                    <div className="flex items-center justify-between">
+                                <div className="border-t border-border/50 p-2 sm:p-3">
+                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
                                         {/* Summary */}
-                                        <div className="text-xs text-muted-foreground">
+                                        <div className="text-xs text-muted-foreground text-center sm:text-left">
                                             Showing {pagination.from}-{pagination.to} of {pagination.total}
                                         </div>
                                         
                                         {/* Page Navigation */}
-                                        <div className="flex items-center gap-1">
+                                        <div className="flex items-center justify-center gap-1">
                                             {/* Previous Button */}
                                             <Button
                                                 variant="ghost"
@@ -1000,7 +1002,7 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                                                     }
                                                 }}
                                                 disabled={pagination.current_page <= 1}
-                                                className="h-7 w-7 p-0 hover:bg-accent"
+                                                className="h-6 w-6 sm:h-7 sm:w-7 p-0 hover:bg-accent"
                                             >
                                                 <ChevronLeft className="h-3 w-3" />
                                             </Button>
@@ -1009,17 +1011,18 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                                             <div className="flex items-center gap-1">
                                                 {Array.from({ length: pagination.last_page }, (_, i) => i + 1).map((page) => {
                                                     // Show first page, last page, current page, and pages around current page
+                                                    // On mobile, show fewer pages to fit better
                                                     const showPage = 
                                                         page === 1 || 
                                                         page === pagination.last_page || 
-                                                        Math.abs(page - pagination.current_page) <= 1;
+                                                        Math.abs(page - pagination.current_page) <= (window.innerWidth < 640 ? 0 : 1);
                                                     
                                                     if (!showPage) {
                                                         // Show ellipsis for gaps
-                                                        if (page === 2 && pagination.current_page > 4) {
+                                                        if (page === 2 && pagination.current_page > (window.innerWidth < 640 ? 2 : 4)) {
                                                             return <span key={`ellipsis-start`} className="px-1 text-xs text-muted-foreground">...</span>;
                                                         }
-                                                        if (page === pagination.last_page - 1 && pagination.current_page < pagination.last_page - 3) {
+                                                        if (page === pagination.last_page - 1 && pagination.current_page < pagination.last_page - (window.innerWidth < 640 ? 1 : 3)) {
                                                             return <span key={`ellipsis-end`} className="px-1 text-xs text-muted-foreground">...</span>;
                                                         }
                                                         return null;
@@ -1035,7 +1038,7 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                                                                     handlePageChange(page);
                                                                 }
                                                             }}
-                                                            className="h-7 w-7 p-0 text-xs hover:bg-accent"
+                                                            className="h-6 w-6 sm:h-7 sm:w-7 p-0 text-xs hover:bg-accent"
                                                         >
                                                             {page}
                                                         </Button>
@@ -1054,7 +1057,7 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                                                     }
                                                 }}
                                                 disabled={pagination.current_page >= pagination.last_page}
-                                                className="h-7 w-7 p-0 hover:bg-accent"
+                                                className="h-6 w-6 sm:h-7 sm:w-7 p-0 hover:bg-accent"
                                             >
                                                 <ChevronRight className="h-3 w-3" />
                                             </Button>

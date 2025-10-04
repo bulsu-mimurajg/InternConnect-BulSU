@@ -56,7 +56,7 @@ class ExtendedStudentSeeder extends Seeder
             $user = User::create([
                 'username' => strtolower(str_replace(' ', '.', $studentData['first_name'] . ' ' . $studentData['last_name'])),
                 'email' => strtolower(str_replace(' ', '.', $studentData['first_name'] . ' ' . $studentData['last_name'])) . '@example.com',
-                'password' => Hash::make('password123'),
+                'password' => Hash::make('password'),
                 'status' => 'verified',
             ]);
 

@@ -166,6 +166,19 @@ export default function EndorsementTable({ endorsements = [], internships = [], 
         return 'bg-red-100 text-red-800';
     };
 
+    const getGradePoint = (score: number) => {
+        if (score >= 96.50) return '1.00';
+        if (score >= 93.50) return '1.25';
+        if (score >= 90.50) return '1.50';
+        if (score >= 87.50) return '1.75';
+        if (score >= 84.50) return '2.00';
+        if (score >= 81.50) return '2.25';
+        if (score >= 78.50) return '2.50';
+        if (score >= 75.50) return '2.75';
+        if (score >= 75.00) return '3.00';
+        return '5.00';
+    };
+
     const handleApprove = async (endorsementId: number) => {
         setLoading(prev => ({ ...prev, [endorsementId]: true }));
         
@@ -425,7 +438,7 @@ export default function EndorsementTable({ endorsements = [], internships = [], 
         <AppLayout>
             <Head title="Student Endorsements" />
 
-            <div className="flex h-full flex-1 flex-col gap-6 rounded-xl p-6">
+            <div className="flex h-full flex-1 flex-col gap-4 md:gap-6 rounded-xl p-4 md:p-6">
                 {/* Flash Messages */}
                 {flash?.success && (
                     <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
@@ -605,55 +618,72 @@ export default function EndorsementTable({ endorsements = [], internships = [], 
                         ) : (
                             <>
                                 {/* Mobile/Tablet Card View */}
-                                <div className="block lg:hidden space-y-4">
+                                <div className="block lg:hidden space-y-3 md:space-y-4">
 
                                     {endorsementPagination.paginatedData.map((endorsement) => (
-                                        <Card key={endorsement.id} className="p-4">
-                                            <div className="flex items-start justify-between mb-3">
-                                                <div className="flex items-center gap-3">
+                                        <Card 
+                                            key={endorsement.id} 
+                                            className={`p-4 md:p-6 transition-all duration-200 hover:shadow-md ${
+                                                highlightedStudentId === endorsement.student.id 
+                                                    ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/20' 
+                                                    : ''
+                                            }`}
+                                        >
+                                            {/* Header with checkbox, student info, and score */}
+                                            <div className="flex items-start justify-between mb-4">
+                                                <div className="flex items-start gap-3 flex-1">
                                                     <Checkbox
                                                         checked={selectedEndorsements.has(endorsement.id)}
                                                         onCheckedChange={(checked) => handleSelectEndorsement(endorsement.id, checked as boolean)}
+                                                        className="mt-1"
                                                     />
-                                                    <div className="flex items-center gap-2">
-                                                        <User className="h-5 w-5 text-muted-foreground" />
-                                                        <div>
-                                                            <div className="font-medium text-base">
-                                                                {endorsement.student.first_name} {endorsement.student.middle_name} {endorsement.student.last_name}
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="font-semibold text-base md:text-lg text-foreground mb-1">
+                                                            {endorsement.student.first_name} {endorsement.student.middle_name} {endorsement.student.last_name}
+                                                        </div>
+                                                        <div className="text-sm text-muted-foreground font-mono">
+                                                            {endorsement.student.student_number}
+                                                        </div>
+                                                        {endorsement.student.specialization && (
+                                                            <div className="text-xs text-muted-foreground mt-1">
+                                                                {endorsement.student.specialization}
                                                             </div>
-                                                            <div className="text-sm text-muted-foreground">
-                                                                {endorsement.student.student_number}
-                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <div className="flex flex-col items-end gap-1 ml-2">
+                                                    <span className="font-semibold text-sm md:text-base bg-primary/10 text-primary px-2 py-1 rounded-md">
+                                                        {Math.round(endorsement.compatibility_score)}%
+                                                    </span>
+                                                    <span className="text-xs text-muted-foreground font-mono">
+                                                        {getGradePoint(endorsement.compatibility_score)}
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            {/* Internship Details */}
+                                            <div className="bg-muted/50 rounded-lg p-3 md:p-4 mb-4">
+                                                <div className="space-y-2">
+                                                    <div>
+                                                        <div className="font-medium text-sm md:text-base text-foreground">
+                                                            {endorsement.internship.position}
+                                                        </div>
+                                                        <div className="text-xs md:text-sm text-muted-foreground">
+                                                            {endorsement.internship.department}
                                                         </div>
                                                     </div>
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                                                    <span className="font-medium text-lg">{endorsement.compatibility_score}%</span>
-                                                </div>
-                                            </div>
-
-                                            <div className="grid grid-cols-1 gap-3 mb-4">
-                                                <div className="flex items-center gap-2">
-                                                    <Briefcase className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                                                    <div>
-                                                        <div className="font-medium text-sm">{endorsement.internship.position}</div>
-                                                        <div className="text-xs text-muted-foreground">{endorsement.internship.department}</div>
+                                                    <div className="flex items-center gap-2">
+                                                        <Building2 className="h-4 w-4 text-muted-foreground" />
+                                                        <span className="text-sm text-foreground">{endorsement.internship.company_name}</span>
                                                     </div>
                                                 </div>
-                                                <div className="flex items-center gap-2">
-                                                    <Building2 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                                                    <span className="text-sm">{endorsement.internship.company_name}</span>
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    <GraduationCap className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                                                    <span className="text-sm">{endorsement.student.specialization}</span>
-                                                </div>
                                             </div>
 
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-2">
+                                            {/* Footer with badges and action buttons */}
+                                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                                <div className="flex flex-wrap items-center gap-2">
                                                     <Badge className={`text-xs ${getScoreColor(endorsement.compatibility_score)}`}>
+                                                        <GraduationCap className="h-3 w-3 mr-1" />
                                                         {getScoreLabel(endorsement.compatibility_score)}
                                                     </Badge>
                                                     <span className="text-xs text-muted-foreground">
@@ -662,23 +692,23 @@ export default function EndorsementTable({ endorsements = [], internships = [], 
                                                 </div>
                                                 <div className="flex gap-2">
                                                     <Button
-                                                        size="sm"
+                                                        size="default"
                                                         variant="default"
                                                         onClick={() => handleApprove(endorsement.id)}
                                                         disabled={loading[endorsement.id] || batchLoading}
-                                                        className="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-1 h-8"
+                                                        className="bg-green-600 hover:bg-green-700 text-white flex-1 sm:flex-none min-w-[80px]"
                                                     >
-                                                        <CheckCircle className="h-3 w-3 mr-1" />
+                                                        <CheckCircle className="h-4 w-4 mr-2" />
                                                         Approve
                                                     </Button>
                                                     <Button
-                                                        size="sm"
+                                                        size="default"
                                                         variant="destructive"
                                                         onClick={() => handleReject(endorsement.id)}
                                                         disabled={loading[endorsement.id] || batchLoading}
-                                                        className="text-xs px-3 py-1 h-8"
+                                                        className="flex-1 sm:flex-none min-w-[80px]"
                                                     >
-                                                        <XCircle className="h-3 w-3 mr-1" />
+                                                        <XCircle className="h-4 w-4 mr-2" />
                                                         Reject
                                                     </Button>
                                                 </div>
@@ -721,12 +751,9 @@ export default function EndorsementTable({ endorsements = [], internships = [], 
                                                     {getRowNumber(endorsementPagination.currentPage, 10, index)}
                                                 </td>
                                                 <td className="py-3 px-2">
-                                                    <div className="flex items-center gap-2">
-                                                        <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                                                        <div className="min-w-0">
-                                                            <div className="font-medium text-sm truncate">
-                                                                {endorsement.student.first_name} {endorsement.student.middle_name} {endorsement.student.last_name}
-                                                            </div>
+                                                    <div className="min-w-0">
+                                                        <div className="font-medium text-sm truncate">
+                                                            {endorsement.student.first_name} {endorsement.student.middle_name} {endorsement.student.last_name}
                                                         </div>
                                                     </div>
                                                 </td>
@@ -738,24 +765,15 @@ export default function EndorsementTable({ endorsements = [], internships = [], 
                                                 </td>
                                                 <td className="py-3 px-2">
                                                     <div className="min-w-0">
-                                                        <div className="flex items-center gap-1">
-                                                            <Briefcase className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                                                            <span className="font-medium text-xs truncate block">{endorsement.internship.position}</span>
-                                                        </div>
+                                                        <div className="font-medium text-xs truncate block">{endorsement.internship.position}</div>
                                                         <div className="text-xs text-muted-foreground truncate">
                                                             {endorsement.internship.company_name}
                                                         </div>
                                                     </div>
                                                 </td>
                                                 <td className="py-3 px-2">
-                                                    <div className="flex flex-col gap-1">
-                                                        <div className="flex items-center gap-1">
-                                                            <Star className="h-3 w-3 text-yellow-500 fill-current flex-shrink-0" />
-                                                            <span className="font-medium text-xs">{endorsement.compatibility_score}%</span>
-                                                        </div>
-                                                        <Badge className={`text-xs ${getScoreColor(endorsement.compatibility_score)} hidden xl:inline-flex w-fit`}>
-                                                            {getScoreLabel(endorsement.compatibility_score)}
-                                                        </Badge>
+                                                    <div className="text-xs font-medium">
+                                                        {Math.round(endorsement.compatibility_score)}% | {getGradePoint(endorsement.compatibility_score)}
                                                     </div>
                                                 </td>
                                                 <td className="py-3 px-2 text-xs text-muted-foreground hidden xl:table-cell">

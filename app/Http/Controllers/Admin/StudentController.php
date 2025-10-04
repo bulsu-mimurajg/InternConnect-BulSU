@@ -991,13 +991,8 @@ class StudentController extends Controller
                     $internship->id
                 );
 
-                // Also notify the student about their placement
-                $notificationService->notifyStudentForPlacement(
-                    $student,
-                    $companyName,
-                    $internship->position_title,
-                    $internship->id
-                );
+                // Don't notify student yet - wait for HTE approval
+                // Student will be notified when HTE approves the endorsement
             }
 
             // Do not auto-fallback on admin endorsement. HTE rejection will drive fallback.
@@ -1611,14 +1606,8 @@ class StudentController extends Controller
                             'endorsement_date' => now(),
                         ]);
 
-                        // Send notification to student about their placement
-                        $notificationService = new NotificationService();
-                        $notificationService->notifyStudentForPlacement(
-                            $student,
-                            $internship->hte->company_name,
-                            $internship->position_title,
-                            $internship->id
-                        );
+                        // Don't notify student yet - wait for HTE approval
+                        // Student will be notified when HTE approves the endorsement
                         
                         $successfulEndorsements[] = [
                             'student_id' => $student->id,
@@ -1690,14 +1679,8 @@ class StudentController extends Controller
                             'endorsement_date' => now(),
                         ]);
 
-                        // Send notification to student about their placement
-                        $notificationService = new NotificationService();
-                        $notificationService->notifyStudentForPlacement(
-                            $student,
-                            $fallbackInternship->hte->company_name,
-                            $fallbackInternship->position_title,
-                            $fallbackInternship->id
-                        );
+                        // Don't notify student yet - wait for HTE approval
+                        // Student will be notified when HTE approves the endorsement
                         
                         $successfulEndorsements[] = [
                             'student_id' => $student->id,
@@ -1734,14 +1717,8 @@ class StudentController extends Controller
                             'endorsement_date' => now(),
                         ]);
 
-                        // Send notification to student about their placement
-                        $notificationService = new NotificationService();
-                        $notificationService->notifyStudentForPlacement(
-                            $student,
-                            $internship->hte->company_name,
-                            $internship->position_title,
-                            $internship->id
-                        );
+                        // Don't notify student yet - wait for HTE approval
+                        // Student will be notified when HTE approves the endorsement
                         
                         $successfulEndorsements[] = [
                             'student_id' => $student->id,

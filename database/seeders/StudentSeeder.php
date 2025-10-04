@@ -289,7 +289,7 @@ class StudentSeeder extends Seeder
 
             // Create user account
             $username = isset($studentData['username']) ? $studentData['username'] : strtolower(str_replace(' ', '.', $studentData['first_name'] . ' ' . $studentData['last_name']));
-            $password = isset($studentData['password']) ? $studentData['password'] : 'password123';
+            $password = isset($studentData['password']) ? $studentData['password'] : 'password';
             
             $user = User::create([
                 'username' => $username,

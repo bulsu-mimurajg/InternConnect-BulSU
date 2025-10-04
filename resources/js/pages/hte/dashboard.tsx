@@ -39,6 +39,8 @@ interface HTEDashboardProps {
             department: string;
             placement_description: string;
             slot_count: number;
+            available_slots_count: number;
+            filled_slots_count: number;
             is_active: boolean;
             created_at: string;
             subcategory_weights: Array<{
@@ -59,6 +61,8 @@ interface HTEDashboardProps {
             id: number;
             position_title: string;
             slot_count: number;
+            available_slots: number;
+            filled_slots: number;
             is_active: boolean;
             created_at: string;
         }>;
@@ -239,24 +243,36 @@ export default function HTEDashboardPage() {
                         {hte.internships.length > 0 ? (
                             <div className="space-y-4">
                                 {hte.internships.map((internship) => (
-                                    <div key={internship.id} className="flex items-center justify-between p-4 border rounded-lg">
+                                    <div key={internship.id} className="flex flex-col md:flex-row md:items-center md:justify-between p-4 border rounded-lg gap-3 md:gap-4">
                                         <div className="flex-1">
-                                            <div className="flex items-center gap-2 mb-1">
-                                                <h4 className="font-medium">{internship.position_title}</h4>
-                                                <Badge variant={internship.is_active ? "default" : "secondary"}>
+                                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
+                                                <h4 className="font-medium text-base">{internship.position_title}</h4>
+                                                <Badge variant={internship.is_active ? "default" : "secondary"} className="w-fit">
                                                     {internship.is_active ? "Active" : "Inactive"}
                                                 </Badge>
                                             </div>
-                                            <p className="text-sm text-muted-foreground mb-2">
-                                                {internship.department} • {internship.slot_count} slot{internship.slot_count !== 1 ? 's' : ''}
-                                            </p>
+                                            
                                             <p className="text-xs text-muted-foreground">
                                                 Created: {new Date(internship.created_at).toLocaleDateString()}
                                             </p>
                                         </div>
-                                        <div className="text-right">
-                                            <div className="text-2xl font-bold text-primary">{internship.slot_count}</div>
-                                            <div className="text-xs text-muted-foreground">slots</div>
+                                        
+                                        {/* Slot Information */}
+                                        <div className="flex items-center justify-between md:justify-end gap-4 bg-muted/50 p-3 rounded-lg md:w-auto">
+                                            <div className="text-center">
+                                                <div className="text-lg font-bold text-primary">{internship.slot_count}</div>
+                                                <div className="text-xs text-muted-foreground">total</div>
+                                            </div>
+                                            <div className="text-center">
+                                                <div className={`text-lg font-bold ${internship.available_slots_count > 0 ? 'text-green-600' : 'text-orange-600'}`}>
+                                                    {internship.available_slots_count}
+                                                </div>
+                                                <div className="text-xs text-muted-foreground">available</div>
+                                            </div>
+                                            <div className="text-center">
+                                                <div className="text-lg font-bold text-slate-600">{internship.filled_slots_count}</div>
+                                                <div className="text-xs text-muted-foreground">filled</div>
+                                            </div>
                                         </div>
                                     </div>
                                 ))}

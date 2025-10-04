@@ -8,10 +8,6 @@ import { AlertCircle } from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
-        title: 'Dashboard',
-        href: '/hte/dashboard',
-    },
-    {
         title: 'Add Internship',
         href: '/hte/add-internship',
     },

@@ -180,6 +180,19 @@ export default function StudentPlaced({ placedStudents = [], filters }: Props) {
         }
     };
 
+    const getGradePoint = (score: number) => {
+        if (score >= 96.50) return '1.00';
+        if (score >= 93.50) return '1.25';
+        if (score >= 90.50) return '1.50';
+        if (score >= 87.50) return '1.75';
+        if (score >= 84.50) return '2.00';
+        if (score >= 81.50) return '2.25';
+        if (score >= 78.50) return '2.50';
+        if (score >= 75.50) return '2.75';
+        if (score >= 75.00) return '3.00';
+        return '5.00';
+    };
+
     return (
         <AdminLayout breadcrumbs={breadcrumbs}>
             <Head title="Placed Students" />
@@ -380,27 +393,27 @@ export default function StudentPlaced({ placedStudents = [], filters }: Props) {
                                 <table className="w-full">
                                     <thead>
                                         <tr className="border-b">
-                                            <th className="text-center p-3 font-medium text-muted-foreground w-16">#</th>
-                                            <th className="text-left p-3 font-medium text-muted-foreground">Student</th>
-                                            <th className="text-left p-3 font-medium text-muted-foreground">Section</th>
-                                            <th className="text-left p-3 font-medium text-muted-foreground">Internship</th>
-                                            <th className="text-left p-3 font-medium text-muted-foreground">Compatibility</th>
-                                            <th className="text-left p-3 font-medium text-muted-foreground">Status</th>
-                                            <th className="text-left p-3 font-medium text-muted-foreground">Date</th>
+                                            <th className="text-center px-2 py-2 text-xs font-medium text-muted-foreground w-12">#</th>
+                                            <th className="text-left px-2 py-2 text-xs font-medium text-muted-foreground">Student</th>
+                                            <th className="text-left px-2 py-2 text-xs font-medium text-muted-foreground">Section</th>
+                                            <th className="text-left px-2 py-2 text-xs font-medium text-muted-foreground">Internship</th>
+                                            <th className="text-left px-2 py-2 text-xs font-medium text-muted-foreground">Compatibility</th>
+                                            <th className="text-left px-2 py-2 text-xs font-medium text-muted-foreground">Status</th>
+                                            <th className="text-left px-2 py-2 text-xs font-medium text-muted-foreground">Date</th>
                                         </tr>
                                     </thead>
                                         <tbody>
                                             {placedPagination.paginatedData.map((placement, index) => (
                                                 <tr key={placement.id} className="border-b hover:bg-muted/50 transition-colors">
-                                                    <td className="text-center p-3 font-mono text-sm text-muted-foreground">
+                                                    <td className="text-center px-2 py-2 font-mono text-xs text-muted-foreground">
                                                         {getRowNumber(placedPagination.currentPage, 10, index)}
                                                     </td>
-                                                    <td className="p-3">
+                                                    <td className="px-2 py-2">
                                                         <div>
-                                                            <div className="font-medium">
+                                                            <div className="font-medium text-sm">
                                                                 {placement.student?.last_name || 'N/A'}, {placement.student?.first_name || 'N/A'}
                                                             </div>
-                                                            <div className="text-sm text-muted-foreground">
+                                                            <div className="text-xs text-muted-foreground">
                                                                 {placement.student?.student_number || 'N/A'}
                                                             </div>
                                                             {placement.student?.middle_name && (
@@ -410,9 +423,9 @@ export default function StudentPlaced({ placedStudents = [], filters }: Props) {
                                                             )}
                                                         </div>
                                                     </td>
-                                                    <td className="p-3">
+                                                    <td className="px-2 py-2">
                                                         <div>
-                                                            <Badge variant="outline">{placement.student?.section || 'N/A'}</Badge>
+                                                            <Badge variant="outline" className="text-xs">{placement.student?.section || 'N/A'}</Badge>
                                                             {placement.student?.specialization && (
                                                                 <div className="text-xs text-muted-foreground mt-1">
                                                                     {placement.student.specialization}
@@ -420,12 +433,12 @@ export default function StudentPlaced({ placedStudents = [], filters }: Props) {
                                                             )}
                                                         </div>
                                                     </td>
-                                                    <td className="p-3">
+                                                    <td className="px-2 py-2">
                                                         <div>
-                                                            <div className="font-medium">
+                                                            <div className="font-medium text-sm">
                                                                 {placement.internship?.position_title || 'N/A'}
                                                             </div>
-                                                            <div className="text-sm text-muted-foreground">
+                                                            <div className="text-xs text-muted-foreground">
                                                                 {placement.internship?.hte?.company_name || 'N/A'}
                                                             </div>
                                                             <div className="text-xs text-muted-foreground">
@@ -433,24 +446,18 @@ export default function StudentPlaced({ placedStudents = [], filters }: Props) {
                                                             </div>
                                                         </div>
                                                     </td>
-                                                    <td className="p-3">
-                                                        <div className="flex items-center gap-2">
-                                                            <Star className="h-4 w-4 text-yellow-300" />
-                                                            <span className="font-medium">
-                                                                {placement.compatibility_score || 0}%
-                                                            </span>
-                                                        </div>
-                                                    </td>
-                                                    <td className="p-3">
-                                                        <Badge className={getStatusColor(placement.status || 'pending')}>
-                                                            <div className="flex items-center gap-1">
-                                                                {getStatusIcon(placement.status || 'pending')}
-                                                                {(placement.status || 'pending').charAt(0).toUpperCase() + (placement.status || 'pending').slice(1)}
-                                                            </div>
+                    <td className="px-2 py-2">
+                        <span className="font-medium text-sm">
+                            {Math.round(placement.compatibility_score || 0)}% | {getGradePoint(placement.compatibility_score || 0)}
+                        </span>
+                    </td>
+                                                    <td className="px-2 py-2">
+                                                        <Badge className={`${getStatusColor(placement.status || 'pending')} text-xs`}>
+                                                            {(placement.status || 'pending').charAt(0).toUpperCase() + (placement.status || 'pending').slice(1)}
                                                         </Badge>
                                                     </td>
-                                                    <td className="p-3">
-                                                        <div className="text-sm text-muted-foreground">
+                                                    <td className="px-2 py-2">
+                                                        <div className="text-xs text-muted-foreground">
                                                             {placement.created_at ? new Date(placement.created_at).toLocaleDateString() : 'N/A'}
                                                         </div>
                                                     </td>

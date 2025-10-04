@@ -377,6 +377,14 @@ class HTEController extends Controller
                     ]
                 ];
             });
+            
+            // Add available slots information
+            $availableSlots = $internship->available_slots;
+            $filledSlots = $internship->filled_slots;
+            
+            $internship->available_slots_count = $availableSlots;
+            $internship->filled_slots_count = $filledSlots;
+            
             return $internship;
         });
 
@@ -391,6 +399,8 @@ class HTEController extends Controller
                 'id' => $internship->id,
                 'position_title' => $internship->position_title,
                 'slot_count' => $internship->slot_count,
+                'available_slots' => $internship->available_slots_count,
+                'filled_slots' => $internship->filled_slots_count,
                 'is_active' => $internship->is_active,
                 'created_at' => $internship->created_at
             ];
@@ -978,10 +988,19 @@ class HTEController extends Controller
                 ->where('internship_id', $endorsement->internship_id)
                 ->update(['placement_status' => 'approved']);
 
+            // Notify student about their placement - THIS is when they should be notified!
+            $notificationService = new NotificationService();
+            $notificationService->notifyStudentForPlacement(
+                $endorsement->student,
+                $endorsement->internship->hte->company_name,
+                $endorsement->internship->position_title,
+                $endorsement->internship_id
+            );
+
             // Don't update endorsement status - it should remain 'endorsed' from SIP
             // The placement_status in student_matches is what matters for HTE approval
 
-            return redirect()->back()->with('success', 'Student placement approved successfully');
+//            return redirect()->back()->with('success', 'Student placement approved successfully :D');
 
         } catch (\Exception $e) {
             Log::error('HTE Endorsement Approval Error:', [
@@ -1156,6 +1175,15 @@ class HTEController extends Controller
                 StudentMatch::where('student_id', $endorsement->student_id)
                     ->where('internship_id', $endorsement->internship_id)
                     ->update(['placement_status' => 'approved']);
+
+                // Notify student about their placement
+                $notificationService = new NotificationService();
+                $notificationService->notifyStudentForPlacement(
+                    $endorsement->student,
+                    $endorsement->internship->hte->company_name,
+                    $endorsement->internship->position_title,
+                    $endorsement->internship_id
+                );
 
                 $successCount++;
 

@@ -206,6 +206,19 @@ export default function StudentEndorsed({
         }
     };
 
+    const getGradePoint = (score: number) => {
+        if (score >= 96.50) return '1.00';
+        if (score >= 93.50) return '1.25';
+        if (score >= 90.50) return '1.50';
+        if (score >= 87.50) return '1.75';
+        if (score >= 84.50) return '2.00';
+        if (score >= 81.50) return '2.25';
+        if (score >= 78.50) return '2.50';
+        if (score >= 75.50) return '2.75';
+        if (score >= 75.00) return '3.00';
+        return '5.00';
+    };
+
     return (
         <AdminLayout breadcrumbs={breadcrumbs}>
             <Head title="Endorsed Students" />
@@ -367,88 +380,73 @@ export default function StudentEndorsed({
                                 <table className="w-full">
                                     <thead>
                                         <tr className="border-b">
-                                            <th className="text-center p-3 font-medium text-muted-foreground w-16">#</th>
-                                            <th className="text-left p-3 font-medium text-muted-foreground">Student</th>
-                                            <th className="text-left p-3 font-medium text-muted-foreground">Student ID</th>
-                                            <th className="text-left p-3 font-medium text-muted-foreground">Section</th>
-                                            <th className="text-left p-3 font-medium text-muted-foreground">Specialization</th>
-                                            <th className="text-left p-3 font-medium text-muted-foreground">Position</th>
-                                            <th className="text-left p-3 font-medium text-muted-foreground">Company</th>
-                                            <th className="text-left p-3 font-medium text-muted-foreground">Compatibility</th>
-                                            <th className="text-left p-3 font-medium text-muted-foreground">HTE Status</th>
-                                            <th className="text-left p-3 font-medium text-muted-foreground">Endorsed Date</th>
+                                            <th className="text-center px-2 py-2 text-xs font-medium text-muted-foreground w-12">#</th>
+                                            <th className="text-left px-2 py-2 text-xs font-medium text-muted-foreground">Student</th>
+                                            <th className="text-left px-2 py-2 text-xs font-medium text-muted-foreground">Student ID</th>
+                                            <th className="text-left px-2 py-2 text-xs font-medium text-muted-foreground">Section</th>
+                                            <th className="text-left px-2 py-2 text-xs font-medium text-muted-foreground">Specialization</th>
+                                            <th className="text-left px-2 py-2 text-xs font-medium text-muted-foreground">Position</th>
+                                            <th className="text-left px-2 py-2 text-xs font-medium text-muted-foreground">Company</th>
+                                            <th className="text-left px-2 py-2 text-xs font-medium text-muted-foreground">Compatibility</th>
+                                            <th className="text-left px-2 py-2 text-xs font-medium text-muted-foreground">HTE Status</th>
+                                            <th className="text-left px-2 py-2 text-xs font-medium text-muted-foreground">Endorsed Date</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {endorsedPagination.paginatedData.map((endorsement, index) => (
                                             <tr key={endorsement.id} className="border-b hover:bg-muted/50 transition-colors">
-                                                <td className="text-center p-3 font-mono text-sm text-muted-foreground">
+                                                <td className="text-center px-2 py-2 font-mono text-xs text-muted-foreground">
                                                     {getRowNumber(endorsedPagination.currentPage, 10, index)}
                                                 </td>
-                                                <td className="p-3">
+                                                <td className="px-2 py-2">
                                                     <div>
-                                                        <div className="font-medium">
+                                                        <div className="font-medium text-sm">
                                                             {endorsement.student.last_name}, {endorsement.student.first_name}
                                                         </div>
                                                         {endorsement.student.middle_name && (
-                                                            <div className="text-sm text-muted-foreground">
+                                                            <div className="text-xs text-muted-foreground">
                                                                 {endorsement.student.middle_name}
                                                             </div>
                                                         )}
                                                     </div>
                                                 </td>
-                                                <td className="p-3">
-                                                    <div className="flex items-center gap-2">
-                                                        <GraduationCap className="h-4 w-4 text-muted-foreground" />
-                                                        <span className="font-mono text-sm">
-                                                            {endorsement.student.student_number}
-                                                        </span>
-                                                    </div>
+                                                <td className="px-2 py-2">
+                                                    <span className="font-mono text-xs">
+                                                        {endorsement.student.student_number}
+                                                    </span>
                                                 </td>
-                                                <td className="p-3">
-                                                    <Badge variant="outline">
+                                                <td className="px-2 py-2">
+                                                    <Badge variant="outline" className="text-xs">
                                                         {endorsement.student.section}
                                                     </Badge>
                                                 </td>
-                                                <td className="p-3">
-                                                    <span className="text-sm text-muted-foreground">
+                                                <td className="px-2 py-2">
+                                                    <span className="text-xs text-muted-foreground">
                                                         {endorsement.student.specialization || '-'}
                                                     </span>
                                                 </td>
-                                                <td className="p-3">
-                                                    <div className="flex items-center gap-2">
-                                                        <Briefcase className="h-4 w-4 text-muted-foreground" />
-                                                        <span className="font-medium">
-                                                            {endorsement.internship.position_title}
-                                                        </span>
-                                                    </div>
+                                                <td className="px-2 py-2">
+                                                    <span className="font-medium text-sm">
+                                                        {endorsement.internship.position_title}
+                                                    </span>
                                                 </td>
-                                                <td className="p-3">
-                                                    <div className="flex items-center gap-2">
-                                                        <Building2 className="h-4 w-4 text-muted-foreground" />
-                                                        <span className="text-sm">
-                                                            {endorsement.internship.hte.company_name}
-                                                        </span>
-                                                    </div>
+                                                <td className="px-2 py-2">
+                                                    <span className="text-xs">
+                                                        {endorsement.internship.hte.company_name}
+                                                    </span>
                                                 </td>
-                                                <td className="p-3">
-                                                    <div className="flex items-center gap-2">
-                                                        <Star className="h-4 w-4 text-yellow-300" />
-                                                        <span className="font-medium">
-                                                            {endorsement.compatibility_score}%
-                                                        </span>
-                                                    </div>
-                                                </td>
-                                                <td className="p-3">
-                                                    <Badge className={getPlacementStatusColor(endorsement.placement_status)}>
-                                                        <div className="flex items-center gap-1">
-                                                            {getPlacementStatusIcon(endorsement.placement_status)}
-                                                            {getPlacementStatusText(endorsement.placement_status)}
-                                                        </div>
+                <td className="px-2 py-2">
+                    <span className="font-medium text-sm">
+                        {Math.round(endorsement.compatibility_score)}% | {getGradePoint(endorsement.compatibility_score)}
+                    </span>
+                </td>
+                                                <td className="px-2 py-2">
+                                                    <Badge className={`${getPlacementStatusColor(endorsement.placement_status)} text-xs`}>
+                                                        {getPlacementStatusText(endorsement.placement_status)}
                                                     </Badge>
                                                 </td>
-                                                <td className="p-3">
-                                                    <span className="text-sm text-muted-foreground">
+                                                <td className="px-2 py-2">
+                                                    <span className="text-xs text-muted-foreground">
                                                         {endorsement.endorsement_date 
                                                             ? new Date(endorsement.endorsement_date).toLocaleDateString()
                                                             : new Date(endorsement.created_at).toLocaleDateString()

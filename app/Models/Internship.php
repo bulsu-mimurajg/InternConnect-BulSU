@@ -90,4 +90,26 @@ class Internship extends Model
     {
         return $this->hasMany(Endorsement::class);
     }
+
+    /**
+     * Get the number of available slots for this internship
+     */
+    public function getAvailableSlotsAttribute(): int
+    {
+        $filledSlots = $this->studentPlacements()
+            ->where('status', 'approved')
+            ->count();
+        
+        return max(0, $this->slot_count - $filledSlots);
+    }
+
+    /**
+     * Get the number of filled slots for this internship
+     */
+    public function getFilledSlotsAttribute(): int
+    {
+        return $this->studentPlacements()
+            ->where('status', 'approved')
+            ->count();
+    }
 }

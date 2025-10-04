@@ -47,7 +47,8 @@ class NotificationService
     }
 
     /**
-     * Notify students when they get placed/endorsed
+     * Notify students when they get placed (approved by HTE)
+     * This should only be called after HTE approval, not admin endorsement
      */
     public function notifyStudentForPlacement(Student $student, string $companyName, string $positionTitle, int $internshipId): void
     {
@@ -55,7 +56,7 @@ class NotificationService
             $student->user_id,
             'student_placement',
             'Congratulations! You\'ve Been Placed',
-            "Congratulations! You have been placed at {$companyName} for the position: {$positionTitle}. Check your dashboard for more details.",
+            "Congratulations! {$companyName} has approved your placement for the position: {$positionTitle}. You are now confirmed for this internship. Check your dashboard for more details.",
             [
                 'student_id' => $student->id,
                 'internship_id' => $internshipId,
@@ -326,6 +327,27 @@ class NotificationService
                 'is_read' => false,
             ]);
         }
+    }
+
+    /**
+     * Notify students when they are endorsed (not yet placed)
+     * This could be used in the future if we want students to know about endorsements
+     * Currently not used as placements happen quickly after endorsements
+     */
+    public function notifyStudentForEndorsement(Student $student, string $companyName, string $positionTitle, int $internshipId): void
+    {
+        Notification::createNotification(
+            $student->user_id,
+            'student_endorsement',
+            'You\'ve Been Endorsed',
+            "Great news! You have been endorsed for the position: {$positionTitle} at {$companyName}. You will be notified when your placement is confirmed.",
+            [
+                'student_id' => $student->id,
+                'internship_id' => $internshipId,
+                'company_name' => $companyName,
+                'position_title' => $positionTitle
+            ]
+        );
     }
 
 }

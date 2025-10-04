@@ -178,6 +178,19 @@ export default function PlacedStudents({
         }
     };
 
+    const getGradePoint = (score: number) => {
+        if (score >= 96.50) return '1.00';
+        if (score >= 93.50) return '1.25';
+        if (score >= 90.50) return '1.50';
+        if (score >= 87.50) return '1.75';
+        if (score >= 84.50) return '2.00';
+        if (score >= 81.50) return '2.25';
+        if (score >= 78.50) return '2.50';
+        if (score >= 75.50) return '2.75';
+        if (score >= 75.00) return '3.00';
+        return '5.00';
+    };
+
     // Show assessment prompt if not submitted
     if (showSubmissionPrompt) {
         return (
@@ -209,7 +222,7 @@ export default function PlacedStudents({
         <AppLayout>
             <Head title="Placed Students" />
             
-            <div className="flex h-full flex-1 flex-col gap-6 rounded-xl p-6">
+            <div className="flex h-full flex-1 flex-col gap-4 md:gap-6 rounded-xl p-4 md:p-6">
                 <div className="flex justify-between items-center">
                     <div>
                         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Placed Students</h1>
@@ -336,61 +349,71 @@ export default function PlacedStudents({
                         ) : (
                             <>
                                 {/* Mobile/Tablet Card View */}
-                                <div className="block lg:hidden space-y-4">
+                                <div className="block lg:hidden space-y-3 md:space-y-4">
                                     {placedPagination.paginatedData.map((placement) => (
-                                        <Card key={placement.id} className="p-4">
-                                            <div className="flex items-start justify-between mb-3">
-                                                <div className="flex items-center gap-3">
-                                                    <UserIcon className="h-5 w-5 text-muted-foreground" />
-                                                    <div>
-                                                        <div className="font-medium text-base">
-                                                            {placement.student.first_name} {placement.student.middle_name} {placement.student.last_name}
-                                                        </div>
-                                                        <div className="text-sm text-muted-foreground">
-                                                            {placement.student.student_number}
-                                                        </div>
+                                        <Card key={placement.id} className="p-4 md:p-6 transition-all duration-200 hover:shadow-md">
+                                            {/* Header with student info and score */}
+                                            <div className="flex items-start justify-between mb-4">
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="font-semibold text-base md:text-lg text-foreground mb-1">
+                                                        {placement.student.first_name} {placement.student.middle_name} {placement.student.last_name}
                                                     </div>
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                                                    <span className="font-medium text-lg">{placement.compatibility_score}%</span>
-                                                </div>
-                                            </div>
-
-                                            <div className="grid grid-cols-1 gap-3 mb-4">
-                                                <div className="flex items-center gap-2">
-                                                    <Briefcase className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                                                    <div>
-                                                        <div className="font-medium text-sm">{placement.internship.position_title}</div>
-                                                        <div className="text-xs text-muted-foreground">{placement.internship.department}</div>
+                                                    <div className="text-sm text-muted-foreground font-mono mb-1">
+                                                        {placement.student.student_number}
                                                     </div>
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    <Building2 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                                                    <span className="text-sm">{placement.internship.hte.company_name}</span>
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    <GraduationCap className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                                                    <div>
-                                                        <span className="text-sm">{placement.student.section}</span>
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                        <Badge variant="secondary" className="text-xs">
+                                                            <UserIcon className="h-3 w-3 mr-1" />
+                                                            {placement.student.section}
+                                                        </Badge>
                                                         {placement.student.specialization && (
-                                                            <span className="text-xs text-muted-foreground ml-2">
-                                                                • {placement.student.specialization}
+                                                            <span className="text-xs text-muted-foreground">
+                                                                {placement.student.specialization}
                                                             </span>
                                                         )}
                                                     </div>
                                                 </div>
+                                                <div className="flex flex-col items-end gap-1 ml-2">
+                                                    <span className="font-semibold text-sm md:text-base bg-primary/10 text-primary px-2 py-1 rounded-md">
+                                                        {Math.round(placement.compatibility_score)}%
+                                                    </span>
+                                                    <span className="text-xs text-muted-foreground font-mono">
+                                                        {getGradePoint(placement.compatibility_score)}
+                                                    </span>
+                                                </div>
                                             </div>
 
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-2">
-                                                    <Badge className={getStatusColor(placement.status)}>
+                                            {/* Internship Details */}
+                                            <div className="bg-muted/50 rounded-lg p-3 md:p-4 mb-4">
+                                                <div className="space-y-2">
+                                                    <div>
+                                                        <div className="font-medium text-sm md:text-base text-foreground">
+                                                            {placement.internship.position_title}
+                                                        </div>
+                                                        <div className="text-xs md:text-sm text-muted-foreground">
+                                                            {placement.internship.department}
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <Building2 className="h-4 w-4 text-muted-foreground" />
+                                                        <span className="text-sm text-foreground">{placement.internship.hte.company_name}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Footer with status and date */}
+                                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    <Badge className={`text-xs ${getStatusColor(placement.status)}`}>
                                                         <div className="flex items-center gap-1">
                                                             {getStatusIcon(placement.status)}
                                                             {placement.status.charAt(0).toUpperCase() + placement.status.slice(1)}
                                                         </div>
                                                     </Badge>
-                                                    <span className="text-xs text-muted-foreground">
+                                                </div>
+                                                <div className="text-xs text-muted-foreground">
+                                                    <span className="inline-flex items-center gap-1">
+                                                        <ClockIcon className="h-3 w-3" />
                                                         {placement.placement_date 
                                                             ? new Date(placement.placement_date).toLocaleDateString()
                                                             : new Date(placement.created_at).toLocaleDateString()
@@ -426,12 +449,9 @@ export default function PlacedStudents({
                                                     {getRowNumber(placedPagination.currentPage, 10, index)}
                                                 </td>
                                                 <td className="py-3 px-2">
-                                                    <div className="flex items-center gap-2">
-                                                        <UserIcon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                                                        <div className="min-w-0">
-                                                            <div className="font-medium text-sm truncate">
-                                                                {placement.student.first_name} {placement.student.middle_name} {placement.student.last_name}
-                                                            </div>
+                                                    <div className="min-w-0">
+                                                        <div className="font-medium text-sm truncate">
+                                                            {placement.student.first_name} {placement.student.middle_name} {placement.student.last_name}
                                                         </div>
                                                     </div>
                                                 </td>
@@ -448,26 +468,17 @@ export default function PlacedStudents({
                                                 </td>
                                                 <td className="py-3 px-2">
                                                     <div className="min-w-0">
-                                                        <div className="flex items-center gap-1">
-                                                            <Briefcase className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                                                            <span className="font-medium text-xs truncate block">{placement.internship.position_title}</span>
-                                                        </div>
+                                                        <div className="font-medium text-xs truncate block">{placement.internship.position_title}</div>
                                                         <div className="text-xs text-muted-foreground truncate">
                                                             {placement.internship.hte.company_name}
                                                         </div>
                                                     </div>
                                                 </td>
                                                 <td className="py-3 px-2 hidden lg:table-cell">
-                                                    <div className="flex items-center gap-1">
-                                                        <Building2 className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                                                        <span className="text-xs truncate block">{placement.internship.department}</span>
-                                                    </div>
+                                                    <span className="text-xs truncate block">{placement.internship.department}</span>
                                                 </td>
                                                 <td className="py-3 px-2">
-                                                    <div className="flex items-center gap-1">
-                                                        <Star className="h-3 w-3 text-yellow-500 fill-current flex-shrink-0" />
-                                                        <span className="font-medium text-xs">{placement.compatibility_score}%</span>
-                                                    </div>
+                                                    <span className="font-medium text-xs">{Math.round(placement.compatibility_score)}% | {getGradePoint(placement.compatibility_score)}</span>
                                                 </td>
                                                 <td className="py-3 px-2">
                                                     <Badge className={`text-xs ${getStatusColor(placement.status)}`}>
