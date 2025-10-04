@@ -1120,7 +1120,7 @@ class AdviserController extends Controller
         }
 
         // Validate report type
-        $validReportTypes = ['student-list', 'assessment-summary', 'performance-analysis', 'progress-report', 'endorsed-students', 'placed-students'];
+        $validReportTypes = ['student-assessment', 'assessment-summary', 'performance-analysis', 'progress-report', 'endorsed-students', 'placed-students'];
         if (!in_array($reportType, $validReportTypes)) {
             abort(404, 'Invalid report type.');
         }
@@ -1178,7 +1178,7 @@ class AdviserController extends Controller
         }
 
         // Validate report type
-        $validReportTypes = ['student-list', 'assessment-summary', 'performance-analysis', 'progress-report', 'endorsed-students', 'placed-students'];
+        $validReportTypes = ['student-assessment', 'assessment-summary', 'performance-analysis', 'progress-report', 'endorsed-students', 'placed-students'];
         if (!in_array($reportType, $validReportTypes)) {
             abort(404, 'Invalid report type.');
         }
@@ -1538,7 +1538,7 @@ class AdviserController extends Controller
     private function getReportDataForType($sectionId, $reportType, $adviserSections): array
     {
         switch ($reportType) {
-            case 'student-list':
+            case 'student-assessment':
                 return [
                     'overviewStats' => $this->getOverviewStats($sectionId, $adviserSections),
                     'studentProgress' => $this->getStudentProgress($sectionId, $adviserSections),
@@ -1583,7 +1583,7 @@ class AdviserController extends Controller
         $csvContent .= "Generated: " . now()->format('F d, Y \a\t h:i A') . "\n\n";
 
         switch ($reportType) {
-            case 'student-list':
+            case 'student-assessment':
                 return $this->generateStudentListCSV($sectionId, $csvContent, $adviserSections);
             case 'assessment-summary':
                 return $this->generateAssessmentSummaryCSV($sectionId, $csvContent);

@@ -41,9 +41,8 @@ export default function AdviserReport({
     const [isGenerating, setIsGenerating] = useState<boolean>(false);
 
     const reportTypes = [
-        { value: 'student-list', label: 'Student List Report', description: 'Complete list of students with their details and status' },
+        { value: 'student-assessment', label: 'Student Assessment Report', description: 'Complete list of students with their details and status' },
         { value: 'assessment-summary', label: 'Assessment Summary Report', description: 'Overview of assessment completion and performance' },
-        { value: 'performance-analysis', label: 'Performance Analysis Report', description: 'Detailed analysis of student performance by category' },
         { value: 'progress-report', label: 'Progress Report', description: 'Student progress tracking and completion status' },
         { value: 'endorsed-students', label: 'Endorsed Students Report', description: 'Students who have been endorsed for internship placement' },
         { value: 'placed-students', label: 'Placed Students Report', description: 'Students who have been successfully placed in internships' }

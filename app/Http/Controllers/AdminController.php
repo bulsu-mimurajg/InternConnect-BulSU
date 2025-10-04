@@ -433,7 +433,7 @@ class AdminController extends Controller
     public function exportSectionPDF(Request $request, $sectionId, $reportType): \Illuminate\Http\Response
     {
         // Validate report type
-        $validReportTypes = ['student-list', 'placed-students', 'registered-students', 'assessment-summary', 'performance-analysis'];
+        $validReportTypes = ['student-list', 'student-assessment', 'placed-students', 'assessment-summary', 'performance-analysis'];
         if (!in_array($reportType, $validReportTypes)) {
             abort(404, 'Invalid report type.');
         }
@@ -445,7 +445,8 @@ class AdminController extends Controller
         $reportData = $this->getSectionReportData($sectionId, $reportType);
 
         // Generate HTML content for PDF
-        $html = view("reports.admin-{$reportType}", array_merge($reportData, [
+        $templateName = $reportType === 'student-list' ? 'admin-student-list' : "admin-{$reportType}";
+        $html = view("reports.{$templateName}", array_merge($reportData, [
             'sectionName' => $section->section_name,
             'generatedAt' => now()->format('F d, Y \a\t h:i A'),
         ]))->render();
@@ -464,7 +465,7 @@ class AdminController extends Controller
     public function exportSectionExcel(Request $request, $sectionId, $reportType): \Symfony\Component\HttpFoundation\BinaryFileResponse
     {
         // Validate report type
-        $validReportTypes = ['student-list', 'placed-students', 'registered-students', 'assessment-summary', 'performance-analysis'];
+        $validReportTypes = ['student-list', 'student-assessment', 'placed-students', 'assessment-summary', 'performance-analysis'];
         if (!in_array($reportType, $validReportTypes)) {
             abort(404, 'Invalid report type.');
         }
@@ -495,9 +496,13 @@ class AdminController extends Controller
      */
     public function exportGeneralPDF(Request $request, $reportType): \Illuminate\Http\Response
     {
+        // Debug: Log the received report type
+        \Log::info('General PDF Export - Report Type:', ['reportType' => $reportType]);
+        
         // Validate report type
-        $validReportTypes = ['comprehensive', 'overview', 'all-students', 'all-placements', 'hte-performance', 'section-comparison'];
+        $validReportTypes = ['comprehensive', 'overview', 'student-list', 'all-placements', 'hte-performance', 'section-comparison'];
         if (!in_array($reportType, $validReportTypes)) {
+            \Log::error('Invalid report type for general PDF export:', ['reportType' => $reportType, 'validTypes' => $validReportTypes]);
             abort(404, 'Invalid report type.');
         }
 
@@ -522,9 +527,13 @@ class AdminController extends Controller
      */
     public function exportGeneralExcel(Request $request, $reportType): \Symfony\Component\HttpFoundation\BinaryFileResponse
     {
+        // Debug: Log the received report type
+        \Log::info('General Excel Export - Report Type:', ['reportType' => $reportType]);
+        
         // Validate report type
-        $validReportTypes = ['comprehensive', 'overview', 'all-students', 'all-placements', 'hte-performance', 'section-comparison'];
+        $validReportTypes = ['comprehensive', 'overview', 'student-list', 'all-placements', 'hte-performance', 'section-comparison'];
         if (!in_array($reportType, $validReportTypes)) {
+            \Log::error('Invalid report type for general Excel export:', ['reportType' => $reportType, 'validTypes' => $validReportTypes]);
             abort(404, 'Invalid report type.');
         }
 
@@ -2393,19 +2402,19 @@ class AdminController extends Controller
     private function getSectionReportData($sectionId, $reportType): array
     {
         switch ($reportType) {
-            case 'student-list':
+            case 'student-assessment':
                 return [
                     'students' => $this->getSectionStudents($sectionId),
+                    'overviewStats' => $this->getSectionOverviewStats($sectionId),
+                ];
+            case 'student-list':
+                return [
+                    'allStudents' => $this->getSectionStudents($sectionId),
                     'overviewStats' => $this->getSectionOverviewStats($sectionId),
                 ];
             case 'placed-students':
                 return [
                     'placedStudents' => $this->getSectionPlacedStudents($sectionId),
-                    'overviewStats' => $this->getSectionOverviewStats($sectionId),
-                ];
-            case 'registered-students':
-                return [
-                    'registeredStudents' => $this->getSectionRegisteredStudents($sectionId),
                     'overviewStats' => $this->getSectionOverviewStats($sectionId),
                 ];
             case 'assessment-summary':
@@ -2443,14 +2452,9 @@ class AdminController extends Controller
                     'stats' => $this->getDashboardStats(),
                     'sectionStats' => $this->getSectionStats(),
                 ];
-            case 'all-students':
+            case 'student-list':
                 return [
                     'allStudents' => $this->getAllStudents(),
-                    'stats' => $this->getDashboardStats(),
-                ];
-            case 'all-placements':
-                return [
-                    'allPlacements' => $this->getAllPlacements(),
                     'stats' => $this->getDashboardStats(),
                 ];
             case 'hte-performance':
@@ -2527,33 +2531,6 @@ class AdminController extends Controller
             ->toArray();
     }
 
-    /**
-     * Get section registered students
-     */
-    private function getSectionRegisteredStudents($sectionId): array
-    {
-        return User::whereHas('roles', function ($query) {
-                $query->where('name', 'student');
-            })
-            ->whereHas('academeAccounts', function ($query) use ($sectionId) {
-                $query->where('section_id', $sectionId);
-            })
-            ->where('status', '!=', 'archived')
-            ->with(['academeAccounts.section', 'student'])
-            ->get()
-            ->map(function ($user) {
-                return [
-                    'username' => $user->username,
-                    'email' => $user->email,
-                    'name' => $user->student ? ($user->student->first_name . ' ' . $user->student->last_name) : 'Pending',
-                    'status' => $user->status,
-                    'section' => $user->academeAccounts->first()->section->section_name ?? '',
-                    'registered_at' => $user->created_at->format('Y-m-d H:i:s'),
-                    'is_verified' => $user->student ? true : false,
-                ];
-            })
-            ->toArray();
-    }
 
     /**
      * Get section overview stats
@@ -2754,10 +2731,10 @@ class AdminController extends Controller
         switch ($reportType) {
             case 'student-list':
                 return $this->generateSectionStudentListCSV($sectionId, $csvContent);
+            case 'student-assessment':
+                return $this->generateSectionStudentListCSV($sectionId, $csvContent);
             case 'placed-students':
                 return $this->generateSectionPlacedStudentsCSV($sectionId, $csvContent);
-            case 'registered-students':
-                return $this->generateSectionRegisteredStudentsCSV($sectionId, $csvContent);
             case 'assessment-summary':
                 return $this->generateSectionAssessmentSummaryCSV($sectionId, $csvContent);
             case 'performance-analysis':
@@ -2780,10 +2757,8 @@ class AdminController extends Controller
                 return $this->generateComprehensiveCSV($csvContent);
             case 'overview':
                 return $this->generateOverviewCSV($csvContent);
-            case 'all-students':
+            case 'student-list':
                 return $this->generateAllStudentsCSV($csvContent);
-            case 'all-placements':
-                return $this->generateAllPlacementsCSV($csvContent);
             case 'hte-performance':
                 return $this->generateHTEPerformanceCSV($csvContent);
             case 'section-comparison':
@@ -2838,25 +2813,6 @@ class AdminController extends Controller
         return $csvContent;
     }
 
-    private function generateSectionRegisteredStudentsCSV($sectionId, $csvContent): string
-    {
-        $registeredStudents = $this->getSectionRegisteredStudents($sectionId);
-        
-        $csvContent .= "Registered Students\n";
-        $csvContent .= "Username,Email,Name,Status,Section,Registered At,Is Verified\n";
-        
-        foreach ($registeredStudents as $student) {
-            $csvContent .= $student['username'] . ",";
-            $csvContent .= $student['email'] . ",";
-            $csvContent .= '"' . $student['name'] . '",';
-            $csvContent .= $student['status'] . ",";
-            $csvContent .= $student['section'] . ",";
-            $csvContent .= $student['registered_at'] . ",";
-            $csvContent .= ($student['is_verified'] ? 'Yes' : 'No') . "\n";
-        }
-
-        return $csvContent;
-    }
 
     private function generateSectionAssessmentSummaryCSV($sectionId, $csvContent): string
     {
@@ -3110,11 +3066,11 @@ class AdminController extends Controller
             case 'student-list':
                 $this->generateStudentListExcel($sheet, $sectionId, $row);
                 break;
+            case 'student-assessment':
+                $this->generateStudentListExcel($sheet, $sectionId, $row);
+                break;
             case 'placed-students':
                 $this->generatePlacedStudentsExcel($sheet, $sectionId, $row);
-                break;
-            case 'registered-students':
-                $this->generateRegisteredStudentsExcel($sheet, $sectionId, $row);
                 break;
             case 'assessment-summary':
                 $this->generateAssessmentSummaryExcel($sheet, $sectionId, $row);
@@ -3155,11 +3111,8 @@ class AdminController extends Controller
             case 'comprehensive':
                 $this->generateComprehensiveExcel($sheet, $row);
                 break;
-            case 'all-students':
+            case 'student-list':
                 $this->generateAllStudentsExcel($sheet, $row);
-                break;
-            case 'all-placements':
-                $this->generateAllPlacementsExcel($sheet, $row);
                 break;
             case 'hte-performance':
                 $this->generateHTEPerformanceExcel($sheet, $row);
@@ -3288,7 +3241,6 @@ class AdminController extends Controller
 
     // Placeholder methods for other Excel generators
     private function generatePlacedStudentsExcel($sheet, $sectionId, $startRow) { /* Implementation */ }
-    private function generateRegisteredStudentsExcel($sheet, $sectionId, $startRow) { /* Implementation */ }
     private function generateAssessmentSummaryExcel($sheet, $sectionId, $startRow) { /* Implementation */ }
     private function generatePerformanceAnalysisExcel($sheet, $sectionId, $startRow) { /* Implementation */ }
     private function generateAllStudentsExcel($sheet, $startRow) { /* Implementation */ }

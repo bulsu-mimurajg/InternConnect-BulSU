@@ -58,26 +58,19 @@ export default function AdminReport({ sections }: Props) {
             title: 'Student Reports',
             reports: [
                 {
-                    value: 'all-students',
-                    label: 'All Students Report',
-                    description: 'Complete list of all students across all sections with basic information',
-                    icon: UsersIcon,
-                    requiresSection: false
-                },
-                {
                     value: 'student-list',
                     label: 'Student List Report',
+                    description: 'Complete list of students with basic information for a specific section',
+                    icon: UsersIcon,
+                    requiresSection: true
+                },
+                {
+                    value: 'student-assessment',
+                    label: 'Student Assessment Report',
                     description: 'Detailed list of students with assessment status and scores for a specific section',
                     icon: UsersIcon,
                     requiresSection: true
                 },
-                {
-                    value: 'registered-students',
-                    label: 'Registered Students Report',
-                    description: 'Students who have completed registration and verification process',
-                    icon: UserCheckIcon,
-                    requiresSection: true
-                }
             ]
         },
         {
@@ -145,7 +138,7 @@ export default function AdminReport({ sections }: Props) {
 
         // Determine the export route based on format and report type
         let exportRoute;
-        if (reportInfo?.requiresSection && selectedSection) {
+        if (reportInfo?.requiresSection && selectedSection && selectedSection !== 'all') {
             // Section-specific report
             switch (selectedFormat) {
                 case 'pdf':
@@ -167,7 +160,7 @@ export default function AdminReport({ sections }: Props) {
                     });
             }
         } else {
-            // General report
+            // General report (including "all" sections)
             switch (selectedFormat) {
                 case 'pdf':
                     exportRoute = route('report.general.export.pdf', {
@@ -187,6 +180,7 @@ export default function AdminReport({ sections }: Props) {
         }
 
         // Open the export URL in a new window/tab
+        console.log('Export Route:', exportRoute);
         window.open(exportRoute, '_blank');
 
         // Reset generating state after a delay
@@ -242,6 +236,9 @@ export default function AdminReport({ sections }: Props) {
                                     <SelectValue placeholder="Choose a section" />
                                 </SelectTrigger>
                                 <SelectContent className="max-h-60">
+                                    <SelectItem value="all">
+                                        All Sections
+                                    </SelectItem>
                                     {sections.map((section) => (
                                         <SelectItem key={section.section_id} value={section.section_id.toString()}>
                                             {section.section_name}
@@ -335,7 +332,10 @@ export default function AdminReport({ sections }: Props) {
                                 <p className="text-sm text-muted-foreground">
                                     {selectedReportType ?
                                         (getSelectedReportInfo()?.requiresSection && selectedSection ?
-                                            `Generate ${getSelectedReportInfo()?.label} for ${getSelectedSectionInfo()?.section_name} in ${exportFormats.find(f => f.value === selectedFormat)?.label} format` :
+                                            (selectedSection === 'all' ?
+                                                `Generate ${getSelectedReportInfo()?.label} for all sections in ${exportFormats.find(f => f.value === selectedFormat)?.label} format` :
+                                                `Generate ${getSelectedReportInfo()?.label} for ${getSelectedSectionInfo()?.section_name} in ${exportFormats.find(f => f.value === selectedFormat)?.label} format`
+                                            ) :
                                             `Generate ${getSelectedReportInfo()?.label} in ${exportFormats.find(f => f.value === selectedFormat)?.label} format`
                                         ) :
                                         'Select a report type to continue'

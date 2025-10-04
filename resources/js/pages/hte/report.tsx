@@ -99,13 +99,6 @@ export default function HteReport({ internships, showSubmissionPrompt }: Props) 
             description: 'Overview of available slots and utilization rates across all internships',
             icon: ClipboardListIcon,
             requiresInternship: false
-        },
-        {
-            value: 'student-compatibility',
-            label: 'Student Compatibility Report',
-            description: 'Analysis of student compatibility scores and matching criteria',
-            icon: TrendingUpIcon,
-            requiresInternship: true
         }
     ];
 

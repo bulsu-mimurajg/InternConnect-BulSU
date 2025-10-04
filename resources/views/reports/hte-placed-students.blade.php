@@ -3,23 +3,222 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Placed Students Report - {{ $hte->company_name }}</title>
+    <title>Placed Students Report</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; color: #333; }
-        .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #059669; padding-bottom: 20px; }
-        .header h1 { color: #059669; margin: 0; font-size: 28px; }
-        .header p { margin: 5px 0 0 0; color: #666; }
-        .section { margin-bottom: 30px; }
-        .section h2 { color: #059669; border-bottom: 1px solid #ddd; padding-bottom: 10px; margin-bottom: 20px; }
-        .stats { background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
-        .stats h3 { margin-top: 0; color: #333; }
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
-        .stat-item { text-align: center; }
-        .stat-value { font-size: 24px; font-weight: bold; color: #059669; }
-        .stat-label { font-size: 12px; color: #666; text-transform: uppercase; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; table-layout: auto; font-size: 10px; }
-        th, td { border: 1px solid #ddd; padding: 4px 6px; text-align: left; word-wrap: break-word; }
-        th { background-color: #f2f2f2; font-weight: bold; font-size: 10px; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            margin: 0; 
+            padding: 20px; 
+            color: #2c3e50; 
+            background-color: #ffffff;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+            width: 100%;
+        }
+        .content-wrapper {
+            max-width: 800px !important;
+            margin: 0 auto !important;
+            width: 100% !important;
+        }
+        .content-wrapper * {
+            max-width: 100% !important;
+            box-sizing: border-box !important;
+        }
+        .content-wrapper .section,
+        .content-wrapper .stats,
+        .content-wrapper table,
+        .content-wrapper .metric-group {
+            max-width: 100% !important;
+            width: 100% !important;
+        }
+        
+        .document-header { 
+            margin-bottom: 30px; 
+            text-align: center; 
+            border-bottom: 3px solid #e67e22;
+            padding-bottom: 20px;
+        }
+        .document-header img { 
+            max-width: 100%; 
+            height: auto; 
+            max-height: 180px;
+        }
+        
+        .header { 
+            text-align: center; 
+            margin-bottom: 40px; 
+            padding: 20px 0;
+            background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+            color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .header h1 { 
+            color: white; 
+            margin: 0; 
+            font-size: 32px; 
+            font-weight: 700;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        .report-title {
+            text-align: center;
+            margin-bottom: 25px;
+            padding: 30px 20px;
+            background: linear-gradient(135deg, #e67e22 0%, #f39c12 100%);
+            border-radius: 12px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+            border: 2px solid #d35400;
+        }
+        .report-title h1 {
+            margin: 0;
+            color: #2c3e50;
+            font-size: 32px;
+            font-weight: 800;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            letter-spacing: 1px;
+        }
+        .generation-info {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #e67e22;
+        }
+        .generation-info p {
+            margin: 0;
+            color: #495057;
+            font-size: 14px;
+            font-weight: 500;
+            font-style: italic;
+        }
+        
+        .section { 
+            margin-bottom: 40px; 
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .section h2 { 
+            color: #e67e22; 
+            background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+            color: white;
+            margin: 0;
+            padding: 20px 25px;
+            font-size: 24px;
+            font-weight: 600;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+        }
+        .section-content {
+            padding: 25px;
+        }
+        
+        .stats { 
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); 
+            border-radius: 12px; 
+            margin-bottom: 25px; 
+            border: 2px solid #e67e22;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .stats h3 { 
+            margin-top: 0; 
+            color: #2c3e50; 
+            font-size: 20px;
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .metric-group {
+            margin-bottom: 30px;
+        }
+        .metric-group h4 {
+            margin: 0 30px 15px 30px;
+            color: #e67e22;
+            font-size: 16px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-bottom: 2px solid #e67e22;
+            padding-bottom: 8px;
+        }
+        .stats-row {
+            display: flex !important;
+            flex-direction: row !important;
+            gap: 20px !important;
+            width: 100%;
+            justify-content: space-between;
+        }
+        .stats-row .stat-item {
+            flex: 1 !important;
+            margin-bottom: 0 !important;
+            min-width: 0 !important;
+        }
+        .stat-item { 
+            text-align: center; 
+            background: white;
+            padding: 25px 12px;
+            border-radius: 12px;
+            border: 2px solid #f39c12;
+        }
+        .stat-value { 
+            font-size: 32px; 
+            font-weight: bold; 
+            color: #e67e22; 
+            margin-bottom: 12px;
+            line-height: 1.2;
+        }
+        .stat-label { 
+            font-size: 13px; 
+            color: #495057; 
+            text-transform: uppercase; 
+            font-weight: 600;
+            letter-spacing: 1px;
+            line-height: 1.3;
+        }
+        
+        table { 
+            width: 100% !important; 
+            max-width: 100% !important;
+            border-collapse: collapse; 
+            margin-top: 20px; 
+            table-layout: fixed; 
+            font-size: 10px; 
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        th, td { 
+            border: 1px solid #dee2e6; 
+            padding: 6px 8px; 
+            text-align: left; 
+            word-wrap: break-word; 
+            color: #000000 !important;
+        }
+        td {
+            color: #000000 !important;
+            background-color: #ffffff !important;
+        }
+        th { 
+            background: linear-gradient(135deg, #e67e22 0%, #f39c12 100%); 
+            color: white;
+            font-weight: bold; 
+            font-size: 10px; 
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+        }
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        tr:hover {
+            background-color: #fff3cd;
+        }
+        
         .col-student { width: 12%; }
         .col-name { width: 20%; }
         .col-section { width: 15%; }
@@ -27,106 +226,127 @@
         .col-department { width: 15%; }
         .col-score { width: 10%; }
         .col-date { width: 13%; }
-        .footer { margin-top: 30px; text-align: center; color: #666; font-size: 12px; }
+        
+        .footer { 
+            margin-top: 40px; 
+            text-align: center; 
+            color: #6c757d; 
+            font-size: 12px; 
+            padding: 20px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 10px;
+            border-top: 3px solid #e67e22;
+        }
         .page-break { page-break-before: always; }
+        
+        /* Responsive adjustments */
+        @media print {
+            body { padding: 10px; }
+            .section { box-shadow: none; }
+            .stat-item:hover { transform: none; }
+        }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>Placed Students Report</h1>
-        <p>{{ $hte->company_name }}</p>
-        <p>Generated on {{ $generatedAt }}</p>
-    </div>
+    <div class="container">
+        <!-- Document Header Image -->
+        <div class="document-header">
+            <img src="{{ public_path('images/document_header.png') }}" alt="Bulacan State University Header" style="width: 100%; height: auto; max-height: 200px; object-fit: contain;">
+        </div>
+        
+        <div class="content-wrapper">
+            <div class="report-title">
+                <h1>Placed Students Report</h1>
+            </div>
+            
+            <div class="generation-info">
+                <p>{{ $hte->company_name }} | Generated on {{ $generatedAt }}</p>
+            </div>
 
-    <!-- Summary Statistics -->
-    <div class="section">
-        <h2>Summary Statistics</h2>
-        <div class="stats">
-            <div class="stats-grid">
-                <div class="stat-item">
-                    <div class="stat-value">{{ $placedStudents->count() }}</div>
-                    <div class="stat-label">Total Placed Students</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-value">{{ $placedStudents->groupBy('section')->count() }}</div>
-                    <div class="stat-label">Sections Represented</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-value">{{ $placedStudents->groupBy('position')->count() }}</div>
-                    <div class="stat-label">Different Positions</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-value">{{ round($placedStudents->avg('compatibility_score'), 2) }}</div>
-                    <div class="stat-label">Average Compatibility Score</div>
+            <!-- Summary Statistics -->
+            <div class="section">
+                <h2>Summary Statistics</h2>
+                <div class="section-content">
+                    <div class="stats">
+                        <h3>Placement Metrics</h3>
+                        
+                        <div class="metric-group">
+                            <h4>Student Placement Statistics</h4>
+                            <table style="width: 100%; border-collapse: separate; border-spacing: 15px;">
+                                <tr>
+                                    <td style="width: 33.33%; vertical-align: top;">
+                                        <div class="stat-item">
+                                            <div class="stat-value">{{ $placedStudents->count() }}</div>
+                                            <div class="stat-label">Total Placed Students</div>
+                                        </div>
+                                    </td>
+                                    <td style="width: 33.33%; vertical-align: top;">
+                                        <div class="stat-item">
+                                            <div class="stat-value">{{ $totalSlots }}</div>
+                                            <div class="stat-label">Total Available Slots</div>
+                                        </div>
+                                    </td>
+                                    <td style="width: 33.33%; vertical-align: top;">
+                                        <div class="stat-item">
+                                            <div class="stat-value">{{ $utilizationRate }}%</div>
+                                            <div class="stat-label">Utilization Rate</div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
+
+            <!-- Placed Students List -->
+            @if($placedStudents->count() > 0)
+            <div class="section page-break">
+                <h2>Placed Students Details</h2>
+                <div class="section-content">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="col-student">Student Number</th>
+                                <th class="col-name">Name</th>
+                                <th class="col-section">Section</th>
+                                <th class="col-position">Position</th>
+                                <th class="col-department">Department</th>
+                                <th class="col-score">Compatibility Score</th>
+                                <th class="col-date">Placement Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($placedStudents as $placement)
+                            <tr>
+                                <td class="col-student"><strong>{{ $placement->student->student_number }}</strong></td>
+                                <td class="col-name">{{ $placement->student->first_name }} {{ $placement->student->last_name }}</td>
+                                <td class="col-section">{{ $placement->student->section->section_name }}</td>
+                                <td class="col-position">{{ $placement->internship->position_title }}</td>
+                                <td class="col-department">{{ $placement->internship->department }}</td>
+                                <td class="col-score">{{ $placement->compatibility_score }}</td>
+                                <td class="col-date">{{ $placement->created_at->format('M d, Y') }}</td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            @else
+            <div class="section page-break">
+                <h2>Placed Students Details</h2>
+                <div class="section-content">
+                    <div class="stats">
+                        <p style="text-align: center; color: #6c757d; font-style: italic;">No students have been placed in internships for this company yet.</p>
+                    </div>
+                </div>
+            </div>
+            @endif
+
+            <div class="footer">
+                <p>This report was generated automatically by the InternConnect System</p>
+            </div>
         </div>
-    </div>
-
-    <!-- Placed Students List -->
-    <div class="section page-break">
-        <h2>Placed Students Details</h2>
-        @if($placedStudents && $placedStudents->count() > 0)
-        <table>
-            <thead>
-                <tr>
-                    <th class="col-student">Student Number</th>
-                    <th class="col-name">Name</th>
-                    <th class="col-section">Section</th>
-                    <th class="col-position">Position</th>
-                    <th class="col-department">Department</th>
-                    <th class="col-score">Compatibility Score</th>
-                    <th class="col-date">Placement Date</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach($placedStudents as $student)
-                <tr>
-                    <td class="col-student">{{ $student['student_number'] }}</td>
-                    <td class="col-name">{{ $student['name'] }}</td>
-                    <td class="col-section">{{ $student['section'] }}</td>
-                    <td class="col-position">{{ $student['position'] }}</td>
-                    <td class="col-department">{{ $student['department'] }}</td>
-                    <td class="col-score">{{ $student['compatibility_score'] }}</td>
-                    <td class="col-date">{{ $student['placement_date'] }}</td>
-                </tr>
-                @endforeach
-            </tbody>
-        </table>
-        @else
-        <p>No students have been placed in your internships yet.</p>
-        @endif
-    </div>
-
-    <!-- Section Breakdown -->
-    @if($placedStudents && $placedStudents->count() > 0)
-    <div class="section page-break">
-        <h2>Students by Section</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th class="col-section">Section</th>
-                    <th class="col-student">Number of Students</th>
-                    <th class="col-score">Average Score</th>
-                    <th class="col-position">Positions</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach($placedStudents->groupBy('section') as $section => $students)
-                <tr>
-                    <td class="col-section">{{ $section }}</td>
-                    <td class="col-student">{{ $students->count() }}</td>
-                    <td class="col-score">{{ round($students->avg('compatibility_score'), 2) }}</td>
-                    <td class="col-position">{{ $students->pluck('position')->unique()->implode(', ') }}</td>
-                </tr>
-                @endforeach
-            </tbody>
-        </table>
-    </div>
-    @endif
-
-    <div class="footer">
-        <p>This report was generated automatically by the InternConnect System</p>
     </div>
 </body>
 </html>
