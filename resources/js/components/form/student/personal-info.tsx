@@ -53,7 +53,7 @@ export default function PersonalInfo() {
                                     <FormItem className="p-2">
                                         <FormLabel>{field.label}</FormLabel>
                                         <FormControl>
-                                            <Input placeholder={field.placeholder} {...formField} />
+                                            <Input placeholder={field.placeholder} {...formField} data-field={field.name} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>

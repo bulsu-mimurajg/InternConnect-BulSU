@@ -7,11 +7,11 @@ import LanguageProficiency from '@/components/form/student/language-proficiency'
 import { Button } from '@/components/ui/button';
 import { Form } from '@/components/ui/form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Path, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { router, usePage } from '@inertiajs/react';
-import { FormFieldsProvider } from '@/contexts/FormFieldsContext';
+import { FormFieldsProvider, useFormFields } from '@/contexts/FormFieldsContext';
 
 interface AdditionalInfo {
     id: number;
@@ -70,27 +70,27 @@ export default function StudentForm() {
     const createFormSchema = () => {
 
         // Add additional info fields to validation schema
-        const additionalInfoSchema: Record<string, z.ZodString> = {};
+        const additionalInfoSchema: Record<string, any> = {};
         additionalInfoFields.forEach(field => {
-            additionalInfoSchema[field] = z.string().min(1, 'This field is required');
+            additionalInfoSchema[field] = z.string().optional().refine(val => val && val.trim() !== '', 'Question is required.');
         });
 
         // Add dynamic fields for language proficiency
-        const languageSchema: Record<string, z.ZodString> = {};
+        const languageSchema: Record<string, any> = {};
         dynamicFields.languageProficiency.forEach(field => {
-            languageSchema[field] = z.string().min(1, 'This field is required');
+            languageSchema[field] = z.string().optional().refine(val => val && val.trim() !== '', 'Question is required.');
         });
 
         // Add dynamic fields for technical skills
-        const technicalSchema: Record<string, z.ZodString> = {};
+        const technicalSchema: Record<string, any> = {};
         dynamicFields.technicalSkills.forEach(field => {
-            technicalSchema[field] = z.string().min(1, 'This field is required');
+            technicalSchema[field] = z.string().optional().refine(val => val && val.trim() !== '', 'Question is required.');
         });
 
         // Add dynamic fields for soft skills
-        const softSchema: Record<string, z.ZodString> = {};
+        const softSchema: Record<string, any> = {};
         dynamicFields.softSkills.forEach(field => {
-            softSchema[field] = z.string().min(1, 'This field is required');
+            softSchema[field] = z.string().optional().refine(val => val && val.trim() !== '', 'Question is required.');
         });
 
         // Ensure we always have at least one field in the schema
@@ -111,11 +111,55 @@ export default function StudentForm() {
 
     const FormSchema = createFormSchema();
 
+    // Create default values object
+    const createDefaultValues = () => {
+        const defaultValues: Record<string, string> = {};
+        
+        // Initialize additional info fields
+        additionalInfoFields.forEach(field => {
+            defaultValues[field] = '';
+        });
+        
+        // Initialize language proficiency fields
+        dynamicFields.languageProficiency.forEach(field => {
+            defaultValues[field] = '';
+        });
+        
+        // Initialize technical skills fields
+        dynamicFields.technicalSkills.forEach(field => {
+            defaultValues[field] = '';
+        });
+        
+        // Initialize soft skills fields
+        dynamicFields.softSkills.forEach(field => {
+            defaultValues[field] = '';
+        });
+        
+        return defaultValues;
+    };
+
     const form = useForm<z.infer<typeof FormSchema>>({
         resolver: zodResolver(FormSchema),
         mode: 'onChange',
-        defaultValues: {},
+        defaultValues: createDefaultValues(),
     });
+
+    // Update form default values when dynamic fields change
+    useEffect(() => {
+        const currentValues = form.getValues();
+        const newDefaults = createDefaultValues();
+        
+        // Only update fields that aren't already set
+        Object.keys(newDefaults).forEach(key => {
+            if (currentValues[key] === undefined) {
+                form.reset(newDefaults);
+            }
+        });
+    }, [dynamicFields]);
+
+    const navigateToStep = (step: number) => {
+        setCurrentStep(step);
+    };
 
     function onSubmit(values: z.infer<typeof FormSchema>) {
         console.log('Form submission values:', values);
@@ -155,10 +199,42 @@ export default function StudentForm() {
             ? currentStepData.fields()
             : currentStepData.fields;
 
-        const isValid = await form.trigger(fields as Path<z.infer<typeof FormSchema>>[], { shouldFocus: true });
+        // Use Zod validation to trigger validation errors
+        const isValid = await form.trigger(fields as Path<z.infer<typeof FormSchema>>[], { shouldFocus: false });
 
         if (isValid) {
             setCurrentStep((prev) => prev + 1);
+        } else {
+            // Find unanswered fields in current step and highlight the first one
+            const unansweredFields: string[] = [];
+            const formValues = form.getValues();
+            
+            fields?.forEach((fieldName) => {
+                const formValue = formValues[fieldName as keyof typeof formValues];
+                if (!formValue || 
+                    (typeof formValue === 'string' && 
+                     formValue.trim() === '')) {
+                    unansweredFields.push(fieldName);
+                }
+            });
+
+            if (unansweredFields.length > 0) {
+                // Focus on the first unanswered question only
+                const firstUnansweredField = unansweredFields[0];
+                setTimeout(() => {
+                    const element = document.querySelector(`input[name="${firstUnansweredField}"], [data-field="${firstUnansweredField}"]`) as HTMLElement;
+                    if (element) {
+                        element.classList.add('animate-pulse-unanswered');
+                        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        element.focus(); // Actually focus the element
+                        
+                        // Remove animation class after 1 pulse (1s)
+                        setTimeout(() => {
+                            element.classList.remove('animate-pulse-unanswered');
+                        }, 1000);
+                    }
+                }, 100);
+            }
         }
     };
 
@@ -167,6 +243,7 @@ export default function StudentForm() {
             setLanguageProficiencyFields={(fields) => setDynamicFields(prev => ({ ...prev, languageProficiency: fields }))}
             setTechnicalSkillFields={(fields) => setDynamicFields(prev => ({ ...prev, technicalSkills: fields }))}
             setSoftSkillFields={(fields) => setDynamicFields(prev => ({ ...prev, softSkills: fields }))}
+            onNavigateToStep={navigateToStep}
         >
             <div className="flex justify-center">
                 <FormStepCounter steps={steps} currentStep={currentStep} />

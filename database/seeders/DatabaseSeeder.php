@@ -26,7 +26,7 @@ class DatabaseSeeder extends Seeder
 
         User::factory()->hte()->create([
             'username' => 'maria',
-            'email' => 'mimuraschool@gmail.com',
+            'email' => 'maria@example.com',
             'status' => 'verified',
             'password' => bcrypt('password'),
         ]);
@@ -40,7 +40,7 @@ class DatabaseSeeder extends Seeder
 
         $clairoUser = User::factory()->student()->create([
             'username' => 'clairo',
-            'email' => 'lesutemp@gmail.com',
+            'email' => 'clairo@example.com',
             'status' => 'verified',
             'password' => bcrypt('password'),
         ]);

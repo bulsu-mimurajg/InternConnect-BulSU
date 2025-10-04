@@ -122,6 +122,7 @@ export default function SoftSkill() {
                                                 onValueChange={field.onChange}
                                                 value={field.value ?? ''}
                                                 className="mb-6 flex"
+                                                data-field={skill.name}
                                             >
                                                 {["1", "2", "3", "4", "5"].map((val) => (
                                                     <FormItem key={val} className="flex items-center gap-3">
