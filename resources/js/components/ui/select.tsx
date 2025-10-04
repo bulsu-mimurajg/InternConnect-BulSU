@@ -50,6 +50,51 @@ function SelectContent({
   position = "popper",
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Content>) {
+  // Aggressive prevention of all Radix body modifications
+  React.useEffect(() => {
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth
+    const originalBodyStyles = {
+      overflow: document.body.style.overflow,
+      overflowY: document.body.style.overflowY,
+      paddingRight: document.body.style.paddingRight,
+      position: document.body.style.position,
+      width: document.body.style.width
+    }
+
+    // Force body to maintain exact original styles
+    const observer = new MutationObserver(() => {
+      // Override any Radix modifications
+      document.body.style.overflow = originalBodyStyles.overflow || 'visible'
+      document.body.style.overflowY = originalBodyStyles.overflowY || 'visible'
+      document.body.style.paddingRight = originalBodyStyles.paddingRight || '0px'
+      
+      // Prevent width changes that cause shifting
+      if (document.body.style.width.includes('calc(') || document.body.style.width.includes('%')) {
+        document.body.style.width = originalBodyStyles.width || 'auto'
+      }
+    })
+
+    observer.observe(document.body, {
+      attributes: true,
+      attributeFilter: ['style']
+    })
+
+    // Also set initial state
+    document.body.style.overflow = originalBodyStyles.overflow || 'visible'
+    document.body.style.overflowY = originalBodyStyles.overflowY || 'visible'
+    document.body.style.paddingRight = originalBodyStyles.paddingRight || '0px'
+
+    return () => {
+      observer.disconnect()
+      // Restore original styles
+      document.body.style.overflow = originalBodyStyles.overflow || ''
+      document.body.style.overflowY = originalBodyStyles.overflowY || ''
+      document.body.style.paddingRight = originalBodyStyles.paddingRight || ''
+      document.body.style.position = originalBodyStyles.position || ''
+      document.body.style.width = originalBodyStyles.width || ''
+    }
+  }, [])
+
   return (
     <SelectPrimitive.Portal>
       <SelectPrimitive.Content
@@ -61,6 +106,7 @@ function SelectContent({
           className
         )}
         position={position}
+        onCloseAutoFocus={(e) => e.preventDefault()}
         {...props}
       >
         <SelectScrollUpButton />
@@ -95,6 +141,7 @@ function SelectLabel({
 function SelectItem({
   className,
   children,
+  value,
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Item>) {
   return (
@@ -104,6 +151,7 @@ function SelectItem({
         "focus:bg-accent focus:text-accent-foreground [&_svg:not([class*='text-'])]:text-muted-foreground relative flex w-full cursor-default items-center gap-2 rounded-sm py-1.5 pr-8 pl-2 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
         className
       )}
+      value={value}
       {...props}
     >
       <span className="absolute right-2 flex size-3.5 items-center justify-center">

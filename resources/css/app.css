@@ -155,6 +155,16 @@
 
     body {
         @apply bg-background text-foreground;
+        /* Prevent all body modifications that cause layout shifts */
+        overflow: visible !important;
+        overflow-y: visible !important;
+        padding-right: 0px !important;
+        
+        /* Prevent width/position changes that cause shifting */
+        position: static !important;
+        width: auto !important;
+        max-width: none !important;
+        margin: 0 !important;
     }
 
     /* Ensure proper scrolling for main content */

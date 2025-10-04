@@ -16,11 +16,11 @@ export default function Contact() {
             <div className="flex min-h-screen flex-col items-center relative">
                 {/* Background Image */}
                 <div 
-                    className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-50 dark:opacity-25" 
+                    className="fixed inset-0 bg-cover bg-center bg-no-repeat opacity-50 dark:opacity-25" 
                     style={{backgroundImage: 'url(/images/pimentel.jpg)'}} 
                 />
                 {/* Background Overlay */}
-                <div className="absolute inset-0 bg-[#FDFDFC]/75 dark:bg-[#0a0a0a]/80" />
+                <div className="fixed inset-0 bg-[#FDFDFC]/75 dark:bg-[#0a0a0a]/80" />
                 
                 {/* Content Container */}
                 <div className="relative z-10 flex min-h-screen flex-col items-center p-6 text-[#1b1b18] lg:justify-center lg:p-8 w-full">
