@@ -77,16 +77,9 @@ export default function AdminReport({ sections }: Props) {
             title: 'Placement Reports',
             reports: [
                 {
-                    value: 'all-placements',
-                    label: 'All Placements Report',
-                    description: 'Complete overview of all student placements across the system',
-                    icon: TargetIcon,
-                    requiresSection: false
-                },
-                {
                     value: 'placed-students',
                     label: 'Placed Students Report',
-                    description: 'Students who have been successfully placed in internships for a specific section',
+                    description: 'Students who have been successfully placed in internships for a specific section or all sections',
                     icon: TargetIcon,
                     requiresSection: true
                 }
@@ -95,13 +88,6 @@ export default function AdminReport({ sections }: Props) {
         {
             title: 'Performance Analytics',
             reports: [
-                {
-                    value: 'assessment-summary',
-                    label: 'Assessment Summary Report',
-                    description: 'Overview of assessment completion and performance by category for a specific section',
-                    icon: BarChart3Icon,
-                    requiresSection: true
-                },
                 {
                     value: 'performance-analysis',
                     label: 'Performance Analysis Report',

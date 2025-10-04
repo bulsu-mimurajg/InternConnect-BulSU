@@ -497,7 +497,7 @@ class AdminController extends Controller
     public function exportGeneralPDF(Request $request, $reportType): \Illuminate\Http\Response
     {
         // Validate report type
-        $validReportTypes = ['comprehensive', 'overview', 'student-list', 'student-assessment', 'all-placements', 'hte-performance', 'section-comparison'];
+        $validReportTypes = ['comprehensive', 'overview', 'student-list', 'student-assessment', 'placed-students', 'hte-performance'];
         if (!in_array($reportType, $validReportTypes)) {
             abort(404, 'Invalid report type.');
         }
@@ -524,7 +524,7 @@ class AdminController extends Controller
     public function exportGeneralExcel(Request $request, $reportType): \Symfony\Component\HttpFoundation\BinaryFileResponse
     {
         // Validate report type
-        $validReportTypes = ['comprehensive', 'overview', 'student-list', 'student-assessment', 'all-placements', 'hte-performance', 'section-comparison'];
+        $validReportTypes = ['comprehensive', 'overview', 'student-list', 'student-assessment', 'placed-students', 'hte-performance'];
         if (!in_array($reportType, $validReportTypes)) {
             abort(404, 'Invalid report type.');
         }
@@ -2409,11 +2409,6 @@ class AdminController extends Controller
                     'placedStudents' => $this->getSectionPlacedStudents($sectionId),
                     'overviewStats' => $this->getSectionOverviewStats($sectionId),
                 ];
-            case 'assessment-summary':
-                return [
-                    'assessmentData' => $this->getSectionAssessmentData($sectionId),
-                    'overviewStats' => $this->getSectionOverviewStats($sectionId),
-                ];
             case 'performance-analysis':
                 return [
                     'performanceData' => $this->getSectionPerformanceData($sectionId),
@@ -2449,14 +2444,9 @@ class AdminController extends Controller
                     'students' => $this->getAllStudents(),
                     'stats' => $this->getDashboardStats(),
                 ];
-            case 'hte-performance':
+            case 'placed-students':
                 return [
-                    'hteStats' => $this->getHTEStats(),
-                    'stats' => $this->getDashboardStats(),
-                ];
-            case 'section-comparison':
-                return [
-                    'sectionAnalytics' => $this->getSectionAnalytics(),
+                    'placedStudents' => $this->getAllPlacements(),
                     'stats' => $this->getDashboardStats(),
                 ];
             default:
@@ -2761,8 +2751,6 @@ class AdminController extends Controller
                 return $this->generateSectionStudentListCSV($sectionId, $csvContent);
             case 'placed-students':
                 return $this->generateSectionPlacedStudentsCSV($sectionId, $csvContent);
-            case 'assessment-summary':
-                return $this->generateSectionAssessmentSummaryCSV($sectionId, $csvContent);
             case 'performance-analysis':
                 return $this->generateSectionPerformanceAnalysisCSV($sectionId, $csvContent);
             default:
@@ -2783,12 +2771,10 @@ class AdminController extends Controller
                 return $this->generateComprehensiveCSV($csvContent);
             case 'overview':
                 return $this->generateOverviewCSV($csvContent);
-            case 'student-assessment':
-                return $this->generateAllStudentsCSV($csvContent);
+            case 'placed-students':
+                return $this->generateAllPlacementsCSV($csvContent);
             case 'hte-performance':
                 return $this->generateHTEPerformanceCSV($csvContent);
-            case 'section-comparison':
-                return $this->generateSectionComparisonCSV($csvContent);
             default:
                 return $csvContent;
         }
@@ -3098,9 +3084,6 @@ class AdminController extends Controller
             case 'placed-students':
                 $this->generatePlacedStudentsExcel($sheet, $sectionId, $row);
                 break;
-            case 'assessment-summary':
-                $this->generateAssessmentSummaryExcel($sheet, $sectionId, $row);
-                break;
             case 'performance-analysis':
                 $this->generatePerformanceAnalysisExcel($sheet, $sectionId, $row);
                 break;
@@ -3137,14 +3120,11 @@ class AdminController extends Controller
             case 'comprehensive':
                 $this->generateComprehensiveExcel($sheet, $row);
                 break;
-            case 'student-assessment':
-                $this->generateAllStudentsExcel($sheet, $row);
+            case 'placed-students':
+                $this->generateAllPlacementsExcel($sheet, $row);
                 break;
             case 'hte-performance':
                 $this->generateHTEPerformanceExcel($sheet, $row);
-                break;
-            case 'section-comparison':
-                $this->generateSectionComparisonExcel($sheet, $row);
                 break;
         }
         
