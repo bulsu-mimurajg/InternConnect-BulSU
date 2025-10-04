@@ -171,7 +171,7 @@ export default function StudentForm() {
             delete cleanValues.dummy;
         }
         
-        router.post('/assessment', cleanValues, {
+        router.post('/assessment', cleanValues as Record<string, any>, {
             onSuccess: (page) => {
                 console.log('Form submission successful:', page);
                 setIsSubmitting(false);
