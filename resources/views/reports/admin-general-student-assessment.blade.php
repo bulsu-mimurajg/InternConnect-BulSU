@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Student List Report - All Sections</title>
+    <title>Student Assessment Report - All Sections</title>
     <style>
         body { 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
@@ -221,12 +221,12 @@
         
         .col-student { width: 12%; }
         .col-name { width: 18%; }
-        .col-email { width: 20%; }
         .col-section { width: 12%; }
+        .col-assessment { width: 12%; }
+        .col-score { width: 10%; }
+        .col-percentage { width: 12%; }
         .col-status { width: 10%; }
-        .col-assessment { width: 10%; }
-        .col-score { width: 8%; }
-        .col-date { width: 10%; }
+        .col-date { width: 14%; }
         
         .footer { 
             margin-top: 40px; 
@@ -257,6 +257,22 @@
             font-weight: bold;
             font-size: 9px;
         }
+        .status-completed { 
+            background-color: #d1ecf1; 
+            color: #0c5460; 
+            padding: 2px 6px; 
+            border-radius: 4px; 
+            font-weight: bold;
+            font-size: 9px;
+        }
+        .status-pending { 
+            background-color: #fff3cd; 
+            color: #856404; 
+            padding: 2px 6px; 
+            border-radius: 4px; 
+            font-weight: bold;
+            font-size: 9px;
+        }
         
         /* Responsive adjustments */
         @media print {
@@ -275,7 +291,7 @@
         
         <div class="content-wrapper">
             <div class="report-title">
-                <h1>Student List Report</h1>
+                <h1>Student Assessment Report</h1>
             </div>
             
             <div class="generation-info">
@@ -285,19 +301,37 @@
             <!-- System Statistics -->
             @if(isset($stats))
             <div class="section">
-                <h2>System Statistics</h2>
+                <h2>System Assessment Statistics</h2>
                 <div class="section-content">
                     <div class="stats">
-                        <h3>Section Overview</h3>
+                        <h3>Assessment Performance Metrics</h3>
                         
                         <div class="metric-group">
-                            <!-- <h4>Section Overview</h4> -->
+                            <h4>Overall Assessment Completion</h4>
                             <table style="width: 100%; border-collapse: separate; border-spacing: 15px;">
                                 <tr>
                                     <td style="width: 25%; vertical-align: top;">
                                         <div class="stat-item">
                                             <div class="stat-value">{{ $stats['totalStudents'] }}</div>
                                             <div class="stat-label">Total Students</div>
+                                        </div>
+                                    </td>
+                                    <td style="width: 25%; vertical-align: top;">
+                                        <div class="stat-item">
+                                            <div class="stat-value">{{ $stats['completedAssessments'] }}</div>
+                                            <div class="stat-label">Completed Assessments</div>
+                                        </div>
+                                    </td>
+                                    <td style="width: 25%; vertical-align: top;">
+                                        <div class="stat-item">
+                                            <div class="stat-value">{{ $stats['placedStudents'] }}</div>
+                                            <div class="stat-label">Placed Students</div>
+                                        </div>
+                                    </td>
+                                    <td style="width: 25%; vertical-align: top;">
+                                        <div class="stat-item">
+                                            <div class="stat-value">{{ $stats['completionRate'] }}%</div>
+                                            <div class="stat-label">Completion Rate</div>
                                         </div>
                                     </td>
                                 </tr>
@@ -308,39 +342,43 @@
             </div>
             @endif
 
-            <!-- All Students List -->
-            @if(isset($allStudents) && count($allStudents) > 0)
+            <!-- All Students Assessment Details -->
+            @if(isset($students) && count($students) > 0)
             <div class="section page-break">
-                <h2>All Students Details</h2>
+                <h2>All Students Assessment Details</h2>
                 <div class="section-content">
                     <table>
                         <thead>
                             <tr>
                                 <th class="col-student">Student Number</th>
                                 <th class="col-name">Name</th>
-                                <th class="col-email">Email</th>
                                 <th class="col-section">Section</th>
-                                <th class="col-status">Status</th>
-                                <th class="col-assessment">Has Assessment</th>
-                                <th class="col-score">Assessment Score</th>
-                                <th class="col-date">Registered At</th>
+                                <th class="col-assessment">Assessment Status</th>
+                                <th class="col-score">Total Score</th>
+                                <th class="col-percentage">Percentage</th>
+                                <th class="col-status">Student Status</th>
+                                <th class="col-date">Submitted At</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach($allStudents as $student)
+                            @foreach($students as $student)
                             <tr>
                                 <td class="col-student"><strong>{{ $student['student_number'] }}</strong></td>
                                 <td class="col-name">{{ $student['name'] }}</td>
-                                <td class="col-email">{{ $student['email'] }}</td>
                                 <td class="col-section">{{ $student['section'] }}</td>
+                                <td class="col-assessment">
+                                    <span class="status-{{ $student['hasAssessment'] ? 'completed' : 'pending' }}">
+                                        {{ $student['hasAssessment'] ? 'Completed' : 'Pending' }}
+                                    </span>
+                                </td>
+                                <td class="col-score">{{ $student['assessmentScore'] ?? 'N/A' }}</td>
+                                <td class="col-percentage">{{ $student['assessmentPercentage'] ?? 'N/A' }}%</td>
                                 <td class="col-status">
                                     <span class="status-{{ strtolower($student['status']) }}">
                                         {{ ucfirst($student['status']) }}
                                     </span>
                                 </td>
-                                <td class="col-assessment">{{ $student['hasAssessment'] ? 'Yes' : 'No' }}</td>
-                                <td class="col-score">{{ $student['assessmentScore'] ?? 'N/A' }}</td>
-                                <td class="col-date">{{ $student['registered_at'] ?? 'N/A' }}</td>
+                                <td class="col-date">{{ $student['submittedAt'] ?? 'N/A' }}</td>
                             </tr>
                             @endforeach
                         </tbody>
@@ -349,7 +387,7 @@
             </div>
             @else
             <div class="section page-break">
-                <h2>All Students Details</h2>
+                <h2>All Students Assessment Details</h2>
                 <div class="section-content">
                     <div class="stats">
                         <p style="text-align: center; color: #6c757d; font-style: italic;">No students found in the system.</p>

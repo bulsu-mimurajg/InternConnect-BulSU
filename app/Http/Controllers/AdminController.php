@@ -445,7 +445,7 @@ class AdminController extends Controller
         $reportData = $this->getSectionReportData($sectionId, $reportType);
 
         // Generate HTML content for PDF
-        $templateName = $reportType === 'student-list' ? 'admin-student-list' : "admin-{$reportType}";
+        $templateName = "admin-{$reportType}";
         $html = view("reports.{$templateName}", array_merge($reportData, [
             'sectionName' => $section->section_name,
             'generatedAt' => now()->format('F d, Y \a\t h:i A'),
@@ -496,13 +496,9 @@ class AdminController extends Controller
      */
     public function exportGeneralPDF(Request $request, $reportType): \Illuminate\Http\Response
     {
-        // Debug: Log the received report type
-        \Log::info('General PDF Export - Report Type:', ['reportType' => $reportType]);
-        
         // Validate report type
-        $validReportTypes = ['comprehensive', 'overview', 'student-list', 'all-placements', 'hte-performance', 'section-comparison'];
+        $validReportTypes = ['comprehensive', 'overview', 'student-list', 'student-assessment', 'all-placements', 'hte-performance', 'section-comparison'];
         if (!in_array($reportType, $validReportTypes)) {
-            \Log::error('Invalid report type for general PDF export:', ['reportType' => $reportType, 'validTypes' => $validReportTypes]);
             abort(404, 'Invalid report type.');
         }
 
@@ -527,13 +523,9 @@ class AdminController extends Controller
      */
     public function exportGeneralExcel(Request $request, $reportType): \Symfony\Component\HttpFoundation\BinaryFileResponse
     {
-        // Debug: Log the received report type
-        \Log::info('General Excel Export - Report Type:', ['reportType' => $reportType]);
-        
         // Validate report type
-        $validReportTypes = ['comprehensive', 'overview', 'student-list', 'all-placements', 'hte-performance', 'section-comparison'];
+        $validReportTypes = ['comprehensive', 'overview', 'student-list', 'student-assessment', 'all-placements', 'hte-performance', 'section-comparison'];
         if (!in_array($reportType, $validReportTypes)) {
-            \Log::error('Invalid report type for general Excel export:', ['reportType' => $reportType, 'validTypes' => $validReportTypes]);
             abort(404, 'Invalid report type.');
         }
 
@@ -2452,9 +2444,9 @@ class AdminController extends Controller
                     'stats' => $this->getDashboardStats(),
                     'sectionStats' => $this->getSectionStats(),
                 ];
-            case 'student-list':
+            case 'student-assessment':
                 return [
-                    'allStudents' => $this->getAllStudents(),
+                    'students' => $this->getAllStudents(),
                     'stats' => $this->getDashboardStats(),
                 ];
             case 'hte-performance':
@@ -2492,6 +2484,7 @@ class AdminController extends Controller
                 
                 return [
                     'username' => $user->username,
+                    'student_number' => $student ? $student->student_number : 'N/A',
                     'email' => $user->email,
                     'name' => $student ? ($student->first_name . ' ' . $student->last_name) : 'Pending',
                     'status' => $user->status,
@@ -2500,6 +2493,7 @@ class AdminController extends Controller
                     'assessmentScore' => $hasAssessment ? $student->scores->sum('score') : 0,
                     'assessmentPercentage' => $hasAssessment ? round(($student->scores->sum('score') / ($student->scores->count() * 5)) * 100, 1) : 0,
                     'submittedAt' => $hasAssessment ? $student->updated_at->format('Y-m-d H:i:s') : null,
+                    'registered_at' => $user->created_at->format('Y-m-d H:i:s'),
                 ];
             })
             ->toArray();
@@ -2564,12 +2558,42 @@ class AdminController extends Controller
             ->where('status', 'approved')
             ->count();
 
+        // Calculate assessment statistics
+        $pendingAssessments = $totalStudents - $completedAssessments;
+        
+        // Get assessment scores for statistics
+        $assessmentScores = User::whereHas('roles', function ($query) {
+                $query->where('name', 'student');
+            })
+            ->whereHas('academeAccounts', function ($query) use ($sectionId) {
+                $query->where('section_id', $sectionId);
+            })
+            ->whereHas('student', function ($query) {
+                $query->where('is_submit', true);
+            })
+            ->where('status', '!=', 'archived')
+            ->with('student.scores')
+            ->get()
+            ->map(function ($user) {
+                return $user->student->scores->sum('score');
+            })
+            ->filter()
+            ->values();
+
+        $averageScore = $assessmentScores->count() > 0 ? round($assessmentScores->avg(), 1) : 0;
+        $highestScore = $assessmentScores->count() > 0 ? $assessmentScores->max() : 0;
+        $lowestScore = $assessmentScores->count() > 0 ? $assessmentScores->min() : 0;
+
         return [
             'totalStudents' => $totalStudents,
             'completedAssessments' => $completedAssessments,
+            'pendingAssessments' => $pendingAssessments,
             'placedStudents' => $placedStudents,
             'completionRate' => $totalStudents > 0 ? round(($completedAssessments / $totalStudents) * 100, 1) : 0,
             'placementRate' => $completedAssessments > 0 ? round(($placedStudents / $completedAssessments) * 100, 1) : 0,
+            'averageScore' => $averageScore,
+            'highestScore' => $highestScore,
+            'lowestScore' => $lowestScore,
         ];
     }
 
@@ -2684,6 +2708,7 @@ class AdminController extends Controller
                 
                 return [
                     'username' => $user->username,
+                    'student_number' => $student ? $student->student_number : 'N/A',
                     'email' => $user->email,
                     'name' => $student ? ($student->first_name . ' ' . $student->last_name) : 'Pending',
                     'status' => $user->status,
@@ -2692,6 +2717,7 @@ class AdminController extends Controller
                     'assessmentScore' => $hasAssessment ? $student->scores->sum('score') : 0,
                     'assessmentPercentage' => $hasAssessment ? round(($student->scores->sum('score') / ($student->scores->count() * 5)) * 100, 1) : 0,
                     'submittedAt' => $hasAssessment ? $student->updated_at->format('Y-m-d H:i:s') : null,
+                    'registered_at' => $user->created_at->format('Y-m-d H:i:s'),
                 ];
             })
             ->toArray();
@@ -2757,7 +2783,7 @@ class AdminController extends Controller
                 return $this->generateComprehensiveCSV($csvContent);
             case 'overview':
                 return $this->generateOverviewCSV($csvContent);
-            case 'student-list':
+            case 'student-assessment':
                 return $this->generateAllStudentsCSV($csvContent);
             case 'hte-performance':
                 return $this->generateHTEPerformanceCSV($csvContent);
@@ -3111,7 +3137,7 @@ class AdminController extends Controller
             case 'comprehensive':
                 $this->generateComprehensiveExcel($sheet, $row);
                 break;
-            case 'student-list':
+            case 'student-assessment':
                 $this->generateAllStudentsExcel($sheet, $row);
                 break;
             case 'hte-performance':

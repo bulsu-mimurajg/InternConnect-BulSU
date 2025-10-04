@@ -219,14 +219,12 @@
             background-color: #fff3cd;
         }
         
-        .col-student { width: 12%; }
-        .col-name { width: 18%; }
-        .col-email { width: 20%; }
-        .col-section { width: 12%; }
-        .col-status { width: 10%; }
-        .col-assessment { width: 10%; }
-        .col-score { width: 8%; }
-        .col-date { width: 10%; }
+        .col-student { width: 15%; }
+        .col-name { width: 20%; }
+        .col-email { width: 25%; }
+        .col-section { width: 15%; }
+        .col-status { width: 12%; }
+        .col-date { width: 13%; }
         
         .footer { 
             margin-top: 40px; 
@@ -288,34 +286,16 @@
                 <h2>Section Statistics</h2>
                 <div class="section-content">
                     <div class="stats">
-                        <h3>Student Performance Metrics</h3>
+                        <h3>Section Overview</h3>
                         
                         <div class="metric-group">
-                            <h4>Section Overview</h4>
+                            <!-- <h4>Section Overview</h4> -->
                             <table style="width: 100%; border-collapse: separate; border-spacing: 15px;">
                                 <tr>
                                     <td style="width: 25%; vertical-align: top;">
                                         <div class="stat-item">
                                             <div class="stat-value">{{ $overviewStats['totalStudents'] }}</div>
                                             <div class="stat-label">Total Students</div>
-                                        </div>
-                                    </td>
-                                    <td style="width: 25%; vertical-align: top;">
-                                        <div class="stat-item">
-                                            <div class="stat-value">{{ $overviewStats['completedAssessments'] }}</div>
-                                            <div class="stat-label">Completed Assessments</div>
-                                        </div>
-                                    </td>
-                                    <td style="width: 25%; vertical-align: top;">
-                                        <div class="stat-item">
-                                            <div class="stat-value">{{ $overviewStats['placedStudents'] }}</div>
-                                            <div class="stat-label">Placed Students</div>
-                                        </div>
-                                    </td>
-                                    <td style="width: 25%; vertical-align: top;">
-                                        <div class="stat-item">
-                                            <div class="stat-value">{{ $overviewStats['completionRate'] }}%</div>
-                                            <div class="stat-label">Completion Rate</div>
                                         </div>
                                     </td>
                                 </tr>
@@ -339,8 +319,6 @@
                                 <th class="col-email">Email</th>
                                 <th class="col-section">Section</th>
                                 <th class="col-status">Status</th>
-                                <th class="col-assessment">Has Assessment</th>
-                                <th class="col-score">Assessment Score</th>
                                 <th class="col-date">Registered At</th>
                             </tr>
                         </thead>
@@ -356,8 +334,6 @@
                                         {{ ucfirst($student['status']) }}
                                     </span>
                                 </td>
-                                <td class="col-assessment">{{ $student['hasAssessment'] ? 'Yes' : 'No' }}</td>
-                                <td class="col-score">{{ $student['assessmentScore'] ?? 'N/A' }}</td>
                                 <td class="col-date">{{ $student['registered_at'] ?? 'N/A' }}</td>
                             </tr>
                             @endforeach

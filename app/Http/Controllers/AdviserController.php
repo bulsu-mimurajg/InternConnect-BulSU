@@ -1194,10 +1194,6 @@ class AdviserController extends Controller
     /**
      * Export report to CSV based on report type
      */
-    public function exportCSV(Request $request, $reportType): \Illuminate\Http\Response
-    {
-        return $this->exportExcel($request, $reportType); // Same implementation for now
-    }
 
     /**
      * Apply section filter to a query based on current section selection

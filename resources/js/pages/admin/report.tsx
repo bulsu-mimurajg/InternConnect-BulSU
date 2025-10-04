@@ -180,7 +180,6 @@ export default function AdminReport({ sections }: Props) {
         }
 
         // Open the export URL in a new window/tab
-        console.log('Export Route:', exportRoute);
         window.open(exportRoute, '_blank');
 
         // Reset generating state after a delay
