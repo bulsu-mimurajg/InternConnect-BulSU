@@ -115,23 +115,19 @@ class NotificationController extends Controller
             ->take($perPage)
             ->get();
 
-        // Check if this is an AJAX request (not Inertia)
-        if ($request->ajax() || $request->wantsJson()) {
-            return response()->json([
-                'notifications' => $notifications,
-                'unreadCount' => Notification::getUnreadCount($user->id),
-                'pagination' => [
-                    'current_page' => $page,
-                    'per_page' => $perPage,
-                    'total' => $totalCount,
-                    'last_page' => ceil($totalCount / $perPage),
-                    'from' => $totalCount > 0 ? (($page - 1) * $perPage) + 1 : 0,
-                    'to' => min($page * $perPage, $totalCount),
-                ],
-            ]);
-        }
-
-        // For Inertia requests, redirect back to prevent JSON response error
-        return redirect()->back();
+        // Always return JSON for this endpoint since it's specifically for notifications
+        // This prevents any potential HTML redirects that could cause JSON parsing errors
+        return response()->json([
+            'notifications' => $notifications,
+            'unreadCount' => Notification::getUnreadCount($user->id),
+            'pagination' => [
+                'current_page' => $page,
+                'per_page' => $perPage,
+                'total' => $totalCount,
+                'last_page' => ceil($totalCount / $perPage),
+                'from' => $totalCount > 0 ? (($page - 1) * $perPage) + 1 : 0,
+                'to' => min($page * $perPage, $totalCount),
+            ],
+        ]);
     }
 }

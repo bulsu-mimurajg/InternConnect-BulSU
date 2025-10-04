@@ -139,7 +139,7 @@ export default function Register({ sections }: RegisterProps) {
                                 maxLength={10}
                             />
                             <div className="space-y-1">
-                                <p className="text-xs text-muted-foreground">Use your student number</p>
+                                <p className="text-xs text-[#706f6c] dark:text-[#A1A09A]">Use your student number</p>
                                 <InputError message={errors.username} />
                             </div>
                         </div>
@@ -158,7 +158,7 @@ export default function Register({ sections }: RegisterProps) {
                                 placeholder="email@example.com"
                             />
                             <div className="space-y-1">
-                                <p className="text-xs text-muted-foreground">Use your personal email</p>
+                                <p className="text-xs text-[#706f6c] dark:text-[#A1A09A]">Use your personal email</p>
                                 <InputError message={errors.email} />
                             </div>
                         </div>
@@ -185,7 +185,7 @@ export default function Register({ sections }: RegisterProps) {
                                     )}
                                 </SelectContent>
                             </Select>
-                            <p className="text-xs text-muted-foreground">Use your current section</p>
+                            <p className="text-xs text-[#706f6c] dark:text-[#A1A09A]">Use your current section</p>
                             <InputError message={errors.section_id} />
                         </div>
 
@@ -201,7 +201,7 @@ export default function Register({ sections }: RegisterProps) {
                                     <SelectItem value="SM">SM</SelectItem>
                                 </SelectContent>
                             </Select>
-                            <p className="text-xs text-muted-foreground">Choose your specialization</p>
+                            <p className="text-xs text-[#706f6c] dark:text-[#A1A09A]">Choose your specialization</p>
                             <InputError message={errors.specialization} />
                         </div>
 
@@ -226,7 +226,7 @@ export default function Register({ sections }: RegisterProps) {
                                 maxLength={11}
                             />
                             <div className="space-y-1">
-                                <p className="text-xs text-muted-foreground">Enter your 11-digit mobile number</p>
+                                <p className="text-xs text-[#706f6c] dark:text-[#A1A09A]">Enter your 11-digit mobile number</p>
                                 <InputError message={errors.contact_number} />
                             </div>
                         </div>
@@ -269,22 +269,27 @@ export default function Register({ sections }: RegisterProps) {
                             </div>
                         </div>
                         <div className="col-span-full">
-                            <p className="text-xs text-muted-foreground text-justify">
+                            <p className="text-xs text-[#706f6c] dark:text-[#A1A09A] text-justify">
                                 Password must be at least 8 characters, have at least one uppercase letter, have at least one lowercase letter, have at least one number,
                                 and have at least one special character (@$!%*?&).
                             </p>
                         </div>
                     </div>
 
-                    <Button type="submit" className="mt-2 w-full" tabIndex={11} disabled={processing}>
+                    <Button 
+                        type="submit" 
+                        className="mt-2 w-full bg-[#f53003] hover:bg-[#e82903] text-white dark:bg-[#FF4433] dark:hover:bg-[#FF5544]" 
+                        tabIndex={11} 
+                        disabled={processing}
+                    >
                         {processing && <LoaderCircle className="h-4 w-4 animate-spin" />}
                         Create account
                     </Button>
                 </div>
 
-                <div className="text-center text-sm text-muted-foreground">
+                <div className="text-center text-sm text-[#706f6c] dark:text-[#A1A09A]">
                     Already have an account?{' '}
-                    <TextLink href={route('login')} tabIndex={12}>
+                    <TextLink href={route('login')} tabIndex={12} className="text-[#f53003] hover:text-[#e82903] dark:text-[#FF4433] dark:hover:text-[#FF5544]">
                         Log in
                     </TextLink>
                 </div>

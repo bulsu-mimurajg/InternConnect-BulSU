@@ -45,14 +45,6 @@ class DatabaseSeeder extends Seeder
             'password' => bcrypt('password'),
         ]);
 
-        // Create Juna - a student who needs adviser approval (pending verification)
-        $junaUser = User::factory()->student()->create([
-            'username' => 'juna',
-            'email' => 'juna@example.com',
-            'status' => 'unverified', // Unverified so she shows in pending students
-            'password' => bcrypt('password'),
-        ]);
-
         // Student::factory()->count(20)->create();
 
         $this->call(CategorySeeder::class);
@@ -82,32 +74,71 @@ class DatabaseSeeder extends Seeder
             ]);
         }
 
-        // Get Emman's section (3A-G1) to assign Juna to the same section
-        $emmanSection = \App\Models\Section::where('section_name', '3A-G1')->first();
-        if ($emmanSection) {
-            // Create academe account for Juna (pending student - no Student record yet)
-            \App\Models\AcademeAccount::create([
-                'user_id' => $junaUser->id,
-                'section_id' => $emmanSection->section_id, // Same section as Emman (adviser)
+        // Create unverified student following the complete registration flow
+        $threeAG1Section = \App\Models\Section::where('section_name', '3A-G1')->first();
+        if ($threeAG1Section) {
+            // 1. Create user account (same as registration flow)
+            $unverifiedStudentUser = User::create([
+                'username' => '2024100123', // Student number format
+                'email' => 'george.miller@example.com',
+                'password' => bcrypt('password'),
+                'email_verified_at' => now(), // Email verified
+                'status' => 'unverified', // Needs adviser approval
             ]);
 
-            // Create notification for Emman about Juna needing approval
+            // 2. Assign student role
+            $unverifiedStudentUser->assignRole('student');
+
+            // 3. Cache registration data (simulating what happens during registration)
+            $registrationData = [
+                'first_name' => 'George',
+                'last_name' => 'Miller',
+                'middle_name' => '',
+                'username' => '2024100123',
+                'email' => 'george.miller@example.com',
+                'contact_number' => '09123456789',
+                'password' => bcrypt('password'),
+                'section_id' => $threeAG1Section->section_id,
+                'specialization' => 'WMAD',
+                'created_at' => now(),
+            ];
+
+            // Store registration data for when adviser approves (24 hours expiry)
+            \Illuminate\Support\Facades\Cache::put("registration_data_{$unverifiedStudentUser->email}", $registrationData, now()->addHours(24));
+
+            // 4. Create academe account (same way as registration)
+            \App\Models\AcademeAccount::create([
+                'user_id' => $unverifiedStudentUser->id,
+                'section_id' => $threeAG1Section->section_id,
+            ]);
+
+            // 5. Create request record (same way as registration)
+            \App\Models\Request::create([
+                'stud_num' => $unverifiedStudentUser->username,
+                'section_id' => $threeAG1Section->section_id,
+            ]);
+
+            // 6. Create notification for Emman (adviser) about new student needing approval
             $emmanUser = User::where('username', 'emman')->first();
             if ($emmanUser) {
                 \App\Models\Notification::create([
                     'user_id' => $emmanUser->id,
                     'type' => 'student_approval_request',
-                    'title' => 'Student Approval Request',
-                    'message' => 'Student Juna needs your approval for registration.',
+                    'title' => 'New Student Registration',
+                    'message' => 'George Miller has registered and is awaiting your approval.',
                     'data' => [
                         'adviser_id' => $emmanUser->id,
-                        'student_name' => 'Juna',
-                        'section_id' => $emmanSection->section_id
+                        'student_username' => $unverifiedStudentUser->username,
+                        'student_email' => $unverifiedStudentUser->email,
+                        'student_name' => 'George Miller',
+                        'section_id' => $threeAG1Section->section_id,
+                        'section_name' => $threeAG1Section->section_name,
                     ],
                     'is_read' => false,
                 ]);
             }
         }
+
 
         $this->call(HTESeeder::class);
         $this->call(InternshipSeeder::class);

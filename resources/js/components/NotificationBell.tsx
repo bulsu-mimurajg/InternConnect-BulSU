@@ -141,7 +141,26 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                 show_read: showReadToUse.toString(),
             });
             
-            const response = await fetch(`/notifications/get?${params}`);
+            const response = await fetch(`/notifications/get?${params}`, {
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                credentials: 'same-origin',
+            });
+            
+            // Check if response is OK and is JSON
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                const responseText = await response.text();
+                console.error('Received non-JSON response:', responseText.substring(0, 200));
+                throw new Error('Expected JSON response but received HTML or other format');
+            }
+            
             const data = await response.json();
             const serverNotifications = data.notifications || [];
 
@@ -178,6 +197,18 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
             setPagination(validatedPagination);
         } catch (error) {
             console.error('Failed to fetch notifications:', error);
+            
+            // If there's an error fetching notifications, set empty state but don't break the UI
+            setNotifications([]);
+            setUnreadCount(0);
+            setPagination({
+                current_page: 1,
+                per_page: pagination.per_page,
+                total: 0,
+                last_page: 1,
+                from: 0,
+                to: 0,
+            });
         } finally {
             setIsLoading(false);
         }
@@ -253,6 +284,13 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                 return false;
             }
 
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                const responseText = await response.text();
+                console.error('Received non-JSON response for markAsRead:', responseText.substring(0, 200));
+                return false;
+            }
+            
             const result = await response.json();
 
             if (result.success) {

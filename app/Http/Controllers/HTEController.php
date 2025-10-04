@@ -919,6 +919,7 @@ class HTEController extends Controller
             })->values()->toArray(),
             'hteId' => $hte->id,
             'showSubmissionPrompt' => !$hte->is_submit,
+            'csrf_token' => csrf_token(),
         ]);
     }
 

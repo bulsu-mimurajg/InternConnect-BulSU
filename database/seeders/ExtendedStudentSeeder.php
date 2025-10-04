@@ -31,7 +31,7 @@ class ExtendedStudentSeeder extends Seeder
         }
 
         // Note: Removed unused students as they are not referenced in any application functionality
-        // Only clairo and juna from DatabaseSeeder are actually used
+        // Only clairo from DatabaseSeeder is actually used
         $additionalStudents = [];
 
         $createdCount = 0;

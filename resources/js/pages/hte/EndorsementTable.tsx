@@ -45,9 +45,10 @@ interface Props {
     internships?: Internship[];
     hteId: number;
     showSubmissionPrompt: boolean;
+    csrf_token?: string;
 }
 
-export default function EndorsementTable({ endorsements = [], internships = [], hteId, showSubmissionPrompt }: Props) {
+export default function EndorsementTable({ endorsements = [], internships = [], hteId, showSubmissionPrompt, csrf_token }: Props) {
     const [selectedInternship, setSelectedInternship] = useState<string>('all');
     const [loading, setLoading] = useState<Record<number, boolean>>({});
     const [selectedEndorsements, setSelectedEndorsements] = useState<Set<number>>(new Set());
@@ -57,6 +58,46 @@ export default function EndorsementTable({ endorsements = [], internships = [], 
     const [errorType, setErrorType] = useState<string | null>(null);
     const [showFilters, setShowFilters] = useState(false);
     const { flash } = usePage<{ flash: { success?: string; error?: string } }>().props;
+
+    // CSRF Token Management
+    const getFreshCsrfToken = () => {
+        return csrf_token || document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+    };
+
+    // Function to refresh CSRF token by making a request to get a new one
+    const refreshCsrfToken = async () => {
+        try {
+            const response = await fetch('/csrf-token', {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                },
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                // Update the meta tag with new token
+                const metaTag = document.querySelector('meta[name="csrf-token"]');
+                if (metaTag) {
+                    metaTag.setAttribute('content', data.token);
+                }
+                return data.token;
+            }
+        } catch (error) {
+            console.error('Failed to refresh CSRF token:', error);
+        }
+        return getFreshCsrfToken();
+    };
+
+    // Ensure CSRF token is set in meta tag when component mounts
+    useEffect(() => {
+        if (csrf_token) {
+            const metaTag = document.querySelector('meta[name="csrf-token"]');
+            if (metaTag) {
+                metaTag.setAttribute('content', csrf_token);
+            }
+        }
+    }, [csrf_token]);
 
     // Handle student highlighting from notification clicks
     useEffect(() => {
@@ -194,6 +235,15 @@ export default function EndorsementTable({ endorsements = [], internships = [], 
     const handleBatchApprove = async () => {
         if (selectedEndorsements.size === 0) return;
 
+        const csrfToken = getFreshCsrfToken();
+        
+        // Check if CSRF token exists (basic auth check)
+        if (!csrfToken) {
+            setErrorMessage('Authentication error: CSRF token not found. Please refresh the page and try again.');
+            setErrorType('error');
+            return;
+        }
+
         setBatchLoading(true);
         setErrorMessage(null);
         setErrorType(null);
@@ -203,7 +253,7 @@ export default function EndorsementTable({ endorsements = [], internships = [], 
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    'X-CSRF-TOKEN': csrfToken,
                     'Accept': 'application/json',
                 },
                 body: JSON.stringify({
@@ -211,16 +261,46 @@ export default function EndorsementTable({ endorsements = [], internships = [], 
                 }),
             });
 
-            const result = await response.json();
-
-            if (response.ok) {
-                setErrorMessage(result.message);
+            // Handle CSRF token mismatch
+            if (response.status === 419) {
+                const newCsrfToken = await refreshCsrfToken();
+                
+                // Retry the request with fresh token
+                const retryResponse = await fetch('/hte/batch-approve-endorsements', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': newCsrfToken,
+                        'Accept': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        endorsement_ids: Array.from(selectedEndorsements)
+                    }),
+                });
+                
+                if (retryResponse.ok) {
+                    const result = await retryResponse.json();
+                    setErrorMessage(result.message || 'Batch approval completed successfully!');
+                    setErrorType('success');
+                    setSelectedEndorsements(new Set());
+                    setTimeout(() => {
+                        router.reload();
+                    }, 1500);
+                } else {
+                    const retryResult = await retryResponse.json();
+                    setErrorMessage(retryResult.message || 'An error occurred during batch approval');
+                    setErrorType('error');
+                }
+            } else if (response.ok) {
+                const result = await response.json();
+                setErrorMessage(result.message || 'Batch approval completed successfully!');
                 setErrorType('success');
                 setSelectedEndorsements(new Set());
                 setTimeout(() => {
-                    window.location.reload();
+                    router.reload();
                 }, 1500);
             } else {
+                const result = await response.json();
                 setErrorMessage(result.message || 'An error occurred during batch approval');
                 setErrorType('error');
             }
@@ -236,6 +316,15 @@ export default function EndorsementTable({ endorsements = [], internships = [], 
     const handleBatchReject = async () => {
         if (selectedEndorsements.size === 0) return;
 
+        const csrfToken = getFreshCsrfToken();
+        
+        // Check if CSRF token exists (basic auth check)
+        if (!csrfToken) {
+            setErrorMessage('Authentication error: CSRF token not found. Please refresh the page and try again.');
+            setErrorType('error');
+            return;
+        }
+
         setBatchLoading(true);
         setErrorMessage(null);
         setErrorType(null);
@@ -245,7 +334,7 @@ export default function EndorsementTable({ endorsements = [], internships = [], 
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    'X-CSRF-TOKEN': csrfToken,
                     'Accept': 'application/json',
                 },
                 body: JSON.stringify({
@@ -253,16 +342,46 @@ export default function EndorsementTable({ endorsements = [], internships = [], 
                 }),
             });
 
-            const result = await response.json();
-
-            if (response.ok) {
-                setErrorMessage(result.message);
+            // Handle CSRF token mismatch
+            if (response.status === 419) {
+                const newCsrfToken = await refreshCsrfToken();
+                
+                // Retry the request with fresh token
+                const retryResponse = await fetch('/hte/batch-reject-endorsements', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': newCsrfToken,
+                        'Accept': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        endorsement_ids: Array.from(selectedEndorsements)
+                    }),
+                });
+                
+                if (retryResponse.ok) {
+                    const result = await retryResponse.json();
+                    setErrorMessage(result.message || 'Batch rejection completed successfully!');
+                    setErrorType('success');
+                    setSelectedEndorsements(new Set());
+                    setTimeout(() => {
+                        router.reload();
+                    }, 1500);
+                } else {
+                    const retryResult = await retryResponse.json();
+                    setErrorMessage(retryResult.message || 'An error occurred during batch rejection');
+                    setErrorType('error');
+                }
+            } else if (response.ok) {
+                const result = await response.json();
+                setErrorMessage(result.message || 'Batch rejection completed successfully!');
                 setErrorType('success');
                 setSelectedEndorsements(new Set());
                 setTimeout(() => {
-                    window.location.reload();
+                    router.reload();
                 }, 1500);
             } else {
+                const result = await response.json();
                 setErrorMessage(result.message || 'An error occurred during batch rejection');
                 setErrorType('error');
             }
