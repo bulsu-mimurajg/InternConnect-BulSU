@@ -33,10 +33,10 @@ interface Props {
     currentSectionId: number | null;
 }
 
-export default function AdviserReport({ 
-    adviserSection, 
-    adviserSections, 
-    currentSectionId 
+export default function AdviserReport({
+    adviserSection,
+    adviserSections,
+    currentSectionId
 }: Props) {
     const [selectedReportType, setSelectedReportType] = useState<string>('');
     const [selectedFormat, setSelectedFormat] = useState<string>('pdf');
@@ -49,28 +49,28 @@ export default function AdviserReport({
             reports: [
                 {
                     value: 'student-list',
-                    label: 'Student List Report',
+                    label: 'Student List report',
                     description: 'Complete list of students with basic information',
                     icon: UsersIcon,
                     requiresSection: true
                 },
                 {
                     value: 'student-assessment',
-                    label: 'Student Assessment Report',
+                    label: 'Student Assessment report',
                     description: 'Complete list of students with their details and status',
                     icon: UsersIcon,
                     requiresSection: true
                 },
                 {
                     value: 'placed-students',
-                    label: 'Placed Students Report',
+                    label: 'Placed Students report',
                     description: 'Students who have been successfully placed in internships',
                     icon: TargetIcon,
                     requiresSection: true
                 },
                 {
                     value: 'endorsed-students',
-                    label: 'Endorsed Students Report',
+                    label: 'Endorsed Students report',
                     description: 'Students who have been endorsed for internship placement',
                     icon: UserCheckIcon,
                     requiresSection: true
@@ -82,7 +82,7 @@ export default function AdviserReport({
             reports: [
                 {
                     value: 'performance-analysis',
-                    label: 'Performance Analysis Report',
+                    label: 'Performance Analysis report',
                     description: 'Detailed analysis of student performance and rankings',
                     icon: TrendingUpIcon,
                     requiresSection: true
@@ -104,7 +104,7 @@ export default function AdviserReport({
         if (!selectedReportType) return;
 
         setIsGenerating(true);
-        
+
         // Determine the export route based on format and report type
         let exportRoute;
         switch (selectedFormat) {
@@ -194,9 +194,9 @@ export default function AdviserReport({
                     </Card>
                 )}
 
-                {/* Report Generation Form */}
+                {/* report Generation Form */}
                 <div className="grid gap-6 grid-cols-1">
-                    {/* Report Type Selection */}
+                    {/* report Type Selection */}
                     <Card className="flex flex-col">
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
@@ -268,14 +268,14 @@ export default function AdviserReport({
                 </div>
 
 
-                {/* Generate Report Button */}
+                {/* Generate report Button */}
                 <Card>
                     <CardContent>
                         <div className="flex items-center justify-between">
                             <div>
                                 <h3 className="text-lg font-semibold">Ready to Generate Report</h3>
                                 <p className="text-sm text-muted-foreground">
-                                    {selectedReportType ? 
+                                    {selectedReportType ?
                                         (adviserSections.length > 1 && selectedSection ?
                                             (selectedSection === 'all' ?
                                                 `Generate ${reportTypes.find(t => t.value === selectedReportType)?.label} for all sections in ${exportFormats.find(f => f.value === selectedFormat)?.label} format` :
@@ -287,13 +287,13 @@ export default function AdviserReport({
                                     }
                                 </p>
                             </div>
-                            <Button 
+                            <Button
                                 onClick={handleGenerateReport}
                                 disabled={!selectedReportType || isGenerating || (adviserSections.length > 1 && !selectedSection)}
                                 className="flex items-center gap-2"
                             >
                                 <DownloadIcon className="h-4 w-4" />
-                                {isGenerating ? 'Generating...' : 'Generate Report'}
+                                {isGenerating ? 'Generating...' : 'Generate report'}
                             </Button>
                         </div>
                     </CardContent>

@@ -5,13 +5,6 @@ import { type BreadcrumbItem } from '@/types';
 import { useState } from 'react';
 import { router } from '@inertiajs/react';
 
-const breadcrumbs: BreadcrumbItem[] = [
-    {
-        title: 'Reports',
-        href: '/reports',
-    },
-];
-
 interface Section {
     section_id: number;
     section_name: string;
@@ -64,8 +57,15 @@ interface ReportGenerationParams {
     internshipId?: string;
 }
 
-export default function AdminReport({ sections, htes, internships, reportCategories, userRole }: Props) {
+export default function ReportIndex({ sections, htes, internships, reportCategories, userRole }: Props) {
     const [isGenerating, setIsGenerating] = useState<boolean>(false);
+
+    const breadcrumbs: BreadcrumbItem[] = [
+        {
+            title: 'Reports',
+            href: '/reports',
+        },
+    ];
 
     const handleGenerateReport = (params: ReportGenerationParams) => {
         setIsGenerating(true);
@@ -104,16 +104,42 @@ export default function AdminReport({ sections, htes, internships, reportCategor
         }, 2000);
     };
 
+    const getPageTitle = (): string => {
+        switch (userRole) {
+            case 'admin':
+                return 'Admin Reports';
+            case 'adviser':
+                return 'Adviser Reports';
+            case 'hte':
+                return 'HTE Reports';
+            default:
+                return 'Reports';
+        }
+    };
+
+    const getPageDescription = (): string => {
+        switch (userRole) {
+            case 'admin':
+                return 'Generate comprehensive reports for students, placements, and system analytics';
+            case 'adviser':
+                return 'Generate reports for your assigned sections and students';
+            case 'hte':
+                return 'Generate reports for your company\'s internship program';
+            default:
+                return 'Generate reports based on your role permissions';
+        }
+    };
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Admin Reports" />
+            <Head title={getPageTitle()} />
             <div className="flex h-full flex-1 flex-col gap-6 rounded-xl p-6">
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-3xl font-bold tracking-tight">Admin Reports</h1>
+                        <h1 className="text-3xl font-bold tracking-tight">{getPageTitle()}</h1>
                         <p className="text-muted-foreground">
-                            Generate comprehensive reports for students, placements, and system analytics
+                            {getPageDescription()}
                         </p>
                     </div>
                 </div>

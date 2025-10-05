@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HTE Placed Students Report</title>
+    <title>Adviser Performance Report</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -159,16 +159,16 @@
 
             <!-- Report Header -->
             <div class="header">
-                <h1>HTE Placed Students Report</h1>
-                <div class="subtitle">{{ $hte ? $hte->company_name : 'All HTEs' }} - {{ $internship_name }}</div>
+                <h1>Adviser Performance Report</h1>
+                <div class="subtitle">Adviser Performance and Student Outcomes</div>
                 <div class="date">Generated on {{ now()->format('F d, Y \a\t g:i A') }}</div>
             </div>
 
-            <!-- Statistics Overview -->
+            <!-- Overall Statistics -->
             <div class="section">
-                <h2 class="section-title">Statistics Overview</h2>
+                <h2 class="section-title">Overall Statistics</h2>
                 <div class="stats">
-                    @foreach($stats as $stat)
+                    @foreach($overallStats as $stat)
                         <div class="stat-card">
                             <div class="stat-label">{{ $stat['label'] }}</div>
                             <div class="stat-value">{{ $stat['value'] }}</div>
@@ -177,43 +177,48 @@
                 </div>
             </div>
 
-            <!-- Placed Students List -->
+            <!-- Individual Adviser Performance -->
             <div class="section">
-                <h2 class="section-title">Placed Students</h2>
-                @if($students->count() > 0)
+                <h2 class="section-title">Individual Adviser Performance</h2>
+                @if($advisers->count() > 0)
                     <table>
                         <thead>
                             <tr>
-                                <th>Student Name</th>
-                                <th>Student Number</th>
-                                <th>Section</th>
-                                <th>Position</th>
-                                <th>Department</th>
-                                <th>Placement Date</th>
-                                <th>Status</th>
+                                <th>Adviser Name</th>
+                                <th>Total Sections</th>
+                                <th>Total Students</th>
+                                <th>Active Students</th>
+                                <th>Assessed Students</th>
+                                <th>Average Score</th>
+                                <th>Placed Students</th>
+                                <th>Placement Rate</th>
+                                <th>Endorsed Students</th>
+                                <th>Endorsement Rate</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach($students as $student)
-                                @php
-                                    $placement = $student->placements ? $student->placements->first() : null;
-                                    $internship = $placement ? $placement->internship : null;
-                                @endphp
+                            @foreach($advisers as $adviser)
                                 <tr>
+                                    <td><strong>{{ $adviser['name'] }}</strong></td>
+                                    <td>{{ $adviser['total_sections'] }}</td>
+                                    <td>{{ $adviser['total_students'] }}</td>
+                                    <td>{{ $adviser['active_students'] }}</td>
+                                    <td>{{ $adviser['assessed_students'] }}</td>
                                     <td>
-                                        {{ $student->last_name }}, {{ $student->first_name }}
-                                        @if($student->middle_name)
-                                            {{ strtoupper(substr($student->middle_name, 0, 1)) }}.
-                                        @endif
+                                        <span style="color: {{ $adviser['average_score'] >= 80 ? '#27ae60' : ($adviser['average_score'] >= 60 ? '#f39c12' : '#e74c3c') }}; font-weight: bold;">
+                                            {{ number_format($adviser['average_score'], 1) }}
+                                        </span>
                                     </td>
-                                    <td>{{ $student->student_number }}</td>
-                                    <td>{{ $student->section->section_name ?? 'N/A' }}</td>
-                                    <td>{{ $internship ? $internship->position_title : 'N/A' }}</td>
-                                    <td>{{ $internship ? $internship->department : 'N/A' }}</td>
-                                    <td>{{ $placement ? $placement->placement_date->format('M d, Y') : 'N/A' }}</td>
+                                    <td>{{ $adviser['placed_students'] }}</td>
                                     <td>
-                                        <span style="color: {{ $placement && $placement->status === 'approved' ? '#27ae60' : '#e74c3c' }}; font-weight: bold;">
-                                            {{ $placement ? ucfirst($placement->status) : 'N/A' }}
+                                        <span style="color: {{ $adviser['placement_rate'] >= 70 ? '#27ae60' : ($adviser['placement_rate'] >= 40 ? '#f39c12' : '#e74c3c') }}; font-weight: bold;">
+                                            {{ number_format($adviser['placement_rate'], 1) }}%
+                                        </span>
+                                    </td>
+                                    <td>{{ $adviser['endorsed_students'] }}</td>
+                                    <td>
+                                        <span style="color: {{ $adviser['endorsement_rate'] >= 70 ? '#27ae60' : ($adviser['endorsement_rate'] >= 40 ? '#f39c12' : '#e74c3c') }}; font-weight: bold;">
+                                            {{ number_format($adviser['endorsement_rate'], 1) }}%
                                         </span>
                                     </td>
                                 </tr>
@@ -222,10 +227,53 @@
                     </table>
                 @else
                     <p style="text-align: center; color: #7f8c8d; font-style: italic; padding: 20px;">
-                        No placed students found for the selected criteria.
+                        No adviser data found.
                     </p>
                 @endif
             </div>
+
+            <!-- Section-wise Performance -->
+            @if(isset($adviserSectionStats) && $adviserSectionStats->count() > 0)
+            <div class="section">
+                <h2 class="section-title">Section-wise Performance</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Adviser</th>
+                            <th>Section</th>
+                            <th>Total Students</th>
+                            <th>Average Score</th>
+                            <th>Placement Rate</th>
+                            <th>Endorsement Rate</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($adviserSectionStats as $section)
+                            <tr>
+                                <td><strong>{{ $section['adviser_name'] }}</strong></td>
+                                <td>{{ $section['section_name'] }}</td>
+                                <td>{{ $section['total_students'] }}</td>
+                                <td>
+                                    <span style="color: {{ $section['average_score'] >= 80 ? '#27ae60' : ($section['average_score'] >= 60 ? '#f39c12' : '#e74c3c') }}; font-weight: bold;">
+                                        {{ number_format($section['average_score'], 1) }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span style="color: {{ $section['placement_rate'] >= 70 ? '#27ae60' : ($section['placement_rate'] >= 40 ? '#f39c12' : '#e74c3c') }}; font-weight: bold;">
+                                        {{ number_format($section['placement_rate'], 1) }}%
+                                    </span>
+                                </td>
+                                <td>
+                                    <span style="color: {{ $section['endorsement_rate'] >= 70 ? '#27ae60' : ($section['endorsement_rate'] >= 40 ? '#f39c12' : '#e74c3c') }}; font-weight: bold;">
+                                        {{ number_format($section['endorsement_rate'], 1) }}%
+                                    </span>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+            @endif
 
             <!-- Footer -->
             <div class="footer">

@@ -377,14 +377,14 @@ class HTEController extends Controller
                     ]
                 ];
             });
-            
+
             // Add available slots information
             $availableSlots = $internship->available_slots;
             $filledSlots = $internship->filled_slots;
-            
+
             $internship->available_slots_count = $availableSlots;
             $internship->filled_slots_count = $filledSlots;
-            
+
             return $internship;
         });
 
@@ -1868,7 +1868,7 @@ class HTEController extends Controller
     // CSV generation methods
     private function generateHTEGeneralCSVContent($hte, $reportType): string
     {
-        $csvContent = ucwords(str_replace('-', ' ', $reportType)) . " Report - {$hte->company_name}\n";
+        $csvContent = ucwords(str_replace('-', ' ', $reportType)) . " report - {$hte->company_name}\n";
         $csvContent .= "Generated: " . now()->format('F d, Y \a\t h:i A') . "\n\n";
 
         switch ($reportType) {
@@ -1885,7 +1885,7 @@ class HTEController extends Controller
 
     private function generateHTEInternshipCSVContent($hte, $internship, $reportType): string
     {
-        $csvContent = ucwords(str_replace('-', ' ', $reportType)) . " Report - {$hte->company_name}\n";
+        $csvContent = ucwords(str_replace('-', ' ', $reportType)) . " report - {$hte->company_name}\n";
         $csvContent .= "Internship: {$internship->position_title}\n";
         $csvContent .= "Generated: " . now()->format('F d, Y \a\t h:i A') . "\n\n";
 

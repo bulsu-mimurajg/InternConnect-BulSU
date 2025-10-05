@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HTE Internship Slots Report</title>
+    <title>HTE Performance Report</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -158,78 +158,70 @@
             </div>
 
             <!-- Report Header -->
-    <div class="header">
-                <h1>HTE Internship Slots Report</h1>
-                <div class="subtitle">{{ $hte ? $hte->company_name : 'All HTEs' }} - {{ $internship_name }}</div>
+            <div class="header">
+                <h1>HTE Performance Report</h1>
+                <div class="subtitle">{{ $hte_name ?? 'All HTEs' }}</div>
                 <div class="date">Generated on {{ now()->format('F d, Y \a\t g:i A') }}</div>
-    </div>
+            </div>
 
             <!-- Statistics Overview -->
-    <div class="section">
+            <div class="section">
                 <h2 class="section-title">Statistics Overview</h2>
-        <div class="stats">
-                    <div class="stat-card">
-                    <div class="stat-label">Total Slots</div>
-                        <div class="stat-value">{{ $totalSlots }}</div>
-                </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Used Slots</div>
-                        <div class="stat-value">{{ $usedSlots }}</div>
-                </div>
-                    <div class="stat-card">
-                    <div class="stat-label">Available Slots</div>
-                        <div class="stat-value">{{ $totalSlots - $usedSlots }}</div>
-                </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Utilization Rate</div>
-                        <div class="stat-value">
-                            @php
-                                $utilizationRate = $totalSlots > 0 ? ($usedSlots / $totalSlots) * 100 : 0;
-                            @endphp
-                            {{ number_format($utilizationRate, 1) }}%
+                <div class="stats">
+                    @foreach($stats as $stat)
+                        <div class="stat-card">
+                            <div class="stat-label">{{ $stat['label'] }}</div>
+                            <div class="stat-value">{{ $stat['value'] }}</div>
+                        </div>
+                    @endforeach
                 </div>
             </div>
-        </div>
-    </div>
 
-            <!-- Internship Slots Details -->
+            <!-- HTE Performance Details -->
             <div class="section">
-                <h2 class="section-title">Internship Slots Details</h2>
-                @if($slotStats->count() > 0)
-        <table>
-            <thead>
-                <tr>
-                                <th>Position Title</th>
-                                <th>Department</th>
+                <h2 class="section-title">HTE Performance Details</h2>
+                @if($htes->count() > 0)
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>HTE Company</th>
+                                <th>Total Internships</th>
                                 <th>Total Slots</th>
                                 <th>Used Slots</th>
-                                <th>Available Slots</th>
                                 <th>Utilization Rate</th>
-                </tr>
-            </thead>
-            <tbody>
-                            @foreach($slotStats as $slot)
+                                <th>Placed Students</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($htes as $hte)
+                                @php
+                                    $totalSlots = $hte->internships->sum('slot_count');
+                                    $usedSlots = $hte->internships->sum(function($internship) {
+                                        return $internship->studentPlacements->where('status', 'approved')->count();
+                                    });
+                                    $utilizationRate = $totalSlots > 0 ? ($usedSlots / $totalSlots) * 100 : 0;
+                                @endphp
                                 <tr>
-                                    <td><strong>{{ $slot['internship']->position_title }}</strong></td>
-                                    <td>{{ $slot['internship']->department }}</td>
-                                    <td>{{ $slot['internship']->slot_count }}</td>
-                                    <td>{{ $slot['usedSlots'] }}</td>
-                                    <td>{{ $slot['internship']->slot_count - $slot['usedSlots'] }}</td>
+                                    <td><strong>{{ $hte->company_name }}</strong></td>
+                                    <td>{{ $hte->internships->count() }}</td>
+                                    <td>{{ $totalSlots }}</td>
+                                    <td>{{ $usedSlots }}</td>
                                     <td>
-                                        <span style="color: {{ $slot['utilizationRate'] >= 70 ? '#27ae60' : ($slot['utilizationRate'] >= 40 ? '#f39c12' : '#e74c3c') }}; font-weight: bold;">
-                                            {{ number_format($slot['utilizationRate'], 1) }}%
+                                        <span style="color: {{ $utilizationRate >= 70 ? '#27ae60' : ($utilizationRate >= 40 ? '#f39c12' : '#e74c3c') }}; font-weight: bold;">
+                                            {{ number_format($utilizationRate, 1) }}%
                                         </span>
-                    </td>
-                </tr>
-                @endforeach
-            </tbody>
-        </table>
-        @else
+                                    </td>
+                                    <td>{{ $usedSlots }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                @else
                     <p style="text-align: center; color: #7f8c8d; font-style: italic; padding: 20px;">
-                        No internship slots found for the selected criteria.
+                        No HTE data found for the selected criteria.
                     </p>
-        @endif
-    </div>
+                @endif
+            </div>
 
             <!-- Footer -->
             <div class="footer">

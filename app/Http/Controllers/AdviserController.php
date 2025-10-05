@@ -22,10 +22,10 @@ class AdviserController extends Controller
     public function dashboard(Request $request): Response
     {
         $adviser = Auth::user();
-        
+
         // Get the adviser's sections from advisers table
         $adviserRecord = $adviser->adviser;
-        
+
         if (!$adviserRecord) {
             return Inertia::render('adviser/dashboard', [
                 'stats' => [],
@@ -39,7 +39,7 @@ class AdviserController extends Controller
 
         // Get all sections assigned to this adviser
         $adviserSections = $adviserRecord->sections;
-        
+
         if ($adviserSections->isEmpty()) {
             return Inertia::render('adviser/dashboard', [
                 'stats' => [],
@@ -57,10 +57,10 @@ class AdviserController extends Controller
 
         // Get comprehensive statistics
         $stats = $this->getDashboardStats($currentSectionId, $adviserSections);
-        
+
         // Get recent assessment submissions
         $recentAssessments = $this->getRecentAssessments($currentSectionId, $adviserSections);
-        
+
         // Get placement overview
         $placementOverview = $this->getPlacementOverview($currentSectionId, $adviserSections);
 
@@ -87,7 +87,7 @@ class AdviserController extends Controller
         // If sectionId is null, aggregate data from all sections
         if ($sectionId === null) {
             $sectionIds = $adviserSections->pluck('section_id')->toArray();
-            
+
             // Total students across all sections
             $totalStudents = User::whereHas('roles', function ($query) {
                     $query->where('name', 'student');
@@ -233,10 +233,10 @@ class AdviserController extends Controller
                 $student = $user->student;
                 $totalScore = $student->scores->sum('score');
                 $scoreCount = $student->scores->count();
-                
+
                 // Check if scores are stored as percentages (51-100) instead of 1-5 scale
                 $hasHighScores = $student->scores->where('score', '>', 10)->count() > 0;
-                
+
                 if ($hasHighScores) {
                     // Scores are already in percentage format, just average them
                     $percentage = $scoreCount > 0 ? round($totalScore / $scoreCount, 1) : 0;
@@ -245,7 +245,7 @@ class AdviserController extends Controller
                     $maxPossibleScore = $scoreCount * 5;
                     $percentage = $maxPossibleScore > 0 ? round(($totalScore / $maxPossibleScore) * 100, 1) : 0;
                 }
-                
+
                 return [
                     'id' => $user->id,
                     'username' => $user->username,
@@ -305,17 +305,17 @@ class AdviserController extends Controller
         foreach ($students as $user) {
             $student = $user->student;
             $placements = $student->placements;
-            
+
             // Check if student has any approved placements
             $approvedPlacements = $placements->where('status', 'approved');
             $isPlaced = $approvedPlacements->isNotEmpty();
-            
+
             if ($isPlaced) {
                 $totalPlaced++;
-                
+
                 // Get the best placement (highest compatibility score)
                 $topMatch = $approvedPlacements->sortByDesc('compatibility_score')->first();
-                
+
                 $studentsWithPlacements[] = [
                     'id' => $student->id,
                     'username' => $user->username,
@@ -329,7 +329,7 @@ class AdviserController extends Controller
                         'rank' => 1, // This could be calculated based on score ranking
                     ],
                 ];
-                
+
                 // Track placements by company
                 $companyName = $topMatch->internship->hte->company_name ?? 'Unknown Company';
                 if (isset($placementsByCompany[$companyName])) {
@@ -344,7 +344,7 @@ class AdviserController extends Controller
                 }
             } else {
                 $totalUnplaced++;
-                
+
                 $studentsWithPlacements[] = [
                     'id' => $student->id,
                     'username' => $user->username,
@@ -370,10 +370,10 @@ class AdviserController extends Controller
     public function index(Request $request): Response
     {
         $adviser = Auth::user();
-        
+
         // Get the adviser's sections from advisers table
         $adviserRecord = $adviser->adviser;
-        
+
         if (!$adviserRecord) {
             return Inertia::render('adviser/application', [
                 'pendingStudents' => [],
@@ -386,7 +386,7 @@ class AdviserController extends Controller
 
         // Get all sections assigned to this adviser
         $adviserSections = $adviserRecord->sections;
-        
+
         if ($adviserSections->isEmpty()) {
             return Inertia::render('adviser/application', [
                 'pendingStudents' => [],
@@ -455,7 +455,7 @@ class AdviserController extends Controller
             ->map(function ($user) {
                 // Get cached registration data for pending students
                 $registrationData = Cache::get("registration_data_{$user->email}");
-                
+
                 return [
                     'id' => $user->id,
                     'username' => $user->username,
@@ -513,7 +513,7 @@ class AdviserController extends Controller
             ->map(function ($user) {
                 // Get cached registration data for rejected students
                 $registrationData = Cache::get("registration_data_{$user->email}");
-                
+
                 // If no cached data, check if there's a student record (in case they were approved then rejected)
                 $studentData = null;
                 if (!$registrationData && $user->student) {
@@ -523,7 +523,7 @@ class AdviserController extends Controller
                         'middle_name' => $user->student->middle_name ?? '',
                     ];
                 }
-                
+
                 return [
                     'id' => $user->id,
                     'username' => $user->username,
@@ -582,7 +582,7 @@ class AdviserController extends Controller
                 'current_time' => now(),
                 'deadlines' => \App\Models\Deadline::where('category', 'student_verification')->get()->toArray()
             ]);
-            
+
             // For now, let's create a deadline if none exists (temporary fix for testing)
             $deadline = \App\Models\Deadline::where('category', 'student_verification')->first();
             if (!$deadline) {
@@ -610,14 +610,14 @@ class AdviserController extends Controller
         foreach ($request->studentIds as $userId) {
             try {
                 $user = User::findOrFail($userId);
-                
+
                 \Log::info('Processing user for approval', [
                     'user_id' => $userId,
                     'username' => $user->username,
                     'current_status' => $user->status,
                     'has_student_record' => $user->student ? true : false
                 ]);
-                
+
                 // Check if user is already verified
                 if ($user->status === 'verified') {
                     $errors[] = "User {$user->username} is already verified.";
@@ -626,10 +626,10 @@ class AdviserController extends Controller
 
                 // Ensure user has student role
                 $user->assignRole('student');
-                
+
                 // Update status to verified
                 $user->update(['status' => 'verified']);
-                
+
                 // Only create student record if it doesn't exist
                 if (!$user->student) {
                     // Get user's section
@@ -637,7 +637,7 @@ class AdviserController extends Controller
 
                     // Get registration data from cache using user's email
                     $registrationData = Cache::get("registration_data_{$user->email}");
-                    
+
                     // Create student record with registration data
                     $student = Student::create([
                         'user_id' => $user->id,
@@ -697,10 +697,10 @@ class AdviserController extends Controller
         foreach ($request->studentIds as $userId) {
             try {
                 $user = User::findOrFail($userId);
-                
+
                 // Set status to archived
                 $user->update(['status' => 'archived']);
-                
+
                 $rejectedCount++;
             } catch (\Exception $e) {
                 $errors[] = "Error processing user {$user->username}: " . $e->getMessage();
@@ -731,16 +731,16 @@ class AdviserController extends Controller
         foreach ($request->studentIds as $userId) {
             try {
                 $user = User::findOrFail($userId);
-                
+
                 // Check if student has submitted their assessment
                 if ($user->student && $user->student->is_submit) {
                     $errors[] = "Cannot remove access for {$user->username} - assessment already submitted";
                     continue;
                 }
-                
+
                 // Only update status to unverified to disable login
                 $user->update(['status' => 'unverified']);
-                
+
                 $removedCount++;
             } catch (\Exception $e) {
                 $errors[] = "Error processing user {$user->username}: " . $e->getMessage();
@@ -771,16 +771,16 @@ class AdviserController extends Controller
         foreach ($request->studentIds as $userId) {
             try {
                 $user = User::findOrFail($userId);
-                
+
                 // Only restore if user is archived (rejected)
                 if ($user->status !== 'archived') {
                     $errors[] = "User {$user->username} is not in rejected status.";
                     continue;
                 }
-                
+
                 // Set status back to unverified
                 $user->update(['status' => 'unverified']);
-                
+
                 $restoredCount++;
             } catch (\Exception $e) {
                 $errors[] = "Error processing user {$user->username}: " . $e->getMessage();
@@ -812,7 +812,7 @@ class AdviserController extends Controller
         foreach ($request->studentIds as $userId) {
             try {
                 $user = User::findOrFail($userId);
-                
+
                 switch ($request->action) {
                     case 'approve':
                         // Remove student record and set status back to unverified
@@ -821,23 +821,23 @@ class AdviserController extends Controller
                         }
                         $user->update(['status' => 'unverified']);
                         break;
-                        
+
                     case 'reject':
                         // Set status back to unverified
                         $user->update(['status' => 'unverified']);
                         break;
-                        
+
                     case 'remove':
                         // Restore status to verified
                         $user->update(['status' => 'verified']);
                         break;
-                        
+
                     case 'restore':
                         // Set status back to archived
                         $user->update(['status' => 'archived']);
                         break;
                 }
-                
+
                 $undoneCount++;
             } catch (\Exception $e) {
                 $errors[] = "Error processing user {$user->username}: " . $e->getMessage();
@@ -858,10 +858,10 @@ class AdviserController extends Controller
     public function getStudents(Request $request): Response
     {
         $adviser = Auth::user();
-        
+
         // Get the adviser's sections from advisers table
         $adviserRecord = $adviser->adviser;
-        
+
         if (!$adviserRecord) {
             return Inertia::render('adviser/students', [
                 'students' => [],
@@ -873,7 +873,7 @@ class AdviserController extends Controller
 
         // Get all sections assigned to this adviser
         $adviserSections = $adviserRecord->sections;
-        
+
         if ($adviserSections->isEmpty()) {
             return Inertia::render('adviser/students', [
                 'students' => [],
@@ -916,12 +916,12 @@ class AdviserController extends Controller
             ->map(function ($user) {
                 $student = $user->student;
                 $hasAssessment = $student && $student->is_submit;
-                
+
                 if ($hasAssessment) {
                     $totalScore = $student->scores->sum('score');
                     $maxPossibleScore = $student->scores->count() * 5;
                     $percentage = $maxPossibleScore > 0 ? round(($totalScore / $maxPossibleScore) * 100, 1) : 0;
-                    
+
                     return [
                         'id' => $user->id,
                         'username' => $user->username,
@@ -985,16 +985,16 @@ class AdviserController extends Controller
     {
         // Try to get from session first
         $sessionSectionId = $request->session()->get('adviser_current_section_id');
-        
+
         // Handle "All Sections" option (null value) - only if explicitly set
         if ($sessionSectionId === 'all') {
             return null;
         }
-        
+
         if ($sessionSectionId && $adviserSections->contains('section_id', $sessionSectionId)) {
             return $sessionSectionId;
         }
-        
+
         // Default behavior based on number of sections
         if ($adviserSections->count() === 1) {
             // Single section: default to that section
@@ -1015,7 +1015,7 @@ class AdviserController extends Controller
     {
         $adviser = Auth::user();
         $adviserRecord = $adviser->adviser;
-        
+
         if (!$adviserRecord) {
             return redirect()->back()->withErrors(['error' => 'Adviser record not found.']);
         }
@@ -1028,7 +1028,7 @@ class AdviserController extends Controller
 
         // Verify the adviser has access to this section
         $hasAccess = $adviserRecord->sections->contains('section_id', $sectionId);
-        
+
         if (!$hasAccess) {
             return redirect()->back()->withErrors(['error' => 'You do not have access to this section.']);
         }
@@ -1045,10 +1045,10 @@ class AdviserController extends Controller
     public function reports(Request $request): Response
     {
         $adviser = Auth::user();
-        
+
         // Get the adviser's sections from advisers table
         $adviserRecord = $adviser->adviser;
-        
+
         if (!$adviserRecord) {
             return Inertia::render('adviser/report', [
                 'adviserSection' => null,
@@ -1059,7 +1059,7 @@ class AdviserController extends Controller
 
         // Get all sections assigned to this adviser
         $adviserSections = $adviserRecord->sections;
-        
+
         if ($adviserSections->isEmpty()) {
             return Inertia::render('adviser/report', [
                 'adviserSection' => null,
@@ -1091,21 +1091,21 @@ class AdviserController extends Controller
     {
         $adviser = Auth::user();
         $adviserRecord = $adviser->adviser;
-        
+
         if (!$adviserRecord) {
             abort(403, 'Adviser record not found.');
         }
 
         // Get all sections assigned to this adviser
         $adviserSections = $adviserRecord->sections;
-        
+
         if ($adviserSections->isEmpty()) {
             abort(403, 'No sections assigned to this adviser.');
         }
 
         // Get current section from session
         $currentSectionId = $request->session()->get('adviser_current_section_id');
-        
+
         // Handle "All Sections" mode
         if ($currentSectionId === 'all' || $currentSectionId === null) {
             $currentSectionId = null; // Set to null for "All Sections"
@@ -1149,21 +1149,21 @@ class AdviserController extends Controller
     {
         $adviser = Auth::user();
         $adviserRecord = $adviser->adviser;
-        
+
         if (!$adviserRecord) {
             abort(403, 'Adviser record not found.');
         }
 
         // Get all sections assigned to this adviser
         $adviserSections = $adviserRecord->sections;
-        
+
         if ($adviserSections->isEmpty()) {
             abort(403, 'No sections assigned to this adviser.');
         }
 
         // Get current section from session
         $currentSectionId = $request->session()->get('adviser_current_section_id');
-        
+
         // Handle "All Sections" mode
         if ($currentSectionId === 'all' || $currentSectionId === null) {
             $currentSectionId = null; // Set to null for "All Sections"
@@ -1195,9 +1195,9 @@ class AdviserController extends Controller
 
         // Set headers for Excel download
         $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
-        
+
         $filename = "{$reportType}-report-" . now()->format('Y-m-d') . '.xlsx';
-        
+
         return response()->streamDownload(function() use ($writer) {
             $writer->save('php://output');
         }, $filename, [
@@ -1312,15 +1312,15 @@ class AdviserController extends Controller
         ];
 
         $totalScores = [];
-        
+
         foreach ($students as $user) {
             $student = $user->student;
             $totalScore = $student->scores->sum('score');
             $maxPossibleScore = $student->scores->count() * 5;
             $percentage = $maxPossibleScore > 0 ? round(($totalScore / $maxPossibleScore) * 100, 1) : 0;
-            
+
             $totalScores[] = $percentage;
-            
+
             if ($percentage >= 90) {
                 $scoreDistribution['excellent']++;
             } elseif ($percentage >= 80) {
@@ -1348,10 +1348,10 @@ class AdviserController extends Controller
     private function getCategoryBreakdown($sectionId, $adviserSections): array
     {
         $query = StudentScore::with(['subcategory.category']);
-        
+
         // Apply section filter
         $this->applySectionFilter($query, $sectionId, $adviserSections, 'student.user.academeAccounts');
-        
+
         $categoryScores = $query->get()
             ->groupBy('subcategory.category.category_name')
             ->map(function ($scores, $categoryName) {
@@ -1387,12 +1387,12 @@ class AdviserController extends Controller
             ->map(function ($user) {
                 $student = $user->student;
                 $hasAssessment = $student && $student->is_submit;
-                
+
                 if ($hasAssessment) {
                     $totalScore = $student->scores->sum('score');
                     $maxPossibleScore = $student->scores->count() * 5;
                     $percentage = $maxPossibleScore > 0 ? round(($totalScore / $maxPossibleScore) * 100, 1) : 0;
-                    
+
                     return [
                         'id' => $user->id,
                         'username' => $user->username,
@@ -1439,11 +1439,11 @@ class AdviserController extends Controller
         // Get assessment submissions by month for the last 6 months
         $months = [];
         $submissions = [];
-        
+
         for ($i = 5; $i >= 0; $i--) {
             $date = now()->subMonths($i);
             $monthName = $date->format('M Y');
-            
+
             $query = User::whereHas('roles', function ($query) {
                     $query->where('name', 'student');
                 })
@@ -1456,9 +1456,9 @@ class AdviserController extends Controller
 
             // Apply section filter
             $this->applySectionFilter($query, $sectionId, $adviserSections);
-            
+
             $count = $query->count();
-            
+
             $months[] = $monthName;
             $submissions[] = $count;
         }
@@ -1477,7 +1477,7 @@ class AdviserController extends Controller
         sort($array);
         $count = count($array);
         $middle = floor($count / 2);
-        
+
         if ($count % 2 == 0) {
             return ($array[$middle - 1] + $array[$middle]) / 2;
         } else {
@@ -1492,14 +1492,14 @@ class AdviserController extends Controller
     {
         $count = count($array);
         if ($count <= 1) return 0;
-        
+
         $mean = array_sum($array) / $count;
         $variance = 0;
-        
+
         foreach ($array as $value) {
             $variance += pow($value - $mean, 2);
         }
-        
+
         return sqrt($variance / ($count - 1));
     }
 
@@ -1526,7 +1526,7 @@ class AdviserController extends Controller
 
         return $query->get()->map(function ($user) {
             $student = $user->student;
-            
+
             return [
                 'student_number' => $student ? $student->student_number : 'N/A',
                 'email' => $user->email,
@@ -1580,25 +1580,25 @@ class AdviserController extends Controller
     private function generateAdviserExcelContent($sheet, $reportType, $reportData, $sectionName)
     {
         $row = 1;
-        
+
         // Add header
-        $sheet->setCellValue('A' . $row, ucwords(str_replace('-', ' ', $reportType)) . ' Report');
+        $sheet->setCellValue('A' . $row, ucwords(str_replace('-', ' ', $reportType)) . ' report');
         $sheet->mergeCells('A' . $row . ':F' . $row);
         $sheet->getStyle('A' . $row)->getFont()->setBold(true)->setSize(16);
         $sheet->getStyle('A' . $row)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
         $row += 2;
-        
+
         // Add generation info
         $sheet->setCellValue('A' . $row, 'Section: ' . $sectionName);
         $sheet->mergeCells('A' . $row . ':F' . $row);
         $sheet->getStyle('A' . $row)->getFont()->setItalic(true);
         $row += 1;
-        
+
         $sheet->setCellValue('A' . $row, 'Generated: ' . now()->format('F d, Y \a\t h:i A'));
         $sheet->mergeCells('A' . $row . ':F' . $row);
         $sheet->getStyle('A' . $row)->getFont()->setItalic(true);
         $row += 3;
-        
+
         // Generate content based on report type
         switch ($reportType) {
             case 'student-list':
@@ -1617,7 +1617,7 @@ class AdviserController extends Controller
                 $this->generatePerformanceAnalysisExcel($sheet, $reportData, $row);
                 break;
         }
-        
+
         // Auto-size columns
         foreach (range('A', 'F') as $column) {
             $sheet->getColumnDimension($column)->setAutoSize(true);
@@ -1630,7 +1630,7 @@ class AdviserController extends Controller
     private function generateStudentListExcel($sheet, $reportData, $startRow)
     {
         $row = $startRow;
-        
+
         // Add headers
         $headers = ['Student Number', 'Name', 'Email', 'Section', 'Status', 'Registered At'];
         $col = 'A';
@@ -1640,7 +1640,7 @@ class AdviserController extends Controller
             $col++;
         }
         $row++;
-        
+
         // Add data
         foreach ($reportData['allStudents'] as $student) {
             $sheet->setCellValue('A' . $row, $student['student_number']);
@@ -1659,7 +1659,7 @@ class AdviserController extends Controller
     private function generateStudentAssessmentExcel($sheet, $reportData, $startRow)
     {
         $row = $startRow;
-        
+
         // Add headers
         $headers = ['Name', 'Email', 'Section', 'Status', 'Has Assessment', 'Score', 'Percentage', 'Submitted At'];
         $col = 'A';
@@ -1669,7 +1669,7 @@ class AdviserController extends Controller
             $col++;
         }
         $row++;
-        
+
         // Add data
         foreach ($reportData['studentProgress'] as $student) {
             $sheet->setCellValue('A' . $row, $student['name']);
@@ -1690,7 +1690,7 @@ class AdviserController extends Controller
     private function generateEndorsedStudentsExcel($sheet, $reportData, $startRow)
     {
         $row = $startRow;
-        
+
         // Add headers
         $headers = ['Student Number', 'Name', 'Section', 'Company', 'Position', 'Department', 'Compatibility Score', 'Status', 'Endorsement Date'];
         $col = 'A';
@@ -1700,7 +1700,7 @@ class AdviserController extends Controller
             $col++;
         }
         $row++;
-        
+
         // Add data
         foreach ($reportData['endorsedStudents'] as $student) {
             $sheet->setCellValue('A' . $row, $student['student_number']);
@@ -1722,7 +1722,7 @@ class AdviserController extends Controller
     private function generatePlacedStudentsExcel($sheet, $reportData, $startRow)
     {
         $row = $startRow;
-        
+
         // Add headers
         $headers = ['Student Number', 'Name', 'Section', 'Company', 'Position', 'Department', 'Score', 'Status', 'Date'];
         $col = 'A';
@@ -1732,7 +1732,7 @@ class AdviserController extends Controller
             $col++;
         }
         $row++;
-        
+
         // Add data
         foreach ($reportData['placedStudents'] as $student) {
             $sheet->setCellValue('A' . $row, $student['student_number']);
@@ -1755,7 +1755,7 @@ class AdviserController extends Controller
     {
         $overviewStats = $this->getOverviewStats($sectionId);
         $assessmentAnalytics = $this->getAssessmentAnalytics($sectionId);
-        
+
         $csvContent .= "Assessment Summary\n";
         $csvContent .= "Total Students," . $overviewStats['totalStudents'] . "\n";
         $csvContent .= "Completed Assessments," . $overviewStats['completedAssessments'] . "\n";
@@ -1786,7 +1786,7 @@ class AdviserController extends Controller
     {
         $categoryBreakdown = $this->getCategoryBreakdown($sectionId);
         $topPerformers = array_slice($this->getStudentProgress($sectionId), 0, 10);
-        
+
         $csvContent .= "Category Performance\n";
         $csvContent .= "Category,Average Score,Total Questions,Percentage\n";
         foreach ($categoryBreakdown as $category) {
@@ -1814,13 +1814,13 @@ class AdviserController extends Controller
     }
 
     /**
-     * Generate Progress Report CSV
+     * Generate Progress report CSV
      */
     private function generateProgressReportCSV($sectionId, $csvContent): string
     {
         $studentProgress = $this->getStudentProgress($sectionId);
         $overviewStats = $this->getOverviewStats($sectionId);
-        
+
         $csvContent .= "Progress Overview\n";
         $csvContent .= "Total Students," . $overviewStats['totalStudents'] . "\n";
         $csvContent .= "Completed Assessments," . $overviewStats['completedAssessments'] . "\n";
@@ -1849,15 +1849,15 @@ class AdviserController extends Controller
     private function getEndorsedStudents($sectionId, $adviserSections): array
     {
         $query = \App\Models\Endorsement::with(['student.user', 'internship.hte']);
-        
+
         // Apply section filter
         $this->applySectionFilter($query, $sectionId, $adviserSections, 'student.user.academeAccounts');
-        
+
         return $query->get()
             ->map(function ($endorsement) {
                 $student = $endorsement->student;
                 $internship = $endorsement->internship;
-                
+
                 return [
                     'student_number' => $student->student_number,
                     'name' => $student->last_name . ', ' . $student->first_name . ($student->middle_name ? ' ' . $student->middle_name : ''),
@@ -1881,10 +1881,10 @@ class AdviserController extends Controller
     private function getAdviserEndorsementStats($sectionId, $adviserSections): array
     {
         $query = \App\Models\Endorsement::query();
-        
+
         // Apply section filter
         $this->applySectionFilter($query, $sectionId, $adviserSections, 'student.user.academeAccounts');
-        
+
         // Total endorsements for this section (excluding placed students)
         $totalEndorsements = (clone $query)
             ->whereDoesntHave('student.placements', function ($query) {
@@ -1936,15 +1936,15 @@ class AdviserController extends Controller
     private function getPlacedStudents($sectionId, $adviserSections): array
     {
         $query = \App\Models\StudentPlacement::with(['student.user', 'internship.hte']);
-        
+
         // Apply section filter
         $this->applySectionFilter($query, $sectionId, $adviserSections, 'student.user.academeAccounts');
-        
+
         return $query->get()
             ->map(function ($placement) {
                 $student = $placement->student;
                 $internship = $placement->internship;
-                
+
                 return [
                     'student_number' => $student->student_number,
                     'name' => $student->last_name . ', ' . $student->first_name . ($student->middle_name ? ' ' . $student->middle_name : ''),
@@ -1969,7 +1969,7 @@ class AdviserController extends Controller
     {
         $endorsedStudents = $this->getEndorsedStudents($sectionId);
         $overviewStats = $this->getOverviewStats($sectionId);
-        
+
         $csvContent .= "Endorsed Students Summary\n";
         $csvContent .= "Total Students," . $overviewStats['totalStudents'] . "\n";
         $csvContent .= "Endorsed Students," . count($endorsedStudents) . "\n";
@@ -1977,7 +1977,7 @@ class AdviserController extends Controller
 
         $csvContent .= "Endorsed Students Details\n";
         $csvContent .= "Student Number,Name,Section,Company,Position,Department,Compatibility Score,Status,Endorsement Date,Notes\n";
-        
+
         foreach ($endorsedStudents as $endorsement) {
             $csvContent .= $endorsement['student']['student_number'] . ",";
             $csvContent .= '"' . $endorsement['student']['first_name'] . ' ' . $endorsement['student']['last_name'] . '",';
@@ -2001,7 +2001,7 @@ class AdviserController extends Controller
     {
         $placedStudents = $this->getPlacedStudents($sectionId);
         $overviewStats = $this->getOverviewStats($sectionId);
-        
+
         $csvContent .= "Placed Students Summary\n";
         $csvContent .= "Total Students," . $overviewStats['totalStudents'] . "\n";
         $csvContent .= "Placed Students," . count($placedStudents) . "\n";
@@ -2009,7 +2009,7 @@ class AdviserController extends Controller
 
         $csvContent .= "Placed Students Details\n";
         $csvContent .= "Student Number,Name,Section,Company,Position,Department,Compatibility Score,Status,Placement Date\n";
-        
+
         foreach ($placedStudents as $placement) {
             $csvContent .= $placement['student']['student_number'] . ",";
             $csvContent .= '"' . $placement['student']['first_name'] . ' ' . $placement['student']['last_name'] . '",';
@@ -2031,13 +2031,13 @@ class AdviserController extends Controller
     private function getStudentListStats($sectionId, $adviserSections): array
     {
         $stats = [];
-        
+
         if ($sectionId === null) {
             // All sections
             $totalStudents = 0;
             $activeStudents = 0;
             $inactiveStudents = 0;
-            
+
             foreach ($adviserSections as $section) {
                 $sectionStudents = \App\Models\User::whereHas('roles', function ($query) {
                     $query->where('name', 'student');
@@ -2047,12 +2047,12 @@ class AdviserController extends Controller
                 })
                 ->where('status', '!=', 'archived')
                 ->get();
-                
+
                 $totalStudents += $sectionStudents->count();
                 $activeStudents += $sectionStudents->where('status', 'active')->count();
                 $inactiveStudents += $sectionStudents->where('status', 'inactive')->count();
             }
-            
+
             $stats = [
                 ['label' => 'Total Students', 'value' => $totalStudents],
                 ['label' => 'Active Students', 'value' => $activeStudents],
@@ -2069,7 +2069,7 @@ class AdviserController extends Controller
             })
             ->where('status', '!=', 'archived')
             ->get();
-            
+
             $stats = [
                 ['label' => 'Total Students', 'value' => $students->count()],
                 ['label' => 'Active Students', 'value' => $students->where('status', 'active')->count()],
@@ -2077,7 +2077,7 @@ class AdviserController extends Controller
                 ['label' => 'Assessment Submitted', 'value' => $students->whereHas('student', function($q) { $q->where('is_submit', true); })->count()],
             ];
         }
-        
+
         return $stats;
     }
 
@@ -2104,7 +2104,7 @@ class AdviserController extends Controller
                 $totalScore = $student->scores->sum('score');
                 $maxPossibleScore = $student->scores->count() * 5;
                 $percentage = $maxPossibleScore > 0 ? round(($totalScore / $maxPossibleScore) * 100, 1) : 0;
-                
+
                 return [
                     'name' => $student->last_name . ', ' . $student->first_name . ($student->middle_name ? ' ' . $student->middle_name : ''),
                     'student_number' => $student->student_number,
@@ -2130,7 +2130,7 @@ class AdviserController extends Controller
     private function generatePerformanceAnalysisExcel($sheet, $reportData, $startRow)
     {
         $row = $startRow;
-        
+
         // Add headers for top performers
         $headers = ['Rank', 'Student Name', 'Student Number', 'Section', 'Score', 'Percentage', 'Submitted At'];
         $col = 'A';
@@ -2140,7 +2140,7 @@ class AdviserController extends Controller
             $col++;
         }
         $row++;
-        
+
         // Add top performers data
         $rank = 1;
         foreach ($reportData['performanceData']['topPerformers'] as $student) {

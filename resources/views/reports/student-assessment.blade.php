@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HTE Internship Slots Report</title>
+    <title>Student Assessment Report</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -158,78 +158,76 @@
             </div>
 
             <!-- Report Header -->
-    <div class="header">
-                <h1>HTE Internship Slots Report</h1>
-                <div class="subtitle">{{ $hte ? $hte->company_name : 'All HTEs' }} - {{ $internship_name }}</div>
+            <div class="header">
+                <h1>Student Assessment Report</h1>
+                <div class="subtitle">{{ $section_name }}</div>
                 <div class="date">Generated on {{ now()->format('F d, Y \a\t g:i A') }}</div>
-    </div>
+            </div>
 
             <!-- Statistics Overview -->
-    <div class="section">
+            <div class="section">
                 <h2 class="section-title">Statistics Overview</h2>
-        <div class="stats">
-                    <div class="stat-card">
-                    <div class="stat-label">Total Slots</div>
-                        <div class="stat-value">{{ $totalSlots }}</div>
-                </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Used Slots</div>
-                        <div class="stat-value">{{ $usedSlots }}</div>
-                </div>
-                    <div class="stat-card">
-                    <div class="stat-label">Available Slots</div>
-                        <div class="stat-value">{{ $totalSlots - $usedSlots }}</div>
-                </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Utilization Rate</div>
-                        <div class="stat-value">
-                            @php
-                                $utilizationRate = $totalSlots > 0 ? ($usedSlots / $totalSlots) * 100 : 0;
-                            @endphp
-                            {{ number_format($utilizationRate, 1) }}%
+                <div class="stats">
+                    @foreach($stats as $stat)
+                        <div class="stat-card">
+                            <div class="stat-label">{{ $stat['label'] }}</div>
+                            <div class="stat-value">{{ $stat['value'] }}</div>
+                        </div>
+                    @endforeach
                 </div>
             </div>
-        </div>
-    </div>
 
-            <!-- Internship Slots Details -->
+            <!-- Student Assessment List -->
             <div class="section">
-                <h2 class="section-title">Internship Slots Details</h2>
-                @if($slotStats->count() > 0)
-        <table>
-            <thead>
-                <tr>
-                                <th>Position Title</th>
-                                <th>Department</th>
-                                <th>Total Slots</th>
-                                <th>Used Slots</th>
-                                <th>Available Slots</th>
-                                <th>Utilization Rate</th>
-                </tr>
-            </thead>
-            <tbody>
-                            @foreach($slotStats as $slot)
+                <h2 class="section-title">Student Assessments</h2>
+                @if($students->count() > 0)
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Student Name</th>
+                                <th>Student Number</th>
+                                <th>Section</th>
+                                <th>Total Score</th>
+                                <th>Assessment Status</th>
+                                <th>Email</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($students as $student)
                                 <tr>
-                                    <td><strong>{{ $slot['internship']->position_title }}</strong></td>
-                                    <td>{{ $slot['internship']->department }}</td>
-                                    <td>{{ $slot['internship']->slot_count }}</td>
-                                    <td>{{ $slot['usedSlots'] }}</td>
-                                    <td>{{ $slot['internship']->slot_count - $slot['usedSlots'] }}</td>
                                     <td>
-                                        <span style="color: {{ $slot['utilizationRate'] >= 70 ? '#27ae60' : ($slot['utilizationRate'] >= 40 ? '#f39c12' : '#e74c3c') }}; font-weight: bold;">
-                                            {{ number_format($slot['utilizationRate'], 1) }}%
+                                        {{ $student->last_name }}, {{ $student->first_name }}
+                                        @if($student->middle_name)
+                                            {{ strtoupper(substr($student->middle_name, 0, 1)) }}.
+                                        @endif
+                                    </td>
+                                    <td>{{ $student->student_number }}</td>
+                                    <td>{{ $student->section->section_name ?? 'N/A' }}</td>
+                                    <td>
+                                        @if($student->scores && $student->scores->count() > 0)
+                                            <span style="color: {{ $student->scores->sum('score') >= 80 ? '#27ae60' : ($student->scores->sum('score') >= 60 ? '#f39c12' : '#e74c3c') }}; font-weight: bold;">
+                                                {{ $student->scores->sum('score') }}
+                                            </span>
+                                        @else
+                                            N/A
+                                        @endif
+                                    </td>
+                                    <td>
+                                        <span style="color: {{ $student->is_submit ? '#27ae60' : '#e74c3c' }}; font-weight: bold;">
+                                            {{ $student->is_submit ? 'Submitted' : 'Not Submitted' }}
                                         </span>
-                    </td>
-                </tr>
-                @endforeach
-            </tbody>
-        </table>
-        @else
+                                    </td>
+                                    <td>{{ $student->user->email ?? 'N/A' }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                @else
                     <p style="text-align: center; color: #7f8c8d; font-style: italic; padding: 20px;">
-                        No internship slots found for the selected criteria.
+                        No students found for the selected criteria.
                     </p>
-        @endif
-    </div>
+                @endif
+            </div>
 
             <!-- Footer -->
             <div class="footer">

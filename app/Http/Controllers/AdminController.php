@@ -237,12 +237,12 @@ class AdminController extends Controller
                 $totalInternships = $hte->internships->count();
                 $activeInternships = $hte->internships->where('is_active', true)->count();
                 $totalSlots = $hte->internships->sum('slot_count');
-                
+
                 // Calculate filled slots from placements
                 $filledSlots = StudentPlacement::whereHas('internship', function ($query) use ($hte) {
                     $query->where('hte_id', $hte->id);
                 })->where('status', 'approved')->count();
-                
+
                 $utilizationRate = $totalSlots > 0 ? round(($filledSlots / $totalSlots) * 100, 1) : 0;
 
                 return [
@@ -345,13 +345,21 @@ class AdminController extends Controller
     /**
      * Display comprehensive reports page
      */
-    public function report(): Response
+    public function report(Request $request): Response
     {
-        // Get all sections for report generation
-        $sections = Section::orderBy('section_name')->get();
+        // Use the new unified ReportService
+        $reportService = app(\App\Services\ReportService::class);
+
+        // Get all sections and HTEs for report generation
+        $sections = $reportService->getSections($request->user());
+        $htes = $reportService->getHTEs($request->user());
+        $reportCategories = $reportService->getReportCategories('admin');
 
         return Inertia::render('admin/report', [
             'sections' => $sections,
+            'htes' => $htes,
+            'reportCategories' => $reportCategories,
+            'userRole' => 'admin',
         ]);
     }
 
@@ -368,7 +376,7 @@ class AdminController extends Controller
 
         // Get section
         $section = Section::findOrFail($sectionId);
-        
+
         // Get report data based on type
         $reportData = $this->getSectionReportData($sectionId, $reportType);
 
@@ -399,22 +407,22 @@ class AdminController extends Controller
         }
 
         $section = Section::findOrFail($sectionId);
-        
+
         // Create new Spreadsheet object
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
-        
+
         // Set title
         $sheet->setTitle(ucwords(str_replace('-', ' ', $reportType)));
-        
+
         // Generate Excel content based on report type
         $this->generateSectionExcelContent($sheet, $sectionId, $reportType, $section->section_name);
-        
+
         // Create writer and save to temporary file
         $writer = new Xlsx($spreadsheet);
         $tempFile = tempnam(sys_get_temp_dir(), 'excel_export_');
         $writer->save($tempFile);
-        
+
         // Return Excel file download
         return response()->download($tempFile, "{$reportType}-report-{$section->section_name}-" . now()->format('Y-m-d') . '.xlsx')->deleteFileAfterSend(true);
     }
@@ -460,18 +468,18 @@ class AdminController extends Controller
         // Create new Spreadsheet object
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
-        
+
         // Set title
         $sheet->setTitle(ucwords(str_replace('-', ' ', $reportType)));
-        
+
         // Generate Excel content based on report type
         $this->generateGeneralExcelContent($sheet, $reportType);
-        
+
         // Create writer and save to temporary file
         $writer = new Xlsx($spreadsheet);
         $tempFile = tempnam(sys_get_temp_dir(), 'excel_export_');
         $writer->save($tempFile);
-        
+
         // Return Excel file download
         return response()->download($tempFile, "{$reportType}-report-" . now()->format('Y-m-d') . '.xlsx')->deleteFileAfterSend(true);
     }
@@ -818,7 +826,7 @@ class AdminController extends Controller
         $sectionAnalytics = $this->getSectionAnalytics();
 
         // Create CSV content
-        $csvContent = "Comprehensive Report - " . now()->format('F d, Y') . "\n\n";
+        $csvContent = "Comprehensive report - " . now()->format('F d, Y') . "\n\n";
 
         // Key Statistics
         $csvContent .= "KEY STATISTICS\n";
@@ -1881,7 +1889,7 @@ class AdminController extends Controller
                     try {
                         $placementService = new \App\Services\AutomaticPlacementService();
                         $endorsedResults = $placementService->processEndorsedStudentsPlacements();
-                        
+
                         if ($endorsedResults['endorsed_placed_count'] > 0) {
                             \Illuminate\Support\Facades\Log::info('Endorsed students placements processed', [
                                 'placed_count' => $endorsedResults['endorsed_placed_count'],
@@ -1900,7 +1908,7 @@ class AdminController extends Controller
                     try {
                         $placementService = new \App\Services\AutomaticPlacementService();
                         $matchedResults = $placementService->processMatchedStudentsPlacements();
-                        
+
                         if ($matchedResults['matched_placed_count'] > 0) {
                             \Illuminate\Support\Facades\Log::info('Matched students auto-placements processed', [
                                 'placed_count' => $matchedResults['matched_placed_count'],
@@ -1919,7 +1927,7 @@ class AdminController extends Controller
                     try {
                         $placementService = new \App\Services\AutomaticPlacementService();
                         $emergencyResults = $placementService->processEmergencyPlacements();
-                        
+
                         if ($emergencyResults['emergency_placed_count'] > 0) {
                             \Illuminate\Support\Facades\Log::info('Emergency placements processed', [
                                 'placed_count' => $emergencyResults['emergency_placed_count'],
@@ -1931,7 +1939,7 @@ class AdminController extends Controller
                     }
                 }
             }
-            
+
             // Also handle legacy SIP endorsement and HTE placement triggers at T-1 minute for backward compatibility
             if ($legacySipTrigger || $legacyHteTrigger) {
                 if (\Illuminate\Support\Facades\Cache::lock('auto-legacy-placement', 60)->get()) {
@@ -1939,7 +1947,7 @@ class AdminController extends Controller
                         // Run endorsements first
                         $endorsementService = new \App\Services\AutomaticEndorsementService();
                         $endorsementService->processSipEndorsements();
-                        
+
                         // Then run placements
                         $placementService = new \App\Services\AutomaticPlacementService();
                         $placementService->processHtePlacements();
@@ -2145,7 +2153,7 @@ class AdminController extends Controller
             // Helper function to compare dates properly
             $compareDates = function($oldDate, $newDate) {
                 if ($oldDate === $newDate) return true; // Exact string match
-                
+
                 try {
                     $oldDateTime = new \DateTime($oldDate);
                     $newDateTime = new \DateTime($newDate);
@@ -2161,7 +2169,7 @@ class AdminController extends Controller
             if ($oldValues['category'] !== $request->category) $changes['category'] = ['old' => $oldValues['category'], 'new' => $request->category];
             if (!$compareDates($oldValues['start_date'], $request->start_date)) $changes['start_date'] = ['old' => $oldValues['start_date'], 'new' => $request->start_date];
             if (!$compareDates($oldValues['end_date'], $request->end_date)) $changes['end_date'] = ['old' => $oldValues['end_date'], 'new' => $request->end_date];
-            
+
             activity()
                 ->causedBy(Auth::user())
                 ->performedOn($deadline)
@@ -2278,14 +2286,14 @@ class AdminController extends Controller
 
             // First, process SIP endorsements
             $endorsementResults = $endorsementService->processSipEndorsements();
-            
+
             // Then, process HTE placements (includes emergency placements)
             $placementResults = $placementService->processHtePlacements();
 
             $message = "Internship placements processed successfully. ";
             $message .= "Endorsed: {$endorsementResults['endorsed_count']} students, ";
             $message .= "Placed: {$placementResults['placed_count']} students";
-            
+
             // Add breakdown of placement types
             $breakdown = [];
             if (isset($placementResults['matched_placed_count']) && $placementResults['matched_placed_count'] > 0) {
@@ -2297,7 +2305,7 @@ class AdminController extends Controller
             if (!empty($breakdown)) {
                 $message .= " (including " . implode(", ", $breakdown) . ")";
             }
-            
+
             $message .= ", Skipped: " . ($endorsementResults['skipped_count'] + $placementResults['skipped_count']) . " students";
 
             $totalErrors = count($endorsementResults['errors']) + count($placementResults['errors']);
@@ -2426,7 +2434,7 @@ class AdminController extends Controller
             ->map(function ($user) {
                 $student = $user->student;
                 $hasAssessment = $student && $student->is_submit;
-                
+
                 return [
                     'username' => $user->username,
                     'student_number' => $student ? $student->student_number : 'N/A',
@@ -2672,7 +2680,7 @@ class AdminController extends Controller
 
         // Calculate assessment statistics
         $pendingAssessments = $totalStudents - $completedAssessments;
-        
+
         // Get assessment scores for statistics
         $assessmentScores = User::whereHas('roles', function ($query) {
                 $query->where('name', 'student');
@@ -2735,7 +2743,7 @@ class AdminController extends Controller
             $totalScore = $student->scores->sum('score');
             $maxPossibleScore = $student->scores->count() * 5;
             $percentage = $maxPossibleScore > 0 ? round(($totalScore / $maxPossibleScore) * 100, 1) : 0;
-            
+
             $totalScores[] = $percentage;
 
             foreach ($student->scores->groupBy('subcategory.category.category_name') as $categoryName => $scores) {
@@ -2784,7 +2792,7 @@ class AdminController extends Controller
                 $totalScore = $student->scores->sum('score');
                 $maxPossibleScore = $student->scores->count() * 5;
                 $percentage = $maxPossibleScore > 0 ? round(($totalScore / $maxPossibleScore) * 100, 1) : 0;
-                
+
                 return [
                       'name' => $student->last_name . ', ' . $student->first_name . ($student->middle_name ? ' ' . $student->middle_name : ''),
                     'student_number' => $student->student_number,
@@ -2822,7 +2830,7 @@ class AdminController extends Controller
                 $totalScore = $student->scores->sum('score');
                 $maxPossibleScore = $student->scores->count() * 5;
                 $percentage = $maxPossibleScore > 0 ? round(($totalScore / $maxPossibleScore) * 100, 1) : 0;
-                
+
                 return [
                       'name' => $student->last_name . ', ' . $student->first_name . ($student->middle_name ? ' ' . $student->middle_name : ''),
                     'student_number' => $student->student_number,
@@ -2882,7 +2890,7 @@ class AdminController extends Controller
             ->map(function ($user) {
                 $student = $user->student;
                 $hasAssessment = $student && $student->is_submit;
-                
+
                 return [
                     'username' => $user->username,
                     'student_number' => $student ? $student->student_number : 'N/A',
@@ -2928,7 +2936,7 @@ class AdminController extends Controller
      */
     /* private function generateSectionCSVContent($sectionId, $reportType, $sectionName): string
     {
-        $csvContent = ucwords(str_replace('-', ' ', $reportType)) . " Report - {$sectionName}\n";
+        $csvContent = ucwords(str_replace('-', ' ', $reportType)) . " report - {$sectionName}\n";
         $csvContent .= "Generated: " . now()->format('F d, Y \a\t h:i A') . "\n\n";
 
         switch ($reportType) {
@@ -2952,7 +2960,7 @@ class AdminController extends Controller
      */
     /* private function generateGeneralCSVContent($reportType): string
     {
-        $csvContent = ucwords(str_replace('-', ' ', $reportType)) . " Report\n";
+        $csvContent = ucwords(str_replace('-', ' ', $reportType)) . " report\n";
         $csvContent .= "Generated: " . now()->format('F d, Y \a\t h:i A') . "\n\n";
 
         switch ($reportType) {
@@ -2973,10 +2981,10 @@ class AdminController extends Controller
     /*
     {
         $studentData = $this->getSectionStudents($sectionId);
-        
+
         $csvContent .= "Student Information\n";
         $csvContent .= "Username,Email,Name,Status,Section,Has Assessment,Assessment Score,Assessment Percentage,Submitted At\n";
-        
+
         foreach ($studentData as $student) {
             $csvContent .= $student['username'] . ",";
             $csvContent .= $student['email'] . ",";
@@ -2995,10 +3003,10 @@ class AdminController extends Controller
     private function generateSectionPlacedStudentsCSV($sectionId, $csvContent): string
     {
         $placedStudents = $this->getSectionPlacedStudents($sectionId);
-        
+
         $csvContent .= "Placed Students\n";
         $csvContent .= "Student Number,Name,Section,Company,Position,Department,Compatibility Score,Status,Placement Date\n";
-        
+
         foreach ($placedStudents as $placement) {
             $csvContent .= $placement['student_number'] . ",";
             $csvContent .= '"' . $placement['name'] . '",';
@@ -3017,10 +3025,10 @@ class AdminController extends Controller
     private function generateSectionEndorsedStudentsCSV($sectionId, $csvContent): string
     {
         $endorsedStudents = $this->getSectionEndorsedStudents($sectionId);
-        
+
         $csvContent .= "Endorsed Students\n";
         $csvContent .= "Student Number,Name,Section,Company,Position,Department,Compatibility Score,Status,Endorsement Date\n";
-        
+
         foreach ($endorsedStudents as $endorsement) {
             $csvContent .= $endorsement['student_number'] . ",";
             $csvContent .= '"' . $endorsement['name'] . '",';
@@ -3040,7 +3048,7 @@ class AdminController extends Controller
     {
         $assessmentData = $this->getSectionAssessmentData($sectionId);
         $overviewStats = $this->getSectionOverviewStats($sectionId);
-        
+
         $csvContent .= "Assessment Summary\n";
         $csvContent .= "Total Students," . $overviewStats['totalStudents'] . "\n";
         $csvContent .= "Completed Assessments," . $overviewStats['completedAssessments'] . "\n";
@@ -3061,10 +3069,10 @@ class AdminController extends Controller
     private function generateSectionPerformanceAnalysisCSV($sectionId, $csvContent): string
     {
         $performanceData = $this->getSectionPerformanceData($sectionId);
-        
+
         $csvContent .= "Performance Analysis\n";
         $csvContent .= "Rank,Name,Student Number,Score,Percentage,Submitted At\n";
-        
+
         foreach ($performanceData['allStudents'] as $index => $student) {
             $csvContent .= ($index + 1) . ",";
             $csvContent .= '"' . $student['name'] . '",';
@@ -3085,10 +3093,10 @@ class AdminController extends Controller
         $hteStats = $this->getHTEStats();
         $allStudents = $this->getAllStudents();
         $allPlacements = $this->getAllPlacements();
-        
+
         $csvContent .= "COMPREHENSIVE SYSTEM REPORT\n";
         $csvContent .= "Generated: " . now()->format('F d, Y \a\t h:i A') . "\n\n";
-        
+
         // System Overview
         $csvContent .= "SYSTEM OVERVIEW\n";
         $csvContent .= "Total Students," . $stats['totalStudents'] . "\n";
@@ -3151,7 +3159,7 @@ class AdminController extends Controller
     {
         $stats = $this->getDashboardStats();
         $sectionStats = $this->getSectionStats();
-        
+
         $csvContent .= "System Overview\n";
         $csvContent .= "Total Students," . $stats['totalStudents'] . "\n";
         $csvContent .= "Completed Assessments," . $stats['completedAssessments'] . "\n";
@@ -3180,10 +3188,10 @@ class AdminController extends Controller
     private function generateAllStudentsCSV($csvContent): string
     {
         $allStudents = $this->getAllStudents();
-        
+
         $csvContent .= "All Students\n";
         $csvContent .= "Username,Email,Name,Status,Section,Has Assessment,Assessment Score,Assessment Percentage,Submitted At\n";
-        
+
         foreach ($allStudents as $student) {
             $csvContent .= $student['username'] . ",";
             $csvContent .= $student['email'] . ",";
@@ -3202,10 +3210,10 @@ class AdminController extends Controller
     private function generateAllPlacementsCSV($csvContent): string
     {
         $allPlacements = $this->getAllPlacements();
-        
+
         $csvContent .= "All Placements\n";
         $csvContent .= "Student Number,Name,Section,Company,Position,Department,Compatibility Score,Status,Placement Date\n";
-        
+
         foreach ($allPlacements as $placement) {
             $csvContent .= $placement['student_number'] . ",";
             $csvContent .= '"' . $placement['name'] . '",';
@@ -3224,10 +3232,10 @@ class AdminController extends Controller
     private function generateHTEPerformanceCSV($csvContent): string
     {
         $hteStats = $this->getHTEStats();
-        
+
         $csvContent .= "HTE Performance\n";
         $csvContent .= "Company,Contact Person,Is Submit,Total Internships,Active Internships,Total Slots,Filled Slots,Utilization Rate,Created At\n";
-        
+
         foreach ($hteStats as $hte) {
             $csvContent .= '"' . $hte['company_name'] . '",';
             $csvContent .= '"' . $hte['contact_person'] . '",';
@@ -3246,10 +3254,10 @@ class AdminController extends Controller
     private function generateSectionComparisonCSV($csvContent): string
     {
         $sectionAnalytics = $this->getSectionAnalytics();
-        
+
         $csvContent .= "Section Comparison\n";
         $csvContent .= "Section,Total Students,Completed Assessments,Placed Students,Completion Rate,Placement Rate,Average Score\n";
-        
+
         foreach ($sectionAnalytics as $section) {
             $csvContent .= $section['section'] . ",";
             $csvContent .= $section['totalStudents'] . ",";
@@ -3269,20 +3277,20 @@ class AdminController extends Controller
     private function generateSectionExcelContent($sheet, $sectionId, $reportType, $sectionName)
     {
         $row = 1;
-        
+
         // Add header
-        $sheet->setCellValue('A' . $row, ucwords(str_replace('-', ' ', $reportType)) . ' Report - ' . $sectionName);
+        $sheet->setCellValue('A' . $row, ucwords(str_replace('-', ' ', $reportType)) . ' report - ' . $sectionName);
         $sheet->mergeCells('A' . $row . ':F' . $row);
         $sheet->getStyle('A' . $row)->getFont()->setBold(true)->setSize(16);
         $sheet->getStyle('A' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
         $row += 2;
-        
+
         // Add generation date
         $sheet->setCellValue('A' . $row, 'Generated: ' . now()->format('F d, Y \a\t h:i A'));
         $sheet->mergeCells('A' . $row . ':F' . $row);
         $sheet->getStyle('A' . $row)->getFont()->setItalic(true);
         $row += 3;
-        
+
         // Generate content based on report type
         switch ($reportType) {
             case 'student-list':
@@ -3301,7 +3309,7 @@ class AdminController extends Controller
                 $this->generatePerformanceAnalysisExcel($sheet, $sectionId, $row);
                 break;
         }
-        
+
         // Auto-size columns
         foreach (range('A', 'F') as $column) {
             $sheet->getColumnDimension($column)->setAutoSize(true);
@@ -3314,20 +3322,20 @@ class AdminController extends Controller
     private function generateGeneralExcelContent($sheet, $reportType)
     {
         $row = 1;
-        
+
         // Add header
-        $sheet->setCellValue('A' . $row, ucwords(str_replace('-', ' ', $reportType)) . ' Report');
+        $sheet->setCellValue('A' . $row, ucwords(str_replace('-', ' ', $reportType)) . ' report');
         $sheet->mergeCells('A' . $row . ':F' . $row);
         $sheet->getStyle('A' . $row)->getFont()->setBold(true)->setSize(16);
         $sheet->getStyle('A' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
         $row += 2;
-        
+
         // Add generation date
         $sheet->setCellValue('A' . $row, 'Generated: ' . now()->format('F d, Y \a\t h:i A'));
         $sheet->mergeCells('A' . $row . ':F' . $row);
         $sheet->getStyle('A' . $row)->getFont()->setItalic(true);
         $row += 3;
-        
+
         // Generate content based on report type
         switch ($reportType) {
             case 'comprehensive':
@@ -3352,7 +3360,7 @@ class AdminController extends Controller
                 $this->generateHTEPerformanceExcel($sheet, $row);
                 break;
         }
-        
+
         // Auto-size columns
         foreach (range('A', 'F') as $column) {
             $sheet->getColumnDimension($column)->setAutoSize(true);
@@ -3365,12 +3373,12 @@ class AdminController extends Controller
     private function generateStudentListExcel($sheet, $sectionId, $startRow)
     {
         $row = $startRow;
-        
+
         // Get students for the section
         $students = Student::where('section_id', $sectionId)
             ->with(['user', 'scores'])
             ->get();
-        
+
         // Add headers
         $headers = ['Student Number', 'Last Name', 'First Name', 'Middle Name', 'Email', 'Assessment Status', 'Average Score'];
         $col = 'A';
@@ -3381,7 +3389,7 @@ class AdminController extends Controller
             $col++;
         }
         $row++;
-        
+
         // Add student data
         foreach ($students as $student) {
             $sheet->setCellValue('A' . $row, $student->student_number);
@@ -3389,11 +3397,11 @@ class AdminController extends Controller
             $sheet->setCellValue('C' . $row, $student->first_name);
             $sheet->setCellValue('D' . $row, $student->middle_name ?? '');
             $sheet->setCellValue('E' . $row, $student->user->email ?? '');
-            
+
             // Assessment status
             $hasScores = $student->scores->isNotEmpty();
             $sheet->setCellValue('F' . $row, $hasScores ? 'Completed' : 'Not Started');
-            
+
             // Average score
             if ($hasScores) {
                 $avgScore = $student->scores->avg('score');
@@ -3401,7 +3409,7 @@ class AdminController extends Controller
             } else {
                 $sheet->setCellValue('G' . $row, 'N/A');
             }
-            
+
             $row++;
         }
     }
@@ -3412,15 +3420,15 @@ class AdminController extends Controller
     private function generateComprehensiveExcel($sheet, $startRow)
     {
         $row = $startRow;
-        
+
         // Get statistics
         $stats = $this->getDashboardStats();
-        
+
         // System Overview
         $sheet->setCellValue('A' . $row, 'SYSTEM OVERVIEW');
         $sheet->getStyle('A' . $row)->getFont()->setBold(true)->setSize(14);
         $row += 2;
-        
+
         $overviewData = [
             ['Total Students', $stats['totalStudents']],
             ['Completed Assessments', $stats['completedAssessments']],
@@ -3432,21 +3440,21 @@ class AdminController extends Controller
             ['Completion Rate', $stats['completionRate'] . '%'],
             ['Placement Rate', $stats['placementRate'] . '%'],
         ];
-        
+
         foreach ($overviewData as $data) {
             $sheet->setCellValue('A' . $row, $data[0]);
             $sheet->setCellValue('B' . $row, $data[1]);
             $sheet->getStyle('A' . $row)->getFont()->setBold(true);
             $row++;
         }
-        
+
         $row += 2;
-        
+
         // Section Performance
         $sheet->setCellValue('A' . $row, 'SECTION PERFORMANCE');
         $sheet->getStyle('A' . $row)->getFont()->setBold(true)->setSize(14);
         $row += 2;
-        
+
         $sectionAnalytics = $this->getSectionAnalytics();
         $headers = ['Section', 'Total Students', 'Completed Assessments', 'Placed Students', 'Completion Rate', 'Placement Rate', 'Average Score'];
         $col = 'A';
@@ -3457,7 +3465,7 @@ class AdminController extends Controller
             $col++;
         }
         $row++;
-        
+
         foreach ($sectionAnalytics as $section) {
             $sheet->setCellValue('A' . $row, $section['section']);
             $sheet->setCellValue('B' . $row, $section['totalStudents']);
@@ -3468,14 +3476,14 @@ class AdminController extends Controller
             $sheet->setCellValue('G' . $row, number_format($section['avgScore'], 2));
             $row++;
         }
-        
+
         $row += 2;
-        
+
         // HTE Performance
         $sheet->setCellValue('A' . $row, 'HTE PERFORMANCE');
         $sheet->getStyle('A' . $row)->getFont()->setBold(true)->setSize(14);
         $row += 2;
-        
+
         $hteStats = $this->getHTEStats();
         $hteHeaders = ['Company', 'Contact Person', 'Status', 'Total Internships', 'Active Internships', 'Total Slots', 'Filled Slots', 'Utilization Rate'];
         $col = 'A';
@@ -3485,7 +3493,7 @@ class AdminController extends Controller
             $col++;
         }
         $row++;
-        
+
         foreach ($hteStats as $hte) {
             $sheet->setCellValue('A' . $row, $hte['company_name']);
             $sheet->setCellValue('B' . $row, $hte['contact_person']);
@@ -3497,20 +3505,20 @@ class AdminController extends Controller
             $sheet->setCellValue('H' . $row, $hte['utilizationRate'] . '%');
             $row++;
         }
-        
+
         $row += 2;
-        
+
         // Top Students
         $sheet->setCellValue('A' . $row, 'TOP PERFORMING STUDENTS');
         $sheet->getStyle('A' . $row)->getFont()->setBold(true)->setSize(14);
         $row += 2;
-        
+
         $allStudents = $this->getAllStudents();
         $topStudents = collect($allStudents)
             ->where('hasAssessment', true)
             ->sortByDesc('assessmentPercentage')
             ->take(20);
-            
+
         $studentHeaders = ['Rank', 'Name', 'Student Number', 'Section', 'Score', 'Percentage'];
         $col = 'A';
         foreach ($studentHeaders as $header) {
@@ -3519,7 +3527,7 @@ class AdminController extends Controller
             $col++;
         }
         $row++;
-        
+
         foreach ($topStudents as $index => $student) {
             $sheet->setCellValue('A' . $row, $index + 1);
             $sheet->setCellValue('B' . $row, $student['name']);
@@ -3535,10 +3543,10 @@ class AdminController extends Controller
     private function generatePlacedStudentsExcel($sheet, $sectionId, $startRow)
     {
         $row = $startRow;
-        
+
         // Get placed students data for the section
         $placedStudents = $this->getSectionPlacedStudents($sectionId);
-        
+
         // Add headers
         $headers = ['Student Number', 'Name', 'Company', 'Position', 'Department', 'Score', 'Status', 'Date'];
         $col = 'A';
@@ -3548,7 +3556,7 @@ class AdminController extends Controller
             $col++;
         }
         $row++;
-        
+
         // Add placed students data
         foreach ($placedStudents as $student) {
             $sheet->setCellValue('A' . $row, $student['student_number']);
@@ -3565,10 +3573,10 @@ class AdminController extends Controller
     private function generateEndorsedStudentsExcel($sheet, $sectionId, $startRow)
     {
         $row = $startRow;
-        
+
         // Get endorsed students data for the section
         $endorsedStudents = $this->getSectionEndorsedStudents($sectionId);
-        
+
         // Add headers
         $headers = ['Student Number', 'Name', 'Company', 'Position', 'Department', 'Score', 'Status', 'Endorsement Date'];
         $col = 'A';
@@ -3578,7 +3586,7 @@ class AdminController extends Controller
             $col++;
         }
         $row++;
-        
+
         // Add endorsed students data
         foreach ($endorsedStudents as $student) {
             $sheet->setCellValue('A' . $row, $student['student_number']);
@@ -3596,10 +3604,10 @@ class AdminController extends Controller
     private function generatePerformanceAnalysisExcel($sheet, $sectionId, $startRow)
     {
         $row = $startRow;
-        
+
         // Get performance data for the section
         $performanceData = $this->getSectionPerformanceData($sectionId);
-        
+
         // Add headers
         $headers = ['Rank', 'Name', 'Student Number', 'Score', 'Percentage', 'Submitted At'];
         $col = 'A';
@@ -3609,7 +3617,7 @@ class AdminController extends Controller
             $col++;
         }
         $row++;
-        
+
         // Add performance data
         if (isset($performanceData['topPerformers'])) {
             foreach ($performanceData['topPerformers'] as $index => $student) {
@@ -3626,10 +3634,10 @@ class AdminController extends Controller
     private function generateAllStudentsExcel($sheet, $startRow)
     {
         $row = $startRow;
-        
+
         // Get all students data
         $students = $this->getAllStudents();
-        
+
         // Add headers
         $headers = ['Student Number', 'Name', 'Email', 'Section', 'Status', 'Registered At'];
         $col = 'A';
@@ -3639,7 +3647,7 @@ class AdminController extends Controller
             $col++;
         }
         $row++;
-        
+
         // Add student data
         foreach ($students as $student) {
             $sheet->setCellValue('A' . $row, $student['student_number']);
@@ -3655,10 +3663,10 @@ class AdminController extends Controller
     private function generateStudentAssessmentExcel($sheet, $startRow)
     {
         $row = $startRow;
-        
+
         // Get all students data
         $students = $this->getAllStudents();
-        
+
         // Add headers
         $headers = ['Student Number', 'Name', 'Email', 'Section', 'Status', 'Has Assessment', 'Score', 'Percentage', 'Submitted At'];
         $col = 'A';
@@ -3668,7 +3676,7 @@ class AdminController extends Controller
             $col++;
         }
         $row++;
-        
+
         // Add student data
         foreach ($students as $student) {
             $sheet->setCellValue('A' . $row, $student['student_number']);
@@ -3686,10 +3694,10 @@ class AdminController extends Controller
     private function generateAllPlacementsExcel($sheet, $startRow)
     {
         $row = $startRow;
-        
+
         // Get all placements data
         $placements = $this->getAllPlacements();
-        
+
         // Add headers
         $headers = ['Student Number', 'Name', 'Section', 'Company', 'Position', 'Department', 'Score', 'Status', 'Date'];
         $col = 'A';
@@ -3699,7 +3707,7 @@ class AdminController extends Controller
             $col++;
         }
         $row++;
-        
+
         // Add placement data
         foreach ($placements as $placement) {
             $sheet->setCellValue('A' . $row, $placement['student_number']);
@@ -3717,10 +3725,10 @@ class AdminController extends Controller
     private function generateHTEPerformanceExcel($sheet, $startRow)
     {
         $row = $startRow;
-        
+
         // Get HTE stats data
         $hteStats = $this->getHTEStats();
-        
+
         // Add headers
         $headers = ['Company', 'Contact Person', 'Status', 'Total Internships', 'Active Internships', 'Total Slots', 'Filled Slots', 'Utilization Rate'];
         $col = 'A';
@@ -3730,7 +3738,7 @@ class AdminController extends Controller
             $col++;
         }
         $row++;
-        
+
         // Add HTE data
         foreach ($hteStats as $hte) {
             $sheet->setCellValue('A' . $row, $hte['company_name']);
@@ -3747,10 +3755,10 @@ class AdminController extends Controller
     private function generateAllSectionsPerformanceAnalysisExcel($sheet, $startRow)
     {
         $row = $startRow;
-        
+
         // Get all sections performance data
         $performanceData = $this->getAllSectionsPerformanceData();
-        
+
         // Add headers
         $headers = ['Rank', 'Name', 'Student Number', 'Score', 'Percentage', 'Submitted At'];
         $col = 'A';
@@ -3760,7 +3768,7 @@ class AdminController extends Controller
             $col++;
         }
         $row++;
-        
+
         // Add performance data
         if (isset($performanceData['topPerformers'])) {
             foreach ($performanceData['topPerformers'] as $index => $student) {
@@ -3781,10 +3789,10 @@ class AdminController extends Controller
     private function generateAllEndorsedStudentsExcel($sheet, $startRow)
     {
         $row = $startRow;
-        
+
         // Get endorsed students data for all sections
         $endorsedStudents = $this->getAllEndorsedStudents();
-        
+
         // Add headers
         $headers = ['Student Number', 'Name', 'Section', 'Company', 'Position', 'Department', 'Score', 'Status', 'Endorsement Date'];
         $col = 'A';
@@ -3794,7 +3802,7 @@ class AdminController extends Controller
             $col++;
         }
         $row++;
-        
+
         // Add endorsed students data
         foreach ($endorsedStudents as $student) {
             $sheet->setCellValue('A' . $row, $student['student_number']);

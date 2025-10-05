@@ -80,7 +80,7 @@ export default function HteReport({ internships, showSubmissionPrompt }: Props) 
             reports: [
                 {
                     value: 'company-overview',
-                    label: 'Company Overview Report',
+                    label: 'Company Overview report',
                     description: 'Complete overview of your company profile, internships, and placement statistics',
                     icon: BuildingIcon,
                     requiresInternship: false
@@ -92,14 +92,14 @@ export default function HteReport({ internships, showSubmissionPrompt }: Props) 
             reports: [
                 {
                     value: 'placed-students',
-                    label: 'Placed Students Report',
+                    label: 'Placed Students report',
                     description: 'List of students placed in your internships with their details and performance',
                     icon: UsersIcon,
                     requiresInternship: false
                 },
                 {
                     value: 'student-compatibility',
-                    label: 'Student Compatibility Report',
+                    label: 'Student Compatibility report',
                     description: 'Analysis of student compatibility scores and matching criteria',
                     icon: TrendingUpIcon,
                     requiresInternship: true
@@ -111,14 +111,14 @@ export default function HteReport({ internships, showSubmissionPrompt }: Props) 
             reports: [
                 {
                     value: 'internship-performance',
-                    label: 'Internship Performance Report',
+                    label: 'Internship Performance report',
                     description: 'Detailed analysis of specific internship performance and student placements',
                     icon: TargetIcon,
                     requiresInternship: true
                 },
                 {
                     value: 'internship-slots',
-                    label: 'Internship Slots Report',
+                    label: 'Internship Slots report',
                     description: 'Overview of available slots and utilization rates across all internships',
                     icon: ClipboardListIcon,
                     requiresInternship: false
@@ -253,9 +253,9 @@ export default function HteReport({ internships, showSubmissionPrompt }: Props) 
                     </Card>
                 )}
 
-                {/* Report Generation Form */}
+                {/* report Generation Form */}
                 <div className="grid gap-6 grid-cols-1">
-                    {/* Report Type Selection */}
+                    {/* report Type Selection */}
                     <Card className="flex flex-col">
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
@@ -326,7 +326,7 @@ export default function HteReport({ internships, showSubmissionPrompt }: Props) 
                     </Card>
                 </div>
 
-                {/* Generate Report Button */}
+                {/* Generate report Button */}
                 <Card>
                     <CardContent>
                         <div className="flex items-center justify-between">
@@ -348,7 +348,7 @@ export default function HteReport({ internships, showSubmissionPrompt }: Props) 
                                 className="flex items-center gap-2"
                             >
                                 <DownloadIcon className="h-4 w-4" />
-                                {isGenerating ? 'Generating...' : 'Generate Report'}
+                                {isGenerating ? 'Generating...' : 'Generate report'}
                             </Button>
                         </div>
                     </CardContent>

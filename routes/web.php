@@ -5,6 +5,7 @@ use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AssessmentController;
 use App\Http\Controllers\AdviserController;
 use App\Http\Controllers\HTEController;
+use App\Http\Controllers\ReportController;
 use App\Models\Question;
 use App\Models\SubCategory;
 use App\Models\StudentMatch;
@@ -119,17 +120,7 @@ Route::middleware(['auth', 'verified', 'role_redirect:admin'])->group(function (
         return Inertia::render('admin/placement');
     })->name('placement');
 
-    Route::get('report', [App\Http\Controllers\AdminController::class, 'report'])->name('report');
-    Route::get('report/export/pdf', [App\Http\Controllers\AdminController::class, 'exportPDF'])->name('report.export.pdf');
-    Route::get('report/export/excel', [App\Http\Controllers\AdminController::class, 'exportExcel'])->name('report.export.excel');
-
-    // Section-specific report exports
-    Route::get('report/section/{sectionId}/export/pdf/{reportType}', [App\Http\Controllers\AdminController::class, 'exportSectionPDF'])->name('report.section.export.pdf');
-    Route::get('report/section/{sectionId}/export/excel/{reportType}', [App\Http\Controllers\AdminController::class, 'exportSectionExcel'])->name('report.section.export.excel');
-
-    // General report exports
-    Route::get('report/general/export/pdf/{reportType}', [App\Http\Controllers\AdminController::class, 'exportGeneralPDF'])->name('report.general.export.pdf');
-    Route::get('report/general/export/excel/{reportType}', [App\Http\Controllers\AdminController::class, 'exportGeneralExcel'])->name('report.general.export.excel');
+    // Admin-specific reports (moved to admin middleware group)
 
     Route::get('admin/logs', [AdminController::class, 'logs'])->name('admin.logs');
 
@@ -142,6 +133,13 @@ Route::middleware(['auth', 'verified', 'role_redirect:admin'])->group(function (
     })->name('admin.email-test');
 });
 
+// Unified report System - Accessible by all authenticated users with role-based filtering
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
+    Route::get('reports/pdf/{reportType}', [ReportController::class, 'generatePDF'])->name('reports.pdf');
+    Route::get('reports/excel/{reportType}', [ReportController::class, 'generateExcel'])->name('reports.excel');
+});
+
 Route::middleware(['auth', 'verified', 'role_redirect:hte'])->group(function () {
     Route::get('form', [App\Http\Controllers\HTEController::class, 'showForm'])->name('form');
     Route::post('hte/submit', [App\Http\Controllers\HTEController::class, 'submit'])->name('hte.submit');
@@ -151,18 +149,20 @@ Route::middleware(['auth', 'verified', 'role_redirect:hte'])->group(function () 
     Route::get('hte/dashboard', [App\Http\Controllers\HTEController::class, 'dashboard'])->name('hte.dashboard');
     Route::get('hte/check-existing', [App\Http\Controllers\HTEController::class, 'checkExistingHTE'])->name('hte.check-existing');
 
-    Route::get('hte/report', [App\Http\Controllers\HTEController::class, 'report'])->name('hte.report');
+    Route::get('hte/report', function () {
+        return redirect()->route('reports.index');
+    })->name('hte.report');
 
-    // HTE Report Generation Routes
+    // HTE report Generation Routes
     // General HTE reports (PDF)
     Route::get('hte/report/general/export/pdf/{reportType}', [App\Http\Controllers\HTEController::class, 'generateGeneralReportPdf'])->name('hte.report.general.export.pdf');
-    
+
     // General HTE reports (Excel/CSV)
     Route::get('hte/report/general/export/excel/{reportType}', [App\Http\Controllers\HTEController::class, 'generateGeneralReportExcel'])->name('hte.report.general.export.excel');
-    
+
     // Internship-specific HTE reports (PDF)
     Route::get('hte/report/internship/{internshipId}/export/pdf/{reportType}', [App\Http\Controllers\HTEController::class, 'generateInternshipReportPdf'])->name('hte.report.internship.export.pdf');
-    
+
     // Internship-specific HTE reports (Excel/CSV)
     Route::get('hte/report/internship/{internshipId}/export/excel/{reportType}', [App\Http\Controllers\HTEController::class, 'generateInternshipReportExcel'])->name('hte.report.internship.export.excel');
 
@@ -197,9 +197,10 @@ Route::middleware(['auth', 'verified', 'role_redirect:adviser'])->group(function
     Route::get('adviser/dashboard', [AdviserController::class, 'dashboard'])->name('adviser.dashboard');
     Route::get('adviser/student-list', [AdviserController::class, 'getStudents'])->name('adviser.student-list');
     Route::get('student-verification', [AdviserController::class, 'index'])->name('student-verification');
-    Route::get('adviser/report', [AdviserController::class, 'reports'])->name('adviser.report');
-    Route::get('adviser/report/export/{reportType}/pdf', [AdviserController::class, 'exportPDF'])->name('adviser.report.export.pdf');
-    Route::get('adviser/report/export/{reportType}/excel', [AdviserController::class, 'exportExcel'])->name('adviser.report.export.excel');
+    // Adviser reports now use unified system - redirect to main reports page
+    Route::get('adviser/report', function () {
+        return redirect()->route('reports.index');
+    })->name('adviser.report');
     Route::post('application/approve', [AdviserController::class, 'approveStudents'])->name('application.approve');
     Route::post('application/reject', [AdviserController::class, 'rejectStudents'])->name('application.reject');
     Route::post('application/remove-access', [AdviserController::class, 'removeStudentAccess'])->name('application.remove-access');

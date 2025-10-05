@@ -27,7 +27,7 @@ const roleBasedNav: Record<string, { main: NavItem[]; groups?: NavGroup[]; foote
                 items: [
                     { title: 'Dashboard', href: '/admin-dashboard', icon: ChartNoAxesColumnIcon },
                     { title: 'Audit Logs', href: '/admin/logs', icon: MonitorCogIcon },
-                    { title: 'Reports', href: '/report', icon: PrinterIcon },
+                    { title: 'Reports', href: '/reports', icon: PrinterIcon },
                 ]
             },
             {
@@ -86,7 +86,7 @@ const roleBasedNav: Record<string, { main: NavItem[]; groups?: NavGroup[]; foote
                 title: 'Overview & Analytics',
                 items: [
                     { title: 'Dashboard', href: '/hte/dashboard', icon: ChartNoAxesColumnIcon },
-                    { title: 'Reports', href: '/hte/report', icon: PrinterIcon },
+                    { title: 'Reports', href: '/reports', icon: PrinterIcon },
                 ]
             },
             {
@@ -120,7 +120,7 @@ const roleBasedNav: Record<string, { main: NavItem[]; groups?: NavGroup[]; foote
             { title: 'Dashboard', href: '/adviser/dashboard', icon: ChartNoAxesColumnIcon },
             { title: 'Student Verification', href: '/student-verification', icon: Check },
             { title: 'Student List', href: '/adviser/student-list', icon: GraduationCapIcon },
-            { title: 'Report', href: '/adviser/report', icon: PrinterIcon },
+            { title: 'Report', href: '/reports', icon: PrinterIcon },
         ],
         footer: [
             { title: 'About', href: '/about', icon: InfoIcon },

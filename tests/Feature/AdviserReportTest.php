@@ -180,12 +180,12 @@ class AdviserReportTest extends TestCase
     public function adviser_can_access_reports_page()
     {
         $adviserUser = $this->adviser->user;
-        
+
         $response = $this->actingAs($adviserUser)
             ->get(route('adviser.reports'));
 
         $response->assertStatus(200);
-        $response->assertInertia(fn ($page) => 
+        $response->assertInertia(fn ($page) =>
             $page->component('adviser/report')
                 ->has('adviserSection')
                 ->has('adviserSections')
@@ -197,7 +197,7 @@ class AdviserReportTest extends TestCase
     public function endorsed_students_pdf_report_generates_successfully()
     {
         $adviserUser = $this->adviser->user;
-        
+
         $response = $this->actingAs($adviserUser)
             ->get(route('adviser.report.export.pdf', ['reportType' => 'endorsed-students']));
 
@@ -212,7 +212,7 @@ class AdviserReportTest extends TestCase
     public function placed_students_pdf_report_generates_successfully()
     {
         $adviserUser = $this->adviser->user;
-        
+
         $response = $this->actingAs($adviserUser)
             ->get(route('adviser.report.export.pdf', ['reportType' => 'placed-students']));
 
@@ -227,7 +227,7 @@ class AdviserReportTest extends TestCase
     public function endorsed_students_csv_report_generates_successfully()
     {
         $adviserUser = $this->adviser->user;
-        
+
         $response = $this->actingAs($adviserUser)
             ->get(route('adviser.report.export.csv', ['reportType' => 'endorsed-students']));
 
@@ -239,7 +239,7 @@ class AdviserReportTest extends TestCase
 
         // Check CSV content
         $content = $response->getContent();
-        $this->assertStringContainsString('Endorsed Students Report', $content);
+        $this->assertStringContainsString('Endorsed Students report', $content);
         $this->assertStringContainsString('John Doe', $content);
         $this->assertStringContainsString('Jane Smith', $content);
         $this->assertStringContainsString('Test Company Inc.', $content);
@@ -249,7 +249,7 @@ class AdviserReportTest extends TestCase
     public function placed_students_csv_report_generates_successfully()
     {
         $adviserUser = $this->adviser->user;
-        
+
         $response = $this->actingAs($adviserUser)
             ->get(route('adviser.report.export.csv', ['reportType' => 'placed-students']));
 
@@ -261,7 +261,7 @@ class AdviserReportTest extends TestCase
 
         // Check CSV content
         $content = $response->getContent();
-        $this->assertStringContainsString('Placed Students Report', $content);
+        $this->assertStringContainsString('Placed Students report', $content);
         $this->assertStringContainsString('John Doe', $content);
         $this->assertStringContainsString('Test Company Inc.', $content);
     }
@@ -270,17 +270,17 @@ class AdviserReportTest extends TestCase
     public function endorsed_students_report_contains_correct_data()
     {
         $adviserUser = $this->adviser->user;
-        
+
         $response = $this->actingAs($adviserUser)
             ->get(route('adviser.report.export.csv', ['reportType' => 'endorsed-students']));
 
         $content = $response->getContent();
-        
+
         // Check summary statistics
         $this->assertStringContainsString('Total Students,3', $content);
         $this->assertStringContainsString('Endorsed Students,2', $content);
         $this->assertStringContainsString('Endorsement Rate,66.7%', $content);
-        
+
         // Check student details
         $this->assertStringContainsString('2021-0001,John Doe,BSIT-4A', $content);
         $this->assertStringContainsString('2021-0002,Jane Smith,BSIT-4A', $content);
@@ -292,17 +292,17 @@ class AdviserReportTest extends TestCase
     public function placed_students_report_contains_correct_data()
     {
         $adviserUser = $this->adviser->user;
-        
+
         $response = $this->actingAs($adviserUser)
             ->get(route('adviser.report.export.csv', ['reportType' => 'placed-students']));
 
         $content = $response->getContent();
-        
+
         // Check summary statistics
         $this->assertStringContainsString('Total Students,3', $content);
         $this->assertStringContainsString('Placed Students,1', $content);
         $this->assertStringContainsString('Placement Rate,33.3%', $content);
-        
+
         // Check student details
         $this->assertStringContainsString('2021-0001,John Doe,BSIT-4A', $content);
         $this->assertStringContainsString('Test Company Inc.', $content);
@@ -313,7 +313,7 @@ class AdviserReportTest extends TestCase
     public function invalid_report_type_returns_404()
     {
         $adviserUser = $this->adviser->user;
-        
+
         $response = $this->actingAs($adviserUser)
             ->get(route('adviser.report.export.pdf', ['reportType' => 'invalid-type']));
 
@@ -331,7 +331,7 @@ class AdviserReportTest extends TestCase
     public function non_adviser_user_cannot_access_reports()
     {
         $studentUser = $this->students[0]->user;
-        
+
         $response = $this->actingAs($studentUser)
             ->get(route('adviser.reports'));
 
@@ -361,7 +361,7 @@ class AdviserReportTest extends TestCase
             ->get(route('adviser.reports'));
 
         $response->assertStatus(200);
-        $response->assertInertia(fn ($page) => 
+        $response->assertInertia(fn ($page) =>
             $page->where('adviserSection', null)
                 ->where('adviserSections', [])
                 ->where('currentSectionId', null)
