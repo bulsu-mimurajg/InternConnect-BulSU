@@ -291,12 +291,6 @@
                                             <div class="stat-label">Completed Assessments</div>
                                         </div>
                                     </td>
-                                    <td style="width: 33.33%; vertical-align: top;">
-                                        <div class="stat-item">
-                                            <div class="stat-value">{{ $overviewStats['placedStudents'] }}</div>
-                                            <div class="stat-label">Placed Students</div>
-                                        </div>
-                                    </td>
                                 </tr>
                             </table>
                         </div>

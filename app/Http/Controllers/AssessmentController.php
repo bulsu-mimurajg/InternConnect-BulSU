@@ -375,7 +375,7 @@ class AssessmentController extends Controller
 
             // Get all categories with their subcategories and scores
             $categories = Category::with(['subCategories' => function ($query) use ($student) {
-                $query->with(['studentScores' => function ($scoreQuery) use ($student) {
+                $query->with(['scores' => function ($scoreQuery) use ($student) {
                     $scoreQuery->where('student_id', $student->id);
                 }]);
             }])->get();
@@ -419,7 +419,7 @@ class AssessmentController extends Controller
                 ];
 
                 foreach ($category->subCategories as $subcategory) {
-                    $score = $subcategory->studentScores->first();
+                    $score = $subcategory->scores->first();
                     $categoryData['subcategories'][] = [
                         'id' => $subcategory->id,
                         'name' => $subcategory->subcategory_name,
@@ -455,7 +455,7 @@ class AssessmentController extends Controller
 
             // Get student's scores by category
             $categories = Category::with(['subCategories' => function ($query) use ($student) {
-                $query->with(['studentScores' => function ($scoreQuery) use ($student) {
+                $query->with(['scores' => function ($scoreQuery) use ($student) {
                     $scoreQuery->where('student_id', $student->id);
                 }]);
             }])->get();
@@ -470,7 +470,7 @@ class AssessmentController extends Controller
                 $categoryQuestions = 0;
 
                 foreach ($category->subCategories as $subcategory) {
-                    $score = $subcategory->studentScores->first();
+                    $score = $subcategory->scores->first();
                     if ($score) {
                         $categoryScore += $score->score;
                         $categoryQuestions++;

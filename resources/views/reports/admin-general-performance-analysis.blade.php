@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Student List Report - All Sections</title>
+    <title>Performance Analysis Report</title>
     <style>
         body { 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
@@ -219,12 +219,12 @@
             background-color: #fff3cd;
         }
         
-        .col-student { width: 15%; }
+        .col-rank { width: 8%; }
         .col-name { width: 20%; }
-        .col-email { width: 25%; }
-        .col-section { width: 15%; }
-        .col-status { width: 12%; }
-        .col-date { width: 13%; }
+        .col-student { width: 15%; }
+        .col-score { width: 12%; }
+        .col-percentage { width: 12%; }
+        .col-date { width: 18%; }
         
         .footer { 
             margin-top: 40px; 
@@ -238,8 +238,13 @@
         }
         .page-break { page-break-before: always; }
         
-        /* Status badges */
-        .status-active { 
+        /* Rank styling */
+        .rank-1 { background-color: #ffd700 !important; color: #000 !important; font-weight: bold; }
+        .rank-2 { background-color: #c0c0c0 !important; color: #000 !important; font-weight: bold; }
+        .rank-3 { background-color: #cd7f32 !important; color: #fff !important; font-weight: bold; }
+        
+        /* Performance badges */
+        .performance-excellent { 
             background-color: #d4edda; 
             color: #155724; 
             padding: 2px 6px; 
@@ -247,7 +252,23 @@
             font-weight: bold;
             font-size: 9px;
         }
-        .status-inactive { 
+        .performance-good { 
+            background-color: #d1ecf1; 
+            color: #0c5460; 
+            padding: 2px 6px; 
+            border-radius: 4px; 
+            font-weight: bold;
+            font-size: 9px;
+        }
+        .performance-average { 
+            background-color: #fff3cd; 
+            color: #856404; 
+            padding: 2px 6px; 
+            border-radius: 4px; 
+            font-weight: bold;
+            font-size: 9px;
+        }
+        .performance-below-average { 
             background-color: #f8d7da; 
             color: #721c24; 
             padding: 2px 6px; 
@@ -273,29 +294,35 @@
         
         <div class="content-wrapper">
             <div class="report-title">
-                <h1>Student List Report</h1>
+                <h1>Performance Analysis Report - All Sections</h1>
             </div>
             
             <div class="generation-info">
-                <p>Section: All sections | Generated on {{ $generatedAt }}</p>
+                <p>All Sections | Generated on {{ $generatedAt }}</p>
             </div>
 
-            <!-- System Statistics -->
-            @if(isset($stats))
+            <!-- Overview Statistics -->
+            @if(isset($overviewStats))
             <div class="section">
-                <h2>System Statistics</h2>
+                <h2>Overview Statistics</h2>
                 <div class="section-content">
                     <div class="stats">
-                        <h3>Section Overview</h3>
+                        <h3>Performance Metrics</h3>
                         
                         <div class="metric-group">
-                            <!-- <h4>Section Overview</h4> -->
+                            <h4>System Performance Statistics</h4>
                             <table style="width: 100%; border-collapse: separate; border-spacing: 15px;">
                                 <tr>
-                                    <td style="width: 25%; vertical-align: top;">
+                                    <td style="width: 33.33%; vertical-align: top;">
                                         <div class="stat-item">
-                                            <div class="stat-value">{{ $stats['totalStudents'] }}</div>
+                                            <div class="stat-value">{{ $overviewStats['totalStudents'] }}</div>
                                             <div class="stat-label">Total Students</div>
+                                        </div>
+                                    </td>
+                                    <td style="width: 33.33%; vertical-align: top;">
+                                        <div class="stat-item">
+                                            <div class="stat-value">{{ $overviewStats['completedAssessments'] }}</div>
+                                            <div class="stat-label">Completed Assessments</div>
                                         </div>
                                     </td>
                                 </tr>
@@ -306,35 +333,31 @@
             </div>
             @endif
 
-            <!-- All Students List -->
-            @if(isset($allStudents) && count($allStudents) > 0)
+            <!-- Top Performers -->
+            @if(isset($performanceData) && isset($performanceData['topPerformers']) && count($performanceData['topPerformers']) > 0)
             <div class="section page-break">
-                <h2>All Students Details</h2>
+                <h2>Top Performers</h2>
                 <div class="section-content">
                     <table>
                         <thead>
                             <tr>
-                                <th class="col-student">Student Number</th>
+                                <th class="col-rank">Rank</th>
                                 <th class="col-name">Name</th>
-                                <th class="col-email">Email</th>
-                                <th class="col-section">Section</th>
-                                <th class="col-status">Status</th>
-                                <th class="col-date">Registered At</th>
+                                <th class="col-student">Student Number</th>
+                                <th class="col-score">Score</th>
+                                <th class="col-percentage">Percentage</th>
+                                <th class="col-date">Submitted At</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach($allStudents as $student)
+                            @foreach($performanceData['topPerformers'] as $index => $student)
                             <tr>
-                                <td class="col-student"><strong>{{ $student['student_number'] }}</strong></td>
-                                <td class="col-name">{{ $student['name'] }}</td>
-                                <td class="col-email">{{ $student['email'] }}</td>
-                                <td class="col-section">{{ $student['section'] }}</td>
-                                <td class="col-status">
-                                    <span class="status-{{ strtolower($student['status']) }}">
-                                        {{ ucfirst($student['status']) }}
-                                    </span>
-                                </td>
-                                <td class="col-date">{{ $student['registered_at'] ?? 'N/A' }}</td>
+                                <td class="col-rank rank-{{ $index < 3 ? $index + 1 : '' }}">{{ $index + 1 }}</td>
+                                <td class="col-name"><strong>{{ $student['name'] }}</strong></td>
+                                <td class="col-student">{{ $student['student_number'] }}</td>
+                                <td class="col-score">{{ $student['score'] }}</td>
+                                <td class="col-percentage">{{ $student['percentage'] }}%</td>
+                                <td class="col-date">{{ $student['submittedAt'] }}</td>
                             </tr>
                             @endforeach
                         </tbody>
@@ -343,10 +366,10 @@
             </div>
             @else
             <div class="section page-break">
-                <h2>All Students Details</h2>
+                <h2>Top Performers</h2>
                 <div class="section-content">
                     <div class="stats">
-                        <p style="text-align: center; color: #6c757d; font-style: italic;">No students found in the system.</p>
+                        <p style="text-align: center; color: #6c757d; font-style: italic;">No performance data available.</p>
                     </div>
                 </div>
             </div>

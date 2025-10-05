@@ -60,14 +60,14 @@ export default function AdminReport({ sections }: Props) {
                 {
                     value: 'student-list',
                     label: 'Student List Report',
-                    description: 'Complete list of students with basic information for a specific section',
+                    description: 'Complete list of students with basic information',
                     icon: UsersIcon,
                     requiresSection: true
                 },
                 {
                     value: 'student-assessment',
                     label: 'Student Assessment Report',
-                    description: 'Detailed list of students with assessment status and scores for a specific section',
+                    description: 'Detailed list of students with assessment status and scores',
                     icon: UsersIcon,
                     requiresSection: true
                 },
@@ -79,7 +79,7 @@ export default function AdminReport({ sections }: Props) {
                 {
                     value: 'placed-students',
                     label: 'Placed Students Report',
-                    description: 'Students who have been successfully placed in internships for a specific section or all sections',
+                    description: 'Students who have been successfully placed in internships',
                     icon: TargetIcon,
                     requiresSection: true
                 }
@@ -91,7 +91,7 @@ export default function AdminReport({ sections }: Props) {
                 {
                     value: 'performance-analysis',
                     label: 'Performance Analysis Report',
-                    description: 'Detailed analysis of student performance and rankings for a specific section',
+                    description: 'Detailed analysis of student performance and rankings',
                     icon: TrendingUpIcon,
                     requiresSection: true
                 },
