@@ -9,7 +9,6 @@ import {
     BriefcaseIcon,
     BarChart3Icon,
     UserCheckIcon,
-    ActivityIcon,
     TrendingUpIcon,
     PieChartIcon,
     LineChartIcon, 
@@ -35,19 +34,6 @@ interface DashboardStats {
     pendingPlacements: number;
     completionRate: number;
     placementRate: number;
-}
-
-interface RecentActivity {
-    id: number;
-    name?: string;
-    student_name?: string;
-    company_name?: string;
-    position?: string;
-    contact_person?: string;
-    student_number?: string;
-    section?: string;
-    created_at: string;
-    type: 'student_registration' | 'hte_registration' | 'placement';
 }
 
 interface PlacementOverview {
@@ -114,12 +100,8 @@ interface AssessmentTrendData {
     total: number;
 }
 
-type ActivityType = 'student_registration' | 'hte_registration' | 'placement';
-
-
 interface AdminDashboardProps {
     stats: DashboardStats;
-    recentActivity: RecentActivity[];
     placementOverview: PlacementOverview;
     sectionStats: SectionStats[];
     hteStats: HTEStats[];
@@ -129,38 +111,11 @@ interface AdminDashboardProps {
 
 export default function AdminDashboard({
     stats,
-    recentActivity,
     placementOverview,
     hteStats,
     sectionAnalytics,
     assessmentTrends
 }: AdminDashboardProps) {
-    const getActivityIcon = (type: ActivityType): React.ReactElement => {
-        switch (type) {
-            case 'student_registration':
-                return <GraduationCapIcon className="h-4 w-4 text-blue-500" />;
-            case 'hte_registration':
-                return <BriefcaseBusinessIcon className="h-4 w-4 text-green-500" />;
-            case 'placement':
-                return <CheckCircleIcon className="h-4 w-4 text-purple-500" />;
-            default:
-                return <ActivityIcon className="h-4 w-4 text-gray-500" />;
-        }
-    };
-
-    const getActivityDescription = (activity: RecentActivity): string => {
-        switch (activity.type) {
-            case 'student_registration':
-                return `${activity.name} (${activity.student_number}) from ${activity.section} registered`;
-            case 'hte_registration':
-                return `${activity.name} registered with contact person ${activity.contact_person}`;
-            case 'placement':
-                return `${activity.student_name} placed at ${activity.company_name} as ${activity.position}`;
-            default:
-                return 'Unknown activity';
-        }
-    };
-
     // Prepare data for charts
     const placementStatusData = Object.entries(placementOverview.byStatus).map(([status, count], index) => {
         const colors = ['#10b981', '#f59e0b', '#ef4444', '#3b82f6', '#8b5cf6'];
@@ -373,39 +328,6 @@ export default function AdminDashboard({
                     </Card>
                 </div>
 
-                {/* Recent Activity */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center space-x-2">
-                            <ActivityIcon className="h-5 w-5" />
-                            <span>Recent Activity</span>
-                        </CardTitle>
-                        <CardDescription>
-                            Latest system activities and updates
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="space-y-4">
-                            {recentActivity.length > 0 ? (
-                                recentActivity.slice(0, 6).map((activity) => (
-                                    <div key={`${activity.type}-${activity.id}`} className="flex items-center space-x-4">
-                                        {getActivityIcon(activity.type)}
-                                        <div className="flex-1 space-y-1">
-                                            <p className="text-sm font-medium leading-none">
-                                                {getActivityDescription(activity)}
-                                            </p>
-                                            <p className="text-xs text-muted-foreground">
-                                                {activity.created_at}
-                                            </p>
-                                        </div>
-                                    </div>
-                                ))
-                            ) : (
-                                <p className="text-sm text-muted-foreground">No recent activity</p>
-                            )}
-                        </div>
-                    </CardContent>
-                </Card>
             </div>
         </AppLayout>
     );

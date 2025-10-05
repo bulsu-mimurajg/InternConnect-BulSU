@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Assessment Summary Report</title>
+    <title>Endorsement Report</title>
     <style>
         body { 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
@@ -219,11 +219,15 @@
             background-color: #fff3cd;
         }
         
-        .col-metric { width: 50%; }
-        .col-value { width: 50%; }
-        .col-level { width: 30%; }
-        .col-range { width: 25%; }
-        .col-count { width: 45%; }
+        .col-student { width: 12%; }
+        .col-name { width: 18%; }
+        .col-section { width: 12%; }
+        .col-company { width: 18%; }
+        .col-position { width: 15%; }
+        .col-department { width: 12%; }
+        .col-score { width: 8%; }
+        .col-status { width: 8%; }
+        .col-date { width: 7%; }
         
         .footer { 
             margin-top: 40px; 
@@ -236,6 +240,32 @@
             border-top: 3px solid #e67e22;
         }
         .page-break { page-break-before: always; }
+        
+        /* Status badges */
+        .status-endorsed { 
+            background-color: #d1ecf1; 
+            color: #0c5460; 
+            padding: 4px 8px; 
+            border-radius: 4px; 
+            font-weight: bold;
+            font-size: 10px;
+        }
+        .status-pending { 
+            background-color: #fff3cd; 
+            color: #856404; 
+            padding: 4px 8px; 
+            border-radius: 4px; 
+            font-weight: bold;
+            font-size: 10px;
+        }
+        .status-approved { 
+            background-color: #d4edda; 
+            color: #155724; 
+            padding: 4px 8px; 
+            border-radius: 4px; 
+            font-weight: bold;
+            font-size: 10px;
+        }
         
         /* Responsive adjustments */
         @media print {
@@ -254,7 +284,7 @@
         
         <div class="content-wrapper">
             <div class="report-title">
-                <h1>Assessment Summary Report</h1>
+                <h1>Endorsement Report</h1>
             </div>
             
             <div class="generation-info">
@@ -262,38 +292,44 @@
             </div>
 
             <!-- Overview Statistics -->
+            @if(isset($endorsementStats))
             <div class="section">
-                <h2>Overview Statistics</h2>
+                <h2>Endorsement Statistics</h2>
                 <div class="section-content">
                     <div class="stats">
-                        <h3>Assessment Performance Metrics</h3>
-                        
+                        <h3>Endorsement Metrics</h3>
                         <div class="metric-group">
-                            <h4>Student Assessment Metrics</h4>
+                            <h4>Endorsement Status</h4>
                             <table style="width: 100%; border-collapse: separate; border-spacing: 15px;">
                                 <tr>
-                                    <td style="width: 25%; vertical-align: top;">
+                                    <td style="width: 20%; vertical-align: top;">
                                         <div class="stat-item">
-                                            <div class="stat-value">{{ $overviewStats['totalStudents'] }}</div>
-                                            <div class="stat-label">Total Students</div>
+                                            <div class="stat-value">{{ $endorsementStats['totalEndorsements'] }}</div>
+                                            <div class="stat-label">Total Endorsements</div>
                                         </div>
                                     </td>
-                                    <td style="width: 25%; vertical-align: top;">
+                                    <td style="width: 20%; vertical-align: top;">
                                         <div class="stat-item">
-                                            <div class="stat-value">{{ $overviewStats['completedAssessments'] }}</div>
-                                            <div class="stat-label">Completed Assessments</div>
+                                            <div class="stat-value">{{ $endorsementStats['pendingEndorsements'] }}</div>
+                                            <div class="stat-label">Pending</div>
                                         </div>
                                     </td>
-                                    <td style="width: 25%; vertical-align: top;">
+                                    <td style="width: 20%; vertical-align: top;">
                                         <div class="stat-item">
-                                            <div class="stat-value">{{ $overviewStats['completionRate'] }}%</div>
-                                            <div class="stat-label">Completion Rate</div>
+                                            <div class="stat-value">{{ $endorsementStats['approvedEndorsements'] }}</div>
+                                            <div class="stat-label">Approved</div>
                                         </div>
                                     </td>
-                                    <td style="width: 25%; vertical-align: top;">
+                                    <td style="width: 20%; vertical-align: top;">
                                         <div class="stat-item">
-                                            <div class="stat-value">{{ $overviewStats['averageScore'] }}</div>
-                                            <div class="stat-label">Average Score</div>
+                                            <div class="stat-value">{{ $endorsementStats['rejectedEndorsements'] }}</div>
+                                            <div class="stat-label">Rejected</div>
+                                        </div>
+                                    </td>
+                                    <td style="width: 20%; vertical-align: top;">
+                                        <div class="stat-item">
+                                            <div class="stat-value">{{ $endorsementStats['averageCompatibilityScore'] }}</div>
+                                            <div class="stat-label">Avg Compatibility Score</div>
                                         </div>
                                     </td>
                                 </tr>
@@ -302,123 +338,59 @@
                     </div>
                 </div>
             </div>
+            @endif
 
-            <!-- Assessment Statistics -->
+            <!-- Endorsed Students List -->
+            @if(isset($endorsedStudents) && count($endorsedStudents) > 0)
             <div class="section page-break">
-                <h2>Assessment Statistics</h2>
+                <h2>Endorsed Students Details</h2>
                 <div class="section-content">
                     <table>
                         <thead>
                             <tr>
-                                <th class="col-metric">Metric</th>
-                                <th class="col-value">Value</th>
+                                <th class="col-student">Student Number</th>
+                                <th class="col-name">Name</th>
+                                <th class="col-section">Section</th>
+                                <th class="col-company">Company</th>
+                                <th class="col-position">Position</th>
+                                <th class="col-department">Department</th>
+                                <th class="col-score">Compatibility Score</th>
+                                <th class="col-status">Endorsement Status</th>
+                                <th class="col-date">Endorsement Date</th>
                             </tr>
                         </thead>
                         <tbody>
+                            @foreach($endorsedStudents as $student)
                             <tr>
-                                <td class="col-metric"><strong>Total Students</strong></td>
-                                <td class="col-value">{{ $overviewStats['totalStudents'] }}</td>
+                                <td class="col-student"><strong>{{ $student['student_number'] }}</strong></td>
+                                <td class="col-name">{{ $student['name'] }}</td>
+                                <td class="col-section">{{ $student['section'] }}</td>
+                                <td class="col-company">{{ $student['company'] }}</td>
+                                <td class="col-position">{{ $student['position'] }}</td>
+                                <td class="col-department">{{ $student['department'] }}</td>
+                                <td class="col-score">{{ $student['compatibility_score'] }}</td>
+                                <td class="col-status">
+                                    <span class="status-{{ strtolower($student['endorsement_status']) }}">
+                                        {{ ucfirst($student['endorsement_status']) }}
+                                    </span>
+                                </td>
+                                <td class="col-date">{{ $student['endorsement_date'] }}</td>
                             </tr>
-                            <tr>
-                                <td class="col-metric"><strong>Completed Assessments</strong></td>
-                                <td class="col-value">{{ $overviewStats['completedAssessments'] }}</td>
-                            </tr>
-                            <tr>
-                                <td class="col-metric"><strong>Pending Students</strong></td>
-                                <td class="col-value">{{ $overviewStats['pendingStudents'] }}</td>
-                            </tr>
-                            <tr>
-                                <td class="col-metric"><strong>Completion Rate</strong></td>
-                                <td class="col-value">{{ $overviewStats['completionRate'] }}%</td>
-                            </tr>
-                            <tr>
-                                <td class="col-metric"><strong>Average Score</strong></td>
-                                <td class="col-value">{{ $overviewStats['averageScore'] }}/5.0</td>
-                            </tr>
-                            <tr>
-                                <td class="col-metric"><strong>Highest Score</strong></td>
-                                <td class="col-value">{{ $overviewStats['highestScore'] }}/5.0</td>
-                            </tr>
-                            <tr>
-                                <td class="col-metric"><strong>Lowest Score</strong></td>
-                                <td class="col-value">{{ $overviewStats['lowestScore'] }}/5.0</td>
-                            </tr>
-                            <tr>
-                                <td class="col-metric"><strong>Score Range</strong></td>
-                                <td class="col-value">{{ $overviewStats['scoreRange'] }}</td>
-                            </tr>
+                            @endforeach
                         </tbody>
                     </table>
                 </div>
             </div>
-
-            <!-- Score Distribution -->
+            @else
             <div class="section page-break">
-                <h2>Score Distribution</h2>
+                <h2>Endorsed Students Details</h2>
                 <div class="section-content">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th class="col-level">Performance Level</th>
-                                <th class="col-range">Score Range</th>
-                                <th class="col-count">Number of Students</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td class="col-level"><strong>Excellent</strong></td>
-                                <td class="col-range">90-100%</td>
-                                <td class="col-count">{{ $assessmentAnalytics['scoreDistribution']['excellent'] }}</td>
-                            </tr>
-                            <tr>
-                                <td class="col-level"><strong>Good</strong></td>
-                                <td class="col-range">80-89%</td>
-                                <td class="col-count">{{ $assessmentAnalytics['scoreDistribution']['good'] }}</td>
-                            </tr>
-                            <tr>
-                                <td class="col-level"><strong>Average</strong></td>
-                                <td class="col-range">70-79%</td>
-                                <td class="col-count">{{ $assessmentAnalytics['scoreDistribution']['average'] }}</td>
-                            </tr>
-                            <tr>
-                                <td class="col-level"><strong>Below Average</strong></td>
-                                <td class="col-range">60-69%</td>
-                                <td class="col-count">{{ $assessmentAnalytics['scoreDistribution']['below_average'] }}</td>
-                            </tr>
-                            <tr>
-                                <td class="col-level"><strong>Poor</strong></td>
-                                <td class="col-range">&lt;60%</td>
-                                <td class="col-count">{{ $assessmentAnalytics['scoreDistribution']['poor'] }}</td>
-                            </tr>
-                        </tbody>
-                    </table>
+                    <div class="stats">
+                        <p style="text-align: center; color: #6c757d; font-style: italic;">No endorsed students found for the selected section.</p>
+                    </div>
                 </div>
             </div>
-
-            <!-- Statistical Analysis -->
-            <div class="section page-break">
-                <h2>Statistical Analysis</h2>
-                <div class="section-content">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th class="col-metric">Statistical Measure</th>
-                                <th class="col-value">Value</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td class="col-metric"><strong>Median Score</strong></td>
-                                <td class="col-value">{{ $assessmentAnalytics['medianScore'] }}%</td>
-                            </tr>
-                            <tr>
-                                <td class="col-metric"><strong>Standard Deviation</strong></td>
-                                <td class="col-value">{{ $assessmentAnalytics['standardDeviation'] }}</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+            @endif
 
             <div class="footer">
                 <p>This report was generated automatically by the InternConnect System</p>

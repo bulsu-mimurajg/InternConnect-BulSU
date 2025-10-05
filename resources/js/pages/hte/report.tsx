@@ -14,7 +14,10 @@ import {
     ClipboardListIcon,
     TrendingUpIcon,
     BriefcaseIcon,
-    AlertCircle
+    AlertCircle,
+    BarChart3Icon,
+    UserCheckIcon,
+    GlobeIcon
 } from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -70,44 +73,62 @@ export default function HteReport({ internships, showSubmissionPrompt }: Props) 
         );
     }
 
-    // HTE-specific report types (only those with templates)
-    const reportTypes = [
+    // HTE-specific report types organized by categories - matching Admin format
+    const reportCategories = [
         {
-            value: 'company-overview',
-            label: 'Company Overview Report',
-            description: 'Complete overview of your company profile, internships, and placement statistics',
-            icon: BuildingIcon,
-            requiresInternship: false
+            title: 'Company Overview',
+            reports: [
+                {
+                    value: 'company-overview',
+                    label: 'Company Overview Report',
+                    description: 'Complete overview of your company profile, internships, and placement statistics',
+                    icon: BuildingIcon,
+                    requiresInternship: false
+                }
+            ]
         },
         {
-            value: 'internship-performance',
-            label: 'Internship Performance Report',
-            description: 'Detailed analysis of specific internship performance and student placements',
-            icon: TargetIcon,
-            requiresInternship: true
+            title: 'Student Reports',
+            reports: [
+                {
+                    value: 'placed-students',
+                    label: 'Placed Students Report',
+                    description: 'List of students placed in your internships with their details and performance',
+                    icon: UsersIcon,
+                    requiresInternship: false
+                },
+                {
+                    value: 'student-compatibility',
+                    label: 'Student Compatibility Report',
+                    description: 'Analysis of student compatibility scores and matching criteria',
+                    icon: TrendingUpIcon,
+                    requiresInternship: true
+                }
+            ]
         },
         {
-            value: 'placed-students',
-            label: 'Placed Students Report',
-            description: 'List of students placed in your internships with their details and performance',
-            icon: UsersIcon,
-            requiresInternship: false
-        },
-        {
-            value: 'internship-slots',
-            label: 'Internship Slots Report',
-            description: 'Overview of available slots and utilization rates across all internships',
-            icon: ClipboardListIcon,
-            requiresInternship: false
-        },
-        {
-            value: 'student-compatibility',
-            label: 'Student Compatibility Report',
-            description: 'Analysis of student compatibility scores and matching criteria',
-            icon: TrendingUpIcon,
-            requiresInternship: true
+            title: 'Internship Analytics',
+            reports: [
+                {
+                    value: 'internship-performance',
+                    label: 'Internship Performance Report',
+                    description: 'Detailed analysis of specific internship performance and student placements',
+                    icon: TargetIcon,
+                    requiresInternship: true
+                },
+                {
+                    value: 'internship-slots',
+                    label: 'Internship Slots Report',
+                    description: 'Overview of available slots and utilization rates across all internships',
+                    icon: ClipboardListIcon,
+                    requiresInternship: false
+                }
+            ]
         }
     ];
+
+    // Flattened report types for backward compatibility
+    const reportTypes = reportCategories.flatMap(category => category.reports);
 
     const exportFormats = [
         { value: 'pdf', label: 'PDF Document' },
@@ -247,20 +268,27 @@ export default function HteReport({ internships, showSubmissionPrompt }: Props) 
                         </CardHeader>
                         <CardContent className="flex-1 flex flex-col justify-end">
                             <Select value={selectedReportType} onValueChange={setSelectedReportType}>
-                                <SelectTrigger className="h-10 text-sm">
+                                <SelectTrigger className="h-12 text-base">
                                     <SelectValue placeholder="Choose a report type" />
                                 </SelectTrigger>
-                                <SelectContent className="max-h-60">
-                                    {reportTypes.map((type) => (
-                                        <SelectItem key={type.value} value={type.value} className="py-3">
-                                            <div className="flex flex-col items-start">
-                                                <div className="font-semibold text-sm flex items-center gap-2">
-                                                    <type.icon className="h-4 w-4" />
-                                                    {type.label}
-                                                </div>
-                                                <div className="text-xs text-muted-foreground mt-1">{type.description}</div>
+                                <SelectContent className="max-h-80">
+                                    {reportCategories.map((category) => (
+                                        <div key={category.title}>
+                                            <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                                                {category.title}
                                             </div>
-                                        </SelectItem>
+                                            {category.reports.map((type) => (
+                                                <SelectItem key={type.value} value={type.value} className="py-3">
+                                                    <div className="flex flex-col items-start">
+                                                        <div className="font-semibold text-sm flex items-center gap-2">
+                                                            <type.icon className="h-4 w-4" />
+                                                            {type.label}
+                                                        </div>
+                                                        <div className="text-xs text-muted-foreground mt-1">{type.description}</div>
+                                                    </div>
+                                                </SelectItem>
+                                            ))}
+                                        </div>
                                     ))}
                                 </SelectContent>
                             </Select>

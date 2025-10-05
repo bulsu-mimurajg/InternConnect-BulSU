@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Endorsed Students Report</title>
+    <title>Endorsement Report - All Sections</title>
     <style>
         body { 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
@@ -65,162 +65,214 @@
         }
         .report-title {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 25px;
+            padding: 30px 20px;
+            background: linear-gradient(135deg, #e67e22 0%, #f39c12 100%);
+            border-radius: 12px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+            border: 2px solid #d35400;
         }
         .report-title h1 {
-            color: #2c3e50;
-            font-size: 28px;
-            font-weight: 700;
             margin: 0;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+            color: #2c3e50;
+            font-size: 32px;
+            font-weight: 800;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            letter-spacing: 1px;
         }
         .generation-info {
             text-align: center;
             margin-bottom: 30px;
             padding: 15px;
-            background-color: #f8f9fa;
+            background: #f8f9fa;
             border-radius: 8px;
             border-left: 4px solid #e67e22;
         }
         .generation-info p {
             margin: 0;
-            color: #6c757d;
+            color: #495057;
             font-size: 14px;
             font-weight: 500;
+            font-style: italic;
         }
         
         .section { 
-            margin-bottom: 30px; 
-            background: white; 
-            border-radius: 12px; 
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1); 
+            margin-bottom: 40px; 
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
             overflow: hidden;
-            border: 1px solid #e9ecef;
         }
         .section h2 { 
-            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); 
-            color: white; 
-            margin: 0; 
-            padding: 20px; 
-            font-size: 20px; 
+            color: #e67e22; 
+            background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+            color: white;
+            margin: 0;
+            padding: 20px 25px;
+            font-size: 24px;
             font-weight: 600;
             text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
         }
-        .section-content { 
-            padding: 25px; 
+        .section-content {
+            padding: 25px;
         }
         
         .stats { 
-            display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
-            gap: 20px; 
-            margin-bottom: 30px; 
-        }
-        .stat-item { 
             background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); 
-            padding: 20px; 
-            border-radius: 10px; 
-            text-align: center; 
-            border: 1px solid #dee2e6;
-            transition: transform 0.2s ease;
+            border-radius: 12px; 
+            margin-bottom: 25px; 
+            border: 2px solid #e67e22;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
         }
-        .stat-item:hover { 
-            transform: translateY(-2px); 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        }
-        .stat-number { 
-            font-size: 32px; 
-            font-weight: 700; 
-            color: #e67e22; 
-            margin-bottom: 5px;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
-        }
-        .stat-label { 
-            font-size: 14px; 
-            color: #6c757d; 
-            font-weight: 500;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        
-        .stat-value {
-            font-size: 2.5em;
-            font-weight: bold;
-            color: #e67e22;
-            margin-bottom: 5px;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
-        }
-        
-        .metric-group {
+        .stats h3 { 
+            margin-top: 0; 
+            color: #2c3e50; 
+            font-size: 20px;
+            font-weight: 600;
+            text-align: center;
             margin-bottom: 20px;
         }
-        
-        .metric-group h3 {
-            color: #2c3e50;
-            margin-bottom: 15px;
-            font-size: 1.3em;
-            border-bottom: 2px solid #e67e22;
-            padding-bottom: 5px;
+        .metric-group {
+            margin-bottom: 30px;
         }
-        
         .metric-group h4 {
-            color: #495057;
-            margin-bottom: 10px;
-            font-size: 1.1em;
+            margin: 0 30px 15px 30px;
+            color: #e67e22;
+            font-size: 16px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-bottom: 2px solid #e67e22;
+            padding-bottom: 8px;
+        }
+        .stats-row {
+            display: flex !important;
+            flex-direction: row !important;
+            gap: 20px !important;
+            width: 100%;
+            justify-content: space-between;
+        }
+        .stats-row .stat-item {
+            flex: 1 !important;
+            margin-bottom: 0 !important;
+            min-width: 0 !important;
+        }
+        .stat-item { 
+            text-align: center; 
+            background: white;
+            padding: 25px 12px;
+            border-radius: 12px;
+            border: 2px solid #f39c12;
+        }
+        .stat-value { 
+            font-size: 32px; 
+            font-weight: bold; 
+            color: #e67e22; 
+            margin-bottom: 12px;
+            line-height: 1.2;
+        }
+        .stat-label { 
+            font-size: 13px; 
+            color: #495057; 
+            text-transform: uppercase; 
+            font-weight: 600;
+            letter-spacing: 1px;
+            line-height: 1.3;
         }
         
         table { 
-            width: 100%; 
+            width: 100% !important; 
+            max-width: 100% !important;
             border-collapse: collapse; 
             margin-top: 20px; 
+            table-layout: fixed; 
+            font-size: 11px; 
             background: white;
             border-radius: 8px;
             overflow: hidden;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
-        th { 
-            background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%); 
-            color: white; 
-            padding: 15px 12px; 
+        th, td { 
+            border: 1px solid #dee2e6; 
+            padding: 8px 10px; 
             text-align: left; 
-            font-weight: 600;
-            font-size: 13px;
+            word-wrap: break-word; 
+            color: #000000 !important;
+        }
+        td {
+            color: #000000 !important;
+            background-color: #ffffff !important;
+        }
+        th { 
+            background: linear-gradient(135deg, #e67e22 0%, #f39c12 100%); 
+            color: white;
+            font-weight: bold; 
+            font-size: 11px; 
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
         }
-        td { 
-            padding: 12px; 
-            border-bottom: 1px solid #e9ecef; 
-            font-size: 13px;
-            vertical-align: middle;
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
         }
-        tr:nth-child(even) { 
-            background-color: #f8f9fa; 
-        }
-        tr:hover { 
-            background-color: #e3f2fd; 
-            transition: background-color 0.2s ease;
+        tr:hover {
+            background-color: #fff3cd;
         }
         
-        /* Column widths */
-        .col-student { width: 12%; }
-        .col-name { width: 18%; }
-        .col-section { width: 12%; }
+        .col-student { width: 10%; }
+        .col-name { width: 15%; }
+        .col-section { width: 10%; }
         .col-company { width: 18%; }
         .col-position { width: 15%; }
         .col-department { width: 12%; }
         .col-score { width: 8%; }
         .col-status { width: 8%; }
-        .col-date { width: 8%; }
+        .col-date { width: 14%; }
+        
+        .footer { 
+            margin-top: 40px; 
+            text-align: center; 
+            color: #6c757d; 
+            font-size: 12px; 
+            padding: 20px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 10px;
+            border-top: 3px solid #e67e22;
+        }
+        .page-break { page-break-before: always; }
         
         /* Status badges */
         .status-endorsed { 
-            background-color: #cce5ff; 
-            color: #004085; 
-            padding: 2px 6px; 
+            background-color: #d1ecf1; 
+            color: #0c5460; 
+            padding: 4px 8px; 
             border-radius: 4px; 
             font-weight: bold;
-            font-size: 9px;
+            font-size: 10px;
+        }
+        .status-pending { 
+            background-color: #fff3cd; 
+            color: #856404; 
+            padding: 4px 8px; 
+            border-radius: 4px; 
+            font-weight: bold;
+            font-size: 10px;
+        }
+        .status-approved { 
+            background-color: #d4edda; 
+            color: #155724; 
+            padding: 4px 8px; 
+            border-radius: 4px; 
+            font-weight: bold;
+            font-size: 10px;
+        }
+        .status-rejected { 
+            background-color: #f8d7da; 
+            color: #721c24; 
+            padding: 4px 8px; 
+            border-radius: 4px; 
+            font-weight: bold;
+            font-size: 10px;
         }
         
         /* Responsive adjustments */
@@ -240,17 +292,17 @@
         
         <div class="content-wrapper">
             <div class="report-title">
-                <h1>Endorsed Students Report</h1>
+                <h1>Endorsement Report - All Sections</h1>
             </div>
             
             <div class="generation-info">
-                <p>Section: {{ $sectionName }} | Generated on {{ $generatedAt }}</p>
+                <p>Generated on {{ $generatedAt }}</p>
             </div>
 
             <!-- Endorsement Statistics -->
             @if(isset($endorsementStats))
             <div class="section">
-                <h2>Endorsement Overview</h2>
+                <h2>Endorsement Statistics</h2>
                 <div class="section-content">
                     <div class="stats">
                         <h3>Endorsement Metrics</h3>
@@ -318,17 +370,19 @@
                         <tbody>
                             @foreach($endorsedStudents as $student)
                             <tr>
-                                <td class="col-student">{{ $student['student_number'] ?? 'N/A' }}</td>
+                                <td class="col-student"><strong>{{ $student['student_number'] }}</strong></td>
                                 <td class="col-name">{{ $student['name'] }}</td>
                                 <td class="col-section">{{ $student['section'] }}</td>
-                                <td class="col-company">{{ $student['hte_name'] }}</td>
-                                <td class="col-position">{{ $student['position_title'] }}</td>
-                                <td class="col-department">{{ $student['department'] ?? 'N/A' }}</td>
-                                <td class="col-score">{{ $student['compatibility_score'] ?? 'N/A' }}</td>
+                                <td class="col-company">{{ $student['company'] }}</td>
+                                <td class="col-position">{{ $student['position'] }}</td>
+                                <td class="col-department">{{ $student['department'] }}</td>
+                                <td class="col-score">{{ $student['compatibility_score'] }}</td>
                                 <td class="col-status">
-                                    <span class="status-endorsed">Endorsed</span>
+                                    <span class="status-{{ strtolower($student['endorsement_status']) }}">
+                                        {{ ucfirst($student['endorsement_status']) }}
+                                    </span>
                                 </td>
-                                <td class="col-date">{{ $student['endorsed_at'] ?? 'N/A' }}</td>
+                                <td class="col-date">{{ $student['endorsement_date'] }}</td>
                             </tr>
                             @endforeach
                         </tbody>
@@ -339,12 +393,16 @@
             <div class="section page-break">
                 <h2>Endorsed Students Details</h2>
                 <div class="section-content">
-                    <p style="text-align: center; color: #6c757d; font-style: italic; padding: 40px;">
-                        No endorsed students found for the selected section.
-                    </p>
+                    <div class="stats">
+                        <p style="text-align: center; color: #6c757d; font-style: italic;">No endorsed students found in the system.</p>
+                    </div>
                 </div>
             </div>
             @endif
+
+            <div class="footer">
+                <p>This report was generated automatically by the InternConnect System</p>
+            </div>
         </div>
     </div>
 </body>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Student List Report</title>
+    <title>Student Assessment Report</title>
     <style>
         body { 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
@@ -178,9 +178,11 @@
         
         /* Column widths */
         .col-student { width: 15%; }
-        .col-name { width: 25%; }
-        .col-email { width: 25%; }
+        .col-name { width: 20%; }
         .col-section { width: 15%; }
+        .col-assessment { width: 15%; }
+        .col-score { width: 10%; }
+        .col-percentage { width: 10%; }
         .col-status { width: 10%; }
         .col-date { width: 10%; }
         
@@ -194,6 +196,23 @@
             font-size: 9px;
         }
         .status-inactive { 
+            background-color: #f8d7da; 
+            color: #721c24; 
+            padding: 2px 6px; 
+            border-radius: 4px; 
+            font-weight: bold;
+            font-size: 9px;
+        }
+        
+        .assessment-yes { 
+            background-color: #d4edda; 
+            color: #155724; 
+            padding: 2px 6px; 
+            border-radius: 4px; 
+            font-weight: bold;
+            font-size: 9px;
+        }
+        .assessment-no { 
             background-color: #f8d7da; 
             color: #721c24; 
             padding: 2px 6px; 
@@ -219,7 +238,7 @@
         
         <div class="content-wrapper">
             <div class="report-title">
-                <h1>Student List Report</h1>
+                <h1>Student Assessment Report</h1>
             </div>
             
             <div class="generation-info">
@@ -227,12 +246,12 @@
             </div>
 
             <!-- Section Statistics -->
-            @if(isset($stats) && count($stats) > 0)
+            @if(isset($overviewStats) && count($overviewStats) > 0)
             <div class="section">
-                <h2>Section Overview</h2>
+                <h2>Assessment Overview</h2>
                 <div class="section-content">
                     <div class="stats">
-                        @foreach($stats as $stat)
+                        @foreach($overviewStats as $stat)
                         <div class="stat-item">
                             <div class="stat-number">{{ $stat['value'] }}</div>
                             <div class="stat-label">{{ $stat['label'] }}</div>
@@ -243,35 +262,43 @@
             </div>
             @endif
 
-            <!-- Students List -->
-            @if(isset($allStudents) && count($allStudents) > 0)
+            <!-- Students Assessment List -->
+            @if(isset($studentProgress) && count($studentProgress) > 0)
             <div class="section page-break">
-                <h2>Students Details</h2>
+                <h2>Student Assessment Details</h2>
                 <div class="section-content">
                     <table>
                         <thead>
                             <tr>
                                 <th class="col-student">Student Number</th>
                                 <th class="col-name">Name</th>
-                                <th class="col-email">Email</th>
                                 <th class="col-section">Section</th>
-                                <th class="col-status">Status</th>
-                                <th class="col-date">Registered At</th>
+                                <th class="col-assessment">Assessment Status</th>
+                                <th class="col-score">Total Score</th>
+                                <th class="col-percentage">Percentage</th>
+                                <th class="col-status">Student Status</th>
+                                <th class="col-date">Submitted At</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach($allStudents as $student)
+                            @foreach($studentProgress as $student)
                             <tr>
-                                <td class="col-student"><strong>{{ $student['student_number'] }}</strong></td>
+                                <td class="col-student">{{ $student['student_number'] ?? 'N/A' }}</td>
                                 <td class="col-name">{{ $student['name'] }}</td>
-                                <td class="col-email">{{ $student['email'] }}</td>
                                 <td class="col-section">{{ $student['section'] }}</td>
+                                <td class="col-assessment">
+                                    <span class="assessment-{{ $student['hasAssessment'] ? 'yes' : 'no' }}">
+                                        {{ $student['hasAssessment'] ? 'Completed' : 'Pending' }}
+                                    </span>
+                                </td>
+                                <td class="col-score">{{ $student['score'] ?? 0 }}</td>
+                                <td class="col-percentage">{{ $student['percentage'] ?? 0 }}%</td>
                                 <td class="col-status">
                                     <span class="status-{{ strtolower($student['status']) }}">
                                         {{ ucfirst($student['status']) }}
                                     </span>
                                 </td>
-                                <td class="col-date">{{ $student['registered_at'] ?? 'N/A' }}</td>
+                                <td class="col-date">{{ $student['submittedAt'] ?? 'N/A' }}</td>
                             </tr>
                             @endforeach
                         </tbody>
@@ -280,10 +307,10 @@
             </div>
             @else
             <div class="section page-break">
-                <h2>Students Details</h2>
+                <h2>Student Assessment Details</h2>
                 <div class="section-content">
                     <p style="text-align: center; color: #6c757d; font-style: italic; padding: 40px;">
-                        No students found for the selected section.
+                        No student assessment data found for the selected section.
                     </p>
                 </div>
             </div>

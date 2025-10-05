@@ -425,7 +425,7 @@ class AdminController extends Controller
     public function exportGeneralPDF(Request $request, $reportType): \Illuminate\Http\Response
     {
         // Validate report type
-        $validReportTypes = ['comprehensive', 'overview', 'student-list', 'student-assessment', 'placed-students', 'endorsed-students', 'performance-analysis', 'hte-performance'];
+        $validReportTypes = ['comprehensive', 'overview', 'student-list', 'student-assessment', 'placed-students', 'performance-analysis', 'hte-performance'];
         if (!in_array($reportType, $validReportTypes)) {
             abort(404, 'Invalid report type.');
         }
@@ -452,7 +452,7 @@ class AdminController extends Controller
     public function exportGeneralExcel(Request $request, $reportType): \Symfony\Component\HttpFoundation\BinaryFileResponse
     {
         // Validate report type
-        $validReportTypes = ['comprehensive', 'overview', 'student-list', 'student-assessment', 'placed-students', 'endorsed-students', 'performance-analysis', 'hte-performance'];
+        $validReportTypes = ['comprehensive', 'overview', 'student-list', 'student-assessment', 'placed-students', 'performance-analysis', 'hte-performance'];
         if (!in_array($reportType, $validReportTypes)) {
             abort(404, 'Invalid report type.');
         }
@@ -2340,7 +2340,7 @@ class AdminController extends Controller
             case 'endorsed-students':
                 return [
                     'endorsedStudents' => $this->getSectionEndorsedStudents($sectionId),
-                    'endorsementStats' => $this->getSectionEndorsementStats($sectionId),
+                    'overviewStats' => $this->getSectionOverviewStats($sectionId),
                 ];
             case 'performance-analysis':
                 return [
@@ -2386,17 +2386,6 @@ class AdminController extends Controller
                 return [
                     'performanceData' => $this->getAllSectionsPerformanceData(),
                     'overviewStats' => $this->getAllSectionsOverviewStats(),
-                    'stats' => $this->getDashboardStats(),
-                ];
-            case 'placed-students':
-                return [
-                    'placedStudents' => $this->getAllPlacements(),
-                    'stats' => $this->getDashboardStats(),
-                ];
-            case 'endorsed-students':
-                return [
-                    'endorsedStudents' => $this->getAllEndorsedStudents(),
-                    'endorsementStats' => $this->getAllSectionsEndorsementStats(),
                     'stats' => $this->getDashboardStats(),
                 ];
             case 'hte-performance':
@@ -2457,7 +2446,7 @@ class AdminController extends Controller
             ->map(function ($placement) {
                 return [
                     'student_number' => $placement->student->student_number,
-                    'name' => $placement->student->last_name . ', ' . $placement->student->first_name . ($placement->student->middle_name ? ' ' . $placement->student->middle_name : ''),
+                    'name' => $placement->student->first_name . ' ' . $placement->student->last_name,
                     'section' => $placement->student->section->section_name ?? '',
                     'company' => $placement->internship->hte->company_name,
                     'position' => $placement->internship->position_title,
@@ -2478,9 +2467,6 @@ class AdminController extends Controller
         return Endorsement::whereHas('student.user.academeAccounts', function ($query) use ($sectionId) {
                 $query->where('section_id', $sectionId);
             })
-            ->whereDoesntHave('student.placements', function ($query) {
-                $query->where('status', 'approved');
-            })
             ->with(['student.user', 'internship.hte'])
             ->get()
             ->map(function ($endorsement) {
@@ -2494,148 +2480,9 @@ class AdminController extends Controller
                     'compatibility_score' => $endorsement->compatibility_score ?? 'N/A',
                     'status' => $endorsement->status ?? 'endorsed',
                     'endorsement_date' => $endorsement->created_at->format('Y-m-d'),
-                    'endorsement_status' => $endorsement->status ?? 'pending',
                 ];
             })
             ->toArray();
-    }
-
-    /**
-     * Get all endorsed students across all sections
-     */
-    private function getAllEndorsedStudents(): array
-    {
-        return Endorsement::whereDoesntHave('student.placements', function ($query) {
-                $query->where('status', 'approved');
-            })
-            ->with(['student.user', 'student.section', 'internship.hte'])
-            ->get()
-            ->map(function ($endorsement) {
-                return [
-                    'student_number' => $endorsement->student->student_number,
-                    'name' => $endorsement->student->last_name . ', ' . $endorsement->student->first_name . ($endorsement->student->middle_name ? ' ' . $endorsement->student->middle_name : ''),
-                    'section' => $endorsement->student->section->section_name ?? '',
-                    'company' => $endorsement->internship->hte->company_name,
-                    'position' => $endorsement->internship->position_title,
-                    'department' => $endorsement->internship->department,
-                    'compatibility_score' => $endorsement->compatibility_score ?? 'N/A',
-                    'status' => $endorsement->status ?? 'endorsed',
-                    'endorsement_date' => $endorsement->created_at->format('Y-m-d'),
-                    'endorsement_status' => $endorsement->status ?? 'pending',
-                ];
-            })
-            ->toArray();
-    }
-
-    /**
-     * Get all sections endorsement statistics
-     */
-    private function getAllSectionsEndorsementStats(): array
-    {
-        // Total endorsements across all sections (excluding placed students)
-        $totalEndorsements = Endorsement::whereDoesntHave('student.placements', function ($query) {
-                $query->where('status', 'approved');
-            })
-            ->count();
-
-        // Pending endorsements (not yet placed)
-        $pendingEndorsements = Endorsement::whereDoesntHave('student.placements', function ($query) {
-                $query->where('status', 'approved');
-            })
-            ->where('status', 'pending')
-            ->count();
-
-        // Approved endorsements (endorsed but not yet placed)
-        $approvedEndorsements = Endorsement::whereDoesntHave('student.placements', function ($query) {
-                $query->where('status', 'approved');
-            })
-            ->where('status', 'approved')
-            ->count();
-
-        // Rejected endorsements
-        $rejectedEndorsements = Endorsement::whereDoesntHave('student.placements', function ($query) {
-                $query->where('status', 'approved');
-            })
-            ->where('status', 'rejected')
-            ->count();
-
-        // Average compatibility score for endorsements
-        $avgCompatibilityScore = Endorsement::whereDoesntHave('student.placements', function ($query) {
-                $query->where('status', 'approved');
-            })
-            ->whereNotNull('compatibility_score')
-            ->avg('compatibility_score');
-
-        return [
-            'totalEndorsements' => $totalEndorsements,
-            'pendingEndorsements' => $pendingEndorsements,
-            'approvedEndorsements' => $approvedEndorsements,
-            'rejectedEndorsements' => $rejectedEndorsements,
-            'averageCompatibilityScore' => round($avgCompatibilityScore ?? 0, 2),
-        ];
-    }
-
-    /**
-     * Get section endorsement statistics
-     */
-    private function getSectionEndorsementStats($sectionId): array
-    {
-        // Total endorsements for this section (excluding placed students)
-        $totalEndorsements = Endorsement::whereHas('student.user.academeAccounts', function ($query) use ($sectionId) {
-                $query->where('section_id', $sectionId);
-            })
-            ->whereDoesntHave('student.placements', function ($query) {
-                $query->where('status', 'approved');
-            })
-            ->count();
-
-        // Pending endorsements (not yet placed)
-        $pendingEndorsements = Endorsement::whereHas('student.user.academeAccounts', function ($query) use ($sectionId) {
-                $query->where('section_id', $sectionId);
-            })
-            ->whereDoesntHave('student.placements', function ($query) {
-                $query->where('status', 'approved');
-            })
-            ->where('status', 'pending')
-            ->count();
-
-        // Approved endorsements (endorsed but not yet placed)
-        $approvedEndorsements = Endorsement::whereHas('student.user.academeAccounts', function ($query) use ($sectionId) {
-                $query->where('section_id', $sectionId);
-            })
-            ->whereDoesntHave('student.placements', function ($query) {
-                $query->where('status', 'approved');
-            })
-            ->where('status', 'approved')
-            ->count();
-
-        // Rejected endorsements
-        $rejectedEndorsements = Endorsement::whereHas('student.user.academeAccounts', function ($query) use ($sectionId) {
-                $query->where('section_id', $sectionId);
-            })
-            ->whereDoesntHave('student.placements', function ($query) {
-                $query->where('status', 'approved');
-            })
-            ->where('status', 'rejected')
-            ->count();
-
-        // Average compatibility score for endorsements
-        $avgCompatibilityScore = Endorsement::whereHas('student.user.academeAccounts', function ($query) use ($sectionId) {
-                $query->where('section_id', $sectionId);
-            })
-            ->whereDoesntHave('student.placements', function ($query) {
-                $query->where('status', 'approved');
-            })
-            ->whereNotNull('compatibility_score')
-            ->avg('compatibility_score');
-
-        return [
-            'totalEndorsements' => $totalEndorsements,
-            'pendingEndorsements' => $pendingEndorsements,
-            'approvedEndorsements' => $approvedEndorsements,
-            'rejectedEndorsements' => $rejectedEndorsements,
-            'averageCompatibilityScore' => round($avgCompatibilityScore ?? 0, 2),
-        ];
     }
 
     /**
@@ -2905,12 +2752,12 @@ class AdminController extends Controller
      */
     private function getAllPlacements(): array
     {
-        return StudentPlacement::with(['student.user', 'student.section', 'internship.hte'])
+        return StudentPlacement::with(['student.user', 'internship.hte'])
             ->get()
             ->map(function ($placement) {
                 return [
                     'student_number' => $placement->student->student_number,
-                    'name' => $placement->student->last_name . ', ' . $placement->student->first_name . ($placement->student->middle_name ? ' ' . $placement->student->middle_name : ''),
+                    'name' => $placement->student->first_name . ' ' . $placement->student->last_name,
                     'section' => $placement->student->section->section_name ?? '',
                     'company' => $placement->internship->hte->company_name,
                     'position' => $placement->internship->position_title,
@@ -2924,9 +2771,9 @@ class AdminController extends Controller
     }
 
     /**
-     * Generate section CSV content - DISABLED (CSV not supported)
+     * Generate section CSV content
      */
-    /* private function generateSectionCSVContent($sectionId, $reportType, $sectionName): string
+    private function generateSectionCSVContent($sectionId, $reportType, $sectionName): string
     {
         $csvContent = ucwords(str_replace('-', ' ', $reportType)) . " Report - {$sectionName}\n";
         $csvContent .= "Generated: " . now()->format('F d, Y \a\t h:i A') . "\n\n";
@@ -2945,12 +2792,12 @@ class AdminController extends Controller
             default:
                 return $csvContent;
         }
-    } */
+    }
 
     /**
-     * Generate general CSV content - DISABLED (CSV not supported)
+     * Generate general CSV content
      */
-    /* private function generateGeneralCSVContent($reportType): string
+    private function generateGeneralCSVContent($reportType): string
     {
         $csvContent = ucwords(str_replace('-', ' ', $reportType)) . " Report\n";
         $csvContent .= "Generated: " . now()->format('F d, Y \a\t h:i A') . "\n\n";
@@ -2967,10 +2814,10 @@ class AdminController extends Controller
             default:
                 return $csvContent;
         }
-    } */
+    }
 
-    // CSV generation methods (simplified versions) - DISABLED (CSV not supported)
-    /*
+    // CSV generation methods (simplified versions)
+    private function generateSectionStudentListCSV($sectionId, $csvContent): string
     {
         $studentData = $this->getSectionStudents($sectionId);
         
@@ -3261,7 +3108,7 @@ class AdminController extends Controller
         }
 
         return $csvContent;
-    } */
+    }
 
     /**
      * Generate Excel content for section-specific reports
@@ -3341,9 +3188,6 @@ class AdminController extends Controller
                 break;
             case 'placed-students':
                 $this->generateAllPlacementsExcel($sheet, $row);
-                break;
-            case 'endorsed-students':
-                $this->generateAllEndorsedStudentsExcel($sheet, $row);
                 break;
             case 'performance-analysis':
                 $this->generateAllSectionsPerformanceAnalysisExcel($sheet, $row);
@@ -3587,7 +3431,7 @@ class AdminController extends Controller
             $sheet->setCellValue('D' . $row, $student['position']);
             $sheet->setCellValue('E' . $row, $student['department']);
             $sheet->setCellValue('F' . $row, $student['compatibility_score']);
-            $sheet->setCellValue('G' . $row, ucfirst($student['endorsement_status']));
+            $sheet->setCellValue('G' . $row, ucfirst($student['status']));
             $sheet->setCellValue('H' . $row, $student['endorsement_date']);
             $row++;
         }
@@ -3772,41 +3616,6 @@ class AdminController extends Controller
                 $sheet->setCellValue('F' . $row, $student['submittedAt']);
                 $row++;
             }
-        }
-    }
-
-    /**
-     * Generate Excel content for all endorsed students
-     */
-    private function generateAllEndorsedStudentsExcel($sheet, $startRow)
-    {
-        $row = $startRow;
-        
-        // Get endorsed students data for all sections
-        $endorsedStudents = $this->getAllEndorsedStudents();
-        
-        // Add headers
-        $headers = ['Student Number', 'Name', 'Section', 'Company', 'Position', 'Department', 'Score', 'Status', 'Endorsement Date'];
-        $col = 'A';
-        foreach ($headers as $header) {
-            $sheet->setCellValue($col . $row, $header);
-            $sheet->getStyle($col . $row)->getFont()->setBold(true);
-            $col++;
-        }
-        $row++;
-        
-        // Add endorsed students data
-        foreach ($endorsedStudents as $student) {
-            $sheet->setCellValue('A' . $row, $student['student_number']);
-            $sheet->setCellValue('B' . $row, $student['name']);
-            $sheet->setCellValue('C' . $row, $student['section']);
-            $sheet->setCellValue('D' . $row, $student['company']);
-            $sheet->setCellValue('E' . $row, $student['position']);
-            $sheet->setCellValue('F' . $row, $student['department']);
-            $sheet->setCellValue('G' . $row, $student['compatibility_score']);
-            $sheet->setCellValue('H' . $row, ucfirst($student['endorsement_status']));
-            $sheet->setCellValue('I' . $row, $student['endorsement_date']);
-            $row++;
         }
     }
 

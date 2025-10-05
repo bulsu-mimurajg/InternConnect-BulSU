@@ -9,7 +9,10 @@ import { useState } from 'react';
 import {
     FileTextIcon,
     DownloadIcon,
-    UsersIcon
+    UsersIcon,
+    TargetIcon,
+    UserCheckIcon,
+    TrendingUpIcon
 } from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -40,13 +43,56 @@ export default function AdviserReport({
     const [selectedSection, setSelectedSection] = useState<string>(currentSectionId?.toString() || '');
     const [isGenerating, setIsGenerating] = useState<boolean>(false);
 
-    const reportTypes = [
-        { value: 'student-assessment', label: 'Student Assessment Report', description: 'Complete list of students with their details and status' },
-        { value: 'assessment-summary', label: 'Assessment Summary Report', description: 'Overview of assessment completion and performance' },
-        { value: 'progress-report', label: 'Progress Report', description: 'Student progress tracking and completion status' },
-        { value: 'endorsed-students', label: 'Endorsed Students Report', description: 'Students who have been endorsed for internship placement' },
-        { value: 'placed-students', label: 'Placed Students Report', description: 'Students who have been successfully placed in internships' }
+    const reportCategories = [
+        {
+            title: 'Student Reports',
+            reports: [
+                {
+                    value: 'student-list',
+                    label: 'Student List Report',
+                    description: 'Complete list of students with basic information',
+                    icon: UsersIcon,
+                    requiresSection: true
+                },
+                {
+                    value: 'student-assessment',
+                    label: 'Student Assessment Report',
+                    description: 'Complete list of students with their details and status',
+                    icon: UsersIcon,
+                    requiresSection: true
+                },
+                {
+                    value: 'placed-students',
+                    label: 'Placed Students Report',
+                    description: 'Students who have been successfully placed in internships',
+                    icon: TargetIcon,
+                    requiresSection: true
+                },
+                {
+                    value: 'endorsed-students',
+                    label: 'Endorsed Students Report',
+                    description: 'Students who have been endorsed for internship placement',
+                    icon: UserCheckIcon,
+                    requiresSection: true
+                }
+            ]
+        },
+        {
+            title: 'Performance Analytics',
+            reports: [
+                {
+                    value: 'performance-analysis',
+                    label: 'Performance Analysis Report',
+                    description: 'Detailed analysis of student performance and rankings',
+                    icon: TrendingUpIcon,
+                    requiresSection: true
+                }
+            ]
+        }
     ];
+
+    // Flattened report types for backward compatibility
+    const reportTypes = reportCategories.flatMap(category => category.reports);
 
     const exportFormats = [
         { value: 'pdf', label: 'PDF Document' },
@@ -105,11 +151,14 @@ export default function AdviserReport({
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Reports" />
-            <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
+            <div className="flex h-full flex-1 flex-col gap-6 rounded-xl p-6">
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="text-3xl font-bold tracking-tight">Generate Reports</h1>
+                        <p className="text-muted-foreground">
+                            Generate comprehensive reports for student assessments, placements, and performance analytics
+                        </p>
                     </div>
                 </div>
 
@@ -163,14 +212,24 @@ export default function AdviserReport({
                                 <SelectTrigger className="h-12 text-base">
                                     <SelectValue placeholder="Choose a report type" />
                                 </SelectTrigger>
-                                <SelectContent className="max-h-60">
-                                    {reportTypes.map((type) => (
-                                        <SelectItem key={type.value} value={type.value} className="py-3">
-                                            <div className="flex flex-col items-start">
-                                                <div className="font-semibold text-sm">{type.label}</div>
-                                                <div className="text-xs text-muted-foreground mt-1">{type.description}</div>
+                                <SelectContent className="max-h-80">
+                                    {reportCategories.map((category) => (
+                                        <div key={category.title}>
+                                            <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                                                {category.title}
                                             </div>
-                                        </SelectItem>
+                                            {category.reports.map((type) => (
+                                                <SelectItem key={type.value} value={type.value} className="py-3">
+                                                    <div className="flex flex-col items-start">
+                                                        <div className="font-semibold text-sm flex items-center gap-2">
+                                                            <type.icon className="h-4 w-4" />
+                                                            {type.label}
+                                                        </div>
+                                                        <div className="text-xs text-muted-foreground mt-1">{type.description}</div>
+                                                    </div>
+                                                </SelectItem>
+                                            ))}
+                                        </div>
                                     ))}
                                 </SelectContent>
                             </Select>

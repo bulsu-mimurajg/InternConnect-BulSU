@@ -82,6 +82,13 @@ export default function AdminReport({ sections }: Props) {
                     description: 'Students who have been successfully placed in internships',
                     icon: TargetIcon,
                     requiresSection: true
+                },
+                {
+                    value: 'endorsed-students',
+                    label: 'Endorsed Students Report',
+                    description: 'Students who have been endorsed for internship placement',
+                    icon: UserCheckIcon,
+                    requiresSection: true
                 }
             ]
         },

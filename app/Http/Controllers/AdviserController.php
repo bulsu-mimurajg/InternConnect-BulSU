@@ -1120,7 +1120,7 @@ class AdviserController extends Controller
         }
 
         // Validate report type
-        $validReportTypes = ['student-assessment', 'assessment-summary', 'performance-analysis', 'progress-report', 'endorsed-students', 'placed-students'];
+        $validReportTypes = ['student-list', 'student-assessment', 'endorsed-students', 'placed-students', 'performance-analysis'];
         if (!in_array($reportType, $validReportTypes)) {
             abort(404, 'Invalid report type.');
         }
@@ -1143,7 +1143,7 @@ class AdviserController extends Controller
     }
 
     /**
-     * Export report to Excel (CSV format) based on report type
+     * Export report to Excel based on report type
      */
     public function exportExcel(Request $request, $reportType): \Illuminate\Http\Response
     {
@@ -1178,16 +1178,30 @@ class AdviserController extends Controller
         }
 
         // Validate report type
-        $validReportTypes = ['student-assessment', 'assessment-summary', 'performance-analysis', 'progress-report', 'endorsed-students', 'placed-students'];
+        $validReportTypes = ['student-list', 'student-assessment', 'endorsed-students', 'placed-students', 'performance-analysis'];
         if (!in_array($reportType, $validReportTypes)) {
             abort(404, 'Invalid report type.');
         }
 
-        $csvContent = $this->generateCSVContent($currentSectionId, $reportType, $sectionName, $adviserSections);
+        // Get report data based on type
+        $reportData = $this->getReportDataForType($currentSectionId, $reportType, $adviserSections);
 
-        return response($csvContent, 200, [
-            'Content-Type' => 'text/csv',
-            'Content-Disposition' => 'attachment; filename="' . $reportType . '-report-' . now()->format('Y-m-d') . '.csv"',
+        // Generate Excel file using PhpSpreadsheet
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+
+        // Generate Excel content based on report type
+        $this->generateAdviserExcelContent($sheet, $reportType, $reportData, $sectionName);
+
+        // Set headers for Excel download
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        
+        $filename = "{$reportType}-report-" . now()->format('Y-m-d') . '.xlsx';
+        
+        return response()->streamDownload(function() use ($writer) {
+            $writer->save('php://output');
+        }, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         ]);
     }
 
@@ -1259,14 +1273,14 @@ class AdviserController extends Controller
         )->min('score') ?? 0;
 
         return [
-            'totalStudents' => $totalStudents,
-            'completedAssessments' => $completedAssessments,
-            'pendingStudents' => $pendingStudents,
-            'completionRate' => $totalStudents > 0 ? round(($completedAssessments / $totalStudents) * 100, 1) : 0,
-            'averageScore' => round($averageScore, 2),
-            'highestScore' => round($highestScore, 2),
-            'lowestScore' => round($lowestScore, 2),
-            'scoreRange' => round($highestScore - $lowestScore, 2),
+            ['label' => 'Total Students', 'value' => $totalStudents],
+            ['label' => 'Completed Assessments', 'value' => $completedAssessments],
+            ['label' => 'Pending Students', 'value' => $pendingStudents],
+            ['label' => 'Completion Rate', 'value' => $totalStudents > 0 ? round(($completedAssessments / $totalStudents) * 100, 1) . '%' : '0%'],
+            ['label' => 'Average Score', 'value' => round($averageScore, 2)],
+            ['label' => 'Highest Score', 'value' => round($highestScore, 2)],
+            ['label' => 'Lowest Score', 'value' => round($lowestScore, 2)],
+            ['label' => 'Score Range', 'value' => round($highestScore - $lowestScore, 2)],
         ];
     }
 
@@ -1512,18 +1526,14 @@ class AdviserController extends Controller
 
         return $query->get()->map(function ($user) {
             $student = $user->student;
-            $hasAssessment = $student && $student->is_submit;
             
             return [
-                'username' => $user->username,
+                'student_number' => $student ? $student->student_number : 'N/A',
                 'email' => $user->email,
-                'name' => $student ? ($student->first_name . ' ' . $student->last_name) : 'Pending',
+                'name' => $student ? ($student->last_name . ', ' . $student->first_name . ($student->middle_name ? ' ' . $student->middle_name : '')) : 'Pending',
                 'status' => $user->status,
                 'section' => $user->academeAccounts->first()->section->section_name ?? '',
-                'hasAssessment' => $hasAssessment,
-                'assessmentScore' => $hasAssessment ? $student->scores->sum('score') : 0,
-                'assessmentPercentage' => $hasAssessment ? round(($student->scores->sum('score') / ($student->scores->count() * 5)) * 100, 1) : 0,
-                'submittedAt' => $hasAssessment ? $student->updated_at->format('Y-m-d H:i:s') : null,
+                'registered_at' => $user->created_at->format('Y-m-d H:i:s'),
             ];
         })->toArray();
     }
@@ -1534,35 +1544,29 @@ class AdviserController extends Controller
     private function getReportDataForType($sectionId, $reportType, $adviserSections): array
     {
         switch ($reportType) {
+            case 'student-list':
+                return [
+                    'allStudents' => $this->getStudentListData($sectionId, null, $adviserSections),
+                    'stats' => $this->getStudentListStats($sectionId, $adviserSections),
+                ];
             case 'student-assessment':
                 return [
                     'overviewStats' => $this->getOverviewStats($sectionId, $adviserSections),
                     'studentProgress' => $this->getStudentProgress($sectionId, $adviserSections),
                 ];
-            case 'assessment-summary':
-                return [
-                    'overviewStats' => $this->getOverviewStats($sectionId, $adviserSections),
-                    'assessmentAnalytics' => $this->getAssessmentAnalytics($sectionId, $adviserSections),
-                ];
-            case 'performance-analysis':
-                return [
-                    'categoryBreakdown' => $this->getCategoryBreakdown($sectionId, $adviserSections),
-                    'topPerformers' => array_slice($this->getStudentProgress($sectionId, $adviserSections), 0, 10),
-                    'assessmentAnalytics' => $this->getAssessmentAnalytics($sectionId, $adviserSections),
-                ];
-            case 'progress-report':
-                return [
-                    'studentProgress' => $this->getStudentProgress($sectionId, $adviserSections),
-                    'overviewStats' => $this->getOverviewStats($sectionId, $adviserSections),
-                ];
             case 'endorsed-students':
                 return [
                     'endorsedStudents' => $this->getEndorsedStudents($sectionId, $adviserSections),
-                    'overviewStats' => $this->getOverviewStats($sectionId, $adviserSections),
+                    'endorsementStats' => $this->getAdviserEndorsementStats($sectionId, $adviserSections),
                 ];
             case 'placed-students':
                 return [
                     'placedStudents' => $this->getPlacedStudents($sectionId, $adviserSections),
+                    'overviewStats' => $this->getOverviewStats($sectionId, $adviserSections),
+                ];
+            case 'performance-analysis':
+                return [
+                    'performanceData' => $this->getAdviserPerformanceData($sectionId, $adviserSections),
                     'overviewStats' => $this->getOverviewStats($sectionId, $adviserSections),
                 ];
             default:
@@ -1571,54 +1575,177 @@ class AdviserController extends Controller
     }
 
     /**
-     * Generate CSV content based on report type
+     * Generate Excel content for adviser reports
      */
-    private function generateCSVContent($sectionId, $reportType, $sectionName, $adviserSections): string
+    private function generateAdviserExcelContent($sheet, $reportType, $reportData, $sectionName)
     {
-        $csvContent = ucwords(str_replace('-', ' ', $reportType)) . " Report - {$sectionName}\n";
-        $csvContent .= "Generated: " . now()->format('F d, Y \a\t h:i A') . "\n\n";
-
+        $row = 1;
+        
+        // Add header
+        $sheet->setCellValue('A' . $row, ucwords(str_replace('-', ' ', $reportType)) . ' Report');
+        $sheet->mergeCells('A' . $row . ':F' . $row);
+        $sheet->getStyle('A' . $row)->getFont()->setBold(true)->setSize(16);
+        $sheet->getStyle('A' . $row)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $row += 2;
+        
+        // Add generation info
+        $sheet->setCellValue('A' . $row, 'Section: ' . $sectionName);
+        $sheet->mergeCells('A' . $row . ':F' . $row);
+        $sheet->getStyle('A' . $row)->getFont()->setItalic(true);
+        $row += 1;
+        
+        $sheet->setCellValue('A' . $row, 'Generated: ' . now()->format('F d, Y \a\t h:i A'));
+        $sheet->mergeCells('A' . $row . ':F' . $row);
+        $sheet->getStyle('A' . $row)->getFont()->setItalic(true);
+        $row += 3;
+        
+        // Generate content based on report type
         switch ($reportType) {
+            case 'student-list':
+                $this->generateStudentListExcel($sheet, $reportData, $row);
+                break;
             case 'student-assessment':
-                return $this->generateStudentListCSV($sectionId, $csvContent, $adviserSections);
-            case 'assessment-summary':
-                return $this->generateAssessmentSummaryCSV($sectionId, $csvContent);
-            case 'performance-analysis':
-                return $this->generatePerformanceAnalysisCSV($sectionId, $csvContent);
-            case 'progress-report':
-                return $this->generateProgressReportCSV($sectionId, $csvContent);
+                $this->generateStudentAssessmentExcel($sheet, $reportData, $row);
+                break;
             case 'endorsed-students':
-                return $this->generateEndorsedStudentsCSV($sectionId, $csvContent);
+                $this->generateEndorsedStudentsExcel($sheet, $reportData, $row);
+                break;
             case 'placed-students':
-                return $this->generatePlacedStudentsCSV($sectionId, $csvContent);
-            default:
-                return $csvContent;
+                $this->generatePlacedStudentsExcel($sheet, $reportData, $row);
+                break;
+            case 'performance-analysis':
+                $this->generatePerformanceAnalysisExcel($sheet, $reportData, $row);
+                break;
+        }
+        
+        // Auto-size columns
+        foreach (range('A', 'F') as $column) {
+            $sheet->getColumnDimension($column)->setAutoSize(true);
         }
     }
 
     /**
-     * Generate Student List CSV
+     * Generate Student List Excel content
      */
-    private function generateStudentListCSV($sectionId, $csvContent, $adviserSections): string
+    private function generateStudentListExcel($sheet, $reportData, $startRow)
     {
-        $studentData = $this->getStudentListData($sectionId, null, $adviserSections);
+        $row = $startRow;
         
-        $csvContent .= "Student Information\n";
-        $csvContent .= "Username,Email,Name,Status,Section,Has Assessment,Assessment Score,Assessment Percentage,Submitted At\n";
-        
-        foreach ($studentData as $student) {
-            $csvContent .= $student['username'] . ",";
-            $csvContent .= $student['email'] . ",";
-            $csvContent .= '"' . $student['name'] . '",';
-            $csvContent .= $student['status'] . ",";
-            $csvContent .= $student['section'] . ",";
-            $csvContent .= ($student['hasAssessment'] ? 'Yes' : 'No') . ",";
-            $csvContent .= $student['assessmentScore'] . ",";
-            $csvContent .= $student['assessmentPercentage'] . ",";
-            $csvContent .= ($student['submittedAt'] ?? 'N/A') . "\n";
+        // Add headers
+        $headers = ['Student Number', 'Name', 'Email', 'Section', 'Status', 'Registered At'];
+        $col = 'A';
+        foreach ($headers as $header) {
+            $sheet->setCellValue($col . $row, $header);
+            $sheet->getStyle($col . $row)->getFont()->setBold(true);
+            $col++;
         }
+        $row++;
+        
+        // Add data
+        foreach ($reportData['allStudents'] as $student) {
+            $sheet->setCellValue('A' . $row, $student['student_number']);
+            $sheet->setCellValue('B' . $row, $student['name']);
+            $sheet->setCellValue('C' . $row, $student['email']);
+            $sheet->setCellValue('D' . $row, $student['section']);
+            $sheet->setCellValue('E' . $row, ucfirst($student['status']));
+            $sheet->setCellValue('F' . $row, $student['registered_at'] ?? 'N/A');
+            $row++;
+        }
+    }
 
-        return $csvContent;
+    /**
+     * Generate Student Assessment Excel content
+     */
+    private function generateStudentAssessmentExcel($sheet, $reportData, $startRow)
+    {
+        $row = $startRow;
+        
+        // Add headers
+        $headers = ['Name', 'Email', 'Section', 'Status', 'Has Assessment', 'Score', 'Percentage', 'Submitted At'];
+        $col = 'A';
+        foreach ($headers as $header) {
+            $sheet->setCellValue($col . $row, $header);
+            $sheet->getStyle($col . $row)->getFont()->setBold(true);
+            $col++;
+        }
+        $row++;
+        
+        // Add data
+        foreach ($reportData['studentProgress'] as $student) {
+            $sheet->setCellValue('A' . $row, $student['name']);
+            $sheet->setCellValue('B' . $row, $student['email']);
+            $sheet->setCellValue('C' . $row, $student['section']);
+            $sheet->setCellValue('D' . $row, ucfirst($student['status']));
+            $sheet->setCellValue('E' . $row, $student['hasAssessment'] ? 'Yes' : 'No');
+            $sheet->setCellValue('F' . $row, $student['score'] ?? 0);
+            $sheet->setCellValue('G' . $row, $student['percentage'] ?? 0);
+            $sheet->setCellValue('H' . $row, $student['submittedAt'] ?? 'N/A');
+            $row++;
+        }
+    }
+
+    /**
+     * Generate Endorsed Students Excel content
+     */
+    private function generateEndorsedStudentsExcel($sheet, $reportData, $startRow)
+    {
+        $row = $startRow;
+        
+        // Add headers
+        $headers = ['Student Number', 'Name', 'Section', 'Company', 'Position', 'Department', 'Compatibility Score', 'Status', 'Endorsement Date'];
+        $col = 'A';
+        foreach ($headers as $header) {
+            $sheet->setCellValue($col . $row, $header);
+            $sheet->getStyle($col . $row)->getFont()->setBold(true);
+            $col++;
+        }
+        $row++;
+        
+        // Add data
+        foreach ($reportData['endorsedStudents'] as $student) {
+            $sheet->setCellValue('A' . $row, $student['student_number']);
+            $sheet->setCellValue('B' . $row, $student['name']);
+            $sheet->setCellValue('C' . $row, $student['section']);
+            $sheet->setCellValue('D' . $row, $student['hte_name']);
+            $sheet->setCellValue('E' . $row, $student['position_title']);
+            $sheet->setCellValue('F' . $row, $student['department']);
+            $sheet->setCellValue('G' . $row, $student['compatibility_score']);
+            $sheet->setCellValue('H' . $row, $student['status']);
+            $sheet->setCellValue('I' . $row, $student['endorsed_at']);
+            $row++;
+        }
+    }
+
+    /**
+     * Generate Placed Students Excel content
+     */
+    private function generatePlacedStudentsExcel($sheet, $reportData, $startRow)
+    {
+        $row = $startRow;
+        
+        // Add headers
+        $headers = ['Student Number', 'Name', 'Section', 'Company', 'Position', 'Department', 'Score', 'Status', 'Date'];
+        $col = 'A';
+        foreach ($headers as $header) {
+            $sheet->setCellValue($col . $row, $header);
+            $sheet->getStyle($col . $row)->getFont()->setBold(true);
+            $col++;
+        }
+        $row++;
+        
+        // Add data
+        foreach ($reportData['placedStudents'] as $student) {
+            $sheet->setCellValue('A' . $row, $student['student_number']);
+            $sheet->setCellValue('B' . $row, $student['name']);
+            $sheet->setCellValue('C' . $row, $student['section']);
+            $sheet->setCellValue('D' . $row, $student['hte_name']);
+            $sheet->setCellValue('E' . $row, $student['position_title']);
+            $sheet->setCellValue('F' . $row, $student['department']);
+            $sheet->setCellValue('G' . $row, $student['compatibility_score']);
+            $sheet->setCellValue('H' . $row, $student['status']);
+            $sheet->setCellValue('I' . $row, $student['placement_date']);
+            $row++;
+        }
     }
 
     /**
@@ -1728,35 +1855,79 @@ class AdviserController extends Controller
         
         return $query->get()
             ->map(function ($endorsement) {
+                $student = $endorsement->student;
+                $internship = $endorsement->internship;
+                
                 return [
-                    'id' => $endorsement->id,
-                    'student' => [
-                        'id' => $endorsement->student->id,
-                        'student_number' => $endorsement->student->student_number,
-                        'first_name' => $endorsement->student->first_name,
-                        'last_name' => $endorsement->student->last_name,
-                        'middle_name' => $endorsement->student->middle_name,
-                        'section' => $endorsement->student->section->section_name ?? '',
-                        'specialization' => $endorsement->student->specialization,
-                    ],
-                    'internship' => [
-                        'id' => $endorsement->internship->id,
-                        'position_title' => $endorsement->internship->position_title,
-                        'department' => $endorsement->internship->department,
-                        'hte' => [
-                            'company_name' => $endorsement->internship->hte->company_name,
-                        ],
-                    ],
-                    'status' => $endorsement->status,
-                    'compatibility_score' => $endorsement->compatibility_score,
-                    'endorsement_date' => $endorsement->endorsement_date,
-                    'notes' => $endorsement->notes,
-                    'created_at' => $endorsement->created_at,
+                    'student_number' => $student->student_number,
+                    'name' => $student->last_name . ', ' . $student->first_name . ($student->middle_name ? ' ' . $student->middle_name : ''),
+                    'section' => $student->section->section_name ?? 'Unknown',
+                    'hte_name' => $internship->hte->company_name ?? 'Unknown',
+                    'position_title' => $internship->position_title ?? 'N/A',
+                    'department' => $internship->department ?? 'N/A',
+                    'compatibility_score' => $endorsement->compatibility_score ?? 'N/A',
+                    'status' => $endorsement->status ?? 'endorsed',
+                    'endorsed_at' => $endorsement->endorsement_date ? $endorsement->endorsement_date->format('Y-m-d') : ($endorsement->created_at ? $endorsement->created_at->format('Y-m-d') : 'N/A'),
                 ];
             })
-            ->sortByDesc('created_at')
+            ->sortByDesc('endorsed_at')
             ->values()
             ->toArray();
+    }
+
+    /**
+     * Get endorsement statistics for the adviser's section
+     */
+    private function getAdviserEndorsementStats($sectionId, $adviserSections): array
+    {
+        $query = \App\Models\Endorsement::query();
+        
+        // Apply section filter
+        $this->applySectionFilter($query, $sectionId, $adviserSections, 'student.user.academeAccounts');
+        
+        // Total endorsements for this section (excluding placed students)
+        $totalEndorsements = (clone $query)
+            ->whereDoesntHave('student.placements', function ($query) {
+                $query->where('status', 'approved');
+            })
+            ->count();
+
+        // Pending endorsements (not yet placed)
+        $pendingEndorsements = (clone $query)
+            ->whereDoesntHave('student.placements', function ($query) {
+                $query->where('status', 'approved');
+            })
+            ->where('status', 'pending')
+            ->count();
+
+        // Approved endorsements (not yet placed)
+        $approvedEndorsements = (clone $query)
+            ->whereDoesntHave('student.placements', function ($query) {
+                $query->where('status', 'approved');
+            })
+            ->where('status', 'approved')
+            ->count();
+
+        // Rejected endorsements
+        $rejectedEndorsements = (clone $query)
+            ->where('status', 'rejected')
+            ->count();
+
+        // Average compatibility score
+        $avgCompatibilityScore = (clone $query)
+            ->whereDoesntHave('student.placements', function ($query) {
+                $query->where('status', 'approved');
+            })
+            ->whereNotNull('compatibility_score')
+            ->avg('compatibility_score') ?? 0;
+
+        return [
+            'totalEndorsements' => $totalEndorsements,
+            'pendingEndorsements' => $pendingEndorsements,
+            'approvedEndorsements' => $approvedEndorsements,
+            'rejectedEndorsements' => $rejectedEndorsements,
+            'averageCompatibilityScore' => round($avgCompatibilityScore, 2),
+        ];
     }
 
     /**
@@ -1771,32 +1942,22 @@ class AdviserController extends Controller
         
         return $query->get()
             ->map(function ($placement) {
+                $student = $placement->student;
+                $internship = $placement->internship;
+                
                 return [
-                    'id' => $placement->id,
-                    'student' => [
-                        'id' => $placement->student->id,
-                        'student_number' => $placement->student->student_number,
-                        'first_name' => $placement->student->first_name,
-                        'last_name' => $placement->student->last_name,
-                        'middle_name' => $placement->student->middle_name,
-                        'section' => $placement->student->section->section_name ?? '',
-                        'specialization' => $placement->student->specialization,
-                    ],
-                    'internship' => [
-                        'id' => $placement->internship->id,
-                        'position_title' => $placement->internship->position_title,
-                        'department' => $placement->internship->department,
-                        'hte' => [
-                            'company_name' => $placement->internship->hte->company_name,
-                        ],
-                    ],
-                    'status' => $placement->status,
-                    'compatibility_score' => $placement->compatibility_score,
-                    'placement_date' => $placement->placement_date,
-                    'created_at' => $placement->created_at,
+                    'student_number' => $student->student_number,
+                    'name' => $student->last_name . ', ' . $student->first_name . ($student->middle_name ? ' ' . $student->middle_name : ''),
+                    'section' => $student->section->section_name ?? 'Unknown',
+                    'hte_name' => $internship->hte->company_name ?? 'Unknown',
+                    'position_title' => $internship->position_title ?? 'N/A',
+                    'department' => $internship->department ?? 'N/A',
+                    'compatibility_score' => $placement->compatibility_score ?? 'N/A',
+                    'status' => $placement->status ?? 'placed',
+                    'placement_date' => $placement->placement_date ? $placement->placement_date->format('Y-m-d') : ($placement->created_at ? $placement->created_at->format('Y-m-d') : 'N/A'),
                 ];
             })
-            ->sortByDesc('created_at')
+            ->sortByDesc('placement_date')
             ->values()
             ->toArray();
     }
@@ -1862,6 +2023,137 @@ class AdviserController extends Controller
         }
 
         return $csvContent;
+    }
+
+    /**
+     * Get student list statistics for adviser sections
+     */
+    private function getStudentListStats($sectionId, $adviserSections): array
+    {
+        $stats = [];
+        
+        if ($sectionId === null) {
+            // All sections
+            $totalStudents = 0;
+            $activeStudents = 0;
+            $inactiveStudents = 0;
+            
+            foreach ($adviserSections as $section) {
+                $sectionStudents = \App\Models\User::whereHas('roles', function ($query) {
+                    $query->where('name', 'student');
+                })
+                ->whereHas('academeAccounts', function ($query) use ($section) {
+                    $query->where('section_id', $section->section_id);
+                })
+                ->where('status', '!=', 'archived')
+                ->get();
+                
+                $totalStudents += $sectionStudents->count();
+                $activeStudents += $sectionStudents->where('status', 'active')->count();
+                $inactiveStudents += $sectionStudents->where('status', 'inactive')->count();
+            }
+            
+            $stats = [
+                ['label' => 'Total Students', 'value' => $totalStudents],
+                ['label' => 'Active Students', 'value' => $activeStudents],
+                ['label' => 'Inactive Students', 'value' => $inactiveStudents],
+                ['label' => 'Sections', 'value' => $adviserSections->count()],
+            ];
+        } else {
+            // Specific section
+            $students = \App\Models\User::whereHas('roles', function ($query) {
+                $query->where('name', 'student');
+            })
+            ->whereHas('academeAccounts', function ($query) use ($sectionId) {
+                $query->where('section_id', $sectionId);
+            })
+            ->where('status', '!=', 'archived')
+            ->get();
+            
+            $stats = [
+                ['label' => 'Total Students', 'value' => $students->count()],
+                ['label' => 'Active Students', 'value' => $students->where('status', 'active')->count()],
+                ['label' => 'Inactive Students', 'value' => $students->where('status', 'inactive')->count()],
+                ['label' => 'Assessment Submitted', 'value' => $students->whereHas('student', function($q) { $q->where('is_submit', true); })->count()],
+            ];
+        }
+        
+        return $stats;
+    }
+
+    /**
+     * Get performance data for adviser sections
+     */
+    private function getAdviserPerformanceData($sectionId, $adviserSections): array
+    {
+        $query = \App\Models\User::whereHas('roles', function ($query) {
+            $query->where('name', 'student');
+        })
+        ->whereHas('student', function ($query) {
+            $query->where('is_submit', true);
+        })
+        ->where('status', '!=', 'archived')
+        ->with(['student.scores.subcategory.category', 'academeAccounts.section']);
+
+        // Apply section filter
+        $this->applySectionFilter($query, $sectionId, $adviserSections);
+
+        $students = $query->get()
+            ->map(function ($user) {
+                $student = $user->student;
+                $totalScore = $student->scores->sum('score');
+                $maxPossibleScore = $student->scores->count() * 5;
+                $percentage = $maxPossibleScore > 0 ? round(($totalScore / $maxPossibleScore) * 100, 1) : 0;
+                
+                return [
+                    'name' => $student->last_name . ', ' . $student->first_name . ($student->middle_name ? ' ' . $student->middle_name : ''),
+                    'student_number' => $student->student_number,
+                    'section' => $user->academeAccounts->first()->section->section_name ?? 'Unknown',
+                    'score' => $totalScore,
+                    'percentage' => $percentage,
+                    'submittedAt' => $student->updated_at->format('Y-m-d'),
+                ];
+            })
+            ->sortByDesc('percentage')
+            ->values()
+            ->toArray();
+
+        return [
+            'topPerformers' => array_slice($students, 0, 10),
+            'allStudents' => $students,
+        ];
+    }
+
+    /**
+     * Generate Performance Analysis Excel content
+     */
+    private function generatePerformanceAnalysisExcel($sheet, $reportData, $startRow)
+    {
+        $row = $startRow;
+        
+        // Add headers for top performers
+        $headers = ['Rank', 'Student Name', 'Student Number', 'Section', 'Score', 'Percentage', 'Submitted At'];
+        $col = 'A';
+        foreach ($headers as $header) {
+            $sheet->setCellValue($col . $row, $header);
+            $sheet->getStyle($col . $row)->getFont()->setBold(true);
+            $col++;
+        }
+        $row++;
+        
+        // Add top performers data
+        $rank = 1;
+        foreach ($reportData['performanceData']['topPerformers'] as $student) {
+            $sheet->setCellValue('A' . $row, $rank);
+            $sheet->setCellValue('B' . $row, $student['name']);
+            $sheet->setCellValue('C' . $row, $student['student_number']);
+            $sheet->setCellValue('D' . $row, $student['section']);
+            $sheet->setCellValue('E' . $row, $student['score']);
+            $sheet->setCellValue('F' . $row, $student['percentage']);
+            $sheet->setCellValue('G' . $row, $student['submittedAt']);
+            $row++;
+            $rank++;
+        }
     }
 
 

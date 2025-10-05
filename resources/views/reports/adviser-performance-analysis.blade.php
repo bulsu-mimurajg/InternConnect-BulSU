@@ -65,183 +65,159 @@
         }
         .report-title {
             text-align: center;
-            margin-bottom: 25px;
-            padding: 30px 20px;
-            background: linear-gradient(135deg, #e67e22 0%, #f39c12 100%);
-            border-radius: 12px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-            border: 2px solid #d35400;
+            margin-bottom: 30px;
         }
         .report-title h1 {
-            margin: 0;
             color: #2c3e50;
-            font-size: 32px;
-            font-weight: 800;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-            letter-spacing: 1px;
+            font-size: 28px;
+            font-weight: 700;
+            margin: 0;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
         }
         .generation-info {
             text-align: center;
             margin-bottom: 30px;
             padding: 15px;
-            background: #f8f9fa;
+            background-color: #f8f9fa;
             border-radius: 8px;
             border-left: 4px solid #e67e22;
         }
         .generation-info p {
             margin: 0;
-            color: #495057;
+            color: #6c757d;
             font-size: 14px;
             font-weight: 500;
-            font-style: italic;
         }
         
         .section { 
-            margin-bottom: 40px; 
-            background: #ffffff;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 30px; 
+            background: white; 
+            border-radius: 12px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1); 
             overflow: hidden;
+            border: 1px solid #e9ecef;
         }
         .section h2 { 
-            color: #e67e22; 
-            background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
-            color: white;
-            margin: 0;
-            padding: 20px 25px;
-            font-size: 24px;
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); 
+            color: white; 
+            margin: 0; 
+            padding: 20px; 
+            font-size: 20px; 
             font-weight: 600;
             text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
         }
-        .section-content {
-            padding: 25px;
+        .section-content { 
+            padding: 25px; 
         }
         
         .stats { 
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); 
-            border-radius: 12px; 
-            margin-bottom: 25px; 
-            border: 2px solid #e67e22;
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .stats h3 { 
-            margin-top: 0; 
-            color: #2c3e50; 
-            font-size: 20px;
-            font-weight: 600;
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        .metric-group {
-            margin-bottom: 30px;
-        }
-        .metric-group h4 {
-            margin: 0 30px 15px 30px;
-            color: #e67e22;
-            font-size: 16px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            border-bottom: 2px solid #e67e22;
-            padding-bottom: 8px;
-        }
-        .stats-row {
-            display: flex !important;
-            flex-direction: row !important;
-            gap: 20px !important;
-            width: 100%;
-            justify-content: space-between;
-        }
-        .stats-row .stat-item {
-            flex: 1 !important;
-            margin-bottom: 0 !important;
-            min-width: 0 !important;
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
+            gap: 20px; 
+            margin-bottom: 30px; 
         }
         .stat-item { 
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); 
+            padding: 20px; 
+            border-radius: 10px; 
             text-align: center; 
-            background: white;
-            padding: 25px 12px;
-            border-radius: 12px;
-            border: 2px solid #f39c12;
+            border: 1px solid #dee2e6;
+            transition: transform 0.2s ease;
         }
-        .stat-value { 
+        .stat-item:hover { 
+            transform: translateY(-2px); 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .stat-number { 
             font-size: 32px; 
-            font-weight: bold; 
+            font-weight: 700; 
             color: #e67e22; 
-            margin-bottom: 12px;
-            line-height: 1.2;
+            margin-bottom: 5px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
         }
         .stat-label { 
-            font-size: 13px; 
-            color: #495057; 
-            text-transform: uppercase; 
-            font-weight: 600;
-            letter-spacing: 1px;
-            line-height: 1.3;
+            font-size: 14px; 
+            color: #6c757d; 
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
         
         table { 
-            width: 100% !important; 
-            max-width: 100% !important;
+            width: 100%; 
             border-collapse: collapse; 
             margin-top: 20px; 
-            table-layout: fixed; 
-            font-size: 11px; 
             background: white;
             border-radius: 8px;
             overflow: hidden;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
-        th, td { 
-            border: 1px solid #dee2e6; 
-            padding: 8px 10px; 
-            text-align: left; 
-            word-wrap: break-word; 
-            color: #000000 !important;
-        }
-        td {
-            color: #000000 !important;
-            background-color: #ffffff !important;
-        }
         th { 
-            background: linear-gradient(135deg, #e67e22 0%, #f39c12 100%); 
-            color: white;
-            font-weight: bold; 
-            font-size: 11px; 
+            background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%); 
+            color: white; 
+            padding: 15px 12px; 
+            text-align: left; 
+            font-weight: 600;
+            font-size: 13px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
         }
-        tr:nth-child(even) {
-            background-color: #f8f9fa;
+        td { 
+            padding: 12px; 
+            border-bottom: 1px solid #e9ecef; 
+            font-size: 13px;
+            vertical-align: middle;
         }
-        tr:hover {
-            background-color: #fff3cd;
+        tr:nth-child(even) { 
+            background-color: #f8f9fa; 
+        }
+        tr:hover { 
+            background-color: #e3f2fd; 
+            transition: background-color 0.2s ease;
         }
         
+        /* Column widths */
         .col-rank { width: 8%; }
         .col-name { width: 20%; }
         .col-student { width: 15%; }
+        .col-section { width: 15%; }
         .col-score { width: 12%; }
         .col-percentage { width: 12%; }
-        .col-date { width: 18%; }
+        .col-date { width: 13%; }
         
-        .footer { 
-            margin-top: 40px; 
-            text-align: center; 
-            color: #6c757d; 
-            font-size: 12px; 
-            padding: 20px;
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-            border-radius: 10px;
-            border-top: 3px solid #e67e22;
+        /* Performance badges */
+        .performance-excellent { 
+            background-color: #d4edda; 
+            color: #155724; 
+            padding: 2px 6px; 
+            border-radius: 4px; 
+            font-weight: bold;
+            font-size: 9px;
         }
-        .page-break { page-break-before: always; }
-        
-        /* Rank styling */
-        .rank-1 { background-color: #ffd700 !important; color: #000 !important; font-weight: bold; }
-        .rank-2 { background-color: #c0c0c0 !important; color: #000 !important; font-weight: bold; }
-        .rank-3 { background-color: #cd7f32 !important; color: #fff !important; font-weight: bold; }
+        .performance-good { 
+            background-color: #cce5ff; 
+            color: #004085; 
+            padding: 2px 6px; 
+            border-radius: 4px; 
+            font-weight: bold;
+            font-size: 9px;
+        }
+        .performance-average { 
+            background-color: #fff3cd; 
+            color: #856404; 
+            padding: 2px 6px; 
+            border-radius: 4px; 
+            font-weight: bold;
+            font-size: 9px;
+        }
+        .performance-below { 
+            background-color: #f8d7da; 
+            color: #721c24; 
+            padding: 2px 6px; 
+            border-radius: 4px; 
+            font-weight: bold;
+            font-size: 9px;
+        }
         
         /* Responsive adjustments */
         @media print {
@@ -267,10 +243,27 @@
                 <p>Section: {{ $sectionName }} | Generated on {{ $generatedAt }}</p>
             </div>
 
-            <!-- Top Performers -->
-            @if(isset($topPerformers) && count($topPerformers) > 0)
+            <!-- Section Statistics -->
+            @if(isset($overviewStats) && count($overviewStats) > 0)
             <div class="section">
-                <h2>Top Performers</h2>
+                <h2>Performance Overview</h2>
+                <div class="section-content">
+                    <div class="stats">
+                        @foreach($overviewStats as $stat)
+                        <div class="stat-item">
+                            <div class="stat-number">{{ $stat['value'] }}</div>
+                            <div class="stat-label">{{ $stat['label'] }}</div>
+                        </div>
+                        @endforeach
+                    </div>
+                </div>
+            </div>
+            @endif
+
+            <!-- Top Performers -->
+            @if(isset($performanceData) && isset($performanceData['topPerformers']) && count($performanceData['topPerformers']) > 0)
+            <div class="section page-break">
+                <h2>Top Performing Students</h2>
                 <div class="section-content">
                     <table>
                         <thead>
@@ -278,19 +271,31 @@
                                 <th class="col-rank">Rank</th>
                                 <th class="col-name">Name</th>
                                 <th class="col-student">Student Number</th>
+                                <th class="col-section">Section</th>
                                 <th class="col-score">Score</th>
                                 <th class="col-percentage">Percentage</th>
                                 <th class="col-date">Submitted At</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach($topPerformers as $index => $student)
+                            @foreach($performanceData['topPerformers'] as $index => $student)
                             <tr>
-                                <td class="col-rank rank-{{ $index < 3 ? $index + 1 : '' }}">{{ $index + 1 }}</td>
-                                <td class="col-name"><strong>{{ $student['name'] }}</strong></td>
+                                <td class="col-rank">{{ $index + 1 }}</td>
+                                <td class="col-name">{{ $student['name'] }}</td>
                                 <td class="col-student">{{ $student['student_number'] }}</td>
+                                <td class="col-section">{{ $student['section'] }}</td>
                                 <td class="col-score">{{ $student['score'] }}</td>
-                                <td class="col-percentage">{{ $student['percentage'] }}%</td>
+                                <td class="col-percentage">
+                                    @php
+                                        $percentage = $student['percentage'];
+                                        $performanceClass = 'performance-average';
+                                        if ($percentage >= 90) $performanceClass = 'performance-excellent';
+                                        elseif ($percentage >= 80) $performanceClass = 'performance-good';
+                                        elseif ($percentage >= 70) $performanceClass = 'performance-average';
+                                        else $performanceClass = 'performance-below';
+                                    @endphp
+                                    <span class="{{ $performanceClass }}">{{ $percentage }}%</span>
+                                </td>
                                 <td class="col-date">{{ $student['submittedAt'] }}</td>
                             </tr>
                             @endforeach
@@ -299,19 +304,15 @@
                 </div>
             </div>
             @else
-            <div class="section">
-                <h2>Top Performers</h2>
+            <div class="section page-break">
+                <h2>Top Performing Students</h2>
                 <div class="section-content">
-                    <div class="stats">
-                        <p style="text-align: center; color: #6c757d; font-style: italic;">No performance data available for this section.</p>
-                    </div>
+                    <p style="text-align: center; color: #6c757d; font-style: italic; padding: 40px;">
+                        No performance data found for the selected section.
+                    </p>
                 </div>
             </div>
             @endif
-
-            <div class="footer">
-                <p>This report was generated automatically by the InternConnect System</p>
-            </div>
         </div>
     </div>
 </body>
