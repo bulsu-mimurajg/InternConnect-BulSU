@@ -51,11 +51,14 @@ interface MatchedStudent {
                     company_name: string;
                 };
                 slot_count?: number; // Total slots
-                available_slots?: number; // Available slots (total - occupied)
-                occupied_slots?: number; // Currently occupied slots
+                approved_slots?: number; // Approved placements
+                endorsed_slots?: number; // Endorsed students
+                available_slots?: number; // Available slots (total - approved - endorsed)
+                occupied_slots?: number; // Currently occupied slots (legacy)
             };
             compatibility_score: number;
             status?: string; // 'pending', 'approved', 'rejected'
+            is_fallback?: boolean; // Indicates if this is a fallback match
         };
 }
 
@@ -1381,16 +1384,32 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                                                                 <Badge variant="outline" className="text-xs">{student.section}</Badge>
                                                     </td>
                                                             <td className="p-2">
-                                                        <div>
-                                                                    <div className="font-medium text-sm">
+                                                            <div>
+                                                                    <div className="font-medium text-sm flex items-center gap-2">
                                                                 {student.best_match?.internship?.position_title || 'Unknown Position'}
                                                             </div>
                                                                     <div className="text-xs text-muted-foreground">
                                                                 {student.best_match?.internship?.hte?.company_name || 'Unknown Company'}
                                                             </div>
                                                             {student.best_match?.internship?.available_slots !== undefined && (
-                                                                        <div className="text-xs text-blue-600 font-medium">
-                                                                            {student.best_match.internship.available_slots} slot{student.best_match.internship.available_slots !== 1 ? 's' : ''} left
+                                                                <div className="space-y-1">
+                                                                    <div className={`text-xs font-medium ${
+                                                                        student.best_match.internship.available_slots === 0 
+                                                                            ? 'text-red-600' 
+                                                                            : student.best_match.internship.available_slots <= 2 
+                                                                            ? 'text-orange-600' 
+                                                                            : 'text-blue-600'
+                                                                    }`}>
+                                                                        {student.best_match.internship.available_slots === 0 
+                                                                            ? 'No slots available' 
+                                                                            : `${student.best_match.internship.available_slots} slot${student.best_match.internship.available_slots !== 1 ? 's' : ''} left`
+                                                                        }
+                                                                    </div>
+                                                                    {student.best_match.internship.slot_count && (
+                                                                        <div className="text-xs text-muted-foreground">
+                                                                            {student.best_match.internship.endorsed_slots || 0} endorsed • {student.best_match.internship.approved_slots || 0} approved • {student.best_match.internship.slot_count} total
+                                                                        </div>
+                                                                    )}
                                                                 </div>
                                                             )}
                                                             {localFilters.internship !== 'all' && student.best_match?.status && (
@@ -1423,10 +1442,15 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                                                                 variant="default"
                                                                 size="sm"
                                                                 onClick={() => handleSingleApprove(student)}
-                                                                disabled={isLoading}
-                                                                        className="bg-green-600 hover:bg-green-700 h-8 px-2"
+                                                                disabled={isLoading || (student.best_match?.internship?.available_slots !== undefined && student.best_match.internship.available_slots === 0)}
+                                                                className={`h-8 px-2 ${
+                                                                    student.best_match?.internship?.available_slots === 0 
+                                                                        ? 'bg-gray-400 hover:bg-gray-400 cursor-not-allowed' 
+                                                                        : 'bg-green-600 hover:bg-green-700'
+                                                                }`}
+                                                                title={student.best_match?.internship?.available_slots === 0 ? 'No slots available for this internship' : 'Endorse student for this internship'}
                                                             >
-                                                                        <CheckCircleIcon className="h-3 w-3" />
+                                                                <CheckCircleIcon className="h-3 w-3" />
                                                             </Button>
                                                             
                                                             <Button

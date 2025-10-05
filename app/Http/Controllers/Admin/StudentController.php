@@ -507,20 +507,33 @@ class StudentController extends Controller
                     ];
                 }
             } else {
-                // Get the best match from stored compatibility scores
+                // Get the best available match from stored compatibility scores
                 // Show only students who haven't been endorsed yet
-                $bestMatch = $student->compatibilityScores()
+                $allMatches = $student->compatibilityScores()
                     ->with(['internship.hte:id,company_name', 'internship.subcategoryWeights.subcategory'])
                     ->where('endorsement_status', 'pending')
                     ->orderBy('compatibility_score', 'desc')
-                    ->get()
-                    ->filter(function ($match) {
-                        // Calculate available slots (total slots - approved placements)
-                        $availableSlots = $match->internship->slot_count - 
-                            $match->internship->studentPlacements()->where('status', 'approved')->count();
-                        return $availableSlots > 0;
-                    })
-                    ->first();
+                    ->get();
+
+                // Find the best available match (with slots available)
+                $bestMatch = null;
+                $isFallback = false;
+                
+                foreach ($allMatches as $match) {
+                    // Calculate available slots (total slots - approved placements - endorsed slots)
+                    $approvedPlacements = $match->internship->studentPlacements()->where('status', 'approved')->count();
+                    $endorsedSlots = Endorsement::where('internship_id', $match->internship->id)
+                        ->where('status', 'endorsed')
+                        ->count();
+                    $availableSlots = $match->internship->slot_count - $approvedPlacements - $endorsedSlots;
+                    
+                    if ($availableSlots > 0) {
+                        $bestMatch = $match;
+                        // If this is not the first match (highest compatibility), it's a fallback
+                        $isFallback = $match !== $allMatches->first();
+                        break;
+                    }
+                }
 
                 if ($bestMatch) {
                     return [
@@ -537,14 +550,16 @@ class StudentController extends Controller
                                 'position_title' => $bestMatch->internship->position_title,
                                 'department' => $bestMatch->internship->department,
                                 'slot_count' => $bestMatch->internship->slot_count,
-                                'available_slots' => $bestMatch->internship->slot_count - $bestMatch->internship->studentPlacements()->where('status', 'approved')->count(),
-                                'occupied_slots' => $bestMatch->internship->studentPlacements()->where('status', 'approved')->count(),
+                                'approved_slots' => $bestMatch->internship->studentPlacements()->where('status', 'approved')->count(),
+                                'endorsed_slots' => Endorsement::where('internship_id', $bestMatch->internship->id)->where('status', 'endorsed')->count(),
+                                'available_slots' => $bestMatch->internship->slot_count - $bestMatch->internship->studentPlacements()->where('status', 'approved')->count() - Endorsement::where('internship_id', $bestMatch->internship->id)->where('status', 'endorsed')->count(),
                                 'hte' => [
                                     'company_name' => $bestMatch->internship->hte->company_name ?? 'Unknown Company'
                                 ]
                             ],
                             'compatibility_score' => $bestMatch->compatibility_score,
                             'status' => $bestMatch->status, // Include status for frontend display
+                            'is_fallback' => $isFallback, // Indicates if this is a fallback match
                         ],
                         'has_matches' => true,
                     ];
@@ -704,8 +719,11 @@ class StudentController extends Controller
                 ->where('endorsement_status', 'pending')
                 ->get()
                 ->filter(function ($match) {
-                    $availableSlots = $match->internship->slot_count - 
-                        $match->internship->studentPlacements()->where('status', 'approved')->count();
+                    $approvedPlacements = $match->internship->studentPlacements()->where('status', 'approved')->count();
+                    $endorsedSlots = Endorsement::where('internship_id', $match->internship->id)
+                        ->where('status', 'endorsed')
+                        ->count();
+                    $availableSlots = $match->internship->slot_count - $approvedPlacements - $endorsedSlots;
                     return $availableSlots > 0;
                 })
                 ->isNotEmpty();
@@ -960,6 +978,23 @@ class StudentController extends Controller
             return response()->json([
                 'message' => 'Internship not found'
             ], 404);
+        }
+
+        // Check if internship has available slots for endorsement
+        $currentEndorsements = Endorsement::where('internship_id', $validated['internship_id'])
+            ->where('status', 'endorsed')
+            ->count();
+        
+        $currentApprovedPlacements = StudentPlacement::where('internship_id', $validated['internship_id'])
+            ->where('status', 'approved')
+            ->count();
+        
+        $totalUsedSlots = $currentEndorsements + $currentApprovedPlacements;
+        
+        if ($totalUsedSlots >= $internship->slot_count) {
+            return response()->json([
+                'message' => 'No available slots for this internship. All slots are either endorsed or approved.'
+            ], 400);
         }
 
         try {
@@ -1565,12 +1600,16 @@ class StudentController extends Controller
         foreach ($internshipGroups as $internshipId => $students) {
             $internship = $students[0]['best_match']->internship;
             
-            // Get current available slots
+            // Get current available slots (considering both approved placements and existing endorsements)
             $currentApprovedPlacements = $internship->studentPlacements()
                 ->where('status', 'approved')
                 ->count();
             
-            $availableSlots = $internship->slot_count - $currentApprovedPlacements;
+            $currentEndorsements = Endorsement::where('internship_id', $internship->id)
+                ->where('status', 'endorsed')
+                ->count();
+            
+            $availableSlots = $internship->slot_count - $currentApprovedPlacements - $currentEndorsements;
             $studentsWantingThisInternship = count($students);
             
             // If more students want this internship than available slots
@@ -1649,7 +1688,10 @@ class StudentController extends Controller
                         }
                         
                         $availableSlots = $match->internship->slot_count - 
-                            $match->internship->studentPlacements()->where('status', 'approved')->count();
+                            $match->internship->studentPlacements()->where('status', 'approved')->count() -
+                            Endorsement::where('internship_id', $match->internship->id)
+                                ->where('status', 'endorsed')
+                                ->count();
                         
                         if ($availableSlots > 0) {
                             $bestAvailableMatch = $match;
@@ -1696,6 +1738,12 @@ class StudentController extends Controller
                 }
             } else {
                 // No conflicts for this internship, all students get their best match
+                // But we still need to check if there are enough slots
+                if ($studentsWantingThisInternship > $availableSlots) {
+                    $errors[] = "Not enough slots for internship {$internship->position_title}. Available: {$availableSlots}, Requested: {$studentsWantingThisInternship}";
+                    continue;
+                }
+                
                 foreach ($students as $studentMatch) {
                     $student = $studentMatch['student'];
                     $bestMatch = $studentMatch['best_match'];
