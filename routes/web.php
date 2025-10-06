@@ -133,6 +133,128 @@ Route::middleware(['auth', 'verified', 'role_redirect:admin'])->group(function (
     Route::get('email-test', function () {
         return Inertia::render('admin/email-test');
     })->name('admin.email-test');
+
+    // Email template preview index
+    Route::get('email-preview', function () {
+        $emailTemplates = [
+            [
+                'name' => 'Account Verification',
+                'route' => 'email.preview.account-verification',
+                'description' => 'Email sent when users register to verify their account'
+            ],
+            [
+                'name' => 'Adviser Credentials',
+                'route' => 'email.preview.adviser-credentials',
+                'description' => 'Email sent to advisers with their login credentials'
+            ],
+            [
+                'name' => 'Assessment Reminder',
+                'route' => 'email.preview.assessment-reminder',
+                'description' => 'Email reminder for pending assessments'
+            ],
+            [
+                'name' => 'HTE Credentials',
+                'route' => 'email.preview.hte-credentials',
+                'description' => 'Email sent to HTE representatives with their login credentials'
+            ],
+            [
+                'name' => 'Internship Notification',
+                'route' => 'email.preview.internship-notification',
+                'description' => 'Email notification for successful internship placement'
+            ],
+            [
+                'name' => 'Password Reset',
+                'route' => 'email.preview.password-reset',
+                'description' => 'Email sent when users request password reset'
+            ],
+            [
+                'name' => 'Unified Deadline',
+                'route' => 'email.preview.unified-deadline',
+                'description' => 'Email notification for upcoming deadlines'
+            ]
+        ];
+
+        return view('emails.preview-index', compact('emailTemplates'));
+    })->name('email.preview.index');
+
+    // Email template preview routes
+    Route::get('email-preview/account-verification', function () {
+        return view('emails.account-verification', [
+            'userName' => 'John Doe',
+            'verificationUrl' => 'https://example.com/verify?token=abc123',
+            'headerSubtitle' => 'Account Verification'
+        ]);
+    })->name('email.preview.account-verification');
+
+    Route::get('email-preview/adviser-credentials', function () {
+        return view('emails.adviser-credentials', [
+            'adviserName' => 'Dr. Jane Smith',
+            'username' => 'adviser001',
+            'password' => 'tempPassword123',
+            'email' => 'jane.smith@bulsu.edu.ph',
+            'loginUrl' => 'https://example.com/login',
+            'sections' => ['CS-3A', 'CS-3B', 'IT-3A'],
+            'headerSubtitle' => 'Adviser Account Created'
+        ]);
+    })->name('email.preview.adviser-credentials');
+
+    Route::get('email-preview/assessment-reminder', function () {
+        return view('emails.assessment-reminder', [
+            'studentName' => 'John Doe',
+            'assessmentType' => 'Technical Skills',
+            'dashboardUrl' => 'https://example.com/dashboard',
+            'headerSubtitle' => 'Assessment Reminder'
+        ]);
+    })->name('email.preview.assessment-reminder');
+
+    Route::get('email-preview/hte-credentials', function () {
+        return view('emails.hte-credentials', [
+            'companyName' => 'Tech Solutions Inc.',
+            'username' => 'hte001',
+            'password' => 'tempPassword123',
+            'email' => 'contact@techsolutions.com',
+            'loginUrl' => 'https://example.com/login',
+            'headerSubtitle' => 'HTE Account Created'
+        ]);
+    })->name('email.preview.hte-credentials');
+
+    Route::get('email-preview/internship-notification', function () {
+        return view('emails.internship-notification', [
+            'studentName' => 'John Doe',
+            'internshipDetails' => [
+                'company_name' => 'Tech Solutions Inc.',
+                'position' => 'Software Developer Intern',
+                'duration' => '6 months',
+                'start_date' => 'January 15, 2024'
+            ],
+            'headerSubtitle' => 'Internship Placement'
+        ]);
+    })->name('email.preview.internship-notification');
+
+    Route::get('email-preview/password-reset', function () {
+        return view('emails.password-reset', [
+            'userName' => 'John Doe',
+            'resetUrl' => 'https://example.com/reset?token=abc123',
+            'headerSubtitle' => 'Password Reset'
+        ]);
+    })->name('email.preview.password-reset');
+
+    Route::get('email-preview/unified-deadline', function () {
+        return view('emails.unified-deadline', [
+            'userDisplayName' => 'John Doe',
+            'urgencyLevel' => ['message' => 'This is an urgent deadline notification.'],
+            'deadlineName' => 'Assessment Submission',
+            'categoryDisplay' => 'Student Assessment',
+            'deadlineDate' => now()->addDays(3),
+            'timeRemainingText' => '3 days remaining',
+            'daysRemaining' => 3,
+            'hoursRemaining' => null,
+            'actionText' => 'Please complete your assessment before the deadline.',
+            'roleSpecificContent' => 'As a student, ensure all required fields are completed.',
+            'actionUrl' => 'https://example.com/assessment',
+            'headerSubtitle' => 'Deadline Notification'
+        ]);
+    })->name('email.preview.unified-deadline');
 });
 
 // Unified report System - Accessible by all authenticated users with role-based filtering

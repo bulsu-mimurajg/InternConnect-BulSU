@@ -1,23 +1,25 @@
 @extends('emails.layout')
 
 @section('content')
-    <p>Dear {{ $userName }},</p>
-    <p>Welcome to BULSU InternConnect! Thank you for registering with our internship management system.</p>
+    <p style="font-size: 16px; font-weight: bold; color: #2c3e50; margin-bottom: 15px;">Welcome, {{ $userName }}!</p>
+    <p style="margin-bottom: 20px;">Thank you for registering with BULSU InternConnect. Please verify your email address to complete your registration.</p>
     
     <div class="highlight">
-        <h3>Please verify your account to get started</h3>
-        <p>Click the button below to verify your email address and activate your account:</p>
-        <a href="{{ $verificationUrl }}" class="button">Verify My Account</a>
+        <h3>Verify Your Account</h3>
+        <p style="margin-bottom: 15px;">Click the button below to verify your email address:</p>
+        <div class="button-container">
+            <a href="{{ $verificationUrl }}" class="button">Verify Account</a>
+        </div>
     </div>
     
-    <p><strong>Or copy and paste this link into your browser:</strong></p>
+    <p style="margin: 15px 0 8px 0; font-weight: bold; color: #7f8c8d;">Or copy this link:</p>
     <div class="url-box">{{ $verificationUrl }}</div>
     
     <div class="warning">
-        <h4>⚠️ Important Information:</h4>
+        <h4>Important</h4>
         <ul>
-            <li>This verification link will expire in 24 hours for security reasons</li>
-            <li>If you didn't create an account with BULSU InternConnect, please ignore this email</li>
+            <li>This link expires in 24 hours</li>
+            <li>Ignore this email if you didn't create an account</li>
         </ul>
     </div>
 @endsection
