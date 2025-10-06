@@ -13,7 +13,7 @@ export default function Contact() {
                 <link rel="preconnect" href="https://fonts.bunny.net" />
                 <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600" rel="stylesheet" />
             </Head>
-            <div className="flex min-h-screen flex-col items-center relative">
+            <div className="flex min-h-screen flex-col items-center relative bg-background">
                 {/* Background Image */}
                 <div 
                     className="fixed inset-0 bg-cover bg-center bg-no-repeat opacity-50 dark:opacity-25" 
