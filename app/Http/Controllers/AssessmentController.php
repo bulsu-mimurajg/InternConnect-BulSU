@@ -209,6 +209,20 @@ class AssessmentController extends Controller
             \Log::info('Updating student submission status', ['student_id' => $student->id]);
             $student->update(['is_submit' => true]);
 
+            // Immediately calculate and store compatibility scores so admin SIP sees matches without requiring student relogin
+            try {
+                $matchingService = new MatchingService();
+                $matchingService->calculateAndStoreCompatibilityScores($student);
+                \Log::info('Compatibility scores calculated and stored after assessment submission', [
+                    'student_id' => $student->id
+                ]);
+            } catch (\Throwable $e) {
+                \Log::error('Failed to calculate compatibility scores after assessment submission', [
+                    'student_id' => $student->id,
+                    'error' => $e->getMessage()
+                ]);
+            }
+
             // Notify admins that student has completed assessment and is waiting for endorsement
             $this->notifyAdminsForStudentAssessmentCompletion($student);
 
