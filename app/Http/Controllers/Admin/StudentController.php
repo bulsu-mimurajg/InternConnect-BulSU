@@ -465,8 +465,9 @@ class StudentController extends Controller
             });
         }
 
-        // Get students who don't have any current endorsed endorsements
+        // Get students who don't have any current active endorsed endorsements
         // This includes students with no endorsements, only rejected endorsements, or mixed statuses
+        // We exclude students who have endorsements with status 'endorsed' that haven't been processed by HTE yet
         $students = $query->whereDoesntHave('endorsements', function($q) {
             $q->where('status', 'endorsed');
         })->get();
@@ -693,8 +694,17 @@ class StudentController extends Controller
             ->where('is_submit', true)
             ->where('is_active', true)
             ->where('is_placed', false)
-            ->whereDoesntHave('endorsements', function($q) {
-                $q->where('status', 'endorsed');
+            ->where(function($q) {
+                // Include students who:
+                // 1. Have no endorsements at all
+                // 2. Have only rejected endorsements
+                // 3. Have been rejected by HTE (have rejected endorsements but no active endorsed ones)
+                $q->whereDoesntHave('endorsements')
+                  ->orWhereHas('endorsements', function($subQ) {
+                      $subQ->where('status', 'rejected');
+                  })->whereDoesntHave('endorsements', function($subQ) {
+                      $subQ->where('status', 'endorsed');
+                  });
             });
 
         // Apply section filter
@@ -728,13 +738,19 @@ class StudentController extends Controller
                 })
                 ->isNotEmpty();
 
+            // Check if student has been rejected by HTE
+            $hteRejectedEndorsements = $student->endorsements()->where('status', 'rejected')->get();
+            $isHteRejected = $hteRejectedEndorsements->isNotEmpty();
+
             // Check if student requires manual intervention
             $unplacedRecord = \App\Models\UnplacedStudent::where('student_id', $student->id)->first();
             $requiresManualIntervention = $unplacedRecord && $unplacedRecord->requires_manual_intervention;
 
             // Get the reason why student couldn't be placed
             $reason = 'Unknown';
-            if ($unplacedRecord) {
+            if ($isHteRejected) {
+                $reason = 'Rejected by HTE';
+            } elseif ($unplacedRecord) {
                 $reason = $unplacedRecord->reason;
             } elseif (!$hasAvailableMatches) {
                 $totalMatches = $student->compatibilityScores()->count();
@@ -756,12 +772,13 @@ class StudentController extends Controller
                 'reason' => $reason,
                 'has_available_matches' => $hasAvailableMatches,
                 'requires_manual_intervention' => $requiresManualIntervention,
+                'is_hte_rejected' => $isHteRejected,
                 'total_matches' => $student->compatibilityScores()->count(),
                 'rejected_matches' => $student->compatibilityScores()->where('endorsement_status', 'rejected')->count(),
             ];
         })->filter(function ($student) {
-            // Only include students who truly couldn't be placed
-            return !$student['has_available_matches'];
+            // Include students who truly couldn't be placed OR have been rejected by HTE
+            return !$student['has_available_matches'] || $student['is_hte_rejected'];
         });
     }
 

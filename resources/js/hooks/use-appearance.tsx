@@ -39,12 +39,43 @@ const handleSystemThemeChange = () => {
 };
 
 export function initializeTheme() {
-    const savedAppearance = (localStorage.getItem('appearance') as Appearance) || 'system';
+    // Ensure we're in a browser environment
+    if (typeof window === 'undefined' || typeof document === 'undefined') {
+        return;
+    }
 
-    applyTheme(savedAppearance);
+    // Function to safely get saved appearance
+    const getSavedAppearance = (): Appearance => {
+        try {
+            const saved = localStorage.getItem('appearance') as Appearance;
+            return saved || 'system';
+        } catch {
+            return 'system';
+        }
+    };
 
-    // Add the event listener for system theme changes...
-    mediaQuery()?.addEventListener('change', handleSystemThemeChange);
+    // Function to safely apply theme
+    const safeApplyTheme = (appearance: Appearance) => {
+        try {
+            applyTheme(appearance);
+        } catch (error) {
+            console.warn('Failed to apply theme:', error);
+        }
+    };
+
+    // Get and apply the saved appearance
+    const savedAppearance = getSavedAppearance();
+    safeApplyTheme(savedAppearance);
+
+    // Add the event listener for system theme changes
+    const mediaQueryInstance = mediaQuery();
+    if (mediaQueryInstance) {
+        try {
+            mediaQueryInstance.addEventListener('change', handleSystemThemeChange);
+        } catch (error) {
+            console.warn('Failed to add theme change listener:', error);
+        }
+    }
 }
 
 export function useAppearance() {

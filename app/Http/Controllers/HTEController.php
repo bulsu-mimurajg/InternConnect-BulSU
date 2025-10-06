@@ -1044,54 +1044,17 @@ class HTEController extends Controller
                 ->where('internship_id', $endorsement->internship_id)
                 ->update(['placement_status' => 'rejected']);
 
-            // Find the student's next highest compatibility HTE
-            // Look for pending endorsement matches (not yet endorsed by admin)
-            $nextMatch = StudentMatch::with(['internship.hte'])
-                ->where('student_id', $endorsement->student_id)
-                ->where('endorsement_status', 'pending')
-                ->orderBy('compatibility_score', 'desc')
-                ->first();
+            // Note: We don't automatically create a new endorsement for the next match
+            // The student will return to the admin matched table for manual review
+            // Admin can then decide whether to endorse them to their next best match
 
-            if ($nextMatch) {
-                // Update the next match's endorsement status to 'endorsed'
-                StudentMatch::where('student_id', $endorsement->student_id)
-                    ->where('internship_id', $nextMatch->internship_id)
-                    ->update(['endorsement_status' => 'endorsed']);
+            Log::info('Student rejected by HTE, returning to admin review:', [
+                'student_id' => $endorsement->student_id,
+                'internship_id' => $endorsement->internship_id,
+                'hte_id' => $hte->id,
+            ]);
 
-                // Create new endorsement for the next highest compatibility HTE
-                Endorsement::create([
-                    'student_id' => $endorsement->student_id,
-                    'internship_id' => $nextMatch->internship_id,
-                    'status' => 'endorsed',
-                    'compatibility_score' => $nextMatch->compatibility_score,
-                    'endorsement_date' => now(),
-                ]);
-
-                // Send notification to the new HTE about the endorsement
-                $student = Student::find($endorsement->student_id);
-                $internship = Internship::with('hte.user')->find($nextMatch->internship_id);
-                if ($student && $internship && $internship->hte) {
-                    $notificationService = new NotificationService();
-                    $studentName = $student->first_name . ' ' . $student->last_name;
-                    $companyName = $internship->hte->company_name;
-                    $notificationService->notifyHTEForEndorsement(
-                        $internship->hte->user_id,
-                        $studentName,
-                        $companyName,
-                        $student->id,
-                        $internship->id
-                    );
-                }
-
-                Log::info('Student moved to next highest compatibility HTE:', [
-                    'student_id' => $endorsement->student_id,
-                    'old_internship_id' => $endorsement->internship_id,
-                    'new_internship_id' => $nextMatch->internship_id,
-                    'new_hte_id' => $nextMatch->internship->hte_id,
-                ]);
-            }
-
-            return redirect()->back()->with('success', 'Student rejected and moved to next highest compatibility HTE');
+            return redirect()->back()->with('success', 'Student rejected successfully.');
 
         } catch (\Exception $e) {
             Log::error('HTE Endorsement Rejection Error:', [
@@ -1238,7 +1201,6 @@ class HTEController extends Controller
         $successCount = 0;
         $errorCount = 0;
         $errors = [];
-        $fallbackCount = 0;
 
         foreach ($endorsementIds as $endorsementId) {
             try {
@@ -1262,46 +1224,9 @@ class HTEController extends Controller
                     ->where('internship_id', $endorsement->internship_id)
                     ->update(['placement_status' => 'rejected']);
 
-                // Find the student's next highest compatibility HTE
-                $nextMatch = StudentMatch::with(['internship.hte'])
-                    ->where('student_id', $endorsement->student_id)
-                    ->where('endorsement_status', 'pending')
-                    ->orderBy('compatibility_score', 'desc')
-                    ->first();
-
-                if ($nextMatch) {
-                    // Update the next match's endorsement status to 'endorsed'
-                    StudentMatch::where('student_id', $endorsement->student_id)
-                        ->where('internship_id', $nextMatch->internship_id)
-                        ->update(['endorsement_status' => 'endorsed']);
-
-                    // Create new endorsement for the next highest compatibility HTE
-                    Endorsement::create([
-                        'student_id' => $endorsement->student_id,
-                        'internship_id' => $nextMatch->internship_id,
-                        'status' => 'endorsed',
-                        'compatibility_score' => $nextMatch->compatibility_score,
-                        'endorsement_date' => now(),
-                    ]);
-
-                    // Send notification to the new HTE about the endorsement
-                    $student = Student::find($endorsement->student_id);
-                    $internship = Internship::with('hte.user')->find($nextMatch->internship_id);
-                    if ($student && $internship && $internship->hte) {
-                        $notificationService = new NotificationService();
-                        $studentName = $student->first_name . ' ' . $student->last_name;
-                        $companyName = $internship->hte->company_name;
-                        $notificationService->notifyHTEForEndorsement(
-                            $internship->hte->user_id,
-                            $studentName,
-                            $companyName,
-                            $student->id,
-                            $internship->id
-                        );
-                    }
-
-                    $fallbackCount++;
-                }
+                // Note: We don't automatically create a new endorsement for the next match
+                // The student will return to the admin matched table for manual review
+                // Admin can then decide whether to endorse them to their next best match
 
                 $successCount++;
 
@@ -1317,10 +1242,7 @@ class HTEController extends Controller
             }
         }
 
-        $message = "Batch rejection completed: {$successCount} rejected";
-        if ($fallbackCount > 0) {
-            $message .= ", {$fallbackCount} moved to fallback matches";
-        }
+        $message = "Batch rejection completed: {$successCount} students rejected.";
         if ($errorCount > 0) {
             $message .= ", {$errorCount} failed";
         }
@@ -1331,7 +1253,6 @@ class HTEController extends Controller
             'total_processed' => count($endorsementIds),
             'success_count' => $successCount,
             'error_count' => $errorCount,
-            'fallback_count' => $fallbackCount,
             'errors' => $errors
         ]);
     }

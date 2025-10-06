@@ -375,10 +375,17 @@ class AutomaticPlacementService
             // 1. Are not placed yet
             // 2. Have no endorsed matches (all were rejected or no endorsement exists)
             // 3. Have completed their assessment (is_submit = true)
+            // 4. Include HTE-rejected students
             $studentsNeedingEmergencyPlacement = Student::where('is_placed', false)
                 ->where('is_submit', true)
-                ->whereDoesntHave('endorsements', function($q) {
-                    $q->where('status', 'endorsed');
+                ->where(function($q) {
+                    // Include students with no endorsements OR only rejected endorsements
+                    $q->whereDoesntHave('endorsements')
+                      ->orWhereHas('endorsements', function($subQ) {
+                          $subQ->where('status', 'rejected');
+                      })->whereDoesntHave('endorsements', function($subQ) {
+                          $subQ->where('status', 'endorsed');
+                      });
                 })
                 ->with(['matches' => function($q) {
                     $q->with('internship.hte')->orderBy('compatibility_score', 'desc');

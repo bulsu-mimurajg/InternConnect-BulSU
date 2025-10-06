@@ -13,7 +13,7 @@ import { Pagination } from '@/components/ui/pagination';
 import { usePagination } from '@/hooks/usePagination';
 import { getRowNumber } from '@/lib/pagination-utils';
 import StudentDetailsModal from '@/components/student-details-modal';
-import { 
+import {
     TargetIcon,
     EyeIcon,
     CheckCircleIcon,
@@ -104,6 +104,7 @@ interface UnplacedStudent {
     reason: string;
     has_available_matches: boolean;
     requires_manual_intervention: boolean;
+    is_hte_rejected: boolean;
     total_matches: number;
     rejected_matches: number;
 }
@@ -152,7 +153,7 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                     'Accept': 'application/json',
                 },
             });
-            
+
             if (response.ok) {
                 const data = await response.json();
                 // Update the meta tag with new token
@@ -221,13 +222,13 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
     // Filter matched students based on local filters
     const filteredMatchedStudents = matchedStudents.filter(student => {
         const matchesSection = localFilters.section === 'all' || student.section === localFilters.section;
-        const matchesInternship = localFilters.internship === 'all' || 
+        const matchesInternship = localFilters.internship === 'all' ||
                                  student.best_match?.internship?.id.toString() === localFilters.internship;
-        const matchesSearch = localFilters.search === '' || 
+        const matchesSearch = localFilters.search === '' ||
                              student.first_name.toLowerCase().includes(localFilters.search.toLowerCase()) ||
                              student.last_name.toLowerCase().includes(localFilters.search.toLowerCase()) ||
                              student.student_number.toLowerCase().includes(localFilters.search.toLowerCase());
-        
+
         return matchesSection && matchesInternship && matchesSearch;
     });
 
@@ -265,7 +266,7 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
 
     const getStatusBadge = (status?: string) => {
         if (!status || status === 'pending') return null;
-        
+
         if (status === 'approved') {
             return (
                 <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
@@ -273,7 +274,7 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                 </Badge>
             );
         }
-        
+
         if (status === 'rejected') {
             return (
                 <Badge className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
@@ -281,7 +282,7 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                 </Badge>
             );
         }
-        
+
         return null;
     };
 
@@ -344,13 +345,13 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
         }
 
         let csrfToken = getFreshCsrfToken();
-        
+
         try {
             setIsLoading(true);
             setErrorMessage(null);
             setErrorType(null);
-            
-            
+
+
             const response = await fetch(`/student/${student.id}/endorse`, {
                 method: 'POST',
                 headers: {
@@ -363,12 +364,12 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                     compatibility_score: student.best_match.compatibility_score || 0,
                 }),
             });
-            
-            
+
+
             // Handle CSRF token mismatch
             if (response.status === 419) {
                 csrfToken = await refreshCsrfToken();
-                
+
                 // Retry the request with fresh token
                 const retryResponse = await fetch(`/student/${student.id}/endorse`, {
                     method: 'POST',
@@ -382,7 +383,7 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                         compatibility_score: student.best_match.compatibility_score || 0,
                     }),
                 });
-                
+
                 if (retryResponse.ok) {
                     await retryResponse.json();
                     setErrorMessage('Student placement approved successfully!');
@@ -393,14 +394,14 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                     return;
                 }
             }
-            
+
             // Check if response is JSON
             const contentType = response.headers.get('content-type');
             if (!contentType || !contentType.includes('application/json')) {
                 // Response is not JSON, likely HTML (login page or error page)
                 const responseText = await response.text();
                 console.error('Non-JSON response received:', responseText.substring(0, 200));
-                
+
                 if (responseText.includes('<!DOCTYPE') || responseText.includes('<html')) {
                     setErrorMessage('Authentication error: You may have been logged out or do not have permission to perform this action. Please refresh the page and try again.');
                     setErrorType('error');
@@ -410,9 +411,9 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                 }
                 return;
             }
-            
+
             const result = await response.json();
-            
+
             if (response.ok) {
                 setErrorMessage('Student placement approved successfully!');
                 setErrorType('success');
@@ -426,7 +427,7 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
             }
         } catch (error) {
             console.error('Error in single approval:', error);
-            
+
             // Check if it's a JSON parsing error
             if (error instanceof SyntaxError && error.message.includes('Unexpected token')) {
                 setErrorMessage('Server returned an invalid response format. This usually indicates an authentication or permission issue. Please refresh the page and try again.');
@@ -448,13 +449,13 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
         }
 
         let csrfToken = getFreshCsrfToken();
-        
+
         try {
             setIsLoading(true);
             setErrorMessage(null);
             setErrorType(null);
-            
-            
+
+
             const response = await fetch(`/student/${student.id}/reject-placement`, {
                 method: 'POST',
                 headers: {
@@ -467,12 +468,12 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                     compatibility_score: student.best_match.compatibility_score || 0,
                 }),
             });
-            
-            
+
+
             // Handle CSRF token mismatch
             if (response.status === 419) {
                 csrfToken = await refreshCsrfToken();
-                
+
                 // Retry the request with fresh token
                 const retryResponse = await fetch(`/student/${student.id}/reject-placement`, {
                     method: 'POST',
@@ -486,7 +487,7 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                         compatibility_score: student.best_match.compatibility_score || 0,
                     }),
                 });
-                
+
                 if (retryResponse.ok) {
                     const result = await retryResponse.json();
                     if (result.fallback) {
@@ -501,14 +502,14 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                     return;
                 }
             }
-            
+
             // Check if response is JSON
             const contentType = response.headers.get('content-type');
             if (!contentType || !contentType.includes('application/json')) {
                 // Response is not JSON, likely HTML (login page or error page)
                 const responseText = await response.text();
                 console.error('Non-JSON response received:', responseText.substring(0, 200));
-                
+
                 if (responseText.includes('<!DOCTYPE') || responseText.includes('<html')) {
                     setErrorMessage('Authentication error: You may have been logged out or do not have permission to perform this action. Please refresh the page and try again.');
                     setErrorType('error');
@@ -518,9 +519,9 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                 }
                 return;
             }
-            
+
             const result = await response.json();
-            
+
             if (response.ok) {
                 if (result.fallback) {
                     setErrorMessage(`Student rejected and moved to next match: ${result.new_internship.position_title} at ${result.new_internship.company_name} (${result.new_internship.compatibility_score}% compatibility)`);
@@ -538,7 +539,7 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
             }
         } catch (error) {
             console.error('Error in single rejection:', error);
-            
+
             // Check if it's a JSON parsing error
             if (error instanceof SyntaxError && error.message.includes('Unexpected token')) {
                 setErrorMessage('Server returned an invalid response format. This usually indicates an authentication or permission issue. Please refresh the page and try again.');
@@ -581,20 +582,20 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
         if (selectedStudents.size === 0) return;
 
         const csrfToken = getFreshCsrfToken();
-        
+
         // Check if CSRF token exists (basic auth check)
         if (!csrfToken) {
             setErrorMessage('Authentication error: CSRF token not found. Please refresh the page and try again.');
             setErrorType('error');
             return;
         }
-        
+
         try {
             setIsLoading(true);
             setErrorMessage(null);
             setErrorType(null);
-            
-            
+
+
             // First, check for slot conflicts
             const conflictResponse = await fetch('/student/check-batch-conflicts', {
                 method: 'POST',
@@ -608,10 +609,10 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                     internship_filter: localFilters.internship !== 'all' ? localFilters.internship : null
                 }),
             });
-            
+
             if (conflictResponse.ok) {
                 const conflictData = await conflictResponse.json();
-                
+
                 if (conflictData.has_conflicts) {
                     // Show confirmation dialog
                     setConflictData(conflictData);
@@ -620,10 +621,10 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                     return;
                 }
             }
-            
+
             // No conflicts, proceed with approval
             await proceedWithBatchApproval(csrfToken);
-            
+
         } catch (error) {
             console.error('Error during batch approval:', error);
             setErrorMessage('An error occurred during batch approval. Please try again.');
@@ -634,7 +635,7 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
 
     const proceedWithBatchApproval = async (csrfToken: string) => {
         try {
-            
+
             // Use the new batch approval endpoint
             const response = await fetch('/student/batch-endorse', {
                 method: 'POST',
@@ -648,12 +649,12 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                     internship_filter: localFilters.internship !== 'all' ? localFilters.internship : null
                 }),
             });
-            
-            
+
+
             // Handle CSRF token mismatch
             if (response.status === 419) {
                 csrfToken = await refreshCsrfToken();
-                
+
                 // Retry the request with fresh token
                 const retryResponse = await fetch('/student/batch-endorse', {
                     method: 'POST',
@@ -667,7 +668,7 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                         internship_filter: localFilters.internship !== 'all' ? localFilters.internship : null
                     }),
                 });
-                
+
                 if (retryResponse.ok) {
                     const result = await retryResponse.json();
                     if (result.total_endorsed > 0) {
@@ -688,14 +689,14 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                     return;
                 }
             }
-            
+
             // Check if response is JSON
             const contentType = response.headers.get('content-type');
             if (!contentType || !contentType.includes('application/json')) {
                 // Response is not JSON, likely HTML (login page or error page)
                 const responseText = await response.text();
                 console.error('Non-JSON response received:', responseText.substring(0, 200));
-                
+
                 if (responseText.includes('<!DOCTYPE') || responseText.includes('<html')) {
                     setErrorMessage('Authentication error: You may have been logged out or do not have permission to perform this action. Please refresh the page and try again.');
                     setErrorType('error');
@@ -705,9 +706,9 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                 }
                 return;
             }
-            
+
             const result = await response.json();
-            
+
             if (response.ok) {
                 // Success
                 if (result.total_endorsed > 0) {
@@ -732,7 +733,7 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
             }
         } catch (error) {
             console.error('Error in batch approval:', error);
-            
+
             // Check if it's a JSON parsing error
             if (error instanceof SyntaxError && error.message.includes('Unexpected token')) {
                 setErrorMessage('Server returned an invalid response format. This usually indicates an authentication or permission issue. Please refresh the page and try again.');
@@ -750,20 +751,20 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
         if (selectedStudents.size === 0) return;
 
         let csrfToken = getFreshCsrfToken();
-        
+
         try {
             setIsLoading(true);
             setErrorMessage(null);
             setErrorType(null);
-            
+
             const promises = Array.from(selectedStudents).map(async (studentId) => {
                 const student = matchedStudents.find(s => s.id === studentId);
                 if (!student) return { success: false, error: 'Student not found' };
-                
+
                 if (!student.best_match?.internship) {
                     return { success: false, error: 'Student missing internship information' };
                 }
-                
+
                 try {
                     let response = await fetch(`/student/${student.id}/reject-placement`, {
                         method: 'POST',
@@ -776,11 +777,11 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                             compatibility_score: student.best_match.compatibility_score || 0,
                         }),
                     });
-                    
+
                     // Handle CSRF token mismatch
                     if (response.status === 419) {
                         csrfToken = await refreshCsrfToken();
-                        
+
                         // Retry the request with fresh token
                         response = await fetch(`/student/${student.id}/reject-placement`, {
                             method: 'POST',
@@ -794,7 +795,7 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                             }),
                         });
                     }
-                    
+
                     if (response.ok) {
                         return { success: true };
                     } else {
@@ -809,7 +810,7 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
             const results = await Promise.all(promises);
             const successful = results.filter(r => r.success);
             const failed = results.filter(r => !r.success);
-            
+
             if (failed.length === 0) {
                 setErrorMessage(`Successfully rejected ${successful.length} placement(s)!`);
                 setErrorType('success');
@@ -822,7 +823,7 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                     const student = matchedStudents.find(s => s.id === Array.from(selectedStudents)[index]);
                     return `Student ${student?.first_name} ${student?.last_name}: ${result.error}`;
                 }).join('\n');
-                
+
                 setErrorMessage(`Rejected ${successful.length} out of ${selectedStudents.size} placements.\n\nFailed placements:\n${errorDetails}`);
                 setErrorType('error');
             }
@@ -864,8 +865,8 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                             </p>
                         </div>
                         <div className="flex gap-2">
-                            <Button 
-                                variant="outline" 
+                            <Button
+                                variant="outline"
                                 size="default"
                                 onClick={() => setShowFilters(!showFilters)}
                             >
@@ -931,8 +932,8 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                                 {/* Section Filter */}
                                 <div className="space-y-2">
                                     <Label htmlFor="section-filter">Section</Label>
-                                    <Select 
-                                        value={localFilters.section} 
+                                    <Select
+                                        value={localFilters.section}
                                         onValueChange={(value) => handleFilterChange('section', value)}
                                     >
                                         <SelectTrigger id="section-filter">
@@ -949,7 +950,7 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                                                         </SelectItem>
                                                     );
                                                 }
-                                                
+
                                                 // Handle object format
                                                 return (
                                                     <SelectItem key={section.name} value={section.name}>
@@ -969,8 +970,8 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                                 {/* Clear Filters */}
                                 <div className="space-y-2">
                                     <Label>&nbsp;</Label>
-                                    <Button 
-                                        variant="outline" 
+                                    <Button
+                                        variant="outline"
                                         onClick={clearFilters}
                                         className="w-full"
                                     >
@@ -982,8 +983,8 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                             {/* Internship Filter - Full Width */}
                             <div className="space-y-2 mt-4">
                                 <Label htmlFor="internship-filter">Internship</Label>
-                                <Select 
-                                    value={localFilters.internship} 
+                                <Select
+                                    value={localFilters.internship}
                                     onValueChange={(value) => handleFilterChange('internship', value)}
                                 >
                                     <SelectTrigger id="internship-filter">
@@ -997,7 +998,7 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                                                 const company = internship.company || internship.hte?.company_name || 'Unknown Company';
                                                 const department = internship.department || 'Unknown Department';
                                                 const slotsInfo = internship.total_slots !== undefined ? ` (${internship.occupied_slots || 0}/${internship.total_slots})` : '';
-                                                
+
                                                 return (
                                                     <SelectItem key={internship.id} value={internship.id.toString()}>
                                                         <span className="truncate">
@@ -1006,7 +1007,7 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                                                     </SelectItem>
                                                 );
                                             }
-                                            
+
                                             return null;
                                         })}
                                     </SelectContent>
@@ -1230,7 +1231,7 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                                                                 #{getRowNumber(matchedPagination.currentPage, 10, index)}
                                                             </span>
                                                         </div>
-                                                        <Badge 
+                                                        <Badge
                                                             className={getScoreColor(student.best_match?.compatibility_score || 0)}
                                                         >
                                                             {Math.round(student.best_match?.compatibility_score || 0)}% | {getGradePoint(student.best_match?.compatibility_score || 0)}
@@ -1327,7 +1328,7 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                                                         Select All ({matchedPagination.paginatedData.length})
                                             </span>
                                                     </div>
-                                        
+
                                         <div className="overflow-x-auto">
                                             <table className="w-full text-sm">
                                                 <thead>
@@ -1377,14 +1378,14 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                                                             {student.best_match?.internship?.available_slots !== undefined && (
                                                                 <div className="space-y-1">
                                                                     <div className={`text-xs font-medium ${
-                                                                        student.best_match.internship.available_slots === 0 
-                                                                            ? 'text-red-600' 
-                                                                            : student.best_match.internship.available_slots <= 2 
-                                                                            ? 'text-orange-600' 
+                                                                        student.best_match.internship.available_slots === 0
+                                                                            ? 'text-red-600'
+                                                                            : student.best_match.internship.available_slots <= 2
+                                                                            ? 'text-orange-600'
                                                                             : 'text-blue-600'
                                                                     }`}>
-                                                                        {student.best_match.internship.available_slots === 0 
-                                                                            ? 'No slots available' 
+                                                                        {student.best_match.internship.available_slots === 0
+                                                                            ? 'No slots available'
                                                                             : `${student.best_match.internship.available_slots} slot${student.best_match.internship.available_slots !== 1 ? 's' : ''} left`
                                                                         }
                                                                     </div>
@@ -1403,7 +1404,7 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                                                         </div>
                                                     </td>
                                                             <td className="p-2 text-center">
-                                                                <Badge 
+                                                                <Badge
                                                                     className={getScoreColor(student.best_match?.compatibility_score || 0)}
                                                                 >
                                                                     {Math.round(student.best_match?.compatibility_score || 0)}% | {getGradePoint(student.best_match?.compatibility_score || 0)}
@@ -1420,22 +1421,22 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                                                             >
                                                                         <EyeIcon className="h-3 w-3" />
                                                             </Button>
-                                                            
+
                                                             <Button
                                                                 variant="default"
                                                                 size="sm"
                                                                 onClick={() => handleSingleApprove(student)}
                                                                 disabled={isLoading || (student.best_match?.internship?.available_slots !== undefined && student.best_match.internship.available_slots === 0)}
                                                                 className={`h-8 px-2 ${
-                                                                    student.best_match?.internship?.available_slots === 0 
-                                                                        ? 'bg-gray-400 hover:bg-gray-400 cursor-not-allowed' 
+                                                                    student.best_match?.internship?.available_slots === 0
+                                                                        ? 'bg-gray-400 hover:bg-gray-400 cursor-not-allowed'
                                                                         : 'bg-green-600 hover:bg-green-700'
                                                                 }`}
                                                                 title={student.best_match?.internship?.available_slots === 0 ? 'No slots available for this internship' : 'Endorse student for this internship'}
                                                             >
                                                                 <CheckCircleIcon className="h-3 w-3" />
                                                             </Button>
-                                                            
+
                                                             <Button
                                                                 variant="destructive"
                                                                 size="sm"
@@ -1473,7 +1474,7 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                             {/* Unplaced Students Section */}
                             <div className="space-y-6">
                                 {/* Unplaced Students Summary */}
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                                     <Card className="border-red-200 bg-red-50 dark:bg-red-900/20">
                                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                             <CardTitle className="text-sm font-medium text-red-800 dark:text-red-200">Unplaced Students</CardTitle>
@@ -1487,6 +1488,20 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                                         </CardContent>
                                     </Card>
 
+                                    <Card className="border-orange-200 bg-orange-50 dark:bg-orange-900/20">
+                                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                            <CardTitle className="text-sm font-medium text-orange-800 dark:text-orange-200">Rejected by HTE</CardTitle>
+                                            <XCircleIcon className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                                        </CardHeader>
+                                        <CardContent>
+                                            <div className="text-2xl font-bold text-orange-800 dark:text-orange-200">
+                                                {Array.isArray(unplacedStudents) ? unplacedStudents.filter(s => s.is_hte_rejected).length : 0}
+                                            </div>
+                                            <p className="text-xs text-orange-700 dark:text-orange-300">
+                                                Waiting for deadline auto-placement
+                                            </p>
+                                        </CardContent>
+                                    </Card>
 
                                     <Card>
                                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -1567,7 +1582,11 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                                                                 {/* Status and Reason */}
                                                                 <div className="space-y-2">
                                                                     <div className="flex items-center gap-2">
-                                                                        {student.requires_manual_intervention ? (
+                                                                        {student.is_hte_rejected ? (
+                                                                            <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 text-xs">
+                                                                                Rejected by HTE
+                                                                            </Badge>
+                                                                        ) : student.requires_manual_intervention ? (
                                                                             <Badge variant="destructive" className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 text-xs">
                                                                                 Auto-Placement Failed
                                                                             </Badge>
@@ -1599,7 +1618,11 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
 
                                                                 {/* Action Required */}
                                                                 <div className="border-l-2 border-orange-200 pl-3">
-                                                                    {student.requires_manual_intervention ? (
+                                                                    {student.is_hte_rejected ? (
+                                                                        <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 text-xs">
+                                                                            Waiting deadline for Auto-Placement
+                                                                        </Badge>
+                                                                    ) : student.requires_manual_intervention ? (
                                                                         <div>
                                                                             <Badge variant="destructive" className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 text-xs mb-1">
                                                                                 Manual Intervention Required
@@ -1660,7 +1683,11 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                                                                     </div>
                                                                 </td>
                                                                         <td className="p-2 text-center">
-                                                                    {student.requires_manual_intervention ? (
+                                                                    {student.is_hte_rejected ? (
+                                                                                <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 text-xs">
+                                                                            Rejected by HTE
+                                                                        </Badge>
+                                                                    ) : student.requires_manual_intervention ? (
                                                                                 <Badge variant="destructive" className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 text-xs">
                                                                             Auto-Placement Failed
                                                                         </Badge>
@@ -1671,7 +1698,11 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                                                                     )}
                                                                 </td>
                                                                         <td className="p-2">
-                                                                    {student.requires_manual_intervention ? (
+                                                                    {student.is_hte_rejected ? (
+                                                                                <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 text-xs">
+                                                                                    Waiting deadline for Auto-Placement
+                                                                        </Badge>
+                                                                    ) : student.requires_manual_intervention ? (
                                                                                 <div className="space-y-1">
                                                                                     <Badge variant="destructive" className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 text-xs">
                                                                                 Manual Intervention Required
@@ -1679,7 +1710,7 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                                                                         </div>
                                                                     ) : (
                                                                                 <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 text-xs">
-                                                                                    Await deadline for Auto-Placement
+                                                                                    Waiting deadline for Auto-Placement
                                                                         </Badge>
                                                                     )}
                                                                 </td>
@@ -1727,7 +1758,7 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                             </div>
                         </CardHeader>
                         <CardContent className="p-6 overflow-y-auto max-h-[60vh]">
-                        
+
                         <div className="mb-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                                 <Card className="border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-900/10">
@@ -1753,7 +1784,7 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                                     </CardContent>
                                 </Card>
                             </div>
-                            
+
                             {/* Students getting approved */}
                             {conflictData.approved_students && conflictData.approved_students.length > 0 && (
                                 <div className="mb-6">
@@ -1786,7 +1817,7 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                                     </div>
                                 </div>
                             )}
-                            
+
                             {/* Students with fallback matches */}
                             {conflictData.conflicts && conflictData.conflicts.length > 0 && (
                                 <div>

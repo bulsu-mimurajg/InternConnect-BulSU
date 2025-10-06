@@ -23,7 +23,7 @@ export default function Contact() {
                 <div className="fixed inset-0 bg-[#FDFDFC]/75 dark:bg-[#0a0a0a]/80" />
                 
                 {/* Content Container */}
-                <div className="relative z-10 flex min-h-screen flex-col items-center p-6 text-[#1b1b18] lg:justify-center lg:p-8 w-full">
+                <div className="relative z-10 flex min-h-screen flex-col items-center p-6 text-foreground lg:justify-center lg:p-8 w-full">
                 <header className="mb-6 w-full max-w-[335px] text-sm not-has-[nav]:hidden lg:max-w-5xl">
                     <div className="flex items-center justify-between">
                         <Link href={route('home')} className="hover:opacity-80 transition-opacity">
@@ -36,7 +36,7 @@ export default function Contact() {
                                         <Link
                                             prefetch
                                             href={route('admin.dashboard')}
-                                            className="inline-block rounded-sm border border-[#19140035] px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#1915014a] dark:border-[#3E3E3A] dark:text-[#EDEDEC] dark:hover:border-[#62605b]"
+                                            className="inline-block rounded-sm border border-border px-5 py-1.5 text-sm leading-normal text-foreground hover:border-border/80"
                                         >
                                             Dashboard
                                         </Link>
@@ -46,7 +46,7 @@ export default function Contact() {
                                         <Link
                                             prefetch
                                             href={route('hte.dashboard')}
-                                            className="inline-block rounded-sm border border-[#19140035] px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#1915014a] dark:border-[#3E3E3A] dark:text-[#EDEDEC] dark:hover:border-[#62605b]"
+                                            className="inline-block rounded-sm border border-border px-5 py-1.5 text-sm leading-normal text-foreground hover:border-border/80"
                                         >
                                             Dashboard
                                         </Link>
@@ -56,7 +56,7 @@ export default function Contact() {
                                         <Link
                                             prefetch
                                             href={route('adviser.dashboard')}
-                                            className="inline-block rounded-sm border border-[#19140035] px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#1915014a] dark:border-[#3E3E3A] dark:text-[#EDEDEC] dark:hover:border-[#62605b]"
+                                            className="inline-block rounded-sm border border-border px-5 py-1.5 text-sm leading-normal text-foreground hover:border-border/80"
                                         >
                                             Dashboard
                                         </Link>
@@ -66,7 +66,7 @@ export default function Contact() {
                                         <Link
                                             prefetch
                                             href={route('student.dashboard')}
-                                            className="inline-block rounded-sm border border-[#19140035] px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#1915014a] dark:border-[#3E3E3A] dark:text-[#EDEDEC] dark:hover:border-[#62605b]"
+                                            className="inline-block rounded-sm border border-border px-5 py-1.5 text-sm leading-normal text-foreground hover:border-border/80"
                                         >
                                             Dashboard
                                         </Link>
@@ -76,7 +76,7 @@ export default function Contact() {
                                 <Link
                                     prefetch
                                     href={route('login')}
-                                    className="inline-block rounded-sm border border-[#19140035] px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#1915014a] dark:border-[#3E3E3A] dark:text-[#EDEDEC] dark:hover:border-[#62605b]"
+                                    className="inline-block rounded-sm border border-border px-5 py-1.5 text-sm leading-normal text-foreground hover:border-border/80"
                                 >
                                     Login
                                 </Link>
@@ -85,14 +85,14 @@ export default function Contact() {
                             <Link
                                 prefetch
                                 href={route('about')}
-                                className="inline-block rounded-sm border border-transparent px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#19140035] dark:text-[#EDEDEC] dark:hover:border-[#3E3E3A]"
+                                className="inline-block rounded-sm border border-transparent px-5 py-1.5 text-sm leading-normal text-foreground hover:border-border"
                             >
                                 About
                             </Link>
                             <Link
                                 prefetch
                                 href={route('contact')}
-                                className="inline-block rounded-sm border border-transparent px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#19140035] dark:text-[#EDEDEC] dark:hover:border-[#3E3E3A]"
+                                className="inline-block rounded-sm border border-transparent px-5 py-1.5 text-sm leading-normal text-foreground hover:border-border"
                             >
                                 Contact
                             </Link>
@@ -101,19 +101,19 @@ export default function Contact() {
                 </header>
                 <div className="flex w-full items-center justify-center opacity-100 transition-opacity duration-750 lg:grow starting:opacity-0">
                     <main className="w-full max-w-[335px] lg:max-w-5xl">
-                        <div className="rounded-br-lg rounded-bl-lg bg-orange-50/10 backdrop-blur-sm p-6 pb-12 text-[13px] leading-[20px] shadow-[inset_0px_0px_0px_1px_rgba(26,26,0,0.16)] lg:rounded-lg lg:p-20 dark:bg-orange-950/8 dark:text-[#EDEDEC] dark:shadow-[inset_0px_0px_0px_1px_#fffaed2d]">
+                        <div className="rounded-br-lg rounded-bl-lg bg-card/10 backdrop-blur-sm p-6 pb-12 text-[13px] leading-[20px] shadow-[inset_0px_0px_0px_1px_hsl(var(--border))] lg:rounded-lg lg:p-20">
                             {/* Hero Section */}
                             <div className="text-center space-y-6 mb-12">
                                 <div className="space-y-2">
-                                    <h1 className="text-3xl md:text-4xl font-bold text-[#1b1b18] dark:text-[#EDEDEC]">
+                                    <h1 className="text-3xl md:text-4xl font-bold text-foreground">
                                         Contact Us
                                     </h1>
-                                    <p className="text-[#706f6c] dark:text-[#A1A09A] text-lg">
+                                    <p className="text-muted-foreground text-lg">
                                         Get in touch with the InternConnect BSIT team
                                     </p>
                                 </div>
                                 
-                                <p className="text-md leading-relaxed text-center text-[#1b1b18] dark:text-[#EDEDEC]">
+                                <p className="text-md leading-relaxed text-center text-foreground">
                                 Have questions about the system? Encountered issues? 
                                 You may reach out to us through the channels below.
                                 </p>
@@ -123,75 +123,74 @@ export default function Contact() {
                             <div className="space-y-8">
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                    <Card className="bg-white dark:bg-[#161615] border-[#e3e3e0] dark:border-[#3E3E3A]">
+                                    <Card className="bg-card border-border">
                                         <CardHeader className="pb-3">
-                                            <div className="h-10 w-10 rounded-lg bg-[#f53003]/10 dark:bg-[#FF4433]/10 flex items-center justify-center mb-3">
-                                                <Mail className="h-5 w-5 text-[#f53003] dark:text-[#FF4433]" />
+                                            <div className="h-10 w-10 rounded-lg bg-destructive/10 flex items-center justify-center mb-3">
+                                                <Mail className="h-5 w-5 text-destructive" />
                                             </div>
-                                            <CardTitle className="text-lg text-[#1b1b18] dark:text-[#EDEDEC]">Email Support</CardTitle>
+                                            <CardTitle className="text-lg text-foreground">Email Support</CardTitle>
                                         </CardHeader>
                                         <CardContent>
-                                            <CardDescription className="text-[#706f6c] dark:text-[#A1A09A] mb-2">
+                                            <CardDescription className="text-muted-foreground mb-2">
                                                 For technical issues and general inquiries
                                             </CardDescription>
                                             <a 
                                                 href="mailto:internconnectbulsu@gmail.com"
-                                                className="text-[#f53003] dark:text-[#FF4433] font-medium hover:underline"
+                                                className="text-destructive font-medium hover:underline"
                                             >
                                                 internconnectbulsu@gmail.com
                                             </a>
                                         </CardContent>
                                     </Card>
 
-                                    <Card className="bg-white dark:bg-[#161615] border-[#e3e3e0] dark:border-[#3E3E3A]">
+                                    <Card className="bg-card border-border">
                                         <CardHeader className="pb-3">
-                                            <div className="h-10 w-10 rounded-lg bg-[#f53003]/10 dark:bg-[#FF4433]/10 flex items-center justify-center mb-3">
-                                                <Building2 className="h-5 w-5 text-[#f53003] dark:text-[#FF4433]" />
+                                            <div className="h-10 w-10 rounded-lg bg-destructive/10 flex items-center justify-center mb-3">
+                                                <Building2 className="h-5 w-5 text-destructive" />
                                             </div>
-                                            <CardTitle className="text-lg text-[#1b1b18] dark:text-[#EDEDEC]">GitHub Repository</CardTitle>
+                                            <CardTitle className="text-lg text-foreground">GitHub Repository</CardTitle>
                                         </CardHeader>
                                         <CardContent>
-                                            <CardDescription className="text-[#706f6c] dark:text-[#A1A09A] mb-2">
+                                            <CardDescription className="text-muted-foreground mb-2">
                                                 View source code and documentation
                                             </CardDescription>
                                             <a 
                                                 href="https://github.com/bulsu-mimurajg/InternConnect-BulSU"
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                className="text-[#f53003] dark:text-[#FF4433] font-medium hover:underline"
+                                                className="text-destructive font-medium hover:underline"
                                             >
                                                 View Repository
                                             </a>
                                         </CardContent>
                                     </Card>
 
-                                    <Card className="bg-white dark:bg-[#161615] border-[#e3e3e0] dark:border-[#3E3E3A]">
+                                    <Card className="bg-card border-border">
                                         <CardHeader className="pb-3">
-                                            <div className="h-10 w-10 rounded-lg bg-[#f53003]/10 dark:bg-[#FF4433]/10 flex items-center justify-center mb-3">
-                                                <Users className="h-5 w-5 text-[#f53003] dark:text-[#FF4433]" />
+                                            <div className="h-10 w-10 rounded-lg bg-destructive/10 flex items-center justify-center mb-3">
+                                                <Users className="h-5 w-5 text-destructive" />
                                             </div>
-                                            <CardTitle className="text-lg text-[#1b1b18] dark:text-[#EDEDEC]">Development Team</CardTitle>
+                                            <CardTitle className="text-lg text-foreground">Development Team</CardTitle>
                                         </CardHeader>
                                         <CardContent>
-                                            <CardDescription className="text-[#706f6c] dark:text-[#A1A09A] mb-2">
-                                                Validex Team - BSIT Capstone Project
+                                            <CardDescription className="text-muted-foreground mb-2">
+                                                BSIT 4EG2 | Capstone Project
                                             </CardDescription>
-                                            <p className="text-[#1b1b18] dark:text-[#EDEDEC] text-sm">
-                                                Bulacan State University<br />
-                                                Class of 2024
+                                            <p className="text-foreground text-sm">
+                                                <br />Bulacan State University
                                             </p>
                                         </CardContent>
                                     </Card>
                                 </div>
 
                                 <div className="text-center space-y-4 pt-8">
-                                    <h3 className="text-xl font-semibold text-[#1b1b18] dark:text-[#EDEDEC]">Visit the University Website</h3>
+                                    <h3 className="text-xl font-semibold text-foreground">Visit the University Website</h3>
                                     <div className="flex flex-wrap gap-4 justify-center">
                                         <a 
                                             href="https://bulsu.edu.ph/" 
                                             target="_blank" 
                                             rel="noopener noreferrer"
-                                            className="inline-flex items-center space-x-1 font-medium text-[#f53003] underline underline-offset-4 dark:text-[#FF4433]"
+                                            className="inline-flex items-center space-x-1 font-medium text-destructive underline underline-offset-4"
                                         >
                                             <span>BulSU Website</span>
                                             <svg

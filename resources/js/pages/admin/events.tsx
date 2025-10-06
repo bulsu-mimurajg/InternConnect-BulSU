@@ -285,7 +285,7 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
                                     </div>
                                     <div className="flex items-start gap-2">
                                         <span className="font-semibold min-w-[140px]">Tier 3 (T-10 min):</span>
-                                        <span>Emergency placement for students with no remaining fallback options into any available internship slots</span>
+                                        <span>Emergency placement for students with no remaining fallback options and those rejected by HTE into any available internship slots</span>
                                     </div>
                                 </div>
                             </div>
