@@ -82,7 +82,7 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
         from: 0,
         to: 0,
     });
-    
+
 
     // Helper function to refresh CSRF token from server
     const refreshCsrfToken = async (): Promise<string> => {
@@ -91,7 +91,7 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                 method: 'GET',
                 credentials: 'same-origin',
             });
-            
+
             if (response.ok) {
                 const data = await response.json();
                 return data.token || '';
@@ -108,26 +108,26 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
         if (csrf_token) {
             return csrf_token;
         }
-        
+
         // Try meta tag
         const metaToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
         if (metaToken) {
             return metaToken;
         }
-        
+
         // Try to get from window object (Laravel sometimes puts it there)
         const windowToken = (window as any).Laravel?.csrfToken;
         if (windowToken) {
             return windowToken;
         }
-        
+
         // Try to get from cookies
         const cookies = document.cookie.split(';');
         const csrfCookie = cookies.find(cookie => cookie.trim().startsWith('XSRF-TOKEN='));
         if (csrfCookie) {
             return decodeURIComponent(csrfCookie.split('=')[1]);
         }
-        
+
         return '';
     };
 
@@ -140,7 +140,7 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                 filter: filterToUse,
                 show_read: showReadToUse.toString(),
             });
-            
+
             const response = await fetch(`/notifications/get?${params}`, {
                 headers: {
                     'Accept': 'application/json',
@@ -148,19 +148,19 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                 },
                 credentials: 'same-origin',
             });
-            
+
             // Check if response is OK and is JSON
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-            
+
             const contentType = response.headers.get('content-type');
             if (!contentType || !contentType.includes('application/json')) {
                 const responseText = await response.text();
                 console.error('Received non-JSON response:', responseText.substring(0, 200));
                 throw new Error('Expected JSON response but received HTML or other format');
             }
-            
+
             const data = await response.json();
             const serverNotifications = data.notifications || [];
 
@@ -183,7 +183,7 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
             });
 
             setUnreadCount(data.unreadCount || 0);
-            
+
             // Validate pagination data from server
             const serverPagination = data.pagination || pagination;
             const validatedPagination = {
@@ -193,11 +193,11 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                 per_page: Math.max(1, serverPagination.per_page || 10),
                 total: Math.max(0, serverPagination.total || 0),
             };
-            
+
             setPagination(validatedPagination);
         } catch (error) {
             console.error('Failed to fetch notifications:', error);
-            
+
             // If there's an error fetching notifications, set empty state but don't break the UI
             setNotifications([]);
             setUnreadCount(0);
@@ -218,12 +218,12 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
         try {
             // Get CSRF token using helper function
             const csrfToken = getCsrfToken();
-            
+
             if (!csrfToken) {
                 console.error('CSRF token not found in any source');
                 return false;
             }
-            
+
             const response = await fetch(`/notifications/${notificationId}/mark-read`, {
                 method: 'POST',
                 headers: {
@@ -238,7 +238,7 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
             if (!response.ok) {
                 const errorText = await response.text();
                 console.error(`HTTP error! status: ${response.status}, response: ${errorText}`);
-                
+
                 // If it's a CSRF token mismatch (419), try to refresh the token and retry
                 if (response.status === 419) {
                     const newToken = await refreshCsrfToken();
@@ -253,7 +253,7 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                             },
                             credentials: 'same-origin',
                         });
-                        
+
                         if (retryResponse.ok) {
                             const retryResult = await retryResponse.json();
                             if (retryResult.success) {
@@ -264,12 +264,12 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                                     )
                                 );
                                 setUnreadCount(prev => Math.max(0, prev - 1));
-                                
+
                                 // If showing unread only, remove the notification from the list
                                 if (!showRead) {
                                     setNotifications(prev => prev.filter(notif => notif.id !== notificationId));
-                                    setPagination(prev => ({ 
-                                        ...prev, 
+                                    setPagination(prev => ({
+                                        ...prev,
                                         total: Math.max(0, prev.total - 1),
                                         from: Math.max(1, prev.from - 1),
                                         to: Math.max(0, prev.to - 1)
@@ -280,7 +280,7 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                         }
                     }
                 }
-                
+
                 return false;
             }
 
@@ -290,7 +290,7 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                 console.error('Received non-JSON response for markAsRead:', responseText.substring(0, 200));
                 return false;
             }
-            
+
             const result = await response.json();
 
             if (result.success) {
@@ -308,12 +308,12 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                     )
                 );
                 setUnreadCount(prev => Math.max(0, prev - 1));
-                
+
                 // If showing unread only, remove the notification from the list
                 if (!showRead) {
                     setNotifications(prev => prev.filter(notif => notif.id !== notificationId));
-                    setPagination(prev => ({ 
-                        ...prev, 
+                    setPagination(prev => ({
+                        ...prev,
                         total: Math.max(0, prev.total - 1),
                         from: Math.max(1, prev.from - 1),
                         to: Math.max(0, prev.to - 1)
@@ -335,12 +335,12 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
         try {
             // Get CSRF token using helper function
             const csrfToken = getCsrfToken();
-            
+
             if (!csrfToken) {
                 console.error('CSRF token not found');
                 return;
             }
-            
+
             const response = await fetch('/notifications/mark-all-read', {
                 method: 'POST',
                 headers: {
@@ -363,7 +363,7 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                     prev.map(notif => ({ ...notif, is_read: true }))
                 );
                 setUnreadCount(0);
-                
+
                 // If showing unread only, clear the list since all are now read
                 if (!showRead) {
                     setNotifications([]);
@@ -386,7 +386,7 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
         try {
             // Get CSRF token from meta tag
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-            
+
             const response = await fetch(`/notifications/${notificationId}/mark-unread`, {
                 method: 'POST',
                 headers: {
@@ -418,7 +418,7 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                     )
                 );
                 setUnreadCount(prev => prev + 1);
-                
+
                 // If showing unread only, refetch to ensure proper filtering
                 if (!showRead) {
                     fetchNotifications(pagination.current_page, filter, false);
@@ -440,15 +440,15 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
         if (page > pagination.last_page) {
             page = pagination.last_page;
         }
-        
+
         // Only proceed if page is valid and different from current
         if (page === pagination.current_page) {
             return;
         }
-        
+
         // Update pagination state first
         setPagination(prev => ({ ...prev, current_page: page }));
-        
+
         fetchNotifications(page, filter, showRead);
     };
 
@@ -458,15 +458,15 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
         if (isFiltering || newFilter === filter) {
             return;
         }
-        
+
         setIsFiltering(true);
         setFilter(newFilter);
         setPagination(prev => ({ ...prev, current_page: 1 }));
-        
+
         // Clear notifications immediately to prevent showing wrong notifications
         setNotifications([]);
         setIsLoading(true);
-        
+
         // Debounce the API call to prevent jittering
         setTimeout(() => {
             fetchNotifications(1, newFilter, showRead).finally(() => {
@@ -480,12 +480,12 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
         if (isFiltering) {
             return;
         }
-        
+
         setIsFiltering(true);
         const newShowRead = !showRead;
         setShowRead(newShowRead);
         setPagination(prev => ({ ...prev, current_page: 1 }));
-        
+
         // Apply immediate client-side filtering for instant UI feedback
         if (newShowRead) {
             // Show all notifications (no filtering needed)
@@ -495,7 +495,7 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
             setNotifications(prev => prev.filter(notification => !notification.is_read));
         }
         setIsLoading(true);
-        
+
         // Debounce the API call to prevent jittering
         setTimeout(() => {
             fetchNotifications(1, filter, newShowRead).finally(() => {
@@ -528,7 +528,7 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
 
             // Mark as read when clicked (regardless of current status) and wait for completion
             const markReadSuccess = await markAsRead(notification.id);
-            
+
             // Ensure the API call has completed before proceeding with navigation
             if (!markReadSuccess) {
                 // Still update UI optimistically to provide immediate feedback
@@ -542,7 +542,7 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
 
             // Add a delay to ensure the API call has fully completed before navigation
             await new Promise(resolve => setTimeout(resolve, 500));
-            
+
             // Close the notification dropdown before navigation
             setIsOpen(false);
 
@@ -638,7 +638,7 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                 if (hasRole('adviser')) {
                     router.get('/adviser/dashboard');
                 } else if (hasRole('admin')) {
-                    router.get('/admin-dashboard');
+                    router.get('/admin/dashboard');
                 } else if (hasRole('hte')) {
                     router.get('/hte/dashboard');
                 } else {
@@ -979,7 +979,7 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                                     ))}
                                 </div>
                             )}
-                            
+
                             {/* Pagination */}
                             {pagination.last_page > 1 && (
                                 <div className="border-t border-border/50 p-2 sm:p-3">
@@ -988,7 +988,7 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                                         <div className="text-xs text-muted-foreground text-center sm:text-left">
                                             Showing {pagination.from}-{pagination.to} of {pagination.total}
                                         </div>
-                                        
+
                                         {/* Page Navigation */}
                                         <div className="flex items-center justify-center gap-1">
                                             {/* Previous Button */}
@@ -1006,17 +1006,17 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                                             >
                                                 <ChevronLeft className="h-3 w-3" />
                                             </Button>
-                                            
+
                                             {/* Page Numbers */}
                                             <div className="flex items-center gap-1">
                                                 {Array.from({ length: pagination.last_page }, (_, i) => i + 1).map((page) => {
                                                     // Show first page, last page, current page, and pages around current page
                                                     // On mobile, show fewer pages to fit better
-                                                    const showPage = 
-                                                        page === 1 || 
-                                                        page === pagination.last_page || 
+                                                    const showPage =
+                                                        page === 1 ||
+                                                        page === pagination.last_page ||
                                                         Math.abs(page - pagination.current_page) <= (window.innerWidth < 640 ? 0 : 1);
-                                                    
+
                                                     if (!showPage) {
                                                         // Show ellipsis for gaps
                                                         if (page === 2 && pagination.current_page > (window.innerWidth < 640 ? 2 : 4)) {
@@ -1027,7 +1027,7 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                                                         }
                                                         return null;
                                                     }
-                                                    
+
                                                     return (
                                                         <Button
                                                             key={page}
@@ -1045,7 +1045,7 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                                                     );
                                                 })}
                                             </div>
-                                            
+
                                             {/* Next Button */}
                                             <Button
                                                 variant="ghost"

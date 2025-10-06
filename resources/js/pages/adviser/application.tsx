@@ -2,6 +2,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
+import { BatchActions, BatchActionPresets } from '@/components/ui/batch-actions';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import AppLayout from '@/layouts/app-layout';
 import SectionSwitcher from '@/components/SectionSwitcher';
@@ -344,35 +345,30 @@ export default function Application({ pendingStudents, verifiedStudents, rejecte
                             </div>
 
                                 {selectedStudents.length > 0 && (
-                                    <div className="pt-4 border-t space-y-4">
-                                        {!deadlineActive && (
-                                            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-                                                <p className="font-medium">Student verification deadline has expired</p>
-                                                <p className="text-sm">
-                                                    You cannot approve students at this time. Please contact the administrator to extend the deadline.
-                                                </p>
-                                            </div>
-                                        )}
-                                        <div className="flex items-center gap-2">
-                                            <Button
-                                                onClick={handleApprove}
-                                                disabled={isProcessing || !deadlineActive}
-                                                className="flex items-center gap-2"
-                                            >
-                                                <CheckIcon className="h-4 w-4" />
-                                                Approve Selected ({selectedStudents.length})
-                                            </Button>
-                                            <Button
-                                                onClick={handleReject}
-                                                disabled={isProcessing}
-                                                variant="destructive"
-                                                className="flex items-center gap-2"
-                                            >
-                                                <XIcon className="h-4 w-4" />
-                                                Reject Selected ({selectedStudents.length})
-                                            </Button>
-                                        </div>
-                                    </div>
+                                    <BatchActions
+                                        selectedCount={selectedStudents.length}
+                                        selectedLabel="student"
+                                        description={deadlineActive 
+                                            ? "You can approve or reject multiple students at once. Approved students will be verified for internship placement."
+                                            : "Student verification deadline has expired. You cannot approve students at this time."
+                                        }
+                                        actions={[
+                                            {
+                                                ...BatchActionPresets.verify.approve,
+                                                label: `Approve Selected (${selectedStudents.length})`,
+                                                onClick: handleApprove,
+                                                disabled: isProcessing || !deadlineActive
+                                            },
+                                            {
+                                                ...BatchActionPresets.verify.reject,
+                                                label: `Reject Selected (${selectedStudents.length})`,
+                                                onClick: handleReject,
+                                                disabled: isProcessing
+                                            }
+                                        ]}
+                                        onClearSelection={() => setSelectedStudents([])}
+                                        isLoading={isProcessing}
+                                    />
                                 )}
                             </div>
                         )}

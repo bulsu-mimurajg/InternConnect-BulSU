@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import { BatchActions, BatchActionPresets } from '@/components/ui/batch-actions';
 import { CheckCircle, XCircle, User, GraduationCap, Star, Building2, Briefcase, Target, AlertTriangle, Info, AlertCircle, FilterIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { Pagination } from '@/components/ui/pagination';
@@ -549,50 +550,27 @@ export default function EndorsementTable({ endorsements = [], internships = [], 
 
                 {/* Batch Actions */}
                 {selectedEndorsements.size > 0 && (
-                    <Card className="border-l-4 border-l-blue-500 bg-blue-50 dark:bg-blue-900/20">
-                        <CardContent className="p-4">
-                            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                                <div className="flex items-start gap-3 flex-1">
-                                    <Target className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
-                                    <div className="flex-1">
-                                        <div className="font-medium text-blue-800 dark:text-blue-200">
-                                            Batch Actions ({selectedEndorsements.size} endorsement{selectedEndorsements.size !== 1 ? 's' : ''} selected)
-                                        </div>
-                                        <div className="mt-1 text-sm text-blue-700 dark:text-blue-300">
-                                            You can approve or reject multiple students at once. Approved students will be placed in your internships.
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="flex flex-col sm:flex-row gap-2">
-                                    <Button
-                                        variant="default"
-                                        onClick={handleBatchApprove}
-                                        disabled={batchLoading}
-                                        className="bg-green-600 hover:bg-green-700 text-sm"
-                                    >
-                                        <CheckCircle className="h-4 w-4 mr-2" />
-                                        Approve All ({selectedEndorsements.size})
-                                    </Button>
-                                    <Button
-                                        variant="destructive"
-                                        onClick={handleBatchReject}
-                                        disabled={batchLoading}
-                                        className="text-sm"
-                                    >
-                                        <XCircle className="h-4 w-4 mr-2" />
-                                        Reject All ({selectedEndorsements.size})
-                                    </Button>
-                                    <Button
-                                        variant="outline"
-                                        onClick={() => setSelectedEndorsements(new Set())}
-                                        className="text-sm"
-                                    >
-                                        Clear Selection
-                                    </Button>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
+                    <BatchActions
+                        selectedCount={selectedEndorsements.size}
+                        selectedLabel="endorsement"
+                        description="You can approve or reject multiple students at once. Approved students will be placed in your internships."
+                        actions={[
+                            {
+                                ...BatchActionPresets.endorse.approve,
+                                label: `Approve All (${selectedEndorsements.size})`,
+                                onClick: handleBatchApprove,
+                                disabled: batchLoading
+                            },
+                            {
+                                ...BatchActionPresets.endorse.reject,
+                                label: `Reject All (${selectedEndorsements.size})`,
+                                onClick: handleBatchReject,
+                                disabled: batchLoading
+                            }
+                        ]}
+                        onClearSelection={() => setSelectedEndorsements(new Set())}
+                        isLoading={batchLoading}
+                    />
                 )}
 
                 {/* Endorsements Table */}

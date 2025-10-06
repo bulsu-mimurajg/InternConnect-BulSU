@@ -33,7 +33,7 @@ return response()->json(['token' => csrf_token()]);
 
 
 Route::middleware(['auth', 'verified', 'role_redirect:admin'])->group(function () {
-    Route::get('admin-dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard');
+    Route::get('admin/dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard');
 
     // HTE Management routes
     Route::get('hte', [AdminController::class, 'hteManagement'])->name('admin.hte');

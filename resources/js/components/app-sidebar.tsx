@@ -25,7 +25,7 @@ const roleBasedNav: Record<string, { main: NavItem[]; groups?: NavGroup[]; foote
             {
                 title: 'Overview & Analytics',
                 items: [
-                    { title: 'Dashboard', href: '/admin-dashboard', icon: ChartNoAxesColumnIcon },
+                    { title: 'Dashboard', href: '/admin/dashboard', icon: ChartNoAxesColumnIcon },
                     { title: 'Audit Logs', href: '/admin/logs', icon: MonitorCogIcon },
                     { title: 'Reports', href: '/reports', icon: PrinterIcon },
                 ]
