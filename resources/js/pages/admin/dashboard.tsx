@@ -314,8 +314,11 @@ export default function AdminDashboard({
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-4">
-                                {hteStats.length > 0 ? (
-                                    hteStats.slice(0, 5).map((hte) => (
+                                {hteStats.filter(h => h.activeInternships > 0).length > 0 ? (
+                                    hteStats
+                                        .filter(h => h.activeInternships > 0)
+                                        .slice(0, 5)
+                                        .map((hte) => (
                                         <div key={hte.id} className="flex items-center justify-between p-3 border rounded-lg">
                                             <div className="flex-1">
                                                 <p className="font-medium text-sm">{hte.company_name}</p>

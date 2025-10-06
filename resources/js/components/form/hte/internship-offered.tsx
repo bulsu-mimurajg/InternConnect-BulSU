@@ -29,12 +29,6 @@ const internshipSections = [
                 placeholder: 'Enter number of interns needed',
                 type: 'number',
             },
-            {
-                name: 'duration',
-                label: 'Duration',
-                placeholder: 'e.g., 3 months, 6 months',
-                type: 'text',
-            },
         ],
     },
 ];

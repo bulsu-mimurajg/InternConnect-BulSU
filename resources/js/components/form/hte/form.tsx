@@ -24,7 +24,7 @@ const FormSchema = z.object({
     position: z.string().min(1, 'Position is required'),
     department: z.string().min(1, 'Department is required'),
     numberOfInterns: z.string().min(1, 'Number of interns is required'),
-    duration: z.string().min(1, 'Duration is required'),
+    // duration removed
     
     // Weights
     subcategoryWeights: z.record(z.string(), z.number().min(0).max(100)),
@@ -90,7 +90,6 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
             position: '',
             department: '',
             numberOfInterns: '',
-            duration: '',
             subcategoryWeights: {},
         },
     });
@@ -252,7 +251,7 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
                 fieldsToValidate = ['companyName', 'contactPerson', 'email', 'phone', 'address'];
                 break;
             case 1: // Internship Offered
-                fieldsToValidate = ['position', 'department', 'numberOfInterns', 'duration'];
+                fieldsToValidate = ['position', 'department', 'numberOfInterns'];
                 break;
             case 2: { // Criteria
                 fieldsToValidate = ['subcategoryWeights'];

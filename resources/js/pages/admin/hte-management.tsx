@@ -323,10 +323,11 @@ export default function HTEManagement({ htes, showArchived = false, filters = {}
                                     <div>
                                         <div className="text-xs font-medium text-muted-foreground">Contact Person</div>
                                         <div className="text-sm">
-                                            {(hte.cperson_fname || hte.cperson_lname) ? 
-                                                `${hte.cperson_fname || ''} ${hte.cperson_lname || ''}`.trim() : 
-                                                'Not provided'
-                                            }
+                                            {(
+                                                hte.contact_person && hte.contact_person.trim()
+                                            ) || (
+                                                (hte.cperson_fname || hte.cperson_lname) ? `${hte.cperson_fname || ''} ${hte.cperson_lname || ''}`.trim() : ''
+                                            ) || 'Not provided'}
                                         </div>
                                     </div>
                                 </div>
@@ -705,10 +706,11 @@ export default function HTEManagement({ htes, showArchived = false, filters = {}
                                                             {hte.company_name || 'Not provided'}
                                                         </td>
                                                         <td className="py-3 px-4 text-sm text-muted-foreground">
-                                                            {(hte.cperson_fname || hte.cperson_lname) ? 
-                                                                `${hte.cperson_fname || ''} ${hte.cperson_lname || ''}`.trim() : 
-                                                                'Not provided'
-                                                            }
+                                                            {(
+                                                                hte.contact_person && hte.contact_person.trim()
+                                                            ) || (
+                                                                (hte.cperson_fname || hte.cperson_lname) ? `${hte.cperson_fname || ''} ${hte.cperson_lname || ''}`.trim() : ''
+                                                            ) || 'Not provided'}
                                                         </td>
                                                         <td className="py-3 px-4">
                                                             <Badge variant={hte.is_submit ? "default" : "outline"}>

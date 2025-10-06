@@ -89,7 +89,6 @@ class HTEController extends Controller
                 'position' => 'required|string|max:100',
                 'department' => 'required|string|max:100',
                 'numberOfInterns' => 'required|string|max:50',
-                'duration' => 'required|string|max:100',
                 'subcategoryWeights' => 'required|array',
             ]);
             Log::info('HTE Form Submission - Validation passed');
@@ -143,7 +142,7 @@ class HTEController extends Controller
                 $internship->update([
                     'position_title' => $request->position,
                     'department' => $request->department,
-                    'placement_description' => 'Internship opportunity at ' . $request->companyName . ' - Duration: ' . $request->duration,
+                    'placement_description' => 'Internship opportunity at ' . $request->companyName,
                     'slot_count' => (int) $request->numberOfInterns,
                     'is_active' => true,
                 ]);
@@ -154,7 +153,7 @@ class HTEController extends Controller
                     'hte_id' => $hte->id,
                     'position_title' => $request->position,
                     'department' => $request->department,
-                    'placement_description' => 'Internship opportunity at ' . $request->companyName . ' - Duration: ' . $request->duration,
+                    'placement_description' => 'Internship opportunity at ' . $request->companyName,
                     'slot_count' => (int) $request->numberOfInterns,
                     'is_active' => true,
                 ]);
@@ -528,7 +527,6 @@ class HTEController extends Controller
             'position' => 'required|string|max:100',
             'department' => 'required|string|max:50',
             'numberOfInterns' => 'required|string|max:50',
-            'duration' => 'required|string|max:100',
             'subcategoryWeights' => 'required|array',
         ]);
 
@@ -538,7 +536,7 @@ class HTEController extends Controller
                 'hte_id' => $hte->id,
                 'position_title' => $request->position,
                 'department' => $request->department,
-                'placement_description' => 'Internship opportunity at ' . $hte->company_name . ' - Duration: ' . $request->duration,
+            'placement_description' => 'Internship opportunity at ' . $hte->company_name,
                 'slot_count' => (int) $request->numberOfInterns,
                 'is_active' => true,
             ]);
@@ -731,7 +729,6 @@ class HTEController extends Controller
             'position' => 'required|string|max:100',
             'department' => 'required|string|max:50',
             'numberOfInterns' => 'required|string|max:50',
-            'duration' => 'required|string|max:100',
             'subcategoryWeights' => 'required|array',
         ]);
 
@@ -749,7 +746,7 @@ class HTEController extends Controller
             $internship->update([
                 'position_title' => $request->position,
                 'department' => $request->department,
-                'placement_description' => 'Internship opportunity at ' . $hte->company_name . ' - Duration: ' . $request->duration,
+            'placement_description' => 'Internship opportunity at ' . $hte->company_name,
                 'slot_count' => (int) $request->numberOfInterns,
             ]);
 
