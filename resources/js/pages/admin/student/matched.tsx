@@ -1,5 +1,5 @@
 import { Head, router, usePage } from '@inertiajs/react';
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import AdminLayout from '@/layouts/admin/layout';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -245,11 +245,7 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
         return 'bg-red-100 text-red-800 dark:bg-green-900 dark:text-red-200';
     };
 
-    const getScoreLabel = (score: number) => {
-        if (score >= 80) return 'Excellent';
-        if (score >= 60) return 'Good';
-        return 'Fair';
-    };
+    // Removed unused getScoreLabel to fix linter error
 
     const getGradePoint = (score: number) => {
         if (score >= 96.50) return '1.00';
@@ -441,7 +437,21 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
         }
     };
 
+    const rejectingRef = React.useRef(false);
+
     const handleSingleReject = async (student: MatchedStudent) => {
+        // Hard guard to avoid rapid double-clicks before state updates flush
+        if (rejectingRef.current) {
+            setErrorMessage('Loading New Match… Please wait');
+            setErrorType('info');
+            return;
+        }
+        // If an action is already in progress (e.g., previous reject), show loading message and exit
+        if (isLoading) {
+            setErrorMessage('Loading New Match… Please wait');
+            setErrorType('info');
+            return;
+        }
         if (!student || !student.best_match?.internship) {
             setErrorMessage('Invalid student data or missing internship information');
             setErrorType('error');
@@ -451,9 +461,11 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
         let csrfToken = getFreshCsrfToken();
 
         try {
+            rejectingRef.current = true;
             setIsLoading(true);
-            setErrorMessage(null);
-            setErrorType(null);
+            // Immediate feedback while the next match is being loaded
+            setErrorMessage('Loading New Match… Please wait');
+            setErrorType('info');
 
 
             const response = await fetch(`/student/${student.id}/reject-placement`, {
@@ -533,9 +545,13 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                     router.reload({ only: ['matchedStudents'] });
                 }, 1500);
             } else {
-                // Handle errors
-                setErrorMessage(`Error: ${result.message}`);
-                setErrorType('error');
+                // Prefer the loading message during transient states or race conditions
+                setErrorMessage('Loading New Match… Please wait');
+                setErrorType('info');
+                // Refresh to fetch the next available match regardless of exact error
+                setTimeout(() => {
+                    router.reload({ only: ['matchedStudents'] });
+                }, 1000);
             }
         } catch (error) {
             console.error('Error in single rejection:', error);
@@ -545,10 +561,13 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                 setErrorMessage('Server returned an invalid response format. This usually indicates an authentication or permission issue. Please refresh the page and try again.');
                 setErrorType('error');
             } else {
-                setErrorMessage('Error during rejection: ' + (error instanceof Error ? error.message : String(error)));
-                setErrorType('error');
+                const fallback = 'Loading New Match… Please wait';
+                const msg = error instanceof Error && error.message ? ('Error during rejection: ' + error.message) : fallback;
+                setErrorMessage(msg);
+                setErrorType(error instanceof Error && error.message ? 'error' : 'info');
             }
         } finally {
+            rejectingRef.current = false;
             setIsLoading(false);
         }
     };
