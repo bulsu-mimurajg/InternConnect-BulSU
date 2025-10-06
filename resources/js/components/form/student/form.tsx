@@ -7,7 +7,7 @@ import LanguageProficiency from '@/components/form/student/language-proficiency'
 import { Button } from '@/components/ui/button';
 import { Form } from '@/components/ui/form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Path, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { router, usePage } from '@inertiajs/react';
@@ -43,7 +43,7 @@ export default function StudentForm() {
         info.info_name.toLowerCase().replace(/[ -]/g, '_')
     );
 
-    const steps = [
+    const steps = useMemo(() => [
         {
             id: 'Step 1',
             name: 'Additional Information',
@@ -52,20 +52,20 @@ export default function StudentForm() {
         {
             id: 'Step 2',
             name: 'Language Proficiency',
-            fields: () => dynamicFields.languageProficiency,
+            fields: [...dynamicFields.languageProficiency],
         },
         {
             id: 'Step 3',
             name: 'Technical Skills',
-            fields: () => dynamicFields.technicalSkills,
+            fields: [...dynamicFields.technicalSkills],
         },
         {
             id: 'Step 4',
             name: 'Soft Skills',
-            fields: () => dynamicFields.softSkills,
+            fields: [...dynamicFields.softSkills],
         },
         { id: 'Step 5', name: 'Submission' },
-    ];
+    ], [additionalInfoFields, dynamicFields]);
     // Create dynamic validation schema
     const createFormSchema = () => {
 
@@ -78,19 +78,19 @@ export default function StudentForm() {
         // Add dynamic fields for language proficiency
         const languageSchema: Record<string, any> = {};
         dynamicFields.languageProficiency.forEach(field => {
-            languageSchema[field] = z.string().optional().refine(val => val && val.trim() !== '', 'Question is required.');
+            languageSchema[field] = z.string().min(1, 'Please select a rating.');
         });
 
         // Add dynamic fields for technical skills
         const technicalSchema: Record<string, any> = {};
         dynamicFields.technicalSkills.forEach(field => {
-            technicalSchema[field] = z.string().optional().refine(val => val && val.trim() !== '', 'Question is required.');
+            technicalSchema[field] = z.string().min(1, 'Please select a rating.');
         });
 
         // Add dynamic fields for soft skills
         const softSchema: Record<string, any> = {};
         dynamicFields.softSkills.forEach(field => {
-            softSchema[field] = z.string().optional().refine(val => val && val.trim() !== '', 'Question is required.');
+            softSchema[field] = z.string().min(1, 'Please select a rating.');
         });
 
         // Ensure we always have at least one field in the schema
@@ -109,7 +109,7 @@ export default function StudentForm() {
         return z.object(schemaFields);
     };
 
-    const FormSchema = createFormSchema();
+    const FormSchema = useMemo(() => createFormSchema(), [dynamicFields, additionalInfoFields]);
 
     // Create default values object
     const createDefaultValues = () => {
@@ -138,31 +138,53 @@ export default function StudentForm() {
         return defaultValues;
     };
 
+    const defaultValues = useMemo(() => createDefaultValues(), [dynamicFields, additionalInfoFields]);
+
     const form = useForm<z.infer<typeof FormSchema>>({
         resolver: zodResolver(FormSchema),
-        mode: 'onChange',
-        defaultValues: createDefaultValues(),
+        mode: 'onSubmit',
+        defaultValues,
     });
 
     // Update form default values when dynamic fields change
     useEffect(() => {
         const currentValues = form.getValues();
-        const newDefaults = createDefaultValues();
         
-        // Only update fields that aren't already set
-        Object.keys(newDefaults).forEach(key => {
-            if (currentValues[key] === undefined) {
-                form.reset(newDefaults);
+        // Only add new fields that don't exist yet, preserve all existing values
+        const newFields: Record<string, string> = {};
+        Object.keys(defaultValues).forEach(key => {
+            if (currentValues[key] === undefined || currentValues[key] === '') {
+                newFields[key] = defaultValues[key];
             }
         });
-    }, [dynamicFields]);
+        
+        // Only update if there are new fields to add
+        if (Object.keys(newFields).length > 0) {
+            // Use setValue to add new fields without resetting existing ones
+            Object.entries(newFields).forEach(([key, value]) => {
+                form.setValue(key as any, value);
+            });
+        }
+    }, [dynamicFields, defaultValues, form]);
 
     const navigateToStep = (step: number) => {
         setCurrentStep(step);
     };
 
     function onSubmit(values: z.infer<typeof FormSchema>) {
-        console.log('Form submission values:', values);
+        // Manual validation check
+        const allValues = form.getValues();
+        const allFields = Object.keys(FormSchema.shape);
+        const missingFields = allFields.filter(field => {
+            const value = allValues[field];
+            return !value || (typeof value === 'string' && value.trim() === '');
+        });
+        
+        if (missingFields.length > 0) {
+            alert(`Please complete the following fields: ${missingFields.join(', ')}`);
+            return;
+        }
+        
         setIsSubmitting(true);
         
         // Remove dummy field if it exists
@@ -173,7 +195,6 @@ export default function StudentForm() {
         
         router.post('/assessment', cleanValues as Record<string, any>, {
             onSuccess: (page) => {
-                console.log('Form submission successful:', page);
                 setIsSubmitting(false);
             },
             onError: (errors) => {
@@ -195,9 +216,7 @@ export default function StudentForm() {
 
     const next = async () => {
         const currentStepData = steps[currentStep];
-        const fields = typeof currentStepData.fields === 'function'
-            ? currentStepData.fields()
-            : currentStepData.fields;
+        const fields = currentStepData.fields;
 
         // Use Zod validation to trigger validation errors
         const isValid = await form.trigger(fields as Path<z.infer<typeof FormSchema>>[], { shouldFocus: false });
@@ -289,7 +308,18 @@ export default function StudentForm() {
                                 <Button onClick={prev} variant="outline">
                                     Previous
                                 </Button>
-                                <Button type="submit" disabled={isSubmitting} onClick={form.handleSubmit(onSubmit)}>
+                                <Button 
+                                    type="button"
+                                    disabled={isSubmitting}
+                                    onClick={async (e) => {
+                                        e.preventDefault();
+                                        try {
+                                            await form.handleSubmit(onSubmit)();
+                                        } catch (error) {
+                                            console.error('Form submission error:', error);
+                                        }
+                                    }}
+                                >
                                     {isSubmitting ? 'Submitting...' : 'Submit'}
                                 </Button>
                             </div>
