@@ -47,5 +47,13 @@ class StudentMatchSeeder extends Seeder
 
         $this->command->info("Successfully stored {$createdMatches} compatibility scores across all students!");
         $this->command->info("All compatibility scores have been stored in the student_matches table for dynamic sorting.");
+        $this->command->info("");
+        $this->command->info("IMPORTANT: The seeder creates ALL possible matches with compatibility scores.");
+        $this->command->info("The application will dynamically filter these matches based on:");
+        $this->command->info("1. Available slots (total - approved - endorsed)");
+        $this->command->info("2. Endorsement status (pending, endorsed, rejected)");
+        $this->command->info("3. Placement status (pending, approved, rejected)");
+        $this->command->info("");
+        $this->command->info("This approach ensures consistency between table display and batch operations.");
     }
 }

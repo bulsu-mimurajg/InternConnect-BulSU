@@ -96,6 +96,8 @@ Route::middleware(['auth', 'verified', 'role_redirect:admin'])->group(function (
     Route::get('student/endorsed', [StudentController::class, 'getEndorsedStudents'])->name('student-endorsed');
     Route::post('student/check-batch-conflicts', [StudentController::class, 'checkBatchPlacementConflicts'])->name('student.check-batch-conflicts');
     Route::post('student/batch-endorse', [StudentController::class, 'endorseBatchStudents'])->name('student.batch-endorse');
+    Route::post('student/undo-endorsement', [StudentController::class, 'undoEndorsement'])->name('student.undo-endorsement');
+    Route::post('student/undo-batch-endorsements', [StudentController::class, 'undoBatchEndorsements'])->name('student.undo-batch-endorsements');
     Route::get('student/placed', [StudentController::class, 'getPlacedStudents'])->name('student-placed');
 
     // Parameterized student routes (must come after specific routes)

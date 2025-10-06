@@ -1321,19 +1321,8 @@ class StudentController extends Controller
                 continue;
             }
             
-            // If internship filter is specified, get match for that specific internship
-            // Otherwise, get student's best match (highest compatibility score)
-            if ($internshipFilter) {
-                $targetMatch = StudentMatch::where('student_id', $student->id)
-                    ->where('internship_id', $internshipFilter)
-                    ->with(['internship.hte'])
-                    ->first();
-            } else {
-                $targetMatch = StudentMatch::where('student_id', $student->id)
-                    ->with(['internship.hte'])
-                    ->orderBy('compatibility_score', 'desc')
-                    ->first();
-            }
+            // Get student's best available match using consistent logic
+            $targetMatch = $this->getBestAvailableMatch($student, $internshipFilter);
             
             if (!$targetMatch) {
                 continue;
@@ -1359,13 +1348,30 @@ class StudentController extends Controller
         foreach ($internshipGroups as $internshipId => $students) {
             $internship = $students[0]['best_match']->internship;
             
-            // Get current available slots
+            // Get current available slots (accounting for both approved placements AND endorsed slots)
             $currentApprovedPlacements = $internship->studentPlacements()
                 ->where('status', 'approved')
                 ->count();
             
-            $availableSlots = $internship->slot_count - $currentApprovedPlacements;
+            $currentEndorsedSlots = Endorsement::where('internship_id', $internship->id)
+                ->where('status', 'endorsed')
+                ->count();
+            
+            $availableSlots = $internship->slot_count - $currentApprovedPlacements - $currentEndorsedSlots;
             $studentsWantingThisInternship = count($students);
+            
+            // Log for debugging
+            \Log::info('Checking internship for conflicts', [
+                'internship_id' => $internship->id,
+                'internship_title' => $internship->position_title,
+                'company' => $internship->hte->company_name ?? 'Unknown',
+                'total_slots' => $internship->slot_count,
+                'approved_placements' => $currentApprovedPlacements,
+                'endorsed_slots' => $currentEndorsedSlots,
+                'available_slots' => $availableSlots,
+                'students_wanting' => $studentsWantingThisInternship,
+                'has_conflict' => $studentsWantingThisInternship > $availableSlots
+            ]);
             
             // If more students want this internship than available slots
             if ($studentsWantingThisInternship > $availableSlots) {
@@ -1391,7 +1397,7 @@ class StudentController extends Controller
                         'internship_title' => $bestMatch->internship->position_title,
                         'company_name' => $bestMatch->internship->hte->company_name ?? 'Unknown Company',
                         'compatibility_score' => $bestMatch->compatibility_score,
-                        'match_rank' => '1st match'
+                        'match_rank' => $this->getOrdinalRank($bestMatch->rank) . ' match'
                     ];
                 }
                 
@@ -1400,17 +1406,18 @@ class StudentController extends Controller
                     $student = $studentMatch['student'];
                     $bestMatch = $studentMatch['best_match'];
                     
-                    // Get all matches for this student to determine fallback rank
+                    // Get all matches for this student ordered by rank (not compatibility score)
                     $allMatches = StudentMatch::where('student_id', $student->id)
                         ->with(['internship.hte'])
-                        ->orderBy('compatibility_score', 'desc')
+                        ->orderBy('rank', 'asc') // Order by rank, not compatibility score
                         ->get();
                     
                     // Find the best available match (with slots) considering simulated placements
                     $fallbackMatch = null;
-                    $fallbackRank = 'Other';
+                    $fallbackRank = 'No fallback available';
+                    $relativeRank = 2; // Start with 2nd match
                     
-                    foreach ($allMatches as $index => $match) {
+                    foreach ($allMatches as $match) {
                         // Skip the best match (first match) as it's already unavailable
                         if ($match->internship->id === $bestMatch->internship->id) {
                             continue;
@@ -1423,16 +1430,8 @@ class StudentController extends Controller
                         
                         if ($availableSlots > 0) {
                             $fallbackMatch = $match;
-                            $rankNumber = $index + 1;
-                            if ($rankNumber == 2) {
-                                $fallbackRank = '2nd match';
-                            } elseif ($rankNumber == 3) {
-                                $fallbackRank = '3rd match';
-                            } elseif ($rankNumber == 4) {
-                                $fallbackRank = '4th match';
-                            } else {
-                                $fallbackRank = 'Other';
-                            }
+                            // Show the actual database rank of the fallback match
+                            $fallbackRank = $this->getOrdinalRank($relativeRank) . ' match';
                             
                             // Simulate this placement for future calculations
                             if (!isset($simulatedPlacements[$match->internship->id])) {
@@ -1441,7 +1440,19 @@ class StudentController extends Controller
                             $simulatedPlacements[$match->internship->id]++;
                             break;
                         }
+                        $relativeRank++;
                     }
+                    
+                    // Log for debugging fallback rank calculation
+                    \Log::info('Calculating fallback rank for student', [
+                        'student_id' => $student->id,
+                        'student_name' => "{$student->first_name} {$student->last_name}",
+                        'best_match_unavailable' => $bestMatch->internship->position_title . ' (' . ($bestMatch->internship->hte->company_name ?? 'Unknown') . ')',
+                        'best_match_rank' => $bestMatch->rank,
+                        'fallback_match_found' => $fallbackMatch ? $fallbackMatch->internship->position_title . ' (' . ($fallbackMatch->internship->hte->company_name ?? 'Unknown') . ')' : 'None',
+                        'fallback_match_db_rank' => $fallbackMatch ? $fallbackMatch->rank : 'N/A',
+                        'fallback_display_rank' => $fallbackRank
+                    ]);
                     
                     if ($fallbackMatch) {
                         $conflicts[] = [
@@ -1557,22 +1568,8 @@ class StudentController extends Controller
                 continue;
             }
             
-            // If internship filter is specified, get match for that specific internship
-            // Otherwise, get student's best match (highest compatibility score)
-            // Only get matches with pending endorsement status
-            if ($internshipFilter) {
-                $targetMatch = StudentMatch::where('student_id', $student->id)
-                    ->where('internship_id', $internshipFilter)
-                    ->where('endorsement_status', 'pending')
-                    ->with(['internship.hte'])
-                    ->first();
-            } else {
-                $targetMatch = StudentMatch::where('student_id', $student->id)
-                    ->where('endorsement_status', 'pending')
-                    ->with(['internship.hte'])
-                    ->orderBy('compatibility_score', 'desc')
-                    ->first();
-            }
+            // Get student's best available match using consistent logic
+            $targetMatch = $this->getBestAvailableMatch($student, $internshipFilter);
             
             if (!$targetMatch) {
                 $errors[] = "Student {$student->first_name} {$student->last_name} has no pending internship matches" . 
@@ -1644,6 +1641,21 @@ class StudentController extends Controller
                             'compatibility_score' => $bestMatch->compatibility_score,
                             'endorsement_date' => now(),
                         ]);
+
+                        // Send notification to HTE about the endorsement
+                        $internshipWithHTE = Internship::with('hte.user')->find($internship->id);
+                        if ($internshipWithHTE && $internshipWithHTE->hte) {
+                            $notificationService = new NotificationService();
+                            $studentName = $student->first_name . ' ' . $student->last_name;
+                            $companyName = $internshipWithHTE->hte->company_name;
+                            $notificationService->notifyHTEForEndorsement(
+                                $internshipWithHTE->hte->user_id,
+                                $studentName,
+                                $companyName,
+                                $student->id,
+                                $internship->id
+                            );
+                        }
 
                         // Don't notify student yet - wait for HTE approval
                         // Student will be notified when HTE approves the endorsement
@@ -1721,6 +1733,21 @@ class StudentController extends Controller
                             'endorsement_date' => now(),
                         ]);
 
+                        // Send notification to HTE about the endorsement
+                        $internshipWithHTE = Internship::with('hte.user')->find($fallbackInternship->id);
+                        if ($internshipWithHTE && $internshipWithHTE->hte) {
+                            $notificationService = new NotificationService();
+                            $studentName = $student->first_name . ' ' . $student->last_name;
+                            $companyName = $internshipWithHTE->hte->company_name;
+                            $notificationService->notifyHTEForEndorsement(
+                                $internshipWithHTE->hte->user_id,
+                                $studentName,
+                                $companyName,
+                                $student->id,
+                                $fallbackInternship->id
+                            );
+                        }
+
                         // Don't notify student yet - wait for HTE approval
                         // Student will be notified when HTE approves the endorsement
                         
@@ -1764,6 +1791,21 @@ class StudentController extends Controller
                             'compatibility_score' => $bestMatch->compatibility_score,
                             'endorsement_date' => now(),
                         ]);
+
+                        // Send notification to HTE about the endorsement
+                        $internshipWithHTE = Internship::with('hte.user')->find($internship->id);
+                        if ($internshipWithHTE && $internshipWithHTE->hte) {
+                            $notificationService = new NotificationService();
+                            $studentName = $student->first_name . ' ' . $student->last_name;
+                            $companyName = $internshipWithHTE->hte->company_name;
+                            $notificationService->notifyHTEForEndorsement(
+                                $internshipWithHTE->hte->user_id,
+                                $studentName,
+                                $companyName,
+                                $student->id,
+                                $internship->id
+                            );
+                        }
 
                         // Don't notify student yet - wait for HTE approval
                         // Student will be notified when HTE approves the endorsement
@@ -2019,6 +2061,190 @@ class StudentController extends Controller
                 'status' => $statusFilter,
             ],
         ]);
+    }
+
+    /**
+     * Undo a single student endorsement
+     */
+    public function undoEndorsement(Request $request)
+    {
+        $validated = $request->validate([
+            'student_id' => 'required|exists:students,id',
+            'internship_id' => 'required|exists:internships,id',
+        ]);
+
+        $studentId = $validated['student_id'];
+        $internshipId = $validated['internship_id'];
+
+        try {
+            // Find the endorsement to undo
+            $endorsement = Endorsement::where('student_id', $studentId)
+                ->where('internship_id', $internshipId)
+                ->where('status', 'endorsed')
+                ->first();
+
+            if (!$endorsement) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No endorsed placement found to undo'
+                ], 404);
+            }
+
+            // Delete the endorsement
+            $endorsement->delete();
+
+            // Update the student match status back to pending
+            StudentMatch::where('student_id', $studentId)
+                ->where('internship_id', $internshipId)
+                ->update(['endorsement_status' => 'pending']);
+
+            \Log::info('Endorsement undone', [
+                'student_id' => $studentId,
+                'internship_id' => $internshipId,
+                'undone_by' => auth()->user()->id
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Endorsement successfully undone'
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error undoing endorsement', [
+                'student_id' => $studentId,
+                'internship_id' => $internshipId,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to undo endorsement: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Undo batch endorsements
+     */
+    public function undoBatchEndorsements(Request $request)
+    {
+        $validated = $request->validate([
+            'student_ids' => 'required|array',
+            'student_ids.*' => 'exists:students,id',
+        ]);
+
+        $studentIds = $validated['student_ids'];
+        $undoneCount = 0;
+        $errors = [];
+
+        try {
+            foreach ($studentIds as $studentId) {
+                // Find all endorsed placements for this student
+                $endorsements = Endorsement::where('student_id', $studentId)
+                    ->where('status', 'endorsed')
+                    ->get();
+
+                foreach ($endorsements as $endorsement) {
+                    // Delete the endorsement
+                    $endorsement->delete();
+
+                    // Update the student match status back to pending
+                    StudentMatch::where('student_id', $studentId)
+                        ->where('internship_id', $endorsement->internship_id)
+                        ->update(['endorsement_status' => 'pending']);
+
+                    $undoneCount++;
+                }
+            }
+
+            \Log::info('Batch endorsements undone', [
+                'student_ids' => $studentIds,
+                'undone_count' => $undoneCount,
+                'undone_by' => auth()->user()->id
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => "Successfully undone {$undoneCount} endorsement(s)",
+                'undone_count' => $undoneCount
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error undoing batch endorsements', [
+                'student_ids' => $studentIds,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to undo batch endorsements: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get ordinal rank with proper suffix (1st, 2nd, 3rd, 4th, etc.)
+     */
+    private function getOrdinalRank(int $number): string
+    {
+        $value = $number % 100;
+        
+        // Handle special cases for 11th, 12th, 13th
+        if ($value >= 11 && $value <= 13) {
+            return $number . 'th';
+        }
+        
+        // Use the last digit to determine suffix
+        $lastDigit = $number % 10;
+        
+        switch ($lastDigit) {
+            case 1:
+                return $number . 'st';
+            case 2:
+                return $number . 'nd';
+            case 3:
+                return $number . 'rd';
+            default:
+                return $number . 'th';
+        }
+    }
+
+    /**
+     * Get the best available match for a student (consistent logic for both table display and batch operations)
+     */
+    private function getBestAvailableMatch(Student $student, ?int $internshipFilter = null): ?StudentMatch
+    {
+        if ($internshipFilter) {
+            // If specific internship is selected, get match for that internship
+            return StudentMatch::where('student_id', $student->id)
+                ->where('internship_id', $internshipFilter)
+                ->where('endorsement_status', 'pending')
+                ->with(['internship.hte'])
+                ->first();
+        } else {
+            // Get all matches ordered by compatibility score (highest first)
+            $allMatches = StudentMatch::where('student_id', $student->id)
+                ->where('endorsement_status', 'pending')
+                ->with(['internship.hte'])
+                ->orderBy('compatibility_score', 'desc')
+                ->get();
+
+            // Find the best available match (with slots available)
+            foreach ($allMatches as $match) {
+                // Calculate available slots (total slots - approved placements - endorsed slots)
+                $approvedPlacements = $match->internship->studentPlacements()->where('status', 'approved')->count();
+                $endorsedSlots = Endorsement::where('internship_id', $match->internship->id)
+                    ->where('status', 'endorsed')
+                    ->count();
+                $availableSlots = $match->internship->slot_count - $approvedPlacements - $endorsedSlots;
+                
+                if ($availableSlots > 0) {
+                    return $match;
+                }
+            }
+        }
+
+        return null;
     }
 
 

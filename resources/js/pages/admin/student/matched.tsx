@@ -335,6 +335,7 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
 
     // handleRejectPlacement function removed as it's unused
 
+
     const handleSingleApprove = async (student: MatchedStudent) => {
         if (!student || !student.best_match?.internship) {
             setErrorMessage('Invalid student data or missing internship information');
@@ -1146,16 +1147,18 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                                             </div>
                                         </div>
                                     </div>
-                                    <Button
-                                        variant="ghost"
-                                        onClick={() => {
-                                            setErrorMessage(null);
-                                            setErrorType(null);
-                                        }}
-                                        className="text-muted-foreground hover:text-foreground h-10 w-10 p-0 min-h-[44px] min-w-[44px]"
-                                    >
-                                        <XCircleIcon className="h-6 w-6" />
-                                    </Button>
+                                    <div className="flex items-center gap-2">
+                                        <Button
+                                            variant="ghost"
+                                            onClick={() => {
+                                                setErrorMessage(null);
+                                                setErrorType(null);
+                                            }}
+                                            className="text-muted-foreground hover:text-foreground h-10 w-10 p-0 min-h-[44px] min-w-[44px]"
+                                        >
+                                            <XCircleIcon className="h-6 w-6" />
+                                        </Button>
+                                    </div>
                                 </div>
                             </CardContent>
                         </Card>
