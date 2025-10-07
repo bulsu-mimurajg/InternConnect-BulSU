@@ -1595,7 +1595,7 @@ class AdviserController extends Controller
         $query = User::whereHas('roles', function ($query) {
                 $query->where('name', 'student');
             })
-            ->where('status', '!=', 'archived')
+            ->where('status', 'verified')
             ->with(['academeAccounts.section', 'student.scores.subcategory.category']);
 
         // Apply section filter
@@ -1614,7 +1614,7 @@ class AdviserController extends Controller
                 'student_number' => $student ? $student->student_number : 'N/A',
                 'email' => $user->email,
                 'name' => $student ? ($student->last_name . ', ' . $student->first_name . ($student->middle_name ? ' ' . $student->middle_name : '')) : 'Pending',
-                'status' => $user->status,
+                'phone' => $student ? $student->phone : 'N/A',
                 'section' => $user->academeAccounts->first()->section->section_name ?? '',
                 'registered_at' => $user->created_at->format('Y-m-d H:i:s'),
             ];
@@ -1715,7 +1715,7 @@ class AdviserController extends Controller
         $row = $startRow;
 
         // Add headers
-        $headers = ['Student Number', 'Name', 'Email', 'Section', 'Status', 'Registered At'];
+        $headers = ['Student Number', 'Name', 'Email', 'Section', 'Phone Number', 'Registered At'];
         $col = 'A';
         foreach ($headers as $header) {
             $sheet->setCellValue($col . $row, $header);
@@ -1730,7 +1730,7 @@ class AdviserController extends Controller
             $sheet->setCellValue('B' . $row, $student['name']);
             $sheet->setCellValue('C' . $row, $student['email']);
             $sheet->setCellValue('D' . $row, $student['section']);
-            $sheet->setCellValue('E' . $row, ucfirst($student['status']));
+            $sheet->setCellValue('E' . $row, $student['phone']);
             $sheet->setCellValue('F' . $row, $student['registered_at'] ?? 'N/A');
             $row++;
         }

@@ -353,7 +353,7 @@ class ReportController extends Controller
 
         // Students table
         if (isset($reportData['students'])) {
-            $headers = ['Student Number', 'First Name', 'Last Name', 'Middle Name', 'Section', 'Specialization', 'Status'];
+            $headers = ['Student Number', 'First Name', 'Last Name', 'Middle Name', 'Section', 'Phone'];
             $col = 'A';
             foreach ($headers as $header) {
                 $sheet->setCellValue("{$col}{$row}", $header);
@@ -363,13 +363,12 @@ class ReportController extends Controller
             $row++;
 
             foreach ($reportData['students'] as $student) {
-                $sheet->setCellValue("A{$row}", $student->student_number ?? '');
-                $sheet->setCellValue("B{$row}", $student->user->first_name ?? '');
-                $sheet->setCellValue("C{$row}", $student->user->last_name ?? '');
-                $sheet->setCellValue("D{$row}", $student->user->middle_name ?? '');
-                $sheet->setCellValue("E{$row}", $student->section->section_name ?? '');
-                $sheet->setCellValue("F{$row}", $student->specialization ?? '');
-                $sheet->setCellValue("G{$row}", $student->is_active ? 'Active' : 'Inactive');
+                $sheet->setCellValue("A{$row}", $student['student_number'] ?? '');
+                $sheet->setCellValue("B{$row}", $student['first_name'] ?? '');
+                $sheet->setCellValue("C{$row}", $student['last_name'] ?? '');
+                $sheet->setCellValue("D{$row}", $student['middle_name'] ?? '');
+                $sheet->setCellValue("E{$row}", $student['section'] ?? '');
+                $sheet->setCellValue("F{$row}", $student['phone'] ?? '');
                 $row++;
             }
         }

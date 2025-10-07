@@ -155,8 +155,6 @@ export default function AdviserStudents({ students, adviserSection, adviserSecti
                 return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Verified</Badge>;
             case 'unverified':
                 return <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">Unverified</Badge>;
-            case 'archived':
-                return <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Archived</Badge>;
             default:
                 return <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">{status}</Badge>;
         }
@@ -244,7 +242,6 @@ export default function AdviserStudents({ students, adviserSection, adviserSecti
                                                 <SelectItem value="all">All Statuses</SelectItem>
                                                 <SelectItem value="verified">Verified</SelectItem>
                                                 <SelectItem value="unverified">Unverified</SelectItem>
-                                                <SelectItem value="archived">Archived</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>

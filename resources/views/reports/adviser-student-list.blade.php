@@ -255,7 +255,7 @@
                                 <th class="col-name">Name</th>
                                 <th class="col-email">Email</th>
                                 <th class="col-section">Section</th>
-                                <th class="col-status">Status</th>
+                                <th class="col-status">Phone Number</th>
                                 <th class="col-date">Registered At</th>
                             </tr>
                         </thead>
@@ -266,11 +266,7 @@
                                 <td class="col-name">{{ $student['name'] }}</td>
                                 <td class="col-email">{{ $student['email'] }}</td>
                                 <td class="col-section">{{ $student['section'] }}</td>
-                                <td class="col-status">
-                                    <span class="status-{{ strtolower($student['status']) }}">
-                                        {{ ucfirst($student['status']) }}
-                                    </span>
-                                </td>
+                                <td class="col-status">{{ $student['phone'] ?? 'N/A' }}</td>
                                 <td class="col-date">{{ $student['registered_at'] ?? 'N/A' }}</td>
                             </tr>
                             @endforeach

@@ -187,29 +187,23 @@
                                 <th>Student Number</th>
                                 <th>Student Name</th>
                                 <th>Section</th>
-                                <th>Specialization</th>
-                                <th>Status</th>
+                                <th>Phone</th>
                                 <th>Email</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach($students as $student)
                                 <tr>
-                                    <td>{{ $student->student_number }}</td>
+                                    <td>{{ $student['student_number'] ?? 'N/A' }}</td>
                                     <td>
-                                        {{ $student->last_name }}, {{ $student->first_name }}
-                                        @if($student->middle_name)
-                                            {{ strtoupper(substr($student->middle_name, 0, 1)) }}.
+                                        {{ $student['last_name'] ?? 'N/A' }}, {{ $student['first_name'] ?? 'N/A' }}
+                                        @if($student['middle_name'])
+                                            {{ strtoupper(substr($student['middle_name'], 0, 1)) }}.
                                         @endif
                                     </td>
-                                    <td>{{ $student->section->section_name ?? 'N/A' }}</td>
-                                    <td>{{ $student->specialization ?? 'N/A' }}</td>
-                                    <td>
-                                        <span style="color: {{ $student->is_active ? '#27ae60' : '#e74c3c' }}; font-weight: bold;">
-                                            {{ $student->is_active ? 'Active' : 'Inactive' }}
-                                        </span>
-                                    </td>
-                                    <td>{{ $student->user->email ?? 'N/A' }}</td>
+                                    <td>{{ $student['section'] ?? 'N/A' }}</td>
+                                    <td>{{ $student['phone'] ?? 'N/A' }}</td>
+                                    <td>{{ $student['user']['email'] ?? 'N/A' }}</td>
                                 </tr>
                             @endforeach
                         </tbody>
