@@ -68,6 +68,11 @@ interface Props {
         status?: string;
         submission?: string;
     };
+    hasActiveStudentAssessmentDeadline?: boolean;
+    studentAssessmentDeadline?: {
+        end_date: string;
+        title: string;
+    } | null;
 }
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -77,13 +82,18 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-export default function HTEManagement({ htes, showArchived = false, filters = {} }: Props) {
+export default function HTEManagement({ htes, showArchived = false, filters = {}, hasActiveStudentAssessmentDeadline = false, studentAssessmentDeadline = null }: Props) {
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [selectedHTE, setSelectedHTE] = useState<HTE | null>(null);
     const [showArchivedHTEs, setShowArchivedHTEs] = useState(showArchived);
     const [showFilters, setShowFilters] = useState(false);
     const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
+    const [isDeadlineModalOpen, setIsDeadlineModalOpen] = useState(false);
+    const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
+    const [hteToArchive, setHteToArchive] = useState<HTE | null>(null);
+    const [isUnarchiveModalOpen, setIsUnarchiveModalOpen] = useState(false);
+    const [hteToUnarchive, setHteToUnarchive] = useState<HTE | null>(null);
     const [localFilters, setLocalFilters] = useState({
         search: filters.search || '',
         status: filters.status || 'all',
@@ -158,31 +168,69 @@ export default function HTEManagement({ htes, showArchived = false, filters = {}
     };
 
     const handleArchive = (hte: HTE) => {
-        if (confirm('Are you sure you want to archive this HTE account?')) {
+        // Check if there's an active student assessment deadline
+        if (hasActiveStudentAssessmentDeadline) {
+            setIsDeadlineModalOpen(true);
+            return;
+        }
+
+        // Open the archive confirmation modal
+        setHteToArchive(hte);
+        setIsArchiveModalOpen(true);
+    };
+
+    const confirmArchive = () => {
+        if (hteToArchive) {
             // Use Inertia's router to make a PATCH request
-            router.patch(route('admin.hte.archive', hte.id), {}, {
+            router.patch(route('admin.hte.archive', hteToArchive.id), {}, {
                 onSuccess: () => {
-                    // Optionally show success message or refresh data
+                    setIsArchiveModalOpen(false);
+                    setHteToArchive(null);
+                    // Refresh the page to update the list
+                    router.reload({ only: ['htes'] });
                 },
                 onError: (errors) => {
                     console.error('Archive error:', errors);
+                    setIsArchiveModalOpen(false);
+                    setHteToArchive(null);
                 }
             });
         }
     };
 
+    const cancelArchive = () => {
+        setIsArchiveModalOpen(false);
+        setHteToArchive(null);
+    };
+
     const handleUnarchive = (hte: HTE) => {
-        if (confirm('Are you sure you want to unarchive this HTE account?')) {
+        // Open the unarchive confirmation modal
+        setHteToUnarchive(hte);
+        setIsUnarchiveModalOpen(true);
+    };
+
+    const confirmUnarchive = () => {
+        if (hteToUnarchive) {
             // Use Inertia's router to make a PATCH request
-            router.patch(route('admin.hte.unarchive', hte.id), {}, {
+            router.patch(route('admin.hte.unarchive', hteToUnarchive.id), {}, {
                 onSuccess: () => {
-                    // Optionally show success message or refresh data
+                    setIsUnarchiveModalOpen(false);
+                    setHteToUnarchive(null);
+                    // Refresh the page to update the list
+                    router.reload({ only: ['htes'] });
                 },
                 onError: (errors) => {
                     console.error('Unarchive error:', errors);
+                    setIsUnarchiveModalOpen(false);
+                    setHteToUnarchive(null);
                 }
             });
         }
+    };
+
+    const cancelUnarchive = () => {
+        setIsUnarchiveModalOpen(false);
+        setHteToUnarchive(null);
     };
 
     const toggleArchivedView = () => {
@@ -733,13 +781,19 @@ export default function HTEManagement({ htes, showArchived = false, filters = {}
                                                                     </Button>
                                                                 </DropdownMenuTrigger>
                                                                 <DropdownMenuContent align="end">
-                                                                    <DropdownMenuItem onClick={() => handleEdit(hte)}>
+                                                                    <DropdownMenuItem onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleEdit(hte);
+                                                                    }}>
                                                                         <Edit className="mr-2 h-4 w-4" />
                                                                         Edit
                                                                     </DropdownMenuItem>
                                                                     {hte.status === 'archived' ? (
                                                                         <DropdownMenuItem 
-                                                                            onClick={() => handleUnarchive(hte)}
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                handleUnarchive(hte);
+                                                                            }}
                                                                             className="text-green-600 focus:text-green-600"
                                                                         >
                                                                             <ArchiveRestore className="mr-2 h-4 w-4" />
@@ -747,7 +801,10 @@ export default function HTEManagement({ htes, showArchived = false, filters = {}
                                                                         </DropdownMenuItem>
                                                                     ) : (
                                                                         <DropdownMenuItem 
-                                                                            onClick={() => handleArchive(hte)}
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                handleArchive(hte);
+                                                                            }}
                                                                             className="text-destructive focus:text-destructive"
                                                                         >
                                                                             <Archive className="mr-2 h-4 w-4" />
@@ -935,6 +992,125 @@ export default function HTEManagement({ htes, showArchived = false, filters = {}
                                 </Button>
                             </DialogFooter>
                         </form>
+                    </DialogContent>
+                </Dialog>
+
+                {/* Deadline Restriction Modal */}
+                <Dialog open={isDeadlineModalOpen} onOpenChange={setIsDeadlineModalOpen}>
+                    <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2 text-amber-600">
+                                <CalendarIcon className="h-5 w-5" />
+                                Archive Restriction
+                            </DialogTitle>
+                            <DialogDescription className="pt-4 space-y-3">
+                                <div className="p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
+                                    <p className="text-sm text-amber-900 dark:text-amber-100 font-medium">
+                                        There's a Student Assessment Deadline ongoing, Archiving HTE is restricted at the moment.
+                                    </p>
+                                </div>
+                                {studentAssessmentDeadline && (
+                                    <div className="text-sm text-muted-foreground space-y-1">
+                                        <p><span className="font-medium">Deadline:</span> {studentAssessmentDeadline.title}</p>
+                                        <p><span className="font-medium">Ends:</span> {studentAssessmentDeadline.end_date}</p>
+                                    </div>
+                                )}
+                            </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter>
+                            <Button 
+                                onClick={() => setIsDeadlineModalOpen(false)}
+                                className="w-full sm:w-auto"
+                            >
+                                Okay
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
+                {/* Archive Confirmation Modal */}
+                <Dialog open={isArchiveModalOpen} onOpenChange={setIsArchiveModalOpen}>
+                    <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2">
+                                <Archive className="h-5 w-5 text-orange-600" />
+                                Archive
+                            </DialogTitle>
+                            <DialogDescription className="pt-4">
+                                <p className="text-base text-foreground">
+                                    Are you sure you want to archive this HTE Account?
+                                </p>
+                                {hteToArchive && (
+                                    <div className="mt-4 p-3 bg-muted rounded-lg">
+                                        <p className="text-sm">
+                                            <span className="font-medium">Company:</span> {hteToArchive.company_name || 'Not provided'}
+                                        </p>
+                                        <p className="text-sm">
+                                            <span className="font-medium">Email:</span> {hteToArchive.email}
+                                        </p>
+                                    </div>
+                                )}
+                            </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter className="gap-3">
+                            <Button 
+                                variant="outline"
+                                onClick={cancelArchive}
+                                className="w-full sm:w-auto"
+                            >
+                                Cancel
+                            </Button>
+                            <Button 
+                                variant="destructive"
+                                onClick={confirmArchive}
+                                className="w-full sm:w-auto"
+                            >
+                                Yes
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
+                {/* Unarchive Confirmation Modal */}
+                <Dialog open={isUnarchiveModalOpen} onOpenChange={setIsUnarchiveModalOpen}>
+                    <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2">
+                                <ArchiveRestore className="h-5 w-5 text-green-600" />
+                                Unarchive
+                            </DialogTitle>
+                            <DialogDescription className="pt-4">
+                                <p className="text-base text-foreground">
+                                    Are you sure you want to unarchive this HTE Account?
+                                </p>
+                                {hteToUnarchive && (
+                                    <div className="mt-4 p-3 bg-muted rounded-lg">
+                                        <p className="text-sm">
+                                            <span className="font-medium">Company:</span> {hteToUnarchive.company_name || 'Not provided'}
+                                        </p>
+                                        <p className="text-sm">
+                                            <span className="font-medium">Email:</span> {hteToUnarchive.email}
+                                        </p>
+                                    </div>
+                                )}
+                            </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter className="gap-3">
+                            <Button 
+                                variant="outline"
+                                onClick={cancelUnarchive}
+                                className="w-full sm:w-auto"
+                            >
+                                Cancel
+                            </Button>
+                            <Button 
+                                variant="default"
+                                onClick={confirmUnarchive}
+                                className="w-full sm:w-auto bg-green-600 hover:bg-green-700"
+                            >
+                                Yes
+                            </Button>
+                        </DialogFooter>
                     </DialogContent>
                 </Dialog>
             </div>

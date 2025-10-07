@@ -918,9 +918,17 @@ class AdminController extends Controller
             'htes_data' => $htes->toArray(),
         ]);
 
+        // Check if there's an active student assessment deadline
+        $studentAssessmentDeadline = Deadline::getActiveForCategory('student_assessment_form');
+
         return Inertia::render('admin/hte-management', [
             'htes' => $htes,
             'showArchived' => false,
+            'hasActiveStudentAssessmentDeadline' => $studentAssessmentDeadline !== null,
+            'studentAssessmentDeadline' => $studentAssessmentDeadline ? [
+                'end_date' => $studentAssessmentDeadline->end_date->format('M d, Y g:i A'),
+                'title' => $studentAssessmentDeadline->title,
+            ] : null,
         ]);
     }
 
@@ -1212,6 +1220,15 @@ class AdminController extends Controller
     public function archiveHTE(HTE $hte)
     {
         try {
+            // Check if there's an active student assessment deadline
+            $studentAssessmentDeadline = Deadline::getActiveForCategory('student_assessment_form');
+            
+            if ($studentAssessmentDeadline) {
+                return redirect()->back()->withErrors([
+                    'error' => 'Cannot archive HTE during an active Student Assessment deadline. Please wait until the deadline expires on ' . $studentAssessmentDeadline->end_date->format('M d, Y g:i A') . '.'
+                ]);
+            }
+
             DB::beginTransaction();
 
             // Archive the user
