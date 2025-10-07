@@ -17,7 +17,6 @@ const FormSchema = z.object({
     position: z.string().min(1, 'Position is required'),
     department: z.string().min(1, 'Department is required'),
     numberOfInterns: z.string().min(1, 'Number of interns is required'),
-    duration: z.string().min(1, 'Duration is required'),
 
     // Weights
     subcategoryWeights: z.record(z.string(), z.number().min(0).max(100)),
@@ -75,6 +74,7 @@ export default function AddInternshipForm() {
     const [expandedCategories, setExpandedCategories] = useState<Set<number>>(new Set());
     const [expandedSubcategories, setExpandedSubcategories] = useState<Set<number>>(new Set());
     const [expandedQuestions, setExpandedQuestions] = useState<Set<number>>(new Set());
+    const [lockedSubcategories, setLockedSubcategories] = useState<Set<number>>(new Set());
 
     const steps = [
         { id: 'Step 1', name: 'Internship Information' },
@@ -89,7 +89,6 @@ export default function AddInternshipForm() {
             position: '',
             department: '',
             numberOfInterns: '',
-            duration: '',
             subcategoryWeights: {},
         },
     });
@@ -132,6 +131,18 @@ export default function AddInternshipForm() {
 
     const [currentStep, setCurrentStep] = useState(0);
 
+    const toggleSubcategoryLock = (subcategoryId: number) => {
+        setLockedSubcategories((prev) => {
+            const newSet = new Set(prev);
+            if (newSet.has(subcategoryId)) {
+                newSet.delete(subcategoryId);
+            } else {
+                newSet.add(subcategoryId);
+            }
+            return newSet;
+        });
+    };
+
     const prev = () => {
         if (currentStep > 0) {
             setCurrentStep((prev) => prev - 1);
@@ -143,7 +154,7 @@ export default function AddInternshipForm() {
 
         switch (currentStep) {
             case 0: // Internship Information
-                fieldsToValidate = ['position', 'department', 'numberOfInterns', 'duration'];
+                fieldsToValidate = ['position', 'department', 'numberOfInterns'];
                 break;
             case 1: // Criteria
                 fieldsToValidate = ['subcategoryWeights'];
@@ -205,6 +216,8 @@ export default function AddInternshipForm() {
                                         setExpandedCategories={setExpandedCategories}
                                         setExpandedSubcategories={setExpandedSubcategories}
                                         setExpandedQuestions={setExpandedQuestions}
+                                        lockedSubcategories={lockedSubcategories}
+                                        onToggleSubcategoryLock={toggleSubcategoryLock}
                                     />
                                 )}
                                 {currentStep === 2 && (
@@ -232,10 +245,6 @@ export default function AddInternshipForm() {
                                                     <label className="text-sm font-medium">Number of Interns</label>
                                                     <p className="text-sm text-muted-foreground">{form.watch('numberOfInterns')}</p>
                                                 </div>
-                                            <div>
-                                                <label className="text-sm font-medium">Duration</label>
-                                                <p className="text-sm text-muted-foreground">{form.watch('duration')}</p>
-                                            </div>
                                             </div>
                                         </div>
 
