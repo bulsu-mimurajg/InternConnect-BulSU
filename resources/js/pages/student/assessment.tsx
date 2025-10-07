@@ -46,7 +46,7 @@ export default function Assessment({ hasSubmitted, deadlineActive, deadlineInfo 
                                 </p>
                                 <div className="flex justify-center gap-3">
                                     <Button variant="outline" asChild>
-                                        <Link href="/dashboard">
+                                        <Link href="/student/dashboard">
                                             Go to Dashboard
                                         </Link>
                                     </Button>
