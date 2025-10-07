@@ -2509,6 +2509,7 @@ class AdminController extends Controller
             ->whereDoesntHave('student.placements', function ($query) {
                 $query->where('status', 'approved');
             })
+            ->where('status', 'endorsed') // Only show endorsed, not approved
             ->with(['student.user', 'internship.hte'])
             ->get()
             ->map(function ($endorsement) {
@@ -2536,6 +2537,7 @@ class AdminController extends Controller
         return Endorsement::whereDoesntHave('student.placements', function ($query) {
                 $query->where('status', 'approved');
             })
+            ->where('status', 'endorsed') // Only show endorsed, not approved
             ->with(['student.user', 'student.section', 'internship.hte'])
             ->get()
             ->map(function ($endorsement) {

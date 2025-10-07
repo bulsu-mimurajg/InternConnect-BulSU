@@ -20,7 +20,7 @@ export default function Contact() {
                     style={{backgroundImage: 'url(/images/pimentel.jpg)'}} 
                 />
                 {/* Background Overlay */}
-                <div className="fixed inset-0 bg-[#FDFDFC]/75 dark:bg-[#0a0a0a]/80" />
+                <div className="fixed inset-0 bg-background/60 dark:bg-background/80" />
                 
                 {/* Content Container */}
                 <div className="relative z-10 flex min-h-screen flex-col items-center p-6 text-foreground lg:justify-center lg:p-8 w-full">
@@ -101,7 +101,7 @@ export default function Contact() {
                 </header>
                 <div className="flex w-full items-center justify-center opacity-100 transition-opacity duration-750 lg:grow starting:opacity-0">
                     <main className="w-full max-w-[335px] lg:max-w-5xl">
-                        <div className="rounded-br-lg rounded-bl-lg bg-card/10 backdrop-blur-sm p-6 pb-12 text-[13px] leading-[20px] shadow-[inset_0px_0px_0px_1px_hsl(var(--border))] lg:rounded-lg lg:p-20">
+                        <div className="rounded-br-lg rounded-bl-lg bg-card/80 backdrop-blur-sm p-6 pb-12 text-[13px] leading-[20px] shadow-[inset_0px_0px_0px_1px_hsl(var(--border))] lg:rounded-lg lg:p-20">
                             {/* Hero Section */}
                             <div className="text-center space-y-6 mb-12">
                                 <div className="space-y-2">
@@ -123,7 +123,7 @@ export default function Contact() {
                             <div className="space-y-8">
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                    <Card className="bg-card border-border">
+                                    <Card className="bg-card/90 border-border shadow-sm">
                                         <CardHeader className="pb-3">
                                             <div className="h-10 w-10 rounded-lg bg-destructive/10 flex items-center justify-center mb-3">
                                                 <Mail className="h-5 w-5 text-destructive" />
@@ -143,7 +143,7 @@ export default function Contact() {
                                         </CardContent>
                                     </Card>
 
-                                    <Card className="bg-card border-border">
+                                    <Card className="bg-card/90 border-border shadow-sm">
                                         <CardHeader className="pb-3">
                                             <div className="h-10 w-10 rounded-lg bg-destructive/10 flex items-center justify-center mb-3">
                                                 <Building2 className="h-5 w-5 text-destructive" />
@@ -165,7 +165,7 @@ export default function Contact() {
                                         </CardContent>
                                     </Card>
 
-                                    <Card className="bg-card border-border">
+                                    <Card className="bg-card/90 border-border shadow-sm">
                                         <CardHeader className="pb-3">
                                             <div className="h-10 w-10 rounded-lg bg-destructive/10 flex items-center justify-center mb-3">
                                                 <Users className="h-5 w-5 text-destructive" />

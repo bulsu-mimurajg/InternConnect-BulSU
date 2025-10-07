@@ -17,7 +17,7 @@ return new class extends Migration
             $table->id();
             $table->foreignIdFor(Student::class)->constrained()->cascadeOnDelete();
             $table->foreignIdFor(Internship::class)->constrained()->cascadeOnDelete();
-            $table->enum('status', ['pending', 'endorsed', 'rejected'])->default('pending');
+            $table->enum('status', ['pending', 'endorsed', 'rejected', 'approved'])->default('pending');
             $table->decimal('compatibility_score', 5, 2);
             $table->text('notes')->nullable();
             $table->timestamp('endorsement_date')->nullable();
