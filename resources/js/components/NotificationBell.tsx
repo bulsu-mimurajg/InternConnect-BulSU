@@ -74,6 +74,7 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
     const [filter, setFilter] = useState<'all' | 'endorsement' | 'deadline' | 'placement' | 'approval'>('all');
     const [showRead, setShowRead] = useState(true);
     const [lastLocalUpdate, setLastLocalUpdate] = useState<{[key: number]: number}>({});
+    const [expandedNotifications, setExpandedNotifications] = useState<Set<number>>(new Set());
     const [pagination, setPagination] = useState({
         current_page: 1,
         per_page: 10,
@@ -510,6 +511,28 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
             return notifications.filter(notification => !notification.is_read);
         }
         return notifications;
+    };
+
+    const toggleNotificationExpansion = (notificationId: number) => {
+        setExpandedNotifications(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(notificationId)) {
+                newSet.delete(notificationId);
+            } else {
+                newSet.add(notificationId);
+            }
+            return newSet;
+        });
+    };
+
+    const isNotificationExpanded = (notificationId: number) => {
+        return expandedNotifications.has(notificationId);
+    };
+
+    const shouldShowSeeMore = (message: string) => {
+        // Show "See more" if message is longer than approximately 100 characters
+        // This is a rough estimate for when text would be truncated
+        return message.length > 100;
     };
 
     const handleNotificationClick = async (notification: Notification) => {
@@ -966,9 +989,25 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                                                             </div>
                                                         </div>
                                                     </div>
-                                                    <p className="text-xs sm:text-sm text-foreground/70 mt-1 sm:mt-1.5 line-clamp-2 leading-relaxed">
-                                                        {notification.message}
-                                                    </p>
+                                                    <div className="mt-1 sm:mt-1.5">
+                                                        <p className={cn(
+                                                            "text-xs sm:text-sm text-foreground/70 leading-relaxed",
+                                                            !isNotificationExpanded(notification.id) && "line-clamp-2"
+                                                        )}>
+                                                            {notification.message}
+                                                        </p>
+                                                        {shouldShowSeeMore(notification.message) && (
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    toggleNotificationExpansion(notification.id);
+                                                                }}
+                                                                className="text-xs text-primary hover:text-primary/80 font-medium mt-1 transition-colors"
+                                                            >
+                                                                {isNotificationExpanded(notification.id) ? 'See less' : 'See more'}
+                                                            </button>
+                                                        )}
+                                                    </div>
                                                     <p className="text-xs text-muted-foreground mt-1.5 sm:mt-2.5 flex items-center gap-1 sm:gap-1.5 font-medium">
                                                         <ClockIcon className="h-3 w-3" />
                                                         {formatTimeAgo(notification.created_at)}

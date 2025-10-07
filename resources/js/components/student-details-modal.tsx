@@ -183,6 +183,30 @@ export default function StudentDetailsModal({
                                         </div>
                                     </div>
                                 </CardHeader>
+                                <CardContent>
+                                    <div className="space-y-3">
+                                        <h4 className="font-medium text-foreground text-sm">Compatibility Breakdown</h4>
+                                        <p className="text-sm text-muted-foreground mb-4">
+                                            How the overall compatibility score was calculated
+                                        </p>
+                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                            <div className="p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg">
+                                                <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">Student Performance</h4>
+                                                <p className="text-sm text-blue-700 dark:text-blue-300">
+                                                    The student's assessment scores are converted to percentages and then 
+                                                    weighted according to the internship's criteria importance.
+                                                </p>
+                                            </div>
+                                            <div className="p-4 bg-green-50 dark:bg-green-950/30 rounded-lg">
+                                                <h4 className="font-medium text-green-900 dark:text-green-100 mb-2">Internship Requirements</h4>
+                                                <p className="text-sm text-green-700 dark:text-green-300">
+                                                    Each subcategory has a weight percentage indicating its importance 
+                                                    for the specific internship position.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </CardContent>
                             </Card>
                         )}
 
@@ -307,36 +331,6 @@ export default function StudentDetailsModal({
                                 </CardContent>
                             </Card>
                         </div>
-
-                        {/* Compatibility Breakdown */}
-                        {student.best_match && (
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="text-lg">Compatibility Breakdown</CardTitle>
-                                    <CardDescription>
-                                        How the overall compatibility score was calculated
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                                        <div className="p-4 bg-blue-50 rounded-lg">
-                                            <h4 className="font-medium text-blue-900 mb-2">Student Performance</h4>
-                                            <p className="text-sm text-blue-700">
-                                                The student's assessment scores are converted to percentages and then 
-                                                weighted according to the internship's criteria importance.
-                                            </p>
-                                        </div>
-                                        <div className="p-4 bg-green-50 rounded-lg">
-                                            <h4 className="font-medium text-green-900 mb-2">Internship Requirements</h4>
-                                            <p className="text-sm text-green-700">
-                                                Each subcategory has a weight percentage indicating its importance 
-                                                for the specific internship position.
-                                            </p>
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        )}
                     </TabsContent>
 
                     {/* Student Details Tab */}
