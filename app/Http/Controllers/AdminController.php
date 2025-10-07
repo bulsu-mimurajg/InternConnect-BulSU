@@ -954,6 +954,8 @@ class AdminController extends Controller
                     'company_address' => $hte->company_address,
                     'company_email' => $hte->company_email,
                     'contact_person' => $hte->cperson_fname . ' ' . $hte->cperson_lname,
+                    'cperson_fname' => $hte->cperson_fname,
+                    'cperson_lname' => $hte->cperson_lname,
                     'contact_position' => $hte->cperson_position,
                     'contact_number' => $hte->cperson_contactnum,
                     'is_active' => $hte->is_active,
@@ -977,6 +979,8 @@ class AdminController extends Controller
         return Inertia::render('admin/hte-management', [
             'htes' => $htes,
             'showArchived' => true,
+            'hasActiveStudentAssessmentDeadline' => false,
+            'studentAssessmentDeadline' => null,
         ]);
     }
 
@@ -1639,7 +1643,6 @@ class AdminController extends Controller
     public function sectionManagement(): Response
     {
         $sections = Section::withCount(['students', 'advisers'])
-            ->where('status', 'active')
             ->orderBy('section_name')
             ->get()
             ->map(function ($section) {
@@ -1838,7 +1841,7 @@ class AdminController extends Controller
                 ])
                 ->log('restored section');
 
-            return redirect()->route('admin.section.archived')->with('success', 'Section restored successfully.');
+            return redirect()->route('admin.section')->with('success', 'Section restored successfully.');
         } catch (\Exception $e) {
             DB::rollBack();
             return redirect()->back()->withErrors(['error' => 'Failed to restore section. Please try again.']);

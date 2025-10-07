@@ -61,9 +61,11 @@ interface Props {
     adviserSection: string | null;
     adviserSections: Section[];
     currentSectionId: number | null;
+    hasArchivedSections?: boolean;
+    archivedSectionNames?: string[];
 }
 
-export default function AdviserStudents({ students, adviserSection, adviserSections, currentSectionId }: Props) {
+export default function AdviserStudents({ students, adviserSection, adviserSections, currentSectionId, hasArchivedSections = false, archivedSectionNames = [] }: Props) {
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<string>('all');
     const [assessmentFilter, setAssessmentFilter] = useState<string>('all');
@@ -107,17 +109,41 @@ export default function AdviserStudents({ students, adviserSection, adviserSecti
             <AppLayout breadcrumbs={breadcrumbs}>
                 <Head title="Students" />
                 <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <UsersIcon className="h-5 w-5" />
-                                No Section Assigned
-                            </CardTitle>
-                            <CardDescription>
-                                You are not assigned to any section. Please contact the administrator.
-                            </CardDescription>
-                        </CardHeader>
-                    </Card>
+                    {hasArchivedSections ? (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2 text-amber-600">
+                                    <ClockIcon className="h-5 w-5" />
+                                    Sections Archived
+                                </CardTitle>
+                                <CardDescription>
+                                    Your assigned sections have been archived and are no longer accessible.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="space-y-2">
+                                    <p className="text-sm text-muted-foreground">
+                                        Archived sections: <span className="font-medium">{archivedSectionNames.join(', ')}</span>
+                                    </p>
+                                    <p className="text-sm text-muted-foreground">
+                                        Please contact an administrator to restore access or get assigned to new sections.
+                                    </p>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ) : (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                    <UsersIcon className="h-5 w-5" />
+                                    No Section Assigned
+                                </CardTitle>
+                                <CardDescription>
+                                    You are not assigned to any section. Please contact the administrator.
+                                </CardDescription>
+                            </CardHeader>
+                        </Card>
+                    )}
                 </div>
             </AppLayout>
         );
@@ -129,8 +155,6 @@ export default function AdviserStudents({ students, adviserSection, adviserSecti
                 return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Verified</Badge>;
             case 'unverified':
                 return <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">Unverified</Badge>;
-            case 'archived':
-                return <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Archived</Badge>;
             default:
                 return <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">{status}</Badge>;
         }
@@ -218,7 +242,6 @@ export default function AdviserStudents({ students, adviserSection, adviserSecti
                                                 <SelectItem value="all">All Statuses</SelectItem>
                                                 <SelectItem value="verified">Verified</SelectItem>
                                                 <SelectItem value="unverified">Unverified</SelectItem>
-                                                <SelectItem value="archived">Archived</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>

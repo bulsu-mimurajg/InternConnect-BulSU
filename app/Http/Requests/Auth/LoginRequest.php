@@ -64,6 +64,19 @@ class LoginRequest extends FormRequest
             ]);
         }
 
+        // Check if student's section is archived
+        if ($user && $user->hasRole('student')) {
+            $academeAccount = $user->academeAccounts()->with('section')->first();
+            if ($academeAccount && $academeAccount->section && $academeAccount->section->status === 'archived') {
+                Auth::logout();
+                RateLimiter::hit($this->throttleKey(), 3600);
+
+                throw ValidationException::withMessages([
+                    'username' => 'Unable to login, section is archived. Please contact your administrator.',
+                ]);
+            }
+        }
+
         RateLimiter::clear($this->throttleKey());
     }
 

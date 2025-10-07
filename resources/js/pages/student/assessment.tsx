@@ -44,13 +44,6 @@ export default function Assessment({ hasSubmitted, deadlineActive, deadlineInfo 
                                     No current deadline or deadline has expired. You cannot take the assessment at this time.
                                     <br />Please contact the administrator for more information.
                                 </p>
-                                <div className="flex justify-center gap-3">
-                                    <Button variant="outline" asChild>
-                                        <Link href="/student/dashboard">
-                                            Go to Dashboard
-                                        </Link>
-                                    </Button>
-                                </div>
                             </div>
                         </CardContent>
                     </Card>

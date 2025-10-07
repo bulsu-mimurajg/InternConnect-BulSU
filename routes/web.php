@@ -9,6 +9,7 @@ use App\Http\Controllers\ReportController;
 use App\Models\Question;
 use App\Models\SubCategory;
 use App\Models\StudentMatch;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -55,7 +56,7 @@ Route::middleware(['auth', 'verified', 'role_redirect:admin'])->group(function (
     Route::get('admin/section', [AdminController::class, 'sectionManagement'])->name('admin.section');
     Route::get('admin/section/archived', [AdminController::class, 'archivedSectionManagement'])->name('admin.section.archived');
     Route::post('admin/section', [AdminController::class, 'storeSection'])->name('admin.section.store');
-    Route::put('admin/section/{section}', [AdminController::class, 'updateSection'])->middleware('deadline_restrictions:section_edit')->name('admin.section.update');
+    Route::put('admin/section/{section}', [AdminController::class, 'updateSection'])->name('admin.section.update');
     Route::patch('admin/section/{section}/archive', [AdminController::class, 'archiveSection'])->middleware('deadline_restrictions:section_archive')->name('admin.section.archive');
     Route::patch('admin/section/{section}/restore', [AdminController::class, 'restoreSection'])->middleware('deadline_restrictions:section_restore')->name('admin.section.restore');
 
@@ -317,12 +318,40 @@ Route::middleware(['auth', 'verified', 'role_redirect:hte'])->group(function () 
 
 
 
-Route::middleware(['auth', 'verified', 'role_redirect:adviser'])->group(function () {
+Route::middleware(['auth', 'verified', 'role_redirect:adviser', 'adviser_section_access'])->group(function () {
     Route::get('adviser/dashboard', [AdviserController::class, 'dashboard'])->name('adviser.dashboard');
     Route::get('adviser/student-list', [AdviserController::class, 'getStudents'])->name('adviser.student-list');
     Route::get('student-verification', [AdviserController::class, 'index'])->name('student-verification');
     // Adviser reports now use unified system - redirect to main reports page
-    Route::get('adviser/report', function () {
+    Route::get('adviser/report', function (Request $request) {
+        $adviser = Auth::user();
+        $adviserRecord = $adviser->adviser;
+
+        if (!$adviserRecord) {
+            return redirect()->route('reports.index');
+        }
+
+        // Check if adviser has any active sections
+        $activeSections = $adviserRecord->sections()->where('status', 'active')->get();
+        
+        if ($activeSections->isEmpty()) {
+            // Check if adviser has any sections (including archived ones)
+            $allAdviserSections = $adviserRecord->sections;
+            $archivedSections = $allAdviserSections->where('status', 'archived');
+            
+            if ($archivedSections->isNotEmpty()) {
+                // Show archived section warning instead of redirecting
+                return Inertia::render('adviser/report', [
+                    'adviserSection' => null,
+                    'adviserSections' => [],
+                    'currentSectionId' => null,
+                    'hasArchivedSections' => true,
+                    'archivedSectionNames' => $archivedSections->pluck('section_name')->toArray(),
+                ]);
+            }
+        }
+
+        // If adviser has active sections, redirect to centralized reports
         return redirect()->route('reports.index');
     })->name('adviser.report');
     Route::post('application/approve', [AdviserController::class, 'approveStudents'])->name('application.approve');

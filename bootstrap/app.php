@@ -28,6 +28,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
             'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
             'deadline_restrictions' => \App\Http\Middleware\CheckDeadlineRestrictions::class,
+            'adviser_section_access' => \App\Http\Middleware\CheckAdviserSectionAccess::class,
         ]);
     })
     ->withProviders([

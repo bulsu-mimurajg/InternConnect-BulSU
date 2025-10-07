@@ -16,6 +16,14 @@ class Section extends Model
     ];
 
     /**
+     * Get the valid status values
+     */
+    public static function getValidStatuses(): array
+    {
+        return ['active', 'archived'];
+    }
+
+    /**
      * Get the requests for this section.
      */
     public function requests(): HasMany

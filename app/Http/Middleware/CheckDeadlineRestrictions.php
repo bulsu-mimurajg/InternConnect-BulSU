@@ -65,13 +65,13 @@ class CheckDeadlineRestrictions
         $restrictions = [];
 
         // Section management restrictions
-        if (in_array($action, ['section_edit', 'section_archive', 'section_restore'])) {
+        if (in_array($action, ['section_archive', 'section_restore'])) {
             if ($studentAssessmentDeadline) {
                 $restrictions[] = [
                     'action' => $action,
                     'reason' => 'student_assessment_active',
                     'deadline' => $studentAssessmentDeadline,
-                    'message' => 'Section editing and archiving is disabled during student assessment deadline period.'
+                    'message' => 'Section archiving and restoration is disabled during student assessment deadline period.'
                 ];
             }
         }

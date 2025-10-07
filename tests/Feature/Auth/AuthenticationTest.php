@@ -1,6 +1,8 @@
 <?php
 
 use App\Models\User;
+use App\Models\Section;
+use App\Models\AcademeAccount;
 use Database\Seeders\RolePermissionSeeder;
 
 beforeEach(fn () => $this->seed(RolePermissionSeeder::class));
@@ -67,7 +69,7 @@ test('unverified users can not authenticate', function () {
 
     $this->assertGuest();
     $response->assertSessionHasErrors(['username']);
-    $response->assertSessionHasErrors(['username' => 'Your account is not yet verified. Please contact an administrator.']);
+    $response->assertSessionHasErrors(['username' => 'Your account is not yet verified. Please contact your adviser.']);
 });
 
 test('archived users can not authenticate', function () {
@@ -84,5 +86,64 @@ test('archived users can not authenticate', function () {
 
     $this->assertGuest();
     $response->assertSessionHasErrors(['username']);
-    $response->assertSessionHasErrors(['username' => 'Your account is not yet verified. Please contact an administrator.']);
+    $response->assertSessionHasErrors(['username' => 'Kindly contact the administrator for further assistance.']);
+});
+
+test('students can not authenticate when their section is archived', function () {
+    // Create an archived section
+    $section = Section::create([
+        'section_name' => 'CS-3A',
+        'status' => 'archived'
+    ]);
+
+    // Create a verified student user
+    $user = User::factory()->create([
+        'status' => 'verified'
+    ]);
+
+    $user->assignRole('student');
+
+    // Create academe account linking user to archived section
+    AcademeAccount::create([
+        'user_id' => $user->id,
+        'section_id' => $section->section_id
+    ]);
+
+    $response = $this->post('/login', [
+        'username' => $user->username,
+        'password' => 'password',
+    ]);
+
+    $this->assertGuest();
+    $response->assertSessionHasErrors(['username']);
+    $response->assertSessionHasErrors(['username' => 'Unable to login, section is archived. Please contact your administrator.']);
+});
+
+test('students can authenticate when their section is active', function () {
+    // Create an active section
+    $section = Section::create([
+        'section_name' => 'CS-3A',
+        'status' => 'active'
+    ]);
+
+    // Create a verified student user
+    $user = User::factory()->create([
+        'status' => 'verified'
+    ]);
+
+    $user->assignRole('student');
+
+    // Create academe account linking user to active section
+    AcademeAccount::create([
+        'user_id' => $user->id,
+        'section_id' => $section->section_id
+    ]);
+
+    $response = $this->post('/login', [
+        'username' => $user->username,
+        'password' => 'password',
+    ]);
+
+    $this->assertAuthenticated();
+    $response->assertRedirect(route('student.dashboard', absolute: false));
 });

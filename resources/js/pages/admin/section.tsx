@@ -15,15 +15,9 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Pagination } from '@/components/ui/pagination';
 import { usePagination } from '@/hooks/usePagination';
-import { Plus, MoreHorizontal, Edit, Archive, ArchiveRestore, SquareLibraryIcon, Eye } from 'lucide-react';
+import { Plus, Edit, Archive, ArchiveRestore, SquareLibraryIcon, Eye } from 'lucide-react';
 import { type BreadcrumbItem } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -83,6 +77,10 @@ export default function SectionManagement({ sections, showArchived = false, dead
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [selectedSection, setSelectedSection] = useState<Section | null>(null);
     const [showArchivedSections, setShowArchivedSections] = useState(showArchived);
+    const [isArchiveDialogOpen, setIsArchiveDialogOpen] = useState(false);
+    const [isRestoreDialogOpen, setIsRestoreDialogOpen] = useState(false);
+    const [sectionToArchive, setSectionToArchive] = useState<Section | null>(null);
+    const [sectionToRestore, setSectionToRestore] = useState<Section | null>(null);
 
     const createForm = useForm({
         section_name: '',
@@ -120,14 +118,36 @@ export default function SectionManagement({ sections, showArchived = false, dead
     }, [editForm, selectedSection]);
 
     const handleArchiveSection = useCallback((sectionId: number) => {
-        if (confirm('Are you sure you want to archive this section?')) {
-            router.patch(`/admin/section/${sectionId}/archive`);
+        const section = sections.find(s => s.section_id === sectionId);
+        if (section) {
+            setSectionToArchive(section);
+            setIsArchiveDialogOpen(true);
         }
-    }, []);
+    }, [sections]);
 
     const handleRestoreSection = useCallback((sectionId: number) => {
-        router.patch(`/admin/section/${sectionId}/restore`);
-    }, []);
+        const section = sections.find(s => s.section_id === sectionId);
+        if (section) {
+            setSectionToRestore(section);
+            setIsRestoreDialogOpen(true);
+        }
+    }, [sections]);
+
+    const confirmArchive = useCallback(() => {
+        if (sectionToArchive) {
+            router.patch(`/admin/section/${sectionToArchive.section_id}/archive`);
+            setIsArchiveDialogOpen(false);
+            setSectionToArchive(null);
+        }
+    }, [sectionToArchive]);
+
+    const confirmRestore = useCallback(() => {
+        if (sectionToRestore) {
+            router.patch(`/admin/section/${sectionToRestore.section_id}/restore`);
+            setIsRestoreDialogOpen(false);
+            setSectionToRestore(null);
+        }
+    }, [sectionToRestore]);
 
     const activeSections = sections.filter(section => section.status === 'active');
     const archivedSections = sections.filter(section => section.status === 'archived');
@@ -153,17 +173,19 @@ export default function SectionManagement({ sections, showArchived = false, dead
         resetToFirstPage();
     }, [showArchivedSections, resetToFirstPage]);
 
-    // Check if section management is restricted due to deadlines
-    const isSectionManagementRestricted = useMemo(() => {
+    // Check if section archiving is restricted due to deadlines
+    const isSectionArchivingRestricted = useMemo(() => {
         return deadlineStatus?.restrictions.some(restriction => 
-            restriction.affected_functionality.includes('section_management')
+            restriction.affected_functionality.includes('section_archive') ||
+            restriction.affected_functionality.includes('section_restore')
         ) || false;
     }, [deadlineStatus]);
 
-    // Get restriction message
-    const restrictionMessage = useMemo(() => {
+    // Get restriction message for archiving
+    const archivingRestrictionMessage = useMemo(() => {
         const restriction = deadlineStatus?.restrictions.find(restriction => 
-            restriction.affected_functionality.includes('section_management')
+            restriction.affected_functionality.includes('section_archive') ||
+            restriction.affected_functionality.includes('section_restore')
         );
         return restriction?.message || '';
     }, [deadlineStatus]);
@@ -173,7 +195,7 @@ export default function SectionManagement({ sections, showArchived = false, dead
             <Head title="Section Management" />
             <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
                 {/* Deadline Restriction Alert */}
-                {isSectionManagementRestricted && (
+                {isSectionArchivingRestricted && (
                     <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
                         <div className="flex items-start">
                             <div className="flex-shrink-0">
@@ -181,10 +203,10 @@ export default function SectionManagement({ sections, showArchived = false, dead
                             </div>
                             <div className="ml-3">
                                 <h3 className="text-sm font-medium text-amber-800">
-                                    Section Management Restricted
+                                    Section Archiving Restricted
                                 </h3>
                                 <div className="mt-2 text-sm text-amber-700">
-                                    <p>{restrictionMessage}</p>
+                                    <p>{archivingRestrictionMessage}</p>
                                 </div>
                             </div>
                         </div>
@@ -203,7 +225,7 @@ export default function SectionManagement({ sections, showArchived = false, dead
                         <Button
                             variant="outline"
                             onClick={handleToggleArchived}
-                            disabled={isSectionManagementRestricted}
+                            disabled={isSectionArchivingRestricted}
                         >
                             {showArchivedSections ? (
                                 <>
@@ -221,7 +243,6 @@ export default function SectionManagement({ sections, showArchived = false, dead
                             <DialogTrigger asChild>
                                 <Button 
                                     className="flex items-center gap-2"
-                                    disabled={isSectionManagementRestricted}
                                 >
                                     <Plus className="h-4 w-4" />
                                     Add Section
@@ -316,12 +337,12 @@ export default function SectionManagement({ sections, showArchived = false, dead
                                     </thead>
                                     <tbody>
                                         {paginatedSections.map((section) => (
-                                            <tr key={section.section_id} className={`border-b hover:bg-muted/50 transition-colors ${section.status === 'archived' ? 'opacity-75' : ''}`}>
+                                            <tr key={section.section_id} className={`border-b hover:bg-muted/50 transition-colors ${section.status === 'archived' ? 'bg-muted/30' : ''}`}>
                                                 <td className="py-3 px-4 font-medium">
                                                     {section.section_name}
                                                 </td>
                                                 <td className="py-3 px-4">
-                                                    <Badge variant={section.status === 'active' ? 'default' : 'secondary'}>
+                                                    <Badge variant={section.status === 'active' ? 'default' : 'outline'}>
                                                         {section.status === 'active' ? 'Active' : 'Archived'}
                                                     </Badge>
                                                 </td>
@@ -335,41 +356,37 @@ export default function SectionManagement({ sections, showArchived = false, dead
                                                     {new Date(section.created_at).toLocaleDateString()}
                                                 </td>
                                                 <td className="py-3 px-4 text-right">
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                                                <MoreHorizontal className="h-4 w-4" />
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="end">
-                                                            <DropdownMenuItem 
-                                                                onClick={() => handleEditSection(section)}
-                                                                disabled={isSectionManagementRestricted}
+                                                    <div className="flex items-center gap-2 justify-end">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => handleEditSection(section)}
+                                                            className="h-8 w-8 p-0"
+                                                        >
+                                                            <Edit className="h-4 w-4" />
+                                                        </Button>
+                                                        {section.status === 'archived' ? (
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => handleRestoreSection(section.section_id)}
+                                                                disabled={isSectionArchivingRestricted}
+                                                                className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-100"
                                                             >
-                                                                <Edit className="mr-2 h-4 w-4" />
-                                                                Edit
-                                                            </DropdownMenuItem>
-                                                            {section.status === 'archived' ? (
-                                                                <DropdownMenuItem 
-                                                                    onClick={() => handleRestoreSection(section.section_id)}
-                                                                    className="text-green-600 focus:text-green-600"
-                                                                    disabled={isSectionManagementRestricted}
-                                                                >
-                                                                    <ArchiveRestore className="mr-2 h-4 w-4" />
-                                                                    Restore
-                                                                </DropdownMenuItem>
-                                                            ) : (
-                                                                <DropdownMenuItem 
-                                                                    onClick={() => handleArchiveSection(section.section_id)}
-                                                                    className="text-destructive focus:text-destructive"
-                                                                    disabled={isSectionManagementRestricted}
-                                                                >
-                                                                    <Archive className="mr-2 h-4 w-4" />
-                                                                    Archive
-                                                                </DropdownMenuItem>
-                                                            )}
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
+                                                                <ArchiveRestore className="h-4 w-4" />
+                                                            </Button>
+                                                        ) : (
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => handleArchiveSection(section.section_id)}
+                                                                disabled={isSectionArchivingRestricted}
+                                                                className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                                            >
+                                                                <Archive className="h-4 w-4" />
+                                                            </Button>
+                                                        )}
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))}
@@ -421,6 +438,48 @@ export default function SectionManagement({ sections, showArchived = false, dead
                             </Button>
                             <Button onClick={handleUpdateSection} disabled={editForm.processing}>
                                 {editForm.processing ? 'Updating...' : 'Update Section'}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
+                {/* Archive Confirmation Dialog */}
+                <Dialog open={isArchiveDialogOpen} onOpenChange={setIsArchiveDialogOpen}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Archive Section</DialogTitle>
+                            <DialogDescription>
+                                Are you sure you want to archive <strong>{sectionToArchive?.section_name}</strong>? 
+                                This will hide it from active sections.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter>
+                            <Button variant="outline" onClick={() => setIsArchiveDialogOpen(false)}>
+                                Cancel
+                            </Button>
+                            <Button variant="destructive" onClick={confirmArchive}>
+                                Archive Section
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
+                {/* Restore Confirmation Dialog */}
+                <Dialog open={isRestoreDialogOpen} onOpenChange={setIsRestoreDialogOpen}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Restore Section</DialogTitle>
+                            <DialogDescription>
+                                Are you sure you want to restore <strong>{sectionToRestore?.section_name}</strong>? 
+                                This will make it active again.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter>
+                            <Button variant="outline" onClick={() => setIsRestoreDialogOpen(false)}>
+                                Cancel
+                            </Button>
+                            <Button onClick={confirmRestore}>
+                                Restore Section
                             </Button>
                         </DialogFooter>
                     </DialogContent>

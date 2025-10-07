@@ -283,6 +283,13 @@ export default function HTEManagement({ htes, showArchived = false, filters = {}
     };
 
     const filteredHTEs = htes.filter(hte => {
+        // First filter by archived status based on current view
+        const matchesArchivedStatus = showArchivedHTEs ? hte.status === 'archived' : hte.status !== 'archived';
+        
+        if (!matchesArchivedStatus) {
+            return false;
+        }
+
         const fullName = `${hte.cperson_fname || ''} ${hte.cperson_lname || ''}`.trim();
         const matchesSearch = hte.username.toLowerCase().includes(localFilters.search.toLowerCase()) ||
                             hte.email.toLowerCase().includes(localFilters.search.toLowerCase()) ||
@@ -299,8 +306,8 @@ export default function HTEManagement({ htes, showArchived = false, filters = {}
 
     // Create a stable reset trigger for pagination
     const resetTrigger = useMemo(() => 
-        `${localFilters.search}-${localFilters.status}-${localFilters.submission}`,
-        [localFilters.search, localFilters.status, localFilters.submission]
+        `${localFilters.search}-${localFilters.status}-${localFilters.submission}-${showArchivedHTEs}`,
+        [localFilters.search, localFilters.status, localFilters.submission, showArchivedHTEs]
     );
 
     // Pagination hook with auto-reset on filter changes

@@ -80,25 +80,51 @@ interface Props {
     adviserSection: string | null;
     adviserSections: Section[];
     currentSectionId: number | null;
+    hasArchivedSections?: boolean;
+    archivedSectionNames?: string[];
 }
 
-export default function AdviserDashboard({ stats, recentAssessments, placementOverview, adviserSection, adviserSections, currentSectionId }: Props) {
+export default function AdviserDashboard({ stats, recentAssessments, placementOverview, adviserSection, adviserSections, currentSectionId, hasArchivedSections = false, archivedSectionNames = [] }: Props) {
     if (!adviserSection) {
         return (
             <AppLayout breadcrumbs={breadcrumbs}>
                 <Head title="Dashboard" />
                 <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <BarChart3Icon className="h-5 w-5" />
-                                No Section Assigned
-                            </CardTitle>
-                            <CardDescription>
-                                You are not assigned to any section. Please contact the administrator.
-                            </CardDescription>
-                        </CardHeader>
-                    </Card>
+                    {hasArchivedSections ? (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2 text-amber-600">
+                                    <ClockIcon className="h-5 w-5" />
+                                    Sections Archived
+                                </CardTitle>
+                                <CardDescription>
+                                    Your assigned sections have been archived and are no longer accessible.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="space-y-2">
+                                    <p className="text-sm text-muted-foreground">
+                                        Archived sections: <span className="font-medium">{archivedSectionNames.join(', ')}</span>
+                                    </p>
+                                    <p className="text-sm text-muted-foreground">
+                                        Please contact an administrator to restore access or get assigned to new sections.
+                                    </p>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ) : (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                    <BarChart3Icon className="h-5 w-5" />
+                                    No Section Assigned
+                                </CardTitle>
+                                <CardDescription>
+                                    You are not assigned to any section. Please contact the administrator.
+                                </CardDescription>
+                            </CardHeader>
+                        </Card>
+                    )}
                 </div>
             </AppLayout>
         );
