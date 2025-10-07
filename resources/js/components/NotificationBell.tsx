@@ -530,9 +530,9 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
     };
 
     const shouldShowSeeMore = (message: string) => {
-        // Show "See more" if message is longer than approximately 100 characters
-        // This is a rough estimate for when text would be truncated
-        return message.length > 100;
+        // Show "See more" if message is longer than approximately 80 characters
+        // This is a rough estimate for when text would be truncated to 2 lines
+        return message.length > 80;
     };
 
     const handleNotificationClick = async (notification: Notification) => {
@@ -747,6 +747,7 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
             case 'student_registration_pending':
             case 'new_student_registration':
             case 'student_approved':
+            case 'student_assessment_completed':
                 return <UsersIcon className={iconClass} />;
             default:
                 return <BellIcon className={iconClass} />;
@@ -781,10 +782,11 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                 { key: 'deadline', label: 'Deadline' }
             ];
         } else if (hasRole('admin')) {
-            // Admins see: All, Endorsement, Deadline
+            // Admins see: All, Endorsement, Approval, Deadline
             return [
                 { key: 'all', label: 'All' },
                 { key: 'endorsement', label: 'Endorsement' },
+                { key: 'approval', label: 'Approval' },
                 { key: 'deadline', label: 'Deadline' }
             ];
         }
@@ -1002,7 +1004,7 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                                                                     e.stopPropagation();
                                                                     toggleNotificationExpansion(notification.id);
                                                                 }}
-                                                                className="text-xs text-primary hover:text-primary/80 font-medium mt-1 transition-colors"
+                                                                className="text-xs text-primary hover:text-primary/80 font-medium mt-1 transition-colors duration-200 hover:underline focus:outline-none focus:ring-2 focus:ring-primary/20 rounded-sm px-1 py-0.5"
                                                             >
                                                                 {isNotificationExpanded(notification.id) ? 'See less' : 'See more'}
                                                             </button>
