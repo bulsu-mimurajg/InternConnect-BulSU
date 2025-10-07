@@ -144,17 +144,7 @@ export default function AdminDashboard({
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Admin Dashboard" />
-            <div className="relative min-h-screen">
-                {/* Fixed Background Image - positioned behind content only */}
-                <div
-                    className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-50 dark:opacity-50 bg-fixed"
-                    style={{backgroundImage: 'url(/images/pimentel.jpg)'}}
-                />
-                {/* Background Overlay */}
-                <div className="absolute inset-0 bg-background/80 dark:bg-background/90" />
-
-                {/* Content Container */}
-                <div className="relative z-10 space-y-6 p-6">
+            <div className="space-y-6 p-6">
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div>
@@ -338,7 +328,6 @@ export default function AdminDashboard({
                             </div>
                         </CardContent>
                     </Card>
-                </div>
                 </div>
             </div>
         </AppLayout>

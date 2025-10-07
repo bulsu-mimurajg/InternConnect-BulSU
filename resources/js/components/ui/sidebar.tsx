@@ -168,12 +168,20 @@ function Sidebar({
       <div
         data-slot="sidebar"
         className={cn(
-          "bg-sidebar text-sidebar-foreground flex h-full w-(--sidebar-width) flex-col",
+          "bg-sidebar text-sidebar-foreground flex h-full w-(--sidebar-width) flex-col relative overflow-hidden",
           className
         )}
         {...props}
       >
-        {children}
+        {/* Background Image with Opacity */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-[0.08] dark:opacity-[0.05] pointer-events-none z-0"
+          style={{backgroundImage: 'url(/images/pimentel.jpg)'}}
+        />
+        {/* Content */}
+        <div className="relative z-10 flex h-full w-full flex-col">
+          {children}
+        </div>
       </div>
     )
   }
@@ -197,7 +205,17 @@ function Sidebar({
           }
           side={side}
         >
-          <div className="flex h-full w-full flex-col">{children}</div>
+          <div className="flex h-full w-full flex-col relative overflow-hidden">
+            {/* Background Image with Opacity */}
+            <div 
+              className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-[0.08] dark:opacity-[0.05] pointer-events-none z-0"
+              style={{backgroundImage: 'url(/images/pimentel.jpg)'}}
+            />
+            {/* Content */}
+            <div className="relative z-10 flex h-full w-full flex-col">
+              {children}
+            </div>
+          </div>
         </SheetContent>
       </Sheet>
     )
@@ -239,9 +257,17 @@ function Sidebar({
       >
         <div
           data-sidebar="sidebar"
-          className="bg-sidebar group-data-[variant=floating]:border-sidebar-border flex h-full w-full flex-col group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:shadow-sm"
+          className="bg-sidebar group-data-[variant=floating]:border-sidebar-border flex h-full w-full flex-col group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:shadow-sm relative overflow-hidden"
         >
-          {children}
+          {/* Background Image with Opacity */}
+          <div 
+            className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-[0.08] dark:opacity-[0.05] pointer-events-none z-0"
+            style={{backgroundImage: 'url(/images/pimentel.jpg)'}}
+          />
+          {/* Content */}
+          <div className="relative z-10 flex h-full w-full flex-col">
+            {children}
+          </div>
         </div>
       </div>
     </div>
