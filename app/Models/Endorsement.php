@@ -89,11 +89,11 @@ class Endorsement extends Model
     }
 
     /**
-     * Scope to get non-rejected endorsements (pending and endorsed)
+     * Scope to get non-rejected endorsements (pending, endorsed, and approved)
      */
     public function scopeNotRejected($query)
     {
-        return $query->whereIn('status', ['pending', 'endorsed']);
+        return $query->whereIn('status', ['pending', 'endorsed', 'approved']);
     }
 
     /**
@@ -126,5 +126,13 @@ class Endorsement extends Model
     public function isPending(): bool
     {
         return $this->status === 'pending';
+    }
+
+    /**
+     * Check if the endorsement is approved
+     */
+    public function isApproved(): bool
+    {
+        return $this->status === 'approved';
     }
 }

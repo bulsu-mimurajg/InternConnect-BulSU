@@ -994,8 +994,8 @@ class HTEController extends Controller
                 $endorsement->internship_id
             );
 
-            // Don't update endorsement status - it should remain 'endorsed' from SIP
-            // The placement_status in student_matches is what matters for HTE approval
+            // Update the endorsement status to 'approved' so it doesn't show in endorsed list anymore
+            $endorsement->update(['status' => 'approved']);
 
 //            return redirect()->back()->with('success', 'Student placement approved successfully :D');
 
@@ -1135,6 +1135,9 @@ class HTEController extends Controller
                 StudentMatch::where('student_id', $endorsement->student_id)
                     ->where('internship_id', $endorsement->internship_id)
                     ->update(['placement_status' => 'approved']);
+
+                // Update the endorsement status to 'approved' so it doesn't show in endorsed list anymore
+                $endorsement->update(['status' => 'approved']);
 
                 // Notify student about their placement
                 $notificationService = new NotificationService();

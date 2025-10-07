@@ -304,6 +304,9 @@ class AutomaticPlacementService
                         ->where('internship_id', $bestMatch->internship_id)
                         ->update(['placement_status' => 'approved']);
 
+                    // Update the endorsement status to 'approved' so it doesn't show in endorsed list anymore
+                    $endorsement->update(['status' => 'approved']);
+
                     // Send notification to HTE
                     if ($bestMatch->internship->hte && $bestMatch->internship->hte->user) {
                         $notificationService = new NotificationService();
@@ -493,6 +496,9 @@ class AutomaticPlacementService
 
                             // Mark student as placed
                             $student->update(['is_placed' => true]);
+
+                            // Update the endorsement status to 'approved' so it doesn't show in endorsed list anymore
+                            $endorsement->update(['status' => 'approved']);
 
                             // Send notification to HTE
                             if ($bestAvailableInternship->hte && $bestAvailableInternship->hte->user) {
