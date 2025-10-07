@@ -991,6 +991,14 @@ class AdminController extends Controller
      */
     public function storeHTE(Request $request)
     {
+        // Check if there's an active student assessment deadline
+        if (\App\Models\Deadline::isActiveForCategory('student_assessment_form')) {
+            $deadline = \App\Models\Deadline::getActiveForCategory('student_assessment_form');
+            return redirect()->back()->withErrors([
+                'error' => "Cannot create new HTE accounts during active student assessment period. Assessment period ends on " . $deadline->end_date->format('M d, Y H:i') . "."
+            ]);
+        }
+
         // Debug: Log incoming request data
         Log::info('HTE Creation Request', [
             'email' => $request->email,

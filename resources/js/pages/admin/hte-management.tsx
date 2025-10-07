@@ -490,7 +490,14 @@ export default function HTEManagement({ htes, showArchived = false, filters = {}
                         </Button>
                         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
                             <DialogTrigger asChild>
-                                <Button>
+                                <Button 
+                                    disabled={hasActiveStudentAssessmentDeadline}
+                                    onClick={() => {
+                                        if (hasActiveStudentAssessmentDeadline) {
+                                            setIsDeadlineModalOpen(true);
+                                        }
+                                    }}
+                                >
                                     <Plus className="mr-2 h-4 w-4" />
                                     Add HTE
                                 </Button>
@@ -701,7 +708,16 @@ export default function HTEManagement({ htes, showArchived = false, filters = {}
                                         </p>
                                     </div>
                                     {!showArchivedHTEs && (
-                                        <Button onClick={() => setIsCreateDialogOpen(true)}>
+                                        <Button 
+                                            disabled={hasActiveStudentAssessmentDeadline}
+                                            onClick={() => {
+                                                if (hasActiveStudentAssessmentDeadline) {
+                                                    setIsDeadlineModalOpen(true);
+                                                } else {
+                                                    setIsCreateDialogOpen(true);
+                                                }
+                                            }}
+                                        >
                                             <Plus className="h-4 w-4 mr-2" />
                                             Add HTE
                                         </Button>
@@ -1008,12 +1024,12 @@ export default function HTEManagement({ htes, showArchived = false, filters = {}
                         <DialogHeader>
                             <DialogTitle className="flex items-center gap-2 text-amber-600">
                                 <CalendarIcon className="h-5 w-5" />
-                                Archive Restriction
+                                Action Restriction
                             </DialogTitle>
                             <DialogDescription className="pt-4 space-y-3">
                                 <div className="p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
                                     <p className="text-sm text-amber-900 dark:text-amber-100 font-medium">
-                                        There's a Student Assessment Deadline ongoing, Archiving HTE is restricted at the moment.
+                                        There's a Student Assessment Deadline ongoing. Adding new HTEs and archiving existing HTEs is restricted at the moment.
                                     </p>
                                 </div>
                                 {studentAssessmentDeadline && (
