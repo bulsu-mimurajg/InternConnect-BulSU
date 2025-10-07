@@ -9,7 +9,7 @@ import SectionSwitcher from '@/components/SectionSwitcher';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
-import { CheckIcon, XIcon, UsersIcon, UserCheckIcon, RotateCcwIcon, UserXIcon } from 'lucide-react';
+import { CheckIcon, XIcon, UsersIcon, UserCheckIcon, RotateCcwIcon, UserXIcon, ClockIcon } from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -61,11 +61,13 @@ interface Props {
     adviserSection: string | null;
     adviserSections: Section[];
     currentSectionId: number | null;
+    hasArchivedSections?: boolean;
+    archivedSectionNames?: string[];
     deadlineActive: boolean;
     deadlineInfo: DeadlineInfo | null;
 }
 
-export default function Application({ pendingStudents, verifiedStudents, rejectedStudents, adviserSection, adviserSections, currentSectionId, deadlineActive, deadlineInfo }: Props) {
+export default function Application({ pendingStudents, verifiedStudents, rejectedStudents, adviserSection, adviserSections, currentSectionId, hasArchivedSections = false, archivedSectionNames = [], deadlineActive, deadlineInfo }: Props) {
     const [selectedStudents, setSelectedStudents] = useState<number[]>([]);
     const [selectedVerifiedStudents, setSelectedVerifiedStudents] = useState<number[]>([]);
     const [selectedRejectedStudents, setSelectedRejectedStudents] = useState<number[]>([]);
@@ -229,17 +231,41 @@ export default function Application({ pendingStudents, verifiedStudents, rejecte
             <AppLayout breadcrumbs={breadcrumbs}>
                 <Head title="Applications" />
                 <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <UsersIcon className="h-5 w-5" />
-                                No Section Assigned
-                            </CardTitle>
-                            <CardDescription>
-                                You are not assigned to any section. Please contact the administrator.
-                            </CardDescription>
-                        </CardHeader>
-                    </Card>
+                    {hasArchivedSections ? (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2 text-amber-600">
+                                    <ClockIcon className="h-5 w-5" />
+                                    Sections Archived
+                                </CardTitle>
+                                <CardDescription>
+                                    Your assigned sections have been archived and are no longer accessible.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="space-y-2">
+                                    <p className="text-sm text-muted-foreground">
+                                        Archived sections: <span className="font-medium">{archivedSectionNames.join(', ')}</span>
+                                    </p>
+                                    <p className="text-sm text-muted-foreground">
+                                        Please contact an administrator to restore access or get assigned to new sections.
+                                    </p>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ) : (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                    <UsersIcon className="h-5 w-5" />
+                                    No Section Assigned
+                                </CardTitle>
+                                <CardDescription>
+                                    You are not assigned to any section. Please contact the administrator.
+                                </CardDescription>
+                            </CardHeader>
+                        </Card>
+                    )}
                 </div>
             </AppLayout>
         );

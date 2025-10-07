@@ -37,10 +37,27 @@ class AdviserController extends Controller
             ]);
         }
 
-        // Get all sections assigned to this adviser
-        $adviserSections = $adviserRecord->sections;
+        // Get all sections assigned to this adviser (only active sections)
+        $adviserSections = $adviserRecord->sections()->where('status', 'active')->get();
 
         if ($adviserSections->isEmpty()) {
+            // Check if adviser has any sections (including archived ones)
+            $allAdviserSections = $adviserRecord->sections;
+            $archivedSections = $allAdviserSections->where('status', 'archived');
+            
+            if ($archivedSections->isNotEmpty()) {
+                return Inertia::render('adviser/dashboard', [
+                    'stats' => [],
+                    'recentAssessments' => [],
+                    'placementOverview' => [],
+                    'adviserSection' => null,
+                    'adviserSections' => [],
+                    'currentSectionId' => null,
+                    'hasArchivedSections' => true,
+                    'archivedSectionNames' => $archivedSections->pluck('section_name')->toArray(),
+                ]);
+            }
+            
             return Inertia::render('adviser/dashboard', [
                 'stats' => [],
                 'recentAssessments' => [],
@@ -48,6 +65,8 @@ class AdviserController extends Controller
                 'adviserSection' => null,
                 'adviserSections' => [],
                 'currentSectionId' => null,
+                'hasArchivedSections' => false,
+                'archivedSectionNames' => [],
             ]);
         }
 
@@ -384,16 +403,34 @@ class AdviserController extends Controller
             ]);
         }
 
-        // Get all sections assigned to this adviser
-        $adviserSections = $adviserRecord->sections;
+        // Get all sections assigned to this adviser (only active sections)
+        $adviserSections = $adviserRecord->sections()->where('status', 'active')->get();
 
         if ($adviserSections->isEmpty()) {
+            // Check if adviser has any sections (including archived ones)
+            $allAdviserSections = $adviserRecord->sections;
+            $archivedSections = $allAdviserSections->where('status', 'archived');
+            
+            if ($archivedSections->isNotEmpty()) {
+                return Inertia::render('adviser/application', [
+                    'pendingStudents' => [],
+                    'verifiedStudents' => [],
+                    'adviserSection' => null,
+                    'adviserSections' => [],
+                    'currentSectionId' => null,
+                    'hasArchivedSections' => true,
+                    'archivedSectionNames' => $archivedSections->pluck('section_name')->toArray(),
+                ]);
+            }
+            
             return Inertia::render('adviser/application', [
                 'pendingStudents' => [],
                 'verifiedStudents' => [],
                 'adviserSection' => null,
                 'adviserSections' => [],
                 'currentSectionId' => null,
+                'hasArchivedSections' => false,
+                'archivedSectionNames' => [],
             ]);
         }
 
@@ -871,15 +908,32 @@ class AdviserController extends Controller
             ]);
         }
 
-        // Get all sections assigned to this adviser
-        $adviserSections = $adviserRecord->sections;
+        // Get all sections assigned to this adviser (only active sections)
+        $adviserSections = $adviserRecord->sections()->where('status', 'active')->get();
 
         if ($adviserSections->isEmpty()) {
+            // Check if adviser has any sections (including archived ones)
+            $allAdviserSections = $adviserRecord->sections;
+            $archivedSections = $allAdviserSections->where('status', 'archived');
+            
+            if ($archivedSections->isNotEmpty()) {
+                return Inertia::render('adviser/students', [
+                    'students' => [],
+                    'adviserSection' => null,
+                    'adviserSections' => [],
+                    'currentSectionId' => null,
+                    'hasArchivedSections' => true,
+                    'archivedSectionNames' => $archivedSections->pluck('section_name')->toArray(),
+                ]);
+            }
+            
             return Inertia::render('adviser/students', [
                 'students' => [],
                 'adviserSection' => null,
                 'adviserSections' => [],
                 'currentSectionId' => null,
+                'hasArchivedSections' => false,
+                'archivedSectionNames' => [],
             ]);
         }
 
@@ -1026,10 +1080,23 @@ class AdviserController extends Controller
             return redirect()->back()->with('success', 'Switched to All Sections view.');
         }
 
-        // Verify the adviser has access to this section
-        $hasAccess = $adviserRecord->sections->contains('section_id', $sectionId);
+        // Verify the adviser has access to this section and it's not archived
+        $hasAccess = $adviserRecord->sections()
+            ->where('section_id', $sectionId)
+            ->where('status', 'active')
+            ->exists();
 
         if (!$hasAccess) {
+            // Check if the section exists but is archived
+            $isArchived = $adviserRecord->sections()
+                ->where('section_id', $sectionId)
+                ->where('status', 'archived')
+                ->exists();
+                
+            if ($isArchived) {
+                return redirect()->back()->withErrors(['error' => 'Cannot switch to archived section. Please contact an administrator.']);
+            }
+            
             return redirect()->back()->withErrors(['error' => 'You do not have access to this section.']);
         }
 
@@ -1057,14 +1124,30 @@ class AdviserController extends Controller
             ]);
         }
 
-        // Get all sections assigned to this adviser
-        $adviserSections = $adviserRecord->sections;
+        // Get all sections assigned to this adviser (only active sections)
+        $adviserSections = $adviserRecord->sections()->where('status', 'active')->get();
 
         if ($adviserSections->isEmpty()) {
+            // Check if adviser has any sections (including archived ones)
+            $allAdviserSections = $adviserRecord->sections;
+            $archivedSections = $allAdviserSections->where('status', 'archived');
+            
+            if ($archivedSections->isNotEmpty()) {
+                return Inertia::render('adviser/report', [
+                    'adviserSection' => null,
+                    'adviserSections' => [],
+                    'currentSectionId' => null,
+                    'hasArchivedSections' => true,
+                    'archivedSectionNames' => $archivedSections->pluck('section_name')->toArray(),
+                ]);
+            }
+            
             return Inertia::render('adviser/report', [
                 'adviserSection' => null,
                 'adviserSections' => [],
                 'currentSectionId' => null,
+                'hasArchivedSections' => false,
+                'archivedSectionNames' => [],
             ]);
         }
 
@@ -1096,11 +1179,11 @@ class AdviserController extends Controller
             abort(403, 'Adviser record not found.');
         }
 
-        // Get all sections assigned to this adviser
-        $adviserSections = $adviserRecord->sections;
+        // Get all sections assigned to this adviser (only active sections)
+        $adviserSections = $adviserRecord->sections()->where('status', 'active')->get();
 
         if ($adviserSections->isEmpty()) {
-            abort(403, 'No sections assigned to this adviser.');
+            abort(403, 'No active sections assigned to this adviser.');
         }
 
         // Get current section from session
@@ -1154,11 +1237,11 @@ class AdviserController extends Controller
             abort(403, 'Adviser record not found.');
         }
 
-        // Get all sections assigned to this adviser
-        $adviserSections = $adviserRecord->sections;
+        // Get all sections assigned to this adviser (only active sections)
+        $adviserSections = $adviserRecord->sections()->where('status', 'active')->get();
 
         if ($adviserSections->isEmpty()) {
-            abort(403, 'No sections assigned to this adviser.');
+            abort(403, 'No active sections assigned to this adviser.');
         }
 
         // Get current section from session

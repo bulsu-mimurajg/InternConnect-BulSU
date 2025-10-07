@@ -246,10 +246,22 @@ class ReportService
         if (isset($params['section_id']) && $params['section_id'] !== 'all') {
             $query->where('section_id', $params['section_id']);
         } else if (isset($params['section_id']) && $params['section_id'] === 'all' && isset($params['user_role']) && $params['user_role'] === 'adviser') {
-            // For advisers, "all sections" means only their assigned sections
+            // For advisers, "all sections" means only their assigned active sections
             $adviserRecord = $params['user']->adviser;
             if ($adviserRecord) {
-                $assignedSectionIds = $adviserRecord->sections->pluck('section_id')->toArray();
+                $assignedSectionIds = $adviserRecord->sections()->where('status', 'active')->pluck('section_id')->toArray();
+                if (empty($assignedSectionIds)) {
+                    // If no active sections, return empty collection
+                    return [
+                        'students' => collect(),
+                        'stats' => [
+                            ['label' => 'Total Students', 'value' => 0],
+                            ['label' => 'Active Students', 'value' => 0],
+                            ['label' => 'Inactive Students', 'value' => 0],
+                        ],
+                        'section_name' => 'All Assigned Sections',
+                    ];
+                }
                 $query->whereIn('section_id', $assignedSectionIds);
             } else {
                 // If no adviser record, return empty collection
@@ -339,10 +351,22 @@ class ReportService
         if (isset($params['section_id']) && $params['section_id'] !== 'all') {
             $query->where('section_id', $params['section_id']);
         } else if (isset($params['section_id']) && $params['section_id'] === 'all' && isset($params['user_role']) && $params['user_role'] === 'adviser') {
-            // For advisers, "all sections" means only their assigned sections
+            // For advisers, "all sections" means only their assigned active sections
             $adviserRecord = $params['user']->adviser;
             if ($adviserRecord) {
-                $assignedSectionIds = $adviserRecord->sections->pluck('section_id')->toArray();
+                $assignedSectionIds = $adviserRecord->sections()->where('status', 'active')->pluck('section_id')->toArray();
+                if (empty($assignedSectionIds)) {
+                    // If no active sections, return empty collection
+                    return [
+                        'students' => collect(),
+                        'stats' => [
+                            ['label' => 'Total Placed Students', 'value' => 0],
+                            ['label' => 'Active Placements', 'value' => 0],
+                            ['label' => 'Completed Placements', 'value' => 0],
+                        ],
+                        'section_name' => 'All Assigned Sections',
+                    ];
+                }
                 $query->whereIn('section_id', $assignedSectionIds);
             } else {
                 // If no adviser record, return empty collection
@@ -397,10 +421,31 @@ class ReportService
         if (isset($params['section_id']) && $params['section_id'] !== 'all') {
             $query->where('section_id', $params['section_id']);
         } else if (isset($params['section_id']) && $params['section_id'] === 'all' && isset($params['user_role']) && $params['user_role'] === 'adviser') {
-            // For advisers, "all sections" means only their assigned sections
+            // For advisers, "all sections" means only their assigned active sections
             $adviserRecord = $params['user']->adviser;
             if ($adviserRecord) {
-                $assignedSectionIds = $adviserRecord->sections->pluck('section_id')->toArray();
+                $assignedSectionIds = $adviserRecord->sections()->where('status', 'active')->pluck('section_id')->toArray();
+                if (empty($assignedSectionIds)) {
+                    // If no active sections, return empty collection
+                    return [
+                        'students' => collect(),
+                        'stats' => [
+                            ['label' => 'Total Endorsements', 'value' => 0],
+                            ['label' => 'Pending Endorsements', 'value' => 0],
+                            ['label' => 'Approved Endorsements', 'value' => 0],
+                            ['label' => 'Rejected Endorsements', 'value' => 0],
+                            ['label' => 'Average Compatibility Score', 'value' => 'N/A'],
+                        ],
+                        'endorsementStats' => [
+                            'totalEndorsements' => 0,
+                            'pendingEndorsements' => 0,
+                            'approvedEndorsements' => 0,
+                            'rejectedEndorsements' => 0,
+                            'averageCompatibilityScore' => 0,
+                        ],
+                        'section_name' => 'All Assigned Sections',
+                    ];
+                }
                 $query->whereIn('section_id', $assignedSectionIds);
             } else {
                 // If no adviser record, return empty collection
@@ -467,10 +512,30 @@ class ReportService
         if (isset($params['section_id']) && $params['section_id'] !== 'all') {
             $query->where('section_id', $params['section_id']);
         } else if (isset($params['section_id']) && $params['section_id'] === 'all' && isset($params['user_role']) && $params['user_role'] === 'adviser') {
-            // For advisers, "all sections" means only their assigned sections
+            // For advisers, "all sections" means only their assigned active sections
             $adviserRecord = $params['user']->adviser;
             if ($adviserRecord) {
-                $assignedSectionIds = $adviserRecord->sections->pluck('section_id')->toArray();
+                $assignedSectionIds = $adviserRecord->sections()->where('status', 'active')->pluck('section_id')->toArray();
+                if (empty($assignedSectionIds)) {
+                    // If no active sections, return empty collection
+                    return [
+                        'students' => collect(),
+                        'stats' => [
+                            ['label' => 'Total Students', 'value' => 0],
+                            ['label' => 'Assessed Students', 'value' => 0],
+                            ['label' => 'Average Score', 'value' => 'N/A'],
+                            ['label' => 'Placement Rate', 'value' => 'N/A'],
+                        ],
+                        'performanceStats' => [
+                            'totalStudents' => 0,
+                            'assessedStudents' => 0,
+                            'averageScore' => 0,
+                            'topPerformers' => collect(),
+                            'placementRate' => 0,
+                        ],
+                        'section_name' => 'All Assigned Sections',
+                    ];
+                }
                 $query->whereIn('section_id', $assignedSectionIds);
             } else {
                 // If no adviser record, return empty collection
@@ -506,8 +571,10 @@ class ReportService
         if (isset($params['section_id']) && $params['section_id'] === 'all' && isset($params['user_role']) && $params['user_role'] === 'adviser') {
             $adviserRecord = $params['user']->adviser;
             if ($adviserRecord) {
-                $assignedSectionIds = $adviserRecord->sections->pluck('section_id')->toArray();
-                $studentsWithPlacementsQuery->whereIn('section_id', $assignedSectionIds);
+                $assignedSectionIds = $adviserRecord->sections()->where('status', 'active')->pluck('section_id')->toArray();
+                if (!empty($assignedSectionIds)) {
+                    $studentsWithPlacementsQuery->whereIn('section_id', $assignedSectionIds);
+                }
             }
         }
         
@@ -1049,7 +1116,7 @@ class ReportService
      */
     public function getSections($user = null): Collection
     {
-        $query = Section::select('section_id', 'section_name');
+        $query = Section::select('section_id', 'section_name')->where('status', 'active');
         
         // For adviser users, only return sections they're assigned to
         if ($user && $user->getRoleNames()->first() === 'adviser') {

@@ -31,6 +31,10 @@ class DeadlineStatusService
         $internshipPlacementDeadline = Deadline::getActiveForCategory('internship_placement');
 
         switch ($functionality) {
+            case 'section_archive':
+            case 'section_restore':
+                return $studentAssessmentDeadline !== null;
+            
             case 'section_management':
                 return $studentAssessmentDeadline !== null;
             
@@ -57,9 +61,23 @@ class DeadlineStatusService
         $internshipPlacementDeadline = Deadline::getActiveForCategory('internship_placement');
 
         switch ($functionality) {
+            case 'section_archive':
+                if ($studentAssessmentDeadline) {
+                    return "Section archiving is disabled during student assessment deadline period. Deadline ends: " . 
+                           Carbon::parse($studentAssessmentDeadline->end_date)->format('M j, Y \a\t g:i A');
+                }
+                break;
+            
+            case 'section_restore':
+                if ($studentAssessmentDeadline) {
+                    return "Section restoration is disabled during student assessment deadline period. Deadline ends: " . 
+                           Carbon::parse($studentAssessmentDeadline->end_date)->format('M j, Y \a\t g:i A');
+                }
+                break;
+            
             case 'section_management':
                 if ($studentAssessmentDeadline) {
-                    return "Section management is disabled during student assessment deadline period. Deadline ends: " . 
+                    return "Section archiving and restoration is disabled during student assessment deadline period. Deadline ends: " . 
                            Carbon::parse($studentAssessmentDeadline->end_date)->format('M j, Y \a\t g:i A');
                 }
                 break;
@@ -128,7 +146,7 @@ class DeadlineStatusService
                 'type' => 'student_assessment',
                 'message' => 'Student assessment deadline is active',
                 'deadline' => $this->formatDeadlineInfo($studentAssessmentDeadline),
-                'affected_functionality' => ['section_management', 'forms_management', 'additional_info_management'],
+                'affected_functionality' => ['section_archive', 'section_restore', 'forms_management', 'additional_info_management'],
             ];
         }
 

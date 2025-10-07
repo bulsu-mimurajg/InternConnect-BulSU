@@ -120,7 +120,7 @@ const roleBasedNav: Record<string, { main: NavItem[]; groups?: NavGroup[]; foote
             { title: 'Dashboard', href: '/adviser/dashboard', icon: ChartNoAxesColumnIcon },
             { title: 'Student Verification', href: '/student-verification', icon: Check },
             { title: 'Student List', href: '/adviser/student-list', icon: GraduationCapIcon },
-            { title: 'Report', href: '/reports', icon: PrinterIcon },
+            { title: 'Report', href: '/adviser/report', icon: PrinterIcon },
         ],
         footer: [
             { title: 'About', href: '/about', icon: InfoIcon },

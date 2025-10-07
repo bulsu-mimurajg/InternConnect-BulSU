@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('sections', function (Blueprint $table) {
             $table->increments('section_id');
             $table->string('section_name', 10)->unique();
-            $table->enum('status', ['active', 'inactive'])->default('active');
+            $table->enum('status', ['active', 'archived'])->default('active');
             $table->timestamps();
         });
     }
