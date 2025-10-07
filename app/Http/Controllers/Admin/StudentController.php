@@ -744,9 +744,11 @@ class StudentController extends Controller
             // Only include students who truly have no available matches
             return !$hasAvailableMatches;
         })->map(function ($student) {
-            // Check if student has been rejected by HTE
-            $hteRejectedEndorsements = $student->endorsements()->where('status', 'rejected')->get();
-            $isHteRejected = $hteRejectedEndorsements->isNotEmpty();
+            // Check if student has been rejected by HTE (placement_status = 'rejected')
+            $hteRejectedMatches = \App\Models\StudentMatch::where('student_id', $student->id)
+                ->where('placement_status', 'rejected')
+                ->get();
+            $isHteRejected = $hteRejectedMatches->isNotEmpty();
 
             // Check if student requires manual intervention
             $unplacedRecord = \App\Models\UnplacedStudent::where('student_id', $student->id)->first();
