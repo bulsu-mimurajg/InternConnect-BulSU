@@ -187,6 +187,8 @@ export default function EndorsementTable({ endorsements = [], internships = [], 
             router.post(`/hte/approve-endorsement/${endorsementId}`, {}, {
                 onSuccess: () => {
                     toast.success('Endorsement approved successfully');
+                    // Refresh the page to show updated data
+                    router.reload();
                 },
                 onError: (errors) => {
                     console.error('Error approving endorsement:', errors);
@@ -210,6 +212,8 @@ export default function EndorsementTable({ endorsements = [], internships = [], 
             router.post(`/hte/reject-endorsement/${endorsementId}`, {}, {
                 onSuccess: () => {
                     toast.success('Endorsement rejected successfully');
+                    // Refresh the page to show updated data (including any automatic fallback)
+                    router.reload();
                 },
                 onError: (errors) => {
                     console.error('Error rejecting endorsement:', errors);

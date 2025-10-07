@@ -697,13 +697,15 @@ class StudentController extends Controller
             ->where(function($q) {
                 // Include students who:
                 // 1. Have no endorsements at all
-                // 2. Have only rejected endorsements
-                // 3. Have been rejected by HTE (have rejected endorsements but no active endorsed ones)
+                // 2. Have only rejected endorsements AND no pending matches with available slots
                 $q->whereDoesntHave('endorsements')
-                  ->orWhereHas('endorsements', function($subQ) {
-                      $subQ->where('status', 'rejected');
-                  })->whereDoesntHave('endorsements', function($subQ) {
-                      $subQ->where('status', 'endorsed');
+                  ->orWhere(function($subQ) {
+                      // Students with only rejected endorsements
+                      $subQ->whereHas('endorsements', function($endorsementQ) {
+                          $endorsementQ->where('status', 'rejected');
+                      })->whereDoesntHave('endorsements', function($endorsementQ) {
+                          $endorsementQ->where('status', 'endorsed');
+                      });
                   });
             });
 
@@ -723,8 +725,9 @@ class StudentController extends Controller
             });
         }
 
-        return $query->get()->map(function ($student) {
-            // Check if student has any pending matches with available slots
+        return $query->get()->filter(function ($student) {
+            // Exclude students who still have pending matches with available slots
+            // These students should remain in the "matched" category, not "unplaced"
             $hasAvailableMatches = $student->compatibilityScores()
                 ->where('endorsement_status', 'pending')
                 ->get()
@@ -738,6 +741,9 @@ class StudentController extends Controller
                 })
                 ->isNotEmpty();
 
+            // Only include students who truly have no available matches
+            return !$hasAvailableMatches;
+        })->map(function ($student) {
             // Check if student has been rejected by HTE
             $hteRejectedEndorsements = $student->endorsements()->where('status', 'rejected')->get();
             $isHteRejected = $hteRejectedEndorsements->isNotEmpty();
@@ -752,7 +758,7 @@ class StudentController extends Controller
                 $reason = 'Rejected by HTE';
             } elseif ($unplacedRecord) {
                 $reason = $unplacedRecord->reason;
-            } elseif (!$hasAvailableMatches) {
+            } else {
                 $totalMatches = $student->compatibilityScores()->count();
                 if ($totalMatches === 0) {
                     $reason = 'No compatibility matches found';
@@ -770,7 +776,7 @@ class StudentController extends Controller
                 'section' => $student->section->section_name ?? '',
                 'specialization' => $student->specialization,
                 'reason' => $reason,
-                'has_available_matches' => $hasAvailableMatches,
+                'has_available_matches' => false, // All students in unplaced category have no available matches
                 'requires_manual_intervention' => $requiresManualIntervention,
                 'is_hte_rejected' => $isHteRejected,
                 'total_matches' => $student->compatibilityScores()->count(),
