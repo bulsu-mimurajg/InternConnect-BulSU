@@ -29,7 +29,7 @@ class Deadline extends Model
         static::saving(function ($deadline) {
             // Automatically set status based on dates
             $now = Carbon::now();
-            if ($deadline->end_date < $now) {
+            if ($deadline->end_date <= $now) {
                 $deadline->status = 'expired';
             } else {
                 $deadline->status = 'active';
@@ -44,7 +44,7 @@ class Deadline extends Model
 
     public function isExpired(): bool
     {
-        return $this->status === 'expired' || $this->end_date < Carbon::now();
+        return $this->status === 'expired' || $this->end_date <= Carbon::now();
     }
 
     /**
@@ -94,7 +94,7 @@ class Deadline extends Model
     public static function getExpired(): \Illuminate\Database\Eloquent\Collection
     {
         return self::where('status', 'expired')
-            ->orWhere('end_date', '<', Carbon::now())
+            ->orWhere('end_date', '<=', Carbon::now())
             ->orderBy('end_date', 'desc')
             ->get();
     }
