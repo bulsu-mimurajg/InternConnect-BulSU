@@ -286,22 +286,6 @@ export default function HTEProfilePage() {
         });
     };
 
-    // Extract duration, start date, and end date from placement description
-    const extractDuration = (description: string) => {
-        const match = description.match(/Duration: ([^-]+)/);
-        return match ? match[1].trim() : 'Not specified';
-    };
-
-    const extractStartDate = (description: string) => {
-        const match = description.match(/from ([^to]+) to/);
-        return match ? match[1].trim() : 'Not specified';
-    };
-
-    const extractEndDate = (description: string) => {
-        const match = description.match(/to (.+)$/);
-        return match ? match[1].trim() : 'Not specified';
-    };
-
     // Group subcategory weights by category for each internship
     const getWeightsByCategory = (internship: {
         subcategory_weights: Array<{
@@ -772,24 +756,6 @@ export default function HTEProfilePage() {
                                                             </div>
                                                         </div>
                                                         <div className="space-y-4">
-                                                            <div>
-                                                                <label className="text-sm font-medium text-muted-foreground">Duration</label>
-                                                                <p className="text-sm font-semibold text-foreground">{extractDuration(selectedInternship.placement_description)}</p>
-                                                            </div>
-                                                            <div>
-                                                                <label className="text-sm font-medium text-muted-foreground">Start Date</label>
-                                                                <p className="text-sm font-semibold flex items-center gap-2 text-foreground">
-                                                                    <Calendar className="h-4 w-4" />
-                                                                    {extractStartDate(selectedInternship.placement_description)}
-                                                                </p>
-                                                            </div>
-                                                            <div>
-                                                                <label className="text-sm font-medium text-muted-foreground">End Date</label>
-                                                                <p className="text-sm font-semibold flex items-center gap-2 text-foreground">
-                                                                    <Calendar className="h-4 w-4" />
-                                                                    {extractEndDate(selectedInternship.placement_description)}
-                                                                </p>
-                                                            </div>
                                                         </div>
                                                     </div>
                                                     

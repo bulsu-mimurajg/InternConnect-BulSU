@@ -785,7 +785,6 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
             // Admins see: All, Endorsement, Approval, Deadline
             return [
                 { key: 'all', label: 'All' },
-                { key: 'endorsement', label: 'Endorsement' },
                 { key: 'approval', label: 'Approval' },
                 { key: 'deadline', label: 'Deadline' }
             ];
