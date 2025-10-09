@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Head, useForm, usePage, router } from '@inertiajs/react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -43,10 +43,21 @@ interface EventsPageProps {
     activeDeadlines: Deadline[];
     expiredDeadlines: Deadline[];
     categoryOptions: CategoryOption[];
+    nextCategory?: {
+        value: string;
+        label: string;
+    };
+    sequenceInfo: {
+        [key: string]: {
+            can_create: boolean;
+            missing_categories: string[];
+            order: number;
+        };
+    };
 }
 
-export default function EventsPage({ activeDeadlines, expiredDeadlines, categoryOptions }: EventsPageProps) {
-    const [showForm, setShowForm] = useState(false);
+export default function EventsPage({ activeDeadlines, expiredDeadlines, categoryOptions, nextCategory, sequenceInfo }: EventsPageProps) {
+    const [showAddDialog, setShowAddDialog] = useState(false);
     const [editingDeadline, setEditingDeadline] = useState<Deadline | null>(null);
     const [showArchived, setShowArchived] = useState(false);
     const [showExtendDialog, setShowExtendDialog] = useState(false);
@@ -54,6 +65,7 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
     const [deletingDeadline, setDeletingDeadline] = useState<Deadline | null>(null);
     const [showEditDialog, setShowEditDialog] = useState(false);
+    const [manualErrors, setManualErrors] = useState<{ [key: string]: string }>({});
     const { flash } = usePage().props as any;
 
     const { data, setData, post, put, delete: destroy, processing, errors, reset } = useForm({
@@ -70,6 +82,19 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Client-side validation for sequence
+        if (data.category && sequenceInfo[data.category] && !sequenceInfo[data.category].can_create) {
+            const missingCategories = sequenceInfo[data.category].missing_categories.map(cat => getCategoryDisplayName(cat)).join(', ');
+            alert(`Cannot create this deadline yet. Please create deadlines in chronological order. Missing: ${missingCategories}`);
+            return;
+        }
+
+        // Check if there are any validation errors
+        if (errors.category || manualErrors.category) {
+            alert('Please resolve the category error before submitting.');
+            return;
+        }
 
         // Convert Date objects to local date strings for API (avoid timezone issues)
         const formatDateForAPI = (date: Date) => {
@@ -89,10 +114,10 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
         };
 
         if (editingDeadline) {
-            router.put(`/admin/deadlines/${editingDeadline.id}`, submitData, {
+            put(`/admin/deadlines/${editingDeadline.id}`, {
                 onSuccess: () => {
                     reset();
-                    setShowForm(false);
+                    setShowAddDialog(false);
                     setShowEditDialog(false);
                     setEditingDeadline(null);
                 },
@@ -104,10 +129,13 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
             router.post('/admin/deadlines', submitData, {
                 onSuccess: () => {
                     reset();
-                    setShowForm(false);
+                    setManualErrors({});
+                    setShowAddDialog(false);
                 },
                 onError: (errors: any) => {
                     console.error('Creation errors:', errors);
+                    // Manually set the errors in the form
+                    setManualErrors(errors);
                 },
             });
         }
@@ -168,9 +196,10 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
         setDeletingDeadline(null);
     };
 
-    const handleCancel = () => {
+    const handleAddCancel = () => {
         reset();
-        setShowForm(false);
+        setManualErrors({});
+        setShowAddDialog(false);
         setEditingDeadline(null);
     };
 
@@ -219,6 +248,35 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
         });
     };
 
+    const getCategoryDisplayName = (category: string) => {
+        const categoryMap: { [key: string]: string } = {
+            'hte_assessment_form': 'HTE Assessment',
+            'student_verification': 'Student Verification',
+            'student_assessment_form': 'Student Assessment',
+            'internship_placement': 'Internship Placement',
+        };
+        return categoryMap[category] || category;
+    };
+
+    const getNextCategoryToCreate = () => {
+        if (!nextCategory) return null;
+        return nextCategory;
+    };
+
+    const getAvailableCategories = () => {
+        return categoryOptions.filter(option => {
+            const info = sequenceInfo[option.value];
+            return info && info.can_create;
+        });
+    };
+
+    // Debug: Log errors when they change
+    useEffect(() => {
+        if (Object.keys(errors).length > 0) {
+            console.log('Form errors detected:', errors);
+        }
+    }, [errors]);
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Events Management" />
@@ -255,7 +313,7 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
                         {/* Primary Actions */}
                         <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                             <Button
-                                onClick={() => setShowForm(true)}
+                                onClick={() => setShowAddDialog(true)}
                                 className="flex items-center gap-2 h-9"
                             >
                                 <PlusIcon className="h-4 w-4" />
@@ -303,113 +361,6 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
                     </CardContent>
                 </Card>
 
-                {/* Add Form */}
-                {showForm && (
-                    <Card className="border-border shadow-sm">
-                        <CardHeader className="pb-4 space-y-2">
-                            <CardTitle className="flex items-center gap-2 text-xl font-semibold text-foreground">
-                                <CalendarIcon className="h-5 w-5" />
-                                Add New Deadline
-                            </CardTitle>
-                            <CardDescription className="text-sm text-muted-foreground">
-                                Enter the deadline information below.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-6">
-                            <form onSubmit={handleSubmit} className="space-y-6">
-                                <div className="grid grid-cols-1 gap-6">
-                                    <div className="space-y-3">
-                                        <Label htmlFor="title" className="text-sm font-medium text-foreground">
-                                            Title
-                                        </Label>
-                                        <Input
-                                            id="title"
-                                            type="text"
-                                            value={data.title}
-                                            onChange={(e) => setData('title', e.target.value)}
-                                            placeholder="Enter deadline title"
-                                            className={`h-10 ${errors.title ? 'border-destructive focus-visible:ring-destructive' : ''}`}
-                                        />
-                                        {errors.title && (
-                                            <p className="text-sm text-destructive">{errors.title}</p>
-                                        )}
-                                    </div>
-
-                                    <div className="space-y-3">
-                                        <Label htmlFor="category" className="text-sm font-medium text-foreground">
-                                            Category
-                                        </Label>
-                                        <Select value={data.category} onValueChange={(value) => setData('category', value)}>
-                                            <SelectTrigger className={`h-10 ${errors.category ? 'border-destructive focus-visible:ring-destructive' : ''}`}>
-                                                <SelectValue placeholder="Select a category" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {categoryOptions.map((option) => (
-                                                    <SelectItem key={option.value} value={option.value}>
-                                                        {option.label}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        {errors.category && (
-                                            <p className="text-sm text-destructive">{errors.category}</p>
-                                        )}
-                                    </div>
-
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-                                        <div className="space-y-3">
-                                            <Label htmlFor="start_date" className="text-sm font-medium text-foreground">
-                                                Start Date & Time
-                                            </Label>
-                                            <DateTimePicker
-                                                value={data.start_date}
-                                                onChange={(date) => setData('start_date', date)}
-                                                placeholder="Select start date and time"
-                                                error={!!errors.start_date}
-                                            />
-                                            {errors.start_date && (
-                                                <p className="text-sm text-destructive">{errors.start_date}</p>
-                                            )}
-                                        </div>
-
-                                        <div className="space-y-3">
-                                            <Label htmlFor="end_date" className="text-sm font-medium text-foreground">
-                                                End Date & Time
-                                            </Label>
-                                            <DateTimePicker
-                                                value={data.end_date}
-                                                onChange={(date) => setData('end_date', date)}
-                                                placeholder="Select end date and time"
-                                                error={!!errors.end_date}
-                                            />
-                                            {errors.end_date && (
-                                                <p className="text-sm text-destructive">{errors.end_date}</p>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="flex flex-col sm:flex-row gap-3 pt-4">
-                                    <Button
-                                        type="submit"
-                                        disabled={processing}
-                                        className="flex-1 sm:flex-none h-9"
-                                    >
-                                        {processing ? 'Saving...' : 'Create Deadline'}
-                                    </Button>
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        onClick={handleCancel}
-                                        className="flex-1 sm:flex-none h-9"
-                                    >
-                                        Cancel
-                                    </Button>
-                                </div>
-                            </form>
-                        </CardContent>
-                    </Card>
-                )}
 
                 {/* Deadlines List */}
                 <Card className="border-border shadow-sm">
@@ -448,7 +399,7 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
                                     </div>
                                     {!showArchived && (
                                         <Button
-                                            onClick={() => setShowForm(true)}
+                                            onClick={() => setShowAddDialog(true)}
                                             className="h-9 px-6"
                                         >
                                             <PlusIcon className="h-4 w-4 mr-2" />
@@ -711,6 +662,219 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
                             >
                                 Cancel
                             </Button>
+                        </div>
+                    </DialogContent>
+                </Dialog>
+
+                {/* Add Deadline Dialog */}
+                <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+                    <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+                        <DialogHeader className="space-y-3">
+                            <DialogTitle className="flex items-center gap-2 text-lg font-semibold text-foreground">
+                                <PlusIcon className="h-5 w-5" />
+                                Add New Deadline
+                            </DialogTitle>
+                            <DialogDescription className="text-sm text-muted-foreground">
+                                Enter the deadline information below.
+                            </DialogDescription>
+                        </DialogHeader>
+                        
+                        {/* Error Message Display */}
+                        {(errors.category || manualErrors.category) && (
+                            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+                                <div className="flex items-start gap-3">
+                                    <div className="w-5 h-5 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                                        <span className="text-red-600 dark:text-red-400 text-xs font-bold">!</span>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <h4 className="font-semibold text-red-800 dark:text-red-200 text-sm">
+                                            Cannot Create Deadline
+                                        </h4>
+                                        <p className="text-sm text-red-700 dark:text-red-300">
+                                            {errors.category || manualErrors.category}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                        
+                        {/* Flash Error Message Display */}
+                        {flash?.error && (
+                            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+                                <div className="flex items-start gap-3">
+                                    <div className="w-5 h-5 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                                        <span className="text-red-600 dark:text-red-400 text-xs font-bold">!</span>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <h4 className="font-semibold text-red-800 dark:text-red-200 text-sm">
+                                            Cannot Create Deadline
+                                        </h4>
+                                        <p className="text-sm text-red-700 dark:text-red-300">
+                                            {flash.error}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                        
+                        
+                        {/* Info Card */}
+                        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                            <div className="flex items-start gap-3">
+                                <div className="w-6 h-6 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                                    <CalendarIcon className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+                                </div>
+                                <div className="space-y-1">
+                                    <h4 className="font-semibold text-blue-800 dark:text-blue-200 text-sm">
+                                        Deadline Creation Order
+                                    </h4>
+                                    <p className="text-sm text-blue-700 dark:text-blue-300">
+                                        Create deadlines chronologically:
+                                    </p>
+                                    <div className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-medium">1.</span>
+                                            <span>HTE Assessment</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-medium">2.</span>
+                                            <span>Student Verification</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-medium">3.</span>
+                                            <span>Student Assessment</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-medium">4.</span>
+                                            <span>Internship Placement</span>
+                                        </div>
+                                    </div>
+                                    {nextCategory && (
+                                        <div className="mt-3 p-2 bg-green-100 dark:bg-green-900/30 rounded border border-green-200 dark:border-green-800">
+                                            <p className="text-sm font-medium text-green-800 dark:text-green-200">
+                                                Next: {nextCategory.label}
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                        <div className="space-y-4">
+                            <form onSubmit={handleSubmit} className="space-y-4">
+                                <div className="grid grid-cols-1 gap-4">
+                                    <div className="space-y-3">
+                                        <Label htmlFor="add_title" className="text-sm font-medium text-foreground">
+                                            Title
+                                        </Label>
+                                        <Input
+                                            id="add_title"
+                                            type="text"
+                                            value={data.title}
+                                            onChange={(e) => setData('title', e.target.value)}
+                                            placeholder="Enter deadline title"
+                                            className={`h-10 ${errors.title ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                                        />
+                                        {errors.title && (
+                                            <p className="text-sm text-destructive">{errors.title}</p>
+                                        )}
+                                    </div>
+
+                                    <div className="space-y-3">
+                                        <Label htmlFor="add_category" className="text-sm font-medium text-foreground">
+                                            Category
+                                        </Label>
+                                        <Select value={data.category} onValueChange={(value) => {
+                                            setData('category', value);
+                                            // Clear manual errors when category changes
+                                            if (manualErrors.category) {
+                                                setManualErrors({});
+                                            }
+                                        }}>
+                                            <SelectTrigger className={`h-10 ${errors.category ? 'border-destructive focus-visible:ring-destructive' : ''}`}>
+                                                <SelectValue placeholder="Select a category" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {getAvailableCategories().map((option) => {
+                                                    const info = sequenceInfo[option.value];
+                                                    const isRecommended = nextCategory?.value === option.value;
+                                                    return (
+                                                        <SelectItem key={option.value} value={option.value}>
+                                                            <div className="flex items-center gap-2">
+                                                                <span>{option.label}</span>
+                                                                {isRecommended && (
+                                                                    <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">
+                                                                        Recommended
+                                                                    </Badge>
+                                                                )}
+                                                            </div>
+                                                        </SelectItem>
+                                                    );
+                                                })}
+                                            </SelectContent>
+                                        </Select>
+                                        {errors.category && (
+                                            <p className="text-sm text-destructive">{errors.category}</p>
+                                        )}
+                                        {data.category && sequenceInfo[data.category] && !sequenceInfo[data.category].can_create && (
+                                            <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                                                <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                                                    <strong>Cannot create this deadline yet.</strong> Please create deadlines in chronological order. Missing: {sequenceInfo[data.category].missing_categories.map(cat => getCategoryDisplayName(cat)).join(', ')}
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+                                        <div className="space-y-3">
+                                            <Label htmlFor="add_start_date" className="text-sm font-medium text-foreground">
+                                                Start Date & Time
+                                            </Label>
+                                            <DateTimePicker
+                                                value={data.start_date}
+                                                onChange={(date) => setData('start_date', date)}
+                                                placeholder="Select start date and time"
+                                                error={!!errors.start_date}
+                                            />
+                                            {errors.start_date && (
+                                                <p className="text-sm text-destructive">{errors.start_date}</p>
+                                            )}
+                                        </div>
+
+                                        <div className="space-y-3">
+                                            <Label htmlFor="add_end_date" className="text-sm font-medium text-foreground">
+                                                End Date & Time
+                                            </Label>
+                                            <DateTimePicker
+                                                value={data.end_date}
+                                                onChange={(date) => setData('end_date', date)}
+                                                placeholder="Select end date and time"
+                                                error={!!errors.end_date}
+                                            />
+                                            {errors.end_date && (
+                                                <p className="text-sm text-destructive">{errors.end_date}</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="flex flex-col sm:flex-row gap-2 justify-end">
+                                    <Button
+                                        type="submit"
+                                        disabled={processing || !!errors.category || !!manualErrors.category}
+                                        className="flex-1 sm:flex-none h-9"
+                                    >
+                                        {processing ? 'Saving...' : 'Create Deadline'}
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={handleAddCancel}
+                                        className="flex-1 sm:flex-none h-9"
+                                    >
+                                        Cancel
+                                    </Button>
+                                </div>
+                            </form>
                         </div>
                     </DialogContent>
                 </Dialog>

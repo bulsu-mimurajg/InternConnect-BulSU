@@ -15,9 +15,9 @@ return new class extends Migration
             $table->id();
             $table->string('title');
             $table->enum('category', [
+                'hte_assessment_form',
                 'student_verification',
                 'student_assessment_form',
-                'hte_assessment_form',
                 'internship_placement',
             ]);
             $table->dateTime('start_date');

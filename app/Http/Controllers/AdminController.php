@@ -2034,10 +2034,56 @@ class AdminController extends Controller
             ['value' => 'internship_placement', 'label' => 'Internship Placement (Endorsement & HTE Placement)'],
         ];
 
+        // Get next category that should be created
+        $nextCategory = Deadline::getNextCategoryToCreate();
+        $nextCategoryInfo = null;
+        if ($nextCategory) {
+            $nextCategoryInfo = [
+                'value' => $nextCategory,
+                'label' => (new Deadline(['category' => $nextCategory]))->getCategoryDisplayName(),
+            ];
+        }
+
+        // Debug logging
+        Log::info('Events Management - Sequence Info', [
+            'next_category' => $nextCategory,
+            'next_category_info' => $nextCategoryInfo,
+            'all_deadlines' => Deadline::all()->map(function($d) {
+                return [
+                    'id' => $d->id,
+                    'category' => $d->category,
+                    'status' => $d->status,
+                    'start_date' => $d->start_date,
+                    'end_date' => $d->end_date,
+                ];
+            })->toArray(),
+        ]);
+
+        // Get sequence validation info for all categories
+        $sequenceInfo = [];
+        foreach (['hte_assessment_form', 'student_verification', 'student_assessment_form', 'internship_placement'] as $category) {
+            $validation = Deadline::canCreateCategory($category);
+            $sequenceInfo[$category] = [
+                'can_create' => $validation['can_create'],
+                'missing_categories' => $validation['missing_categories'],
+                'order' => $validation['current_order'],
+            ];
+            
+            // Debug logging for each category
+            Log::info("Sequence validation for {$category}", [
+                'can_create' => $validation['can_create'],
+                'missing_categories' => $validation['missing_categories'],
+                'order' => $validation['current_order'],
+                'has_deadline' => Deadline::hasDeadlineForCategory($category),
+            ]);
+        }
+
         return Inertia::render('admin/events', [
             'activeDeadlines' => $activeDeadlines,
             'expiredDeadlines' => $expiredDeadlines,
             'categoryOptions' => $categoryOptions,
+            'nextCategory' => $nextCategoryInfo,
+            'sequenceInfo' => $sequenceInfo,
         ]);
     }
 
@@ -2072,16 +2118,25 @@ class AdminController extends Controller
         }
 
         try {
-            // Check if there's already an active deadline for this category
-            $existingDeadline = Deadline::where('category', $request->category)
-                ->where('status', 'active')
-                ->where('end_date', '>', now())
-                ->first();
+            // Validate chronological sequence
+            $sequenceValidation = Deadline::validateSequence($request->category);
+            if (!$sequenceValidation['valid']) {
+                return redirect()->back()
+                    ->withErrors(['category' => $sequenceValidation['message']])
+                    ->withInput();
+            }
+
+            // Check if there's already a deadline for this category (regardless of status)
+            $existingDeadline = Deadline::where('category', $request->category)->first();
 
             if ($existingDeadline) {
-                return redirect()->back()
-                    ->withErrors(['category' => 'There is already an active deadline for this category. Please extend or update the existing deadline instead.'])
-                    ->withInput();
+                $deadlineStatus = $existingDeadline->isExpired() ? 'expired' : 'active';
+                $deadlineEndDate = $existingDeadline->end_date->format('M d, Y g:i A');
+                
+                // Return validation error that will be caught by Inertia
+                return back()->withErrors([
+                    'category' => "A {$deadlineStatus} deadline already exists for this category ({$existingDeadline->getCategoryDisplayName()}). The existing deadline ends on {$deadlineEndDate}. Please extend or update the existing deadline instead of creating a new one."
+                ])->withInput();
             }
 
             $deadline = Deadline::create([
