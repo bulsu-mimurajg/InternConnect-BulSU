@@ -337,8 +337,24 @@ class StudentController extends Controller
      */
     public function archive(Student $student)
     {
+        // Archive the student
         $student->update(['is_active' => false]);
-        
+
+        // Delete any active endorsements for this student to free up slots
+        // This ensures that archived students don't count toward endorsement limits
+        Endorsement::where('student_id', $student->id)
+            ->where('status', 'endorsed')
+            ->delete();
+
+        // Delete any approved placements for this student to free up slots
+        // This ensures that archived students don't occupy approved slots
+        StudentPlacement::where('student_id', $student->id)
+            ->where('status', 'approved')
+            ->delete();
+
+        // Reset the student's placement status since they've been removed from placements
+        $student->update(['is_placed' => false]);
+
         return redirect()->route('student-list')->with('success', 'Student archived successfully');
     }
 
@@ -2260,6 +2276,7 @@ class StudentController extends Controller
                 $approvedPlacements = $match->internship->studentPlacements()->where('status', 'approved')->count();
                 $endorsedSlots = Endorsement::where('internship_id', $match->internship->id)
                     ->where('status', 'endorsed')
+                    ->whereNotIn('status', ['cancelled'])
                     ->count();
                 $availableSlots = $match->internship->slot_count - $approvedPlacements - $endorsedSlots;
                 

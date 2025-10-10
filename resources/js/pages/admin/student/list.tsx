@@ -102,9 +102,28 @@ export default function StudentList({ students, unverifiedUsers = [], archivedSt
 
     const confirmArchive = () => {
         if (selectedStudent) {
-            router.patch(`/student/${selectedStudent.id}/archive`);
+            router.patch(`/student/${selectedStudent.id}/archive`, {}, {
+                onSuccess: () => {
+                    // Reload all student-related data to update matched/endorsed lists
+                    router.reload({ 
+                        only: [
+                            'students', 
+                            'archivedStudents',
+                            'matchedStudents',
+                            'unplacedStudents',
+                            'endorsed_students',
+                            'statistics',
+                            'filters'
+                        ] 
+                    });
+                }
+            });
         } else if (selectedUnverifiedUser) {
-            router.patch(`/student/unverified/${selectedUnverifiedUser.id}/archive`);
+            router.patch(`/student/unverified/${selectedUnverifiedUser.id}/archive`, {}, {
+                onSuccess: () => {
+                    router.reload({ only: ['unverifiedUsers', 'archivedUnverifiedUsers'] });
+                }
+            });
         }
         setShowArchiveDialog(false);
         setSelectedStudent(null);

@@ -309,6 +309,11 @@ Route::middleware(['auth', 'verified', 'role_redirect:hte'])->group(function () 
         Route::post('hte/batch-approve-endorsements', [App\Http\Controllers\HTEController::class, 'batchApproveEndorsements'])->name('hte.batch-approve-endorsements');
         Route::post('hte/batch-reject-endorsements', [App\Http\Controllers\HTEController::class, 'batchRejectEndorsements'])->name('hte.batch-reject-endorsements');
 
+    // HTE Approval Table routes
+    Route::get('hte/approval-table', [App\Http\Controllers\HTEController::class, 'showApprovalTable'])->name('hte.approval-table');
+        Route::post('hte/approve-student/{studentId}', [App\Http\Controllers\HTEController::class, 'approveStudent'])->name('hte.approve-student');
+        Route::post('hte/reject-student/{studentId}', [App\Http\Controllers\HTEController::class, 'rejectStudent'])->name('hte.reject-student');
+
     // HTE Placed Students routes
     Route::get('hte/placed-students', [App\Http\Controllers\HTEController::class, 'showPlacedStudents'])->name('hte.placed-students');
 

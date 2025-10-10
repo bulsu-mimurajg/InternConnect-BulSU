@@ -875,10 +875,13 @@ class HTEController extends Controller
         $internships = $hte->internships()->active()->get();
 
         // Get endorsed students for this HTE's internships
-        // Only show students who haven't been approved/rejected by HTE yet
+        // Only show students who haven't been approved/rejected by HTE yet and are not archived
         $endorsements = Endorsement::with(['student', 'internship'])
             ->whereIn('internship_id', $internships->pluck('id'))
             ->where('status', 'endorsed')
+            ->whereHas('student', function($query) {
+                $query->where('is_active', true); // Only active (non-archived) students
+            })
             ->get()
             ->filter(function($endorsement) {
                 // Check if the student's placement status is still pending for this internship
@@ -928,6 +931,205 @@ class HTEController extends Controller
             'showSubmissionPrompt' => !$hte->is_submit,
             'csrf_token' => csrf_token(),
         ]);
+    }
+
+    /**
+     * Show approval table for HTE to approve students based on compatibility scores
+     */
+    public function showApprovalTable(Request $request)
+    {
+        $user = Auth::user();
+        $hte = $user->hte;
+
+        if (!$hte) {
+            return redirect()->route('form');
+        }
+
+        // Get HTE's active internships
+        $internships = $hte->internships()->active()->get();
+
+        $selectedInternshipId = $request->get('internship_id');
+        $studentsForApproval = collect();
+
+        if ($selectedInternshipId) {
+            // Get students whose highest compatibility score matches this specific internship
+            // Exclude archived students (is_active = false)
+            $studentsForApproval = StudentMatch::with(['student', 'internship'])
+                ->where('internship_id', $selectedInternshipId)
+                ->whereHas('student', function($query) {
+                    $query->where('is_active', true); // Only active (non-archived) students
+                })
+                ->where('placement_status', 'pending')
+                ->get()
+                ->map(function($match) {
+                    // Get the rank for this student among all matches for this internship
+                    $rank = StudentMatch::where('internship_id', $match->internship_id)
+                        ->where('compatibility_score', '>', $match->compatibility_score)
+                        ->count() + 1;
+
+                    return [
+                        'id' => $match->student->id,
+                        'student_number' => $match->student->student_number,
+                        'first_name' => $match->student->first_name,
+                        'last_name' => $match->student->last_name,
+                        'middle_name' => $match->student->middle_name,
+                        'specialization' => $match->student->specialization,
+                        'compatibility_score' => $match->compatibility_score,
+                        'rank' => $rank,
+                        'match_id' => $match->id,
+                    ];
+                })
+                ->sortBy('rank')
+                ->values();
+        }
+
+        return Inertia::render('hte/approval-table', [
+            'internships' => $internships->map(function($internship) {
+                return [
+                    'id' => $internship->id,
+                    'position_title' => $internship->position_title,
+                    'department' => $internship->department,
+                    'slot_count' => $internship->slot_count,
+                ];
+            }),
+            'selectedInternshipId' => $selectedInternshipId,
+            'studentsForApproval' => $studentsForApproval,
+        ]);
+    }
+
+    /**
+     * Approve student directly (not through endorsement system)
+     */
+    public function approveStudent(Request $request, $studentId)
+    {
+        $user = Auth::user();
+        $hte = $user->hte;
+
+        if (!$hte) {
+            return response()->json(['error' => 'HTE not found'], 404);
+        }
+
+        $internshipId = $request->get('internship_id');
+
+        try {
+            // Get the student match
+            $studentMatch = StudentMatch::with(['student', 'internship'])
+                ->where('student_id', $studentId)
+                ->where('internship_id', $internshipId)
+                ->where('placement_status', 'pending')
+                ->whereHas('student', function($query) {
+                    $query->where('is_active', true); // Ensure student is active
+                })
+                ->first();
+
+            if (!$studentMatch) {
+                return response()->json(['error' => 'Student match not found or student is archived'], 404);
+            }
+
+            // Check if internship belongs to this HTE
+            if ($studentMatch->internship->hte_id !== $hte->id) {
+                return response()->json(['error' => 'Unauthorized'], 403);
+            }
+
+            // Check if student already has a placement
+            $existingPlacement = StudentPlacement::where('student_id', $studentId)->first();
+            if ($existingPlacement) {
+                return response()->json(['error' => 'Student already has a placement'], 400);
+            }
+
+            // Check if internship has available slots
+            $currentApprovedPlacements = StudentPlacement::where('internship_id', $internshipId)
+                ->where('status', 'approved')
+                ->count();
+
+            if ($currentApprovedPlacements >= $studentMatch->internship->slot_count) {
+                return response()->json(['error' => 'No available slots for this internship'], 400);
+            }
+
+            // Create placement record
+            $placement = StudentPlacement::create([
+                'student_id' => $studentId,
+                'internship_id' => $internshipId,
+                'status' => 'approved',
+                'compatibility_score' => $studentMatch->compatibility_score,
+                'placement_date' => now(),
+            ]);
+
+            // Update student status
+            $studentMatch->student->update(['is_placed' => true]);
+
+            // Update the student_match record placement status to 'approved'
+            $studentMatch->update(['placement_status' => 'approved']);
+
+            // Notify student about their placement
+            $notificationService = new NotificationService();
+            $notificationService->notifyStudentForPlacement(
+                $studentMatch->student,
+                $studentMatch->internship->hte->company_name,
+                $studentMatch->internship->position_title,
+                $internshipId
+            );
+
+            return response()->json(['message' => 'Student approved successfully']);
+
+        } catch (\Exception $e) {
+            Log::error('HTE Student Approval Error:', [
+                'error' => $e->getMessage(),
+                'student_id' => $studentId,
+                'internship_id' => $internshipId,
+                'hte_id' => $hte->id,
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json(['error' => 'An error occurred while approving the student'], 500);
+        }
+    }
+
+    /**
+     * Reject student directly
+     */
+    public function rejectStudent(Request $request, $studentId)
+    {
+        $user = Auth::user();
+        $hte = $user->hte;
+
+        if (!$hte) {
+            return response()->json(['error' => 'HTE not found'], 404);
+        }
+
+        $internshipId = $request->get('internship_id');
+
+        try {
+            // Get the student match
+            $studentMatch = StudentMatch::with(['student', 'internship'])
+                ->where('student_id', $studentId)
+                ->where('internship_id', $internshipId)
+                ->where('placement_status', 'pending')
+                ->first();
+
+            if (!$studentMatch) {
+                return response()->json(['error' => 'Student match not found'], 404);
+            }
+
+            // Check if internship belongs to this HTE
+            if ($studentMatch->internship->hte_id !== $hte->id) {
+                return response()->json(['error' => 'Unauthorized'], 403);
+            }
+
+            // Update the student_match record placement status to 'rejected'
+            $studentMatch->update(['placement_status' => 'rejected']);
+
+            return response()->json(['message' => 'Student rejected successfully']);
+
+        } catch (\Exception $e) {
+            Log::error('HTE Student Rejection Error:', [
+                'error' => $e->getMessage(),
+                'student_id' => $studentId,
+                'internship_id' => $internshipId,
+                'hte_id' => $hte->id,
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json(['error' => 'An error occurred while rejecting the student'], 500);
+        }
     }
 
     /**
@@ -1298,7 +1500,10 @@ class HTEController extends Controller
         // Base query for placed students for this HTE's internships
         $query = StudentPlacement::with(['student.section', 'internship.hte'])
             ->whereIn('internship_id', $internships->pluck('id'))
-            ->where('status', 'approved'); // Only show approved placements
+            ->where('status', 'approved') // Only show approved placements
+            ->whereHas('student', function($q) {
+                $q->where('is_active', true); // Only show placements for active students
+            });
 
         // Apply section filter
         if ($sectionFilter && $sectionFilter !== 'all') {
