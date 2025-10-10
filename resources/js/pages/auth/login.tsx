@@ -1,6 +1,6 @@
 import { Head, useForm } from '@inertiajs/react';
-import { LoaderCircle } from 'lucide-react';
-import { FormEventHandler } from 'react';
+import { LoaderCircle, EyeIcon, EyeOffIcon } from 'lucide-react';
+import { FormEventHandler, useState, useRef } from 'react';
 
 import InputError from '@/components/input-error';
 import TextLink from '@/components/text-link';
@@ -27,6 +27,9 @@ export default function Login({ status, canResetPassword }: LoginProps) {
         password: '',
         remember: false,
     });
+
+    const [showPassword, setShowPassword] = useState(false);
+    const passwordInputRef = useRef<HTMLInputElement>(null);
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
@@ -66,16 +69,39 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                                 </TextLink>
                             )}
                         </div>
-                        <Input
-                            id="password"
-                            type="password"
-                            required
-                            tabIndex={2}
-                            autoComplete="current-password"
-                            value={data.password}
-                            onChange={(e) => setData('password', e.target.value)}
-                            placeholder="Password"
-                        />
+                        <div className="relative">
+                            <Input
+                                ref={passwordInputRef}
+                                id="password"
+                                type={showPassword ? "text" : "password"}
+                                required
+                                tabIndex={2}
+                                autoComplete="current-password"
+                                value={data.password}
+                                onChange={(e) => setData('password', e.target.value)}
+                                placeholder="Password"
+                                className="pr-10"
+                            />
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="absolute right-0 top-0 h-9 w-9 px-0 hover:bg-transparent"
+                                onClick={() => {
+                                    setShowPassword(!showPassword);
+                                    // Refocus the password input after toggling
+                                    setTimeout(() => passwordInputRef.current?.focus(), 0);
+                                }}
+                                tabIndex={-1}
+                                aria-label={showPassword ? "Hide password" : "Show password"}
+                            >
+                                {showPassword ? (
+                                    <EyeOffIcon className="h-4 w-4 text-muted-foreground" />
+                                ) : (
+                                    <EyeIcon className="h-4 w-4 text-muted-foreground" />
+                                )}
+                            </Button>
+                        </div>
                         <InputError message={errors.password} />
                     </div>
 

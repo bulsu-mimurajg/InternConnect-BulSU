@@ -442,13 +442,13 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
     const handleSingleReject = async (student: MatchedStudent) => {
         // Hard guard to avoid rapid double-clicks before state updates flush
         if (rejectingRef.current) {
-            setErrorMessage('Loading New Match… Please wait');
+            setErrorMessage('Loading New Match, Please wait . . .');
             setErrorType('info');
             return;
         }
         // If an action is already in progress (e.g., previous reject), show loading message and exit
         if (isLoading) {
-            setErrorMessage('Loading New Match… Please wait');
+            setErrorMessage('Loading New Match, Please wait . . .');
             setErrorType('info');
             return;
         }
@@ -464,7 +464,7 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
             rejectingRef.current = true;
             setIsLoading(true);
             // Immediate feedback while the next match is being loaded
-            setErrorMessage('Loading New Match… Please wait');
+            setErrorMessage('Loading New Match, Please wait . . .');
             setErrorType('info');
 
 
@@ -546,7 +546,7 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                 }, 1500);
             } else {
                 // Prefer the loading message during transient states or race conditions
-                setErrorMessage('Loading New Match… Please wait');
+                setErrorMessage('Loading New Match, Please wait . . .');
                 setErrorType('info');
                 // Refresh to fetch the next available match regardless of exact error
                 setTimeout(() => {
@@ -561,7 +561,7 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                 setErrorMessage('Server returned an invalid response format. This usually indicates an authentication or permission issue. Please refresh the page and try again.');
                 setErrorType('error');
             } else {
-                const fallback = 'Loading New Match… Please wait';
+                const fallback = 'Loading New Match, Please wait . . .';
                 const msg = error instanceof Error && error.message ? ('Error during rejection: ' + error.message) : fallback;
                 setErrorMessage(msg);
                 setErrorType(error instanceof Error && error.message ? 'error' : 'info');
@@ -1144,24 +1144,34 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                     {/* Error Display */}
                     {errorMessage && (
                         <Card className={`border-l-4 ${
-                            errorType === 'success' ? 'border-l-green-500 bg-green-50 dark:bg-green-900/20' : 'border-l-red-500 bg-red-50 dark:bg-red-900/20'
+                            errorType === 'success' ? 'border-l-green-500 bg-green-50 dark:bg-green-900/20' :
+                            errorType === 'info' ? 'border-l-yellow-500 bg-yellow-50 dark:bg-yellow-900/20' :
+                            'border-l-red-500 bg-red-50 dark:bg-red-900/20'
                         }`}>
                             <CardContent className="p-4">
                                 <div className="flex items-start justify-between">
                                     <div className="flex items-start gap-3 flex-1">
                                         {errorType === 'success' ? (
                                             <CheckCircleIcon className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                                        ) : errorType === 'info' ? (
+                                            <AlertTriangleIcon className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" />
                                         ) : (
                                             <XCircleIcon className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
                                         )}
                                         <div className="flex-1">
                                             <div className={`font-medium ${
-                                                errorType === 'success' ? 'text-green-800 dark:text-green-200' : 'text-red-800 dark:text-red-200'
+                                                errorType === 'success' ? 'text-green-800 dark:text-green-200' :
+                                                errorType === 'info' ? 'text-yellow-800 dark:text-yellow-200' :
+                                                'text-red-800 dark:text-red-200'
                                             }`}>
-                                                {errorType === 'success' ? 'Success' : 'Error'}
+                                                {errorType === 'success' ? 'Success' :
+                                                 errorType === 'info' ? 'Something went wrong' :
+                                                 'Error'}
                                             </div>
                                             <div className={`mt-1 text-sm ${
-                                                errorType === 'success' ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'
+                                                errorType === 'success' ? 'text-green-700 dark:text-green-300' :
+                                                errorType === 'info' ? 'text-yellow-700 dark:text-yellow-300' :
+                                                'text-red-700 dark:text-red-300'
                                             }`}>
                                                 {errorMessage}
                                             </div>
