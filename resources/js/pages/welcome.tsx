@@ -19,22 +19,24 @@ export default function Welcome() {
                     className="fixed inset-0 bg-cover bg-center bg-no-repeat opacity-50 dark:opacity-25" 
                     style={{backgroundImage: 'url(/images/pimentel.jpg)'}} 
                 />
-                {/* Minimal Background Overlay */}
-                <div className="fixed inset-0 bg-background/60 dark:bg-background/80" />
+                {/* Background Overlay */}
+                <div className="fixed inset-0 bg-background/40 dark:bg-background/60" />
                 
                 {/* Content Container */}
                 <div className="relative z-10 flex min-h-screen flex-col items-center p-6 text-foreground lg:justify-center lg:p-8 w-full">
                 <header className="mb-6 w-full max-w-[335px] text-sm not-has-[nav]:hidden lg:max-w-5xl">
-                    <div className="flex items-center justify-between">
-                        <AppLogoIcon className="h-8 w-auto" />
-                        <nav className="flex items-center justify-end gap-4">
+                    <div className="flex items-center justify-between w-full">
+                        <Link href={route('home')} className="hover:opacity-80 transition-opacity flex-shrink-0">
+                            <AppLogoIcon className="h-8 w-auto md:h-10" />
+                        </Link>
+                        <nav className="flex items-center justify-end gap-2 md:gap-4 flex-shrink-0">
                             {auth.user ? (
                                 <>
                                     {auth.role === 'admin' && (
                                         <Link
                                             prefetch
                                             href={route('admin.dashboard')}
-                                            className="inline-block rounded-sm border border-border px-5 py-1.5 text-sm leading-normal text-foreground hover:border-border/80"
+                                            className="inline-block rounded-sm border border-black dark:border-accent-foreground px-3 md:px-5 py-1.5 text-xs md:text-sm leading-normal text-foreground hover:border-foreground/20 hover:bg-foreground/5 whitespace-nowrap"
                                         >
                                             Dashboard
                                         </Link>
@@ -44,7 +46,7 @@ export default function Welcome() {
                                         <Link
                                             prefetch
                                             href={route('hte.dashboard')}
-                                            className="inline-block rounded-sm border border-border px-5 py-1.5 text-sm leading-normal text-foreground hover:border-border/80"
+                                            className="inline-block rounded-sm border border-border px-3 md:px-5 py-1.5 text-xs md:text-sm leading-normal text-foreground hover:border-foreground/20 hover:bg-foreground/5 whitespace-nowrap"
                                         >
                                             Dashboard
                                         </Link>
@@ -54,7 +56,7 @@ export default function Welcome() {
                                         <Link
                                             prefetch
                                             href={route('adviser.dashboard')}
-                                            className="inline-block rounded-sm border border-border px-5 py-1.5 text-sm leading-normal text-foreground hover:border-border/80"
+                                            className="inline-block rounded-sm border border-border px-3 md:px-5 py-1.5 text-xs md:text-sm leading-normal text-foreground hover:border-foreground/20 hover:bg-foreground/5 whitespace-nowrap"
                                         >
                                             Dashboard
                                         </Link>
@@ -64,7 +66,7 @@ export default function Welcome() {
                                         <Link
                                             prefetch
                                             href={route('student.dashboard')}
-                                            className="inline-block rounded-sm border border-border px-5 py-1.5 text-sm leading-normal text-foreground hover:border-border/80"
+                                            className="inline-block rounded-sm border border-border px-3 md:px-5 py-1.5 text-xs md:text-sm leading-normal text-foreground hover:border-foreground/20 hover:bg-foreground/5 whitespace-nowrap"
                                         >
                                             Dashboard
                                         </Link>
@@ -74,7 +76,7 @@ export default function Welcome() {
                                 <Link
                                     prefetch
                                     href={route('login')}
-                                    className="inline-block rounded-sm border border-border px-5 py-1.5 text-sm leading-normal text-foreground hover:border-border/80"
+                                    className="inline-block rounded-sm border border-accent-foreground px-3 md:px-5 py-1.5 text-xs md:text-sm leading-normal text-foreground hover:border-foreground/20 hover:bg-foreground/5 whitespace-nowrap"
                                 >
                                     Login
                                 </Link>
@@ -83,23 +85,23 @@ export default function Welcome() {
                             <Link
                                 prefetch
                                 href={route('about')}
-                                className="inline-block rounded-sm border border-transparent px-5 py-1.5 text-sm leading-normal text-foreground hover:border-border"
+                                className="inline-block rounded-sm border border-transparent px-3 md:px-5 py-1.5 text-xs md:text-sm leading-normal text-foreground hover:border-foreground/20 hover:bg-foreground/5 whitespace-nowrap"
                             >
                                 About
                             </Link>
                             <Link
                                 prefetch
                                 href={route('contact')}
-                                className="inline-block rounded-sm border border-transparent px-5 py-1.5 text-sm leading-normal text-foreground hover:border-border"
+                                className="inline-block rounded-sm border border-transparent px-3 md:px-5 py-1.5 text-xs md:text-sm leading-normal text-foreground hover:border-foreground/20 hover:bg-foreground/5 whitespace-nowrap"
                             >
                                 Contact
                             </Link>
                         </nav>
                     </div>
                 </header>
-                <div className="flex w-full items-center justify-center opacity-100 transition-opacity duration-750 lg:grow starting:opacity-0">
+                <div className="flex w-full items-center justify-center opacity-100 transition-opacity duration-750 lg:grow starting:opacity-10">
                     <main className="w-full max-w-[335px] lg:max-w-5xl">
-                        <div className="rounded-br-lg rounded-bl-lg bg-card/80 backdrop-blur-sm p-6 pb-12 text-[13px] leading-[20px] shadow-[inset_0px_0px_0px_1px_hsl(var(--border))] lg:rounded-lg lg:p-20">
+                        <div className="rounded-br-lg rounded-bl-lg bg-card/40 backdrop-blur-sm p-6 pb-12 text-[13px] leading-[20px] shadow-[inset_0px_0px_0px_1px_hsl(var(--border))] lg:rounded-lg lg:p-20">
                             {/* Hero Section */}
                             <div className="text-center space-y-6 mb-12">
                                 <div className="space-y-2">
@@ -122,57 +124,57 @@ export default function Welcome() {
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                    <Card className="bg-card/90 border-border shadow-sm">
+                                    <Card className="bg-white dark:bg-[#161615] border-[#e3e3e0] dark:border-[#3E3E3A]">
                                         <CardHeader className="pb-3">
-                                            <div className="h-10 w-10 rounded-lg bg-destructive/10 flex items-center justify-center mb-3">
-                                                <NotepadTextIcon className="h-5 w-5 text-destructive" />
+                                            <div className="h-10 w-10 rounded-lg bg-[#f53003]/10 dark:bg-[#FF4433]/10 flex items-center justify-center mb-3">
+                                                <NotepadTextIcon className="h-5 w-5 text-[#f53003] dark:text-[#FF4433]" />
                                             </div>
-                                            <CardTitle className="text-lg text-foreground">1. Assessment</CardTitle>
+                                            <CardTitle className="text-lg text-[#1b1b18] dark:text-[#EDEDEC]">1. Assessment</CardTitle>
                                         </CardHeader>
                                         <CardContent>
-                                            <CardDescription className="text-muted-foreground">
+                                            <CardDescription className="text-[#706f6c] dark:text-[#A1A09A]">
                                                 Students complete skill assessments across various IT competencies.
                                             </CardDescription>
                                         </CardContent>
                                     </Card>
 
-                                    <Card className="bg-card/90 border-border shadow-sm">
+                                    <Card className="bg-white dark:bg-[#161615] border-[#e3e3e0] dark:border-[#3E3E3A]">
                                         <CardHeader className="pb-3">
-                                            <div className="h-10 w-10 rounded-lg bg-destructive/10 flex items-center justify-center mb-3">
-                                                <SquareKanbanIcon className="h-5 w-5 text-destructive" />
+                                            <div className="h-10 w-10 rounded-lg bg-[#f53003]/10 dark:bg-[#FF4433]/10 flex items-center justify-center mb-3">
+                                                <SquareKanbanIcon className="h-5 w-5 text-[#f53003] dark:text-[#FF4433]" />
                                             </div>
-                                            <CardTitle className="text-lg text-foreground">2. Matching</CardTitle>
+                                            <CardTitle className="text-lg text-[#1b1b18] dark:text-[#EDEDEC]">2. Matching</CardTitle>
                                         </CardHeader>
                                         <CardContent>
-                                            <CardDescription className="text-muted-foreground">
+                                            <CardDescription className="text-[#706f6c] dark:text-[#A1A09A]">
                                                 Our deterministic weighted scoring algorithm analyzes skills to match students with suitable HTEs.
                                             </CardDescription>
                                         </CardContent>
                                     </Card>
 
-                                    <Card className="bg-card/90 border-border shadow-sm">
+                                    <Card className="bg-white dark:bg-[#161615] border-[#e3e3e0] dark:border-[#3E3E3A]">
                                         <CardHeader className="pb-3">
-                                            <div className="h-10 w-10 rounded-lg bg-destructive/10 flex items-center justify-center mb-3">
-                                                <UserCheck className="h-5 w-5 text-destructive" />
+                                            <div className="h-10 w-10 rounded-lg bg-[#f53003]/10 dark:bg-[#FF4433]/10 flex items-center justify-center mb-3">
+                                                <UserCheck className="h-5 w-5 text-[#f53003] dark:text-[#FF4433]" />
                                             </div>
-                                            <CardTitle className="text-lg text-foreground">3. Endorsement</CardTitle>
+                                            <CardTitle className="text-lg text-[#1b1b18] dark:text-[#EDEDEC]">3. Endorsement</CardTitle>
                                         </CardHeader>
                                         <CardContent>
-                                            <CardDescription className="text-muted-foreground">
+                                            <CardDescription className="text-[#706f6c] dark:text-[#A1A09A]">
                                                 The SIP Coordinator endorses students for HTE's to review and place.
                                             </CardDescription>
                                         </CardContent>
                                     </Card>
 
-                                    <Card className="bg-card/90 border-border shadow-sm">
+                                    <Card className="bg-white dark:bg-[#161615] border-[#e3e3e0] dark:border-[#3E3E3A]">
                                         <CardHeader className="pb-3">
-                                            <div className="h-10 w-10 rounded-lg bg-destructive/10 flex items-center justify-center mb-3">
-                                                <BriefcaseBusinessIcon className="h-5 w-5 text-destructive" />
+                                            <div className="h-10 w-10 rounded-lg bg-[#f53003]/10 dark:bg-[#FF4433]/10 flex items-center justify-center mb-3">
+                                                <BriefcaseBusinessIcon className="h-5 w-5 text-[#f53003] dark:text-[#FF4433]" />
                                             </div>
-                                            <CardTitle className="text-lg text-foreground">4. Placement</CardTitle>
+                                            <CardTitle className="text-lg text-[#1b1b18] dark:text-[#EDEDEC]">4. Placement</CardTitle>
                                         </CardHeader>
                                         <CardContent>
-                                            <CardDescription className="text-muted-foreground">
+                                            <CardDescription className="text-[#706f6c] dark:text-[#A1A09A]">
                                                 Students are placed with their matched HTEs to begin their internship journey and gain experience.
                                             </CardDescription>
                                         </CardContent>

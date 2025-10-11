@@ -47,7 +47,9 @@ export default function Register({ sections }: RegisterProps) {
     });
 
     const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const passwordInputRef = useRef<HTMLInputElement>(null);
+    const confirmPasswordInputRef = useRef<HTMLInputElement>(null);
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
@@ -170,7 +172,23 @@ export default function Register({ sections }: RegisterProps) {
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-3 md:items-start">
                         <div className="flex flex-col gap-2">
                             <Label htmlFor="section">Section</Label>
-                            <Select value={data.section_id} onValueChange={(value) => setData('section_id', value)} disabled={processing}>
+                            <Select 
+                                value={data.section_id} 
+                                onValueChange={(value) => setData('section_id', value)} 
+                                disabled={processing}
+                                onOpenChange={(open) => {
+                                    // When dropdown closes, ensure proper focus management
+                                    if (!open) {
+                                        // Small delay to allow the dropdown to fully close
+                                        setTimeout(() => {
+                                            const nextElement = document.querySelector('[tabindex="7"]') as HTMLElement;
+                                            if (nextElement) {
+                                                nextElement.focus();
+                                            }
+                                        }, 100);
+                                    }
+                                }}
+                            >
                                 <SelectTrigger tabIndex={6}>
                                     <SelectValue placeholder="Select your section" />
                                 </SelectTrigger>
@@ -194,7 +212,23 @@ export default function Register({ sections }: RegisterProps) {
 
                         <div className="flex flex-col gap-2">
                             <Label htmlFor="specialization">Specialization</Label>
-                            <Select value={data.specialization} onValueChange={(value) => setData('specialization', value)} disabled={processing}>
+                            <Select 
+                                value={data.specialization} 
+                                onValueChange={(value) => setData('specialization', value)} 
+                                disabled={processing}
+                                onOpenChange={(open) => {
+                                    // When dropdown closes, ensure proper focus management
+                                    if (!open) {
+                                        // Small delay to allow the dropdown to fully close
+                                        setTimeout(() => {
+                                            const nextElement = document.querySelector('[tabindex="8"]') as HTMLElement;
+                                            if (nextElement) {
+                                                nextElement.focus();
+                                            }
+                                        }, 100);
+                                    }
+                                }}
+                            >
                                 <SelectTrigger tabIndex={7}>
                                     <SelectValue placeholder="Select specialization" />
                                 </SelectTrigger>
@@ -279,17 +313,40 @@ export default function Register({ sections }: RegisterProps) {
 
                         <div className="flex flex-col gap-2">
                             <Label htmlFor="password_confirmation">Confirm password</Label>
-                            <Input
-                                id="password_confirmation"
-                                type={showPassword ? "text" : "password"}
-                                required
-                                tabIndex={10}
-                                autoComplete="new-password"
-                                value={data.password_confirmation}
-                                onChange={(e) => setData('password_confirmation', e.target.value)}
-                                disabled={processing}
-                                placeholder="Confirm password"
-                            />
+                            <div className="relative">
+                                <Input
+                                    ref={confirmPasswordInputRef}
+                                    id="password_confirmation"
+                                    type={showConfirmPassword ? "text" : "password"}
+                                    required
+                                    tabIndex={10}
+                                    autoComplete="new-password"
+                                    value={data.password_confirmation}
+                                    onChange={(e) => setData('password_confirmation', e.target.value)}
+                                    disabled={processing}
+                                    placeholder="Confirm password"
+                                    className="pr-10"
+                                />
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="absolute right-0 top-0 h-9 w-9 px-0 hover:bg-transparent"
+                                    onClick={() => {
+                                        setShowConfirmPassword(!showConfirmPassword);
+                                        // Refocus the confirm password input after toggling
+                                        setTimeout(() => confirmPasswordInputRef.current?.focus(), 0);
+                                    }}
+                                    tabIndex={-1}
+                                    aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+                                >
+                                    {showConfirmPassword ? (
+                                        <EyeOffIcon className="h-4 w-4 text-muted-foreground" />
+                                    ) : (
+                                        <EyeIcon className="h-4 w-4 text-muted-foreground" />
+                                    )}
+                                </Button>
+                            </div>
                             <div className="space-y-1">
                                 <InputError message={errors.password_confirmation} />
                             </div>

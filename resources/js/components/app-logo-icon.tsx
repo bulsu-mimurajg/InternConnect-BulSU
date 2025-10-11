@@ -11,6 +11,17 @@ export default function AppLogoIcon({ className, ...props }: ImgHTMLAttributes<H
     );
 }
 
+export function BulSULogoIcon({ className, ...props }: ImgHTMLAttributes<HTMLImageElement>) {
+    return (
+        <img 
+            src="/bulsu_logo_svg.svg" 
+            alt="BulSU Logo"
+            className={className}
+            {...props}
+        />
+    );
+}
+
 // Old SVG version - replaced with logo_mockup_4.svg
 
 import { SVGAttributes } from 'react';

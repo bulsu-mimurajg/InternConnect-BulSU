@@ -21,23 +21,23 @@ export default function About() {
                     style={{backgroundImage: 'url(/images/pimentel.jpg)'}} 
                 />
                 {/* Background Overlay */}
-                <div className="fixed inset-0 bg-background/60 dark:bg-background/80" />
+                <div className="fixed inset-0 bg-background/40 dark:bg-background/60" />
                 
                 {/* Content Container */}
                 <div className="relative z-10 flex min-h-screen flex-col items-center p-6 text-foreground lg:justify-center lg:p-8 w-full">
                 <header className="mb-6 w-full max-w-[335px] text-sm not-has-[nav]:hidden lg:max-w-5xl">
-                    <div className="flex items-center justify-between">
-                        <Link href={route('home')} className="hover:opacity-80 transition-opacity">
-                            <AppLogoIcon className="h-8 w-auto" />
+                    <div className="flex items-center justify-between w-full">
+                        <Link href={route('home')} className="hover:opacity-80 transition-opacity flex-shrink-0">
+                            <AppLogoIcon className="h-8 w-auto md:h-10" />
                         </Link>
-                        <nav className="flex items-center justify-end gap-4">
+                        <nav className="flex items-center justify-end gap-2 md:gap-4 flex-shrink-0">
                             {auth.user ? (
                                 <>
                                     {auth.role === 'admin' && (
                                         <Link
                                             prefetch
                                             href={route('admin.dashboard')}
-                                            className="inline-block rounded-sm border border-border px-5 py-1.5 text-sm leading-normal text-foreground hover:border-border/80"
+                                            className="inline-block rounded-sm border border-black dark:border-accent-foreground px-3 md:px-5 py-1.5 text-xs md:text-sm leading-normal text-foreground hover:border-foreground/20 hover:bg-foreground/5 whitespace-nowrap"
                                         >
                                             Dashboard
                                         </Link>
@@ -47,7 +47,7 @@ export default function About() {
                                         <Link
                                             prefetch
                                             href={route('hte.dashboard')}
-                                            className="inline-block rounded-sm border border-border px-5 py-1.5 text-sm leading-normal text-foreground hover:border-border/80"
+                                            className="inline-block rounded-sm border border-border px-3 md:px-5 py-1.5 text-xs md:text-sm leading-normal text-foreground hover:border-foreground/20 hover:bg-foreground/5 whitespace-nowrap"
                                         >
                                             Dashboard
                                         </Link>
@@ -57,7 +57,7 @@ export default function About() {
                                         <Link
                                             prefetch
                                             href={route('adviser.dashboard')}
-                                            className="inline-block rounded-sm border border-border px-5 py-1.5 text-sm leading-normal text-foreground hover:border-border/80"
+                                            className="inline-block rounded-sm border border-border px-3 md:px-5 py-1.5 text-xs md:text-sm leading-normal text-foreground hover:border-foreground/20 hover:bg-foreground/5 whitespace-nowrap"
                                         >
                                             Dashboard
                                         </Link>
@@ -67,7 +67,7 @@ export default function About() {
                                         <Link
                                             prefetch
                                             href={route('student.dashboard')}
-                                            className="inline-block rounded-sm border border-border px-5 py-1.5 text-sm leading-normal text-foreground hover:border-border/80"
+                                            className="inline-block rounded-sm border border-border px-3 md:px-5 py-1.5 text-xs md:text-sm leading-normal text-foreground hover:border-foreground/20 hover:bg-foreground/5 whitespace-nowrap"
                                         >
                                             Dashboard
                                         </Link>
@@ -77,7 +77,7 @@ export default function About() {
                                 <Link
                                     prefetch
                                     href={route('login')}
-                                    className="inline-block rounded-sm border border-border px-5 py-1.5 text-sm leading-normal text-foreground hover:border-border/80"
+                                    className="inline-block rounded-sm border border-accent-foreground px-3 md:px-5 py-1.5 text-xs md:text-sm leading-normal text-foreground hover:border-foreground/20 hover:bg-foreground/5 whitespace-nowrap"
                                 >
                                     Login
                                 </Link>
@@ -86,23 +86,23 @@ export default function About() {
                             <Link
                                 prefetch
                                 href={route('about')}
-                                className="inline-block rounded-sm border border-transparent px-5 py-1.5 text-sm leading-normal text-foreground hover:border-border"
+                                className="inline-block rounded-sm border border-transparent px-3 md:px-5 py-1.5 text-xs md:text-sm leading-normal text-foreground hover:border-foreground/20 hover:bg-foreground/5 whitespace-nowrap"
                             >
                                 About
                             </Link>
                             <Link
                                 prefetch
                                 href={route('contact')}
-                                className="inline-block rounded-sm border border-transparent px-5 py-1.5 text-sm leading-normal text-foreground hover:border-border"
+                                className="inline-block rounded-sm border border-transparent px-3 md:px-5 py-1.5 text-xs md:text-sm leading-normal text-foreground hover:border-foreground/20 hover:bg-foreground/5 whitespace-nowrap"
                             >
                                 Contact
                             </Link>
                         </nav>
                     </div>
                 </header>
-                <div className="flex w-full items-center justify-center opacity-100 transition-opacity duration-750 lg:grow starting:opacity-0">
+                <div className="flex w-full items-center justify-center opacity-100 transition-opacity duration-750 lg:grow starting:opacity-10">
                     <main className="w-full max-w-[335px] lg:max-w-5xl">
-                        <div className="rounded-br-lg rounded-bl-lg bg-card/80 backdrop-blur-sm p-6 pb-12 text-[13px] leading-[20px] shadow-[inset_0px_0px_0px_1px_hsl(var(--border))] lg:rounded-lg lg:p-20">
+                        <div className="rounded-br-lg rounded-bl-lg bg-card/40 backdrop-blur-sm p-6 pb-12 text-[13px] leading-[20px] shadow-[inset_0px_0px_0px_1px_hsl(var(--border))] lg:rounded-lg lg:p-20">
                             {/* Hero Section */}
                             <div className="text-center space-y-6 mb-12">
                                 <div className="space-y-2">
@@ -133,7 +133,7 @@ export default function About() {
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                    <Card className="bg-card/90 border-border shadow-sm">
+                                    <Card className="bg-card/40 border-border shadow-sm">
                                         <CardHeader className="pb-3">
                                             <div className="h-10 w-10 rounded-lg bg-destructive/10 flex items-center justify-center mb-3">
                                                 <Users className="h-5 w-5 text-destructive" />
@@ -147,7 +147,7 @@ export default function About() {
                                         </CardContent>
                                     </Card>
 
-                                    <Card className="bg-card/90 border-border shadow-sm">
+                                    <Card className="bg-card/40 border-border shadow-sm">
                                         <CardHeader className="pb-3">
                                             <div className="h-10 w-10 rounded-lg bg-destructive/10 flex items-center justify-center mb-3">
                                                 <Building2 className="h-5 w-5 text-destructive" />
@@ -162,7 +162,7 @@ export default function About() {
                                         </CardContent>
                                     </Card>
 
-                                    <Card className="bg-card/90 border-border shadow-sm">
+                                    <Card className="bg-card/40 border-border shadow-sm">
                                         <CardHeader className="pb-3">
                                             <div className="h-10 w-10 rounded-lg bg-destructive/10 flex items-center justify-center mb-3">
                                                 <Target className="h-5 w-5 text-destructive" />
