@@ -194,7 +194,7 @@ export default function Register({ sections }: RegisterProps) {
                                 </SelectTrigger>
                                 <SelectContent>
                                     {sections.length === 0 ? (
-                                        <SelectItem value="" disabled>
+                                        <SelectItem value="no-sections-available" disabled>
                                             No sections available
                                         </SelectItem>
                                     ) : (
