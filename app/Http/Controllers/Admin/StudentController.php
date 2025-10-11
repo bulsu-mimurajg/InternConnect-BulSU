@@ -340,11 +340,21 @@ class StudentController extends Controller
         // Archive the student
         $student->update(['is_active' => false]);
 
+        // Reset student_matches endorsement status to pending before deleting endorsements
+        StudentMatch::where('student_id', $student->id)
+            ->where('endorsement_status', 'endorsed')
+            ->update(['endorsement_status' => 'pending']);
+
         // Delete any active endorsements for this student to free up slots
         // This ensures that archived students don't count toward endorsement limits
         Endorsement::where('student_id', $student->id)
             ->where('status', 'endorsed')
             ->delete();
+
+        // Reset student_matches placement status to pending before deleting placements
+        StudentMatch::where('student_id', $student->id)
+            ->where('placement_status', 'approved')
+            ->update(['placement_status' => 'pending']);
 
         // Delete any approved placements for this student to free up slots
         // This ensures that archived students don't occupy approved slots

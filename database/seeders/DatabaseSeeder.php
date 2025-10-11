@@ -142,7 +142,6 @@ class DatabaseSeeder extends Seeder
 
         $this->call(HTESeeder::class);
         $this->call(InternshipSeeder::class);
-        $this->call(ExtendedInternshipSeeder::class);
         $this->call(StudentSeeder::class);
         $this->call(ExtendedStudentSeeder::class);
         $this->call(AcademeAccountSeeder::class);
