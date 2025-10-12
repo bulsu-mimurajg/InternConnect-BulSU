@@ -133,7 +133,17 @@ export default function AdviserDashboard({ stats, recentAssessments, placementOv
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Dashboard" />
-            <div className="flex h-full flex-1 flex-col gap-6 rounded-xl p-4">
+            <div className="relative">
+                {/* Full Background Image - covers entire main content area */}
+                <div
+                    className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-70 dark:opacity-50 bg-fixed"
+                    style={{backgroundImage: 'url(/images/pimentel.jpg)'}}
+                />
+                {/* Background Overlay */}
+                <div className="absolute inset-0 bg-background/80 dark:bg-background/90" />
+                
+                {/* Content Container with padding */}
+                <div className="relative z-10 flex h-full flex-1 flex-col gap-6 rounded-xl p-4">
                 {/* Section Header */}
                 <div className="flex items-center justify-between">
                     <div>
@@ -363,7 +373,6 @@ export default function AdviserDashboard({ stats, recentAssessments, placementOv
                         </CardContent>
                     </Card>
                 </div>
-
             </div>
         </AppLayout>
     );

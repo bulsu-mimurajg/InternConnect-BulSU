@@ -143,7 +143,17 @@ export default function StudentDashboard({
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Student Dashboard" />
-            <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4 md:p-6">
+            <div className="relative">
+                {/* Full Background Image - covers entire main content area */}
+                <div
+                    className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-70 dark:opacity-50 bg-fixed"
+                    style={{backgroundImage: 'url(/images/pimentel.jpg)'}}
+                />
+                {/* Background Overlay */}
+                <div className="absolute inset-0 bg-background/80 dark:bg-background/90" />
+                
+                {/* Content Container with padding */}
+                <div className="relative z-10 flex h-full flex-1 flex-col gap-4 rounded-xl p-4 md:p-6">
                 {/* Hello Header */}
                 <div className="bg-card border rounded-lg p-6">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -276,6 +286,7 @@ export default function StudentDashboard({
                         currentMatch={currentMatch}
                     />
                 )}
+                </div>
             </div>
         </AppLayout>
     );

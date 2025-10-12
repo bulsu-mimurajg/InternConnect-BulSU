@@ -123,7 +123,17 @@ export default function HTEDashboardPage() {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="HTE Dashboard" />
-                <div className="flex h-full flex-1 flex-col gap-6 rounded-xl p-6">
+            <div className="relative">
+                {/* Full Background Image - covers entire main content area */}
+                <div
+                    className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-70 dark:opacity-50 bg-fixed"
+                    style={{backgroundImage: 'url(/images/pimentel.jpg)'}}
+                />
+                {/* Background Overlay */}
+                <div className="absolute inset-0 bg-background/80 dark:bg-background/90" />
+                
+                {/* Content Container with padding */}
+                <div className="relative z-10 flex h-full flex-1 flex-col gap-6 rounded-xl p-6">
                 {/* Header */}
                 <div className="space-y-2">
                     <h1 className="text-3xl font-bold tracking-tight">Company Dashboard</h1>
@@ -288,6 +298,7 @@ export default function HTEDashboardPage() {
                 </Card>
 
 
+                </div>
             </div>
         </AppLayout>
     );
