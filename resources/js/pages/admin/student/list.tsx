@@ -1,4 +1,4 @@
-import { Head, router } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import AdminLayout from '@/layouts/admin/layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Pagination } from '@/components/ui/pagination';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { usePagination } from '@/hooks/usePagination';
 import { getRowNumber } from '@/lib/pagination-utils';
 import { UsersIcon, UserCheckIcon, ArchiveIcon, RotateCcwIcon, EditIcon, UserXIcon, Filter, ArrowUpDown, Search } from 'lucide-react';
@@ -63,6 +64,7 @@ interface Props {
 }
 
 export default function StudentList({ students, unverifiedUsers = [], archivedStudents = [], archivedUnverifiedUsers = [], section_options = [], filters = {} }: Props) {
+    const { flash } = usePage<{ flash: { message?: string; error?: string } }>().props;
     const [showUnverified, setShowUnverified] = useState(false);
     const [showArchived, setShowArchived] = useState(false);
     const [showFilters, setShowFilters] = useState(false);
@@ -85,6 +87,12 @@ export default function StudentList({ students, unverifiedUsers = [], archivedSt
     };
 
     const handleArchive = (student: Student) => {
+        // Check if student is already archived
+        if (!student.is_active) {
+            // Show error message or prevent action
+            return;
+        }
+        
         setSelectedStudent(student);
         setSelectedUnverifiedUser(null);
         setShowArchiveDialog(true);
@@ -95,6 +103,12 @@ export default function StudentList({ students, unverifiedUsers = [], archivedSt
     };
 
     const handleArchiveUnverified = (user: UnverifiedUser) => {
+        // Check if user is already archived
+        if (user.status === 'archived') {
+            // Show error message or prevent action
+            return;
+        }
+        
         setSelectedUnverifiedUser(user);
         setSelectedStudent(null);
         setShowArchiveDialog(true);
@@ -116,12 +130,20 @@ export default function StudentList({ students, unverifiedUsers = [], archivedSt
                             'filters'
                         ] 
                     });
+                },
+                onError: (errors) => {
+                    // Error handling is done by backend redirect with flash message
+                    console.error('Archive error:', errors);
                 }
             });
         } else if (selectedUnverifiedUser) {
             router.patch(`/student/unverified/${selectedUnverifiedUser.id}/archive`, {}, {
                 onSuccess: () => {
                     router.reload({ only: ['unverifiedUsers', 'archivedUnverifiedUsers'] });
+                },
+                onError: (errors) => {
+                    // Error handling is done by backend redirect with flash message
+                    console.error('Archive error:', errors);
                 }
             });
         }
@@ -311,6 +333,18 @@ export default function StudentList({ students, unverifiedUsers = [], archivedSt
                         </Button>
                     </div>
                 </div>
+
+                {/* Error/Success Messages */}
+                {flash?.error && (
+                    <Alert variant="destructive">
+                        <AlertDescription>{flash.error}</AlertDescription>
+                    </Alert>
+                )}
+                {flash?.message && (
+                    <Alert>
+                        <AlertDescription>{flash.message}</AlertDescription>
+                    </Alert>
+                )}
 
                 {/* Filters Section */}
                 {showFilters && (
@@ -693,10 +727,14 @@ export default function StudentList({ students, unverifiedUsers = [], archivedSt
                                                                 variant="outline"
                                                                 size="sm"
                                                                 onClick={() => handleArchiveUnverified(user)}
-                                                                className="text-orange-600 hover:text-orange-700"
+                                                                disabled={user.status === 'archived'}
+                                                                className={user.status === 'archived'
+                                                                    ? "text-muted-foreground cursor-not-allowed" 
+                                                                    : "text-orange-600 hover:text-orange-700"
+                                                                }
                                                             >
                                                                 <ArchiveIcon className="h-4 w-4 mr-2" />
-                                                                Archive
+                                                                {user.status === 'archived' ? 'Already Archived' : 'Archive'}
                                                             </Button>
                                                         </div>
                                                     </td>
@@ -817,10 +855,14 @@ export default function StudentList({ students, unverifiedUsers = [], archivedSt
                                                                 variant="outline"
                                                                 size="sm"
                                                                 onClick={() => handleArchive(stud)}
-                                                                className="text-orange-600 hover:text-orange-700"
+                                                                disabled={!stud.is_active}
+                                                                className={!stud.is_active 
+                                                                    ? "text-muted-foreground cursor-not-allowed" 
+                                                                    : "text-orange-600 hover:text-orange-700"
+                                                                }
                                                             >
                                                                 <ArchiveIcon className="h-4 w-4 mr-2" />
-                                                                Archive
+                                                                {!stud.is_active ? 'Already Archived' : 'Archive'}
                                                             </Button>
                                                         </div>
                                                     </td>
@@ -863,6 +905,15 @@ export default function StudentList({ students, unverifiedUsers = [], archivedSt
                                         <span className="text-sm text-muted-foreground mt-1 block">
                                             Student ID: {selectedStudent.student_number}
                                         </span>
+                                        <br />
+                                        <div className="mt-3 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
+                                            <p className="text-sm text-red-800 dark:text-red-200 font-medium">
+                                                Warning: Already endorsed or placed students will be removed and this action cannot be undone.
+                                            </p>
+                                            <p className="text-xs text-red-700 dark:text-red-300 mt-1">
+                                                This will free up slots for other students.
+                                            </p>
+                                        </div>
                                     </>
                                 ) : selectedUnverifiedUser ? (
                                     <>

@@ -337,6 +337,13 @@ class StudentController extends Controller
      */
     public function archive(Student $student)
     {
+        // Check if student is already archived
+        if (!$student->is_active) {
+            return redirect()->route('student-list')->withErrors([
+                'error' => 'This student is already archived and cannot be archived again.'
+            ]);
+        }
+
         // Archive the student
         $student->update(['is_active' => false]);
 
@@ -375,7 +382,13 @@ class StudentController extends Controller
     {
         $student->update(['is_active' => true]);
         
-        return redirect()->route('student-list')->with('success', 'Student restored successfully');
+        // Recalculate compatibility scores to ensure fresh matches
+        if ($student->is_submit) {
+            $matchingService = new \App\Services\MatchingService();
+            $matchingService->calculateAndStoreCompatibilityScores($student);
+        }
+        
+        return redirect()->route('student-list')->with('success', 'Student restored successfully and matches recalculated');
     }
 
     /**
@@ -437,6 +450,13 @@ class StudentController extends Controller
      */
     public function archiveUnverifiedUser(User $user)
     {
+        // Check if user is already archived
+        if ($user->status === 'archived') {
+            return redirect()->route('student-list')->withErrors([
+                'error' => 'This user is already archived and cannot be archived again.'
+            ]);
+        }
+
         $user->update(['status' => 'archived']);
         
         return redirect()->route('student-unverified')->with('success', 'Unverified user archived successfully');
@@ -926,6 +946,19 @@ class StudentController extends Controller
                     'compatibility_score' => $compatibilityScore,
                 ];
             }
+        }
+
+        // Add slot availability information to the best match
+        if ($bestMatch) {
+            $internship = $bestMatch['internship'];
+            $approvedPlacements = $internship->studentPlacements()->where('status', 'approved')->count();
+            $endorsedSlots = Endorsement::where('internship_id', $internship->id)
+                ->where('status', 'endorsed')
+                ->count();
+            $availableSlots = $internship->slot_count - $approvedPlacements - $endorsedSlots;
+            
+            $bestMatch['available_slots'] = $availableSlots;
+            $bestMatch['has_available_slots'] = $availableSlots > 0;
         }
 
         // Get detailed scores breakdown

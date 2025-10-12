@@ -94,7 +94,11 @@ class AdminController extends Controller
             ->count();
 
         // Students who have been placed
-        $placedStudents = StudentPlacement::where('status', 'approved')->count();
+        $placedStudents = StudentPlacement::where('status', 'approved')
+            ->whereHas('student', function ($query) {
+                $query->where('is_active', true);
+            })
+            ->count();
 
         // Total HTEs
         $totalHTEs = HTE::where('is_active', true)->count();
@@ -111,7 +115,11 @@ class AdminController extends Controller
         $totalSlots = Internship::where('is_active', true)->sum('slot_count');
 
         // Pending placements
-        $pendingPlacements = StudentPlacement::where('status', 'pending')->count();
+        $pendingPlacements = StudentPlacement::where('status', 'pending')
+            ->whereHas('student', function ($query) {
+                $query->where('is_active', true);
+            })
+            ->count();
 
         // Calculate rates
         $completionRate = $totalStudents > 0 ? round(($completedAssessments / $totalStudents) * 100, 1) : 0;
@@ -139,15 +147,23 @@ class AdminController extends Controller
     private function getPlacementOverview(): array
     {
         // Placements by status - include both actual placements and matches
+        // Exclude archived students (is_active = false)
         $placementsByStatus = StudentPlacement::select('status', DB::raw('count(*) as count'))
+            ->whereHas('student', function ($query) {
+                $query->where('is_active', true);
+            })
             ->groupBy('status')
             ->get()
             ->pluck('count', 'status')
             ->toArray();
 
         // Add matches from student_matches table for all statuses
+        // Exclude archived students (is_active = false)
         $matchesByStatus = StudentMatch::select('placement_status', DB::raw('count(*) as count'))
             ->whereNotNull('placement_status')
+            ->whereHas('student', function ($query) {
+                $query->where('is_active', true);
+            })
             ->groupBy('placement_status')
             ->get()
             ->pluck('count', 'placement_status')
@@ -161,6 +177,9 @@ class AdminController extends Controller
         // Placements by company
         $placementsByCompany = StudentPlacement::with('internship.hte')
             ->where('status', 'approved')
+            ->whereHas('student', function ($query) {
+                $query->where('is_active', true);
+            })
             ->get()
             ->groupBy('internship.hte.company_name')
             ->map(function ($placements, $companyName) {
@@ -177,6 +196,9 @@ class AdminController extends Controller
         // Placements by section
         $placementsBySection = StudentPlacement::with('student.section')
             ->where('status', 'approved')
+            ->whereHas('student', function ($query) {
+                $query->where('is_active', true);
+            })
             ->get()
             ->groupBy('student.section.section_name')
             ->map(function ($placements, $sectionName) {
@@ -1232,6 +1254,13 @@ class AdminController extends Controller
     public function archiveHTE(HTE $hte)
     {
         try {
+            // Check if HTE is already archived
+            if ($hte->user->status === 'archived' || !$hte->is_active) {
+                return redirect()->back()->withErrors([
+                    'error' => 'This HTE is already archived and cannot be archived again.'
+                ]);
+            }
+
             // Check if there's an active student assessment deadline
             $studentAssessmentDeadline = Deadline::getActiveForCategory('student_assessment_form');
             
@@ -1541,6 +1570,13 @@ class AdminController extends Controller
     public function archiveAdviser(Adviser $adviser)
     {
         try {
+            // Check if adviser is already archived
+            if ($adviser->user->status === 'archived' || !$adviser->is_active) {
+                return redirect()->back()->withErrors([
+                    'error' => 'This adviser is already archived and cannot be archived again.'
+                ]);
+            }
+
             DB::beginTransaction();
 
             // Archive the user
@@ -1804,6 +1840,13 @@ class AdminController extends Controller
     public function archiveSection(Section $section)
     {
         try {
+            // Check if section is already archived
+            if ($section->status === 'archived') {
+                return redirect()->back()->withErrors([
+                    'error' => 'This section is already archived and cannot be archived again.'
+                ]);
+            }
+
             DB::beginTransaction();
 
             $section->update(['status' => 'archived']);
@@ -2759,6 +2802,9 @@ class AdminController extends Controller
 
         $placedStudents = StudentPlacement::whereHas('student.user.academeAccounts', function ($query) use ($sectionId) {
                 $query->where('section_id', $sectionId);
+            })
+            ->whereHas('student', function ($query) {
+                $query->where('is_active', true);
             })
             ->where('status', 'approved')
             ->count();
