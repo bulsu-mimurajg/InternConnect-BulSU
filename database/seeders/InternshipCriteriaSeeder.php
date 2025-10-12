@@ -269,26 +269,9 @@ class InternshipCriteriaSeeder extends Seeder
             }
         }
 
-        // Set remaining subcategories to 0 weight for completeness
-        foreach ($internships as $internship) {
-            foreach ($categories as $category) {
-                foreach ($category->subCategories as $subcategory) {
-                    // Check if this subcategory weight already exists
-                    $existingWeight = SubcategoryWeight::where('internship_id', $internship->id)
-                        ->where('subcategory_id', $subcategory->id)
-                        ->first();
-                    
-                    if (!$existingWeight) {
-                        // Create weight of 0 for unset subcategories
-                        SubcategoryWeight::create([
-                            'internship_id' => $internship->id,
-                            'subcategory_id' => $subcategory->id,
-                            'weight' => 0,
-                        ]);
-                    }
-                }
-            }
-        }
+        // Note: We only create weights for subcategories that have explicit criteria defined
+        // This prevents creating unnecessary 0-weight entries that could cause conflicts
+        // If you need to ensure all subcategories have weights, use updateOrCreate instead of create
 
         $this->command->info('Internship criteria seeded successfully!');
     }

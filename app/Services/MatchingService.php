@@ -56,18 +56,37 @@ class MatchingService
      */
     private function storeCompatibilityScores(Student $student, Collection $rankedScores): void
     {
+        // Get existing matches with their statuses BEFORE deletion
+        $existingStatuses = StudentMatch::where('student_id', $student->id)
+            ->get()
+            ->keyBy('internship_id')
+            ->map(function ($match) {
+                return [
+                    'endorsement_status' => $match->endorsement_status,
+                    'placement_status' => $match->placement_status,
+                ];
+            });
+
         // Delete existing scores for this student
         StudentMatch::where('student_id', $student->id)->delete();
 
-        // Insert all new scores
+        // Insert all new scores with preserved statuses
         foreach ($rankedScores as $scoreData) {
+            $internshipId = $scoreData['internship']->id;
+            
+            // Use existing statuses if available, otherwise default to pending
+            $statuses = $existingStatuses->get($internshipId, [
+                'endorsement_status' => 'pending',
+                'placement_status' => 'pending',
+            ]);
+
             StudentMatch::create([
                 'student_id' => $student->id,
-                'internship_id' => $scoreData['internship']->id,
+                'internship_id' => $internshipId,
                 'compatibility_score' => $scoreData['compatibility_score'],
                 'rank' => $scoreData['rank'],
-                'endorsement_status' => 'pending', // Default endorsement status for new matches
-                'placement_status' => 'pending', // Default placement status for new matches
+                'endorsement_status' => $statuses['endorsement_status'],
+                'placement_status' => $statuses['placement_status'],
             ]);
         }
     }

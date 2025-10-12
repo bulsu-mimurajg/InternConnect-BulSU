@@ -23,8 +23,8 @@ const roleBasedNav: Record<string, { main: NavItem[]; groups?: NavGroup[]; foote
         main: [],
         groups: [
             {
-                title: 'Overview & Analytics',
-                items: [
+                'title': 'Overview & Analytics',
+                'items': [
                     { title: 'Dashboard', href: '/admin/dashboard', icon: ChartNoAxesColumnIcon },
                     { title: 'Audit Logs', href: '/admin/logs', icon: MonitorCogIcon },
                     { title: 'Reports', href: '/reports', icon: PrinterIcon },
@@ -99,7 +99,7 @@ const roleBasedNav: Record<string, { main: NavItem[]; groups?: NavGroup[]; foote
             {
                 title: 'Student Management',
                 items: [
-                    { title: 'Student Endorsements', href: '/hte/endorsement-table', icon: Check },
+                    { title: 'Endorsements', href: '/hte/endorsement-table', icon: Check },
                     { title: 'Placed Students', href: '/hte/placed-students', icon: UsersIcon },
                 ]
             },

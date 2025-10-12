@@ -442,12 +442,8 @@ Route::group(['middleware' => ['auth', 'verified', 'role_redirect:student']], fu
         $overallAverage = $totalQuestions > 0 ? round($totalScore / $totalQuestions, 2) : 0;
 
         // Get possible internships with compatibility scores
+        // Get top 5 matches from stored compatibility scores
         $matchingService = new \App\Services\MatchingService();
-
-        // Calculate and store all compatibility scores for this student
-        $matchingService->calculateAndStoreCompatibilityScores($student);
-
-        // Get top 5 for dashboard display
         $possibleInternships = $matchingService->getTopCompatibleInternships($student, 5);
 
         $possibleInternships = $possibleInternships->map(function ($item) {
@@ -649,10 +645,6 @@ Route::group(['middleware' => ['auth', 'verified', 'role_redirect:student']], fu
         $bestMatch = null;
         $highestScore = 0;
 
-        // Use the matching service to get all compatibility scores
-        $matchingService = new \App\Services\MatchingService();
-        $matchingService->calculateAndStoreCompatibilityScores($student);
-
         // Get the best match from stored scores
         $bestMatchData = StudentMatch::where('student_id', $student->id)
             ->with([
@@ -762,10 +754,6 @@ Route::group(['middleware' => ['auth', 'verified', 'role_redirect:student']], fu
                 'hasSubmitted' => false
             ]);
         }
-
-        // Use the matching service to get all compatibility scores
-        $matchingService = new \App\Services\MatchingService();
-        $matchingService->calculateAndStoreCompatibilityScores($student);
 
         // Get all compatibility scores for this student
         $compatibilityScores = \App\Models\StudentMatch::where('student_id', $student->id)
