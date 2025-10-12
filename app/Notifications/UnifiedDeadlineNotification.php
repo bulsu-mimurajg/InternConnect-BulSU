@@ -42,31 +42,10 @@ class UnifiedDeadlineNotification extends Notification implements ShouldQueue
     /**
      * Get the mail representation of the notification.
      */
-    public function toMail(object $notifiable): MailMessage
+    public function toMail(object $notifiable): void
     {
-        $deadlineName = $this->deadline->title ?? $this->getDefaultDeadlineName();
-        $timeRemaining = $this->getTimeRemainingText();
-        $actionText = $this->getActionText();
-        $actionUrl = $this->getActionUrl();
-        $userDisplayName = $this->getUserDisplayName($notifiable);
-        $categoryDisplay = $this->deadline->getCategoryDisplayName();
-        $roleSpecificContent = $this->getRoleSpecificContent();
-
-        return (new MailMessage)
-            ->subject($this->urgencyLevel['title'])
-            ->view('emails.unified-deadline', [
-                'urgencyLevel' => $this->urgencyLevel,
-                'userDisplayName' => $userDisplayName,
-                'deadlineName' => $deadlineName,
-                'categoryDisplay' => $categoryDisplay,
-                'deadlineDate' => $this->deadline->end_date,
-                'timeRemainingText' => $timeRemaining,
-                'daysRemaining' => $this->daysRemaining,
-                'hoursRemaining' => $this->hoursRemaining,
-                'actionText' => $actionText,
-                'actionUrl' => $actionUrl,
-                'roleSpecificContent' => $roleSpecificContent,
-            ]);
+        // Use custom EmailService instead of Laravel Mail
+        $this->sendCustomEmail($notifiable);
     }
 
     /**
@@ -271,11 +250,11 @@ class UnifiedDeadlineNotification extends Notification implements ShouldQueue
     private function getActionUrl(): string
     {
         return match($this->userRole) {
-            'admin' => route('admin.events'),
-            'adviser' => route('adviser.dashboard'),
-            'student' => route('student.dashboard'),
-            'hte' => route('hte.dashboard'),
-            default => route('dashboard'),
+            'admin' => '/admin/events',
+            'adviser' => '/adviser/dashboard',
+            'student' => '/student/dashboard',
+            'hte' => '/hte/dashboard',
+            default => '/dashboard',
         };
     }
 

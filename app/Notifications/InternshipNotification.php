@@ -2,10 +2,11 @@
 
 namespace App\Notifications;
 
+use App\Services\EmailService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
+use Illuminate\Support\Facades\Log;
 
 class InternshipNotification extends Notification implements ShouldQueue
 {
@@ -36,14 +37,25 @@ class InternshipNotification extends Notification implements ShouldQueue
     /**
      * Get the mail representation of the notification.
      */
-    public function toMail(object $notifiable): MailMessage
+    public function toMail(object $notifiable): void
     {
-        return (new MailMessage)
-            ->subject('Congratulations! You\'ve Been Placed for Internship')
-            ->view('emails.internship-notification', [
-                'studentName' => $this->studentName,
-                'internshipDetails' => $this->internshipDetails,
-            ]);
+        // Use the custom EmailService to send the internship notification email
+        $emailService = new EmailService();
+        
+        $subject = "Congratulations! You've Been Placed for Internship - BULSU InternConnect";
+        
+        // Generate HTML body using Blade template
+        $body = view('emails.internship-notification', [
+            'studentName' => $this->studentName,
+            'internshipDetails' => $this->internshipDetails,
+        ])->render();
+
+        try {
+            $emailService->sendEmail($notifiable->email, $subject, $body, $this->studentName);
+        } catch (\Exception $e) {
+            // Log the error but don't fail the notification
+            Log::error('Failed to send internship notification email: ' . $e->getMessage());
+        }
     }
 
     /**

@@ -20,13 +20,19 @@ class PlacementSeeder extends Seeder
 
         foreach ($students as $index => $student) {
             if (isset($internships[$index])) {
-                // Create a sample match with high compatibility score
-                StudentMatch::create([
-                    'student_id' => $student->id,
-                    'internship_id' => $internships[$index]->id,
-                    'compatibility_score' => rand(70, 95),
-                    'rank' => 1, // Top rank for sample
-                ]);
+                // Use updateOrCreate to prevent duplicates
+                StudentMatch::updateOrCreate(
+                    [
+                        'student_id' => $student->id,
+                        'internship_id' => $internships[$index]->id,
+                    ],
+                    [
+                        'compatibility_score' => rand(70, 95),
+                        'rank' => 1, // Top rank for sample
+                        'endorsement_status' => 'pending',
+                        'placement_status' => 'pending',
+                    ]
+                );
             }
         }
     }

@@ -40,10 +40,10 @@ class HTECredentialsNotification extends Notification implements ShouldQueue
     /**
      * Get the mail representation of the notification.
      */
-    public function toMail(object $notifiable): MailMessage
+    public function toMail(object $notifiable): void
     {
         $userName = $this->companyName ?: $notifiable->username ?? 'HTE User';
-        $loginUrl = url('/hte/login');
+        $loginUrl = '/login';
         
         // Use the custom EmailService to send the credentials email
         $emailService = new EmailService();
@@ -65,18 +65,6 @@ class HTECredentialsNotification extends Notification implements ShouldQueue
             // Log the error but don't fail the notification
             Log::error('Failed to send HTE credentials email: ' . $e->getMessage());
         }
-
-        // Return the default Laravel mail message for compatibility
-        return (new MailMessage)
-            ->subject('Welcome to BULSU InternConnect - Your HTE Account Credentials')
-            ->greeting('Welcome to BULSU InternConnect!')
-            ->line('Your Host Training Establishment (HTE) account has been successfully created.')
-            ->line('**Username:** ' . $this->username)
-            ->line('**Password:** ' . $this->password)
-            ->line('**Email:** ' . $notifiable->email)
-            ->action('Access HTE Dashboard', $loginUrl)
-            ->line('Please change your password after your first login for security.')
-            ->line('If you have any questions, please contact the support team.');
     }
 
     /**

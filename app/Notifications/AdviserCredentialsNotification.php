@@ -42,10 +42,10 @@ class AdviserCredentialsNotification extends Notification implements ShouldQueue
     /**
      * Get the mail representation of the notification.
      */
-    public function toMail(object $notifiable): MailMessage
+    public function toMail(object $notifiable): void
     {
         $userName = $this->adviserName ?: $notifiable->username ?? 'Adviser';
-        $loginUrl = url('/adviser/login');
+        $loginUrl = '/login';
         $sectionsList = !empty($this->sections) ? implode(', ', $this->sections) : 'No sections assigned';
         
         // Use the custom EmailService to send the credentials email
@@ -69,19 +69,6 @@ class AdviserCredentialsNotification extends Notification implements ShouldQueue
             // Log the error but don't fail the notification
             Log::error('Failed to send adviser credentials email: ' . $e->getMessage());
         }
-
-        // Return the default Laravel mail message for compatibility
-        return (new MailMessage)
-            ->subject('Welcome to BULSU InternConnect - Your Adviser Account Credentials')
-            ->greeting('Welcome to BULSU InternConnect!')
-            ->line('Your adviser account has been successfully created.')
-            ->line('**Username:** ' . $this->username)
-            ->line('**Password:** ' . $this->password)
-            ->line('**Email:** ' . $notifiable->email)
-            ->line('**Assigned Sections:** ' . $sectionsList)
-            ->action('Access Adviser Dashboard', $loginUrl)
-            ->line('Please change your password after your first login for security.')
-            ->line('If you have any questions, please contact the support team.');
     }
 
     /**

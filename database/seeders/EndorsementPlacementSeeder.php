@@ -165,15 +165,19 @@ class EndorsementPlacementSeeder extends Seeder
             $studentData = $testStudents[$index];
             
             if (in_array($studentData['status'], ['matched', 'endorsed', 'placed'])) {
-                // Create student match with Maria's internship
-                $studentMatch = StudentMatch::create([
-                    'student_id' => $student->id,
-                    'internship_id' => $mariaInternship->id,
-                    'rank' => $index + 1,
-                    'compatibility_score' => rand(80, 95),
-                    'endorsement_status' => in_array($studentData['status'], ['endorsed', 'placed']) ? 'endorsed' : 'pending',
-                    'placement_status' => $studentData['status'] === 'placed' ? 'approved' : 'pending'
-                ]);
+                // Use updateOrCreate to prevent duplicates
+                $studentMatch = StudentMatch::updateOrCreate(
+                    [
+                        'student_id' => $student->id,
+                        'internship_id' => $mariaInternship->id,
+                    ],
+                    [
+                        'rank' => $index + 1,
+                        'compatibility_score' => rand(80, 95),
+                        'endorsement_status' => in_array($studentData['status'], ['endorsed', 'placed']) ? 'endorsed' : 'pending',
+                        'placement_status' => $studentData['status'] === 'placed' ? 'approved' : 'pending'
+                    ]
+                );
 
                 if (in_array($studentData['status'], ['endorsed', 'placed'])) {
                     // Create endorsement with Maria's internship

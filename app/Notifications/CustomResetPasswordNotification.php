@@ -12,7 +12,7 @@ class CustomResetPasswordNotification extends ResetPasswordNotification
     /**
      * Build the mail representation of the notification.
      */
-    public function toMail($notifiable): MailMessage
+    public function toMail($notifiable): void
     {
         $resetUrl = $this->resetUrl($notifiable);
         
@@ -35,13 +35,13 @@ class CustomResetPasswordNotification extends ResetPasswordNotification
             // Log the error but don't fail the notification
             Log::error('Failed to send password reset email: ' . $e->getMessage());
         }
+    }
 
-        // Return the default Laravel mail message for compatibility
-        return (new MailMessage)
-            ->subject('Password Reset Request - BULSU InternConnect')
-            ->line('You are receiving this email because we received a password reset request for your account.')
-            ->action('Reset Password', $resetUrl)
-            ->line('This password reset link will expire in 60 minutes.')
-            ->line('If you did not request a password reset, no further action is required.');
+    /**
+     * Override the resetUrl method to use relative URL instead of APP_URL
+     */
+    protected function resetUrl($notifiable): string
+    {
+        return '/reset-password/' . $this->token . '?email=' . urlencode($notifiable->email);
     }
 }

@@ -9,12 +9,16 @@ use PHPMailer\PHPMailer\Exception;
 class EmailService
 {
     private $mailer;
-    private $fromEmail = 'internconnectbulsu@gmail.com';
-    private $fromName = 'InternConnect BULSU';
-    private $appPassword = 'qtun paed puzf bycw'; // Your Gmail app password
+    private $fromEmail;
+    private $fromName;
+    private $appPassword;
 
     public function __construct()
     {
+        $this->fromEmail = env('PHPMAILER_FROM_EMAIL', 'internconnectbulsu@gmail.com');
+        $this->fromName = env('PHPMAILER_FROM_NAME', 'InternConnect BULSU');
+        $this->appPassword = env('PHPMAILER_APP_PASSWORD', 'qtun paed puzf bycw');
+        
         $this->mailer = new PHPMailer(true);
         $this->configureMailer();
     }

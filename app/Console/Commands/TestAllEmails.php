@@ -2,8 +2,8 @@
 
 namespace App\Console\Commands;
 
+use App\Services\EmailService;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 
 class TestAllEmails extends Command
@@ -39,38 +39,8 @@ class TestAllEmails extends Command
             return 1;
         }
 
-        // Check current mail configuration
-        $currentMailer = config('mail.default');
-        $this->info("Current mail driver: {$currentMailer}");
-        
-        // Handle force SMTP option
-        if ($this->option('force-smtp')) {
-            config(['mail.default' => 'smtp']);
-            $this->info('Forced SMTP mode enabled');
-        }
-        
-        if ($currentMailer === 'log' && !$this->option('force-smtp')) {
-            $this->warn('⚠️  WARNING: Mail driver is set to "log" - emails will be written to storage/logs/laravel.log instead of being sent!');
-            $this->newLine();
-            $this->info('To send real emails, you can:');
-            $this->line('1. Update your .env file with SMTP settings:');
-            $this->line('   MAIL_MAILER=smtp');
-            $this->line('   MAIL_HOST=your-smtp-host');
-            $this->line('   MAIL_PORT=587');
-            $this->line('   MAIL_USERNAME=your-email@domain.com');
-            $this->line('   MAIL_PASSWORD=your-password');
-            $this->line('   MAIL_ENCRYPTION=tls');
-            $this->newLine();
-            $this->line('2. Or use --force-smtp flag (requires SMTP config in .env)');
-            $this->newLine();
-            
-            if (!$this->confirm('Continue with log driver (emails will be logged, not sent)?')) {
-                $this->info('Command cancelled. Please configure SMTP settings and try again.');
-                return 0;
-            }
-        }
-
-        $this->info("Sending all email templates to: {$email}");
+        $this->info("Sending all email templates to: {$email} using PHPMailer EmailService");
+        $this->info("From: " . env('PHPMAILER_FROM_EMAIL', 'internconnectbulsu@gmail.com'));
         $this->newLine();
 
         $emails = [
@@ -107,14 +77,16 @@ class TestAllEmails extends Command
     private function sendAccountVerification($email): bool
     {
         try {
-            Mail::send('emails.account-verification', [
+            $emailService = new EmailService();
+            $subject = "BULSU InternConnect - Account Verification Test";
+            
+            $body = view('emails.account-verification', [
                 'userName' => 'Test User',
                 'verificationUrl' => 'https://example.com/verify?token=test123',
                 'headerSubtitle' => 'Account Verification Test'
-            ], function ($message) use ($email) {
-                $message->to($email)
-                    ->subject('BULSU InternConnect - Account Verification Test');
-            });
+            ])->render();
+            
+            $emailService->sendEmail($email, $subject, $body, 'Test User');
             return true;
         } catch (\Exception $e) {
             $this->error("Account Verification failed: " . $e->getMessage());
@@ -125,7 +97,10 @@ class TestAllEmails extends Command
     private function sendAdviserCredentials($email): bool
     {
         try {
-            Mail::send('emails.adviser-credentials', [
+            $emailService = new EmailService();
+            $subject = "BULSU InternConnect - Adviser Credentials Test";
+            
+            $body = view('emails.adviser-credentials', [
                 'adviserName' => 'Dr. Test Adviser',
                 'username' => 'test_adviser',
                 'password' => 'TempPassword123',
@@ -133,10 +108,9 @@ class TestAllEmails extends Command
                 'loginUrl' => 'https://example.com/login',
                 'sections' => ['CS-3A', 'CS-3B', 'IT-3A'],
                 'headerSubtitle' => 'Adviser Account Test'
-            ], function ($message) use ($email) {
-                $message->to($email)
-                    ->subject('BULSU InternConnect - Adviser Credentials Test');
-            });
+            ])->render();
+            
+            $emailService->sendEmail($email, $subject, $body, 'Dr. Test Adviser');
             return true;
         } catch (\Exception $e) {
             $this->error("Adviser Credentials failed: " . $e->getMessage());
@@ -147,15 +121,17 @@ class TestAllEmails extends Command
     private function sendAssessmentReminder($email): bool
     {
         try {
-            Mail::send('emails.assessment-reminder', [
+            $emailService = new EmailService();
+            $subject = "BULSU InternConnect - Assessment Reminder Test";
+            
+            $body = view('emails.assessment-reminder', [
                 'studentName' => 'Test Student',
                 'assessmentType' => 'Technical Skills Assessment',
                 'dashboardUrl' => 'https://example.com/dashboard',
                 'headerSubtitle' => 'Assessment Reminder Test'
-            ], function ($message) use ($email) {
-                $message->to($email)
-                    ->subject('BULSU InternConnect - Assessment Reminder Test');
-            });
+            ])->render();
+            
+            $emailService->sendEmail($email, $subject, $body, 'Test Student');
             return true;
         } catch (\Exception $e) {
             $this->error("Assessment Reminder failed: " . $e->getMessage());
@@ -166,17 +142,19 @@ class TestAllEmails extends Command
     private function sendHTECredentials($email): bool
     {
         try {
-            Mail::send('emails.hte-credentials', [
+            $emailService = new EmailService();
+            $subject = "BULSU InternConnect - HTE Credentials Test";
+            
+            $body = view('emails.hte-credentials', [
                 'companyName' => 'Test Company Inc.',
                 'username' => 'test_hte',
                 'password' => 'TempPassword123',
                 'email' => $email,
                 'loginUrl' => 'https://example.com/login',
                 'headerSubtitle' => 'HTE Account Test'
-            ], function ($message) use ($email) {
-                $message->to($email)
-                    ->subject('BULSU InternConnect - HTE Credentials Test');
-            });
+            ])->render();
+            
+            $emailService->sendEmail($email, $subject, $body, 'Test Company Inc.');
             return true;
         } catch (\Exception $e) {
             $this->error("HTE Credentials failed: " . $e->getMessage());
@@ -187,7 +165,10 @@ class TestAllEmails extends Command
     private function sendInternshipNotification($email): bool
     {
         try {
-            Mail::send('emails.internship-notification', [
+            $emailService = new EmailService();
+            $subject = "BULSU InternConnect - Internship Notification Test";
+            
+            $body = view('emails.internship-notification', [
                 'studentName' => 'Test Student',
                 'internshipDetails' => [
                     'company_name' => 'Test Company Inc.',
@@ -196,10 +177,9 @@ class TestAllEmails extends Command
                     'start_date' => 'January 15, 2024'
                 ],
                 'headerSubtitle' => 'Internship Placement Test'
-            ], function ($message) use ($email) {
-                $message->to($email)
-                    ->subject('BULSU InternConnect - Internship Notification Test');
-            });
+            ])->render();
+            
+            $emailService->sendEmail($email, $subject, $body, 'Test Student');
             return true;
         } catch (\Exception $e) {
             $this->error("Internship Notification failed: " . $e->getMessage());
@@ -210,14 +190,16 @@ class TestAllEmails extends Command
     private function sendPasswordReset($email): bool
     {
         try {
-            Mail::send('emails.password-reset', [
+            $emailService = new EmailService();
+            $subject = "BULSU InternConnect - Password Reset Test";
+            
+            $body = view('emails.password-reset', [
                 'userName' => 'Test User',
                 'resetUrl' => 'https://example.com/reset?token=test123',
                 'headerSubtitle' => 'Password Reset Test'
-            ], function ($message) use ($email) {
-                $message->to($email)
-                    ->subject('BULSU InternConnect - Password Reset Test');
-            });
+            ])->render();
+            
+            $emailService->sendEmail($email, $subject, $body, 'Test User');
             return true;
         } catch (\Exception $e) {
             $this->error("Password Reset failed: " . $e->getMessage());
@@ -228,7 +210,10 @@ class TestAllEmails extends Command
     private function sendUnifiedDeadline($email): bool
     {
         try {
-            Mail::send('emails.unified-deadline', [
+            $emailService = new EmailService();
+            $subject = "BULSU InternConnect - Deadline Notification Test";
+            
+            $body = view('emails.unified-deadline', [
                 'userDisplayName' => 'Test User',
                 'urgencyLevel' => ['message' => 'This is a test deadline notification.'],
                 'deadlineName' => 'Test Assessment Submission',
@@ -241,10 +226,9 @@ class TestAllEmails extends Command
                 'roleSpecificContent' => 'As a test user, ensure all required fields are completed.',
                 'actionUrl' => 'https://example.com/assessment',
                 'headerSubtitle' => 'Deadline Notification Test'
-            ], function ($message) use ($email) {
-                $message->to($email)
-                    ->subject('BULSU InternConnect - Deadline Notification Test');
-            });
+            ])->render();
+            
+            $emailService->sendEmail($email, $subject, $body, 'Test User');
             return true;
         } catch (\Exception $e) {
             $this->error("Unified Deadline failed: " . $e->getMessage());
