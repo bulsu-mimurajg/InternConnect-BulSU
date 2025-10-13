@@ -37,6 +37,9 @@ class Deadline extends Model
         parent::boot();
 
         static::saving(function ($deadline) {
+            // Store the original status to detect changes
+            $originalStatus = $deadline->getOriginal('status');
+            
             // Automatically set status based on dates
             $now = Carbon::now();
             if ($deadline->end_date <= $now) {
@@ -45,6 +48,18 @@ class Deadline extends Model
                 $deadline->status = 'inactive';
             } else {
                 $deadline->status = 'active';
+            }
+        });
+
+        static::saved(function ($deadline) {
+            // Check if this is a student assessment form deadline that just expired
+            $originalStatus = $deadline->getOriginal('status');
+            if ($deadline->category === 'student_assessment_form' && 
+                $originalStatus !== 'expired' && 
+                $deadline->status === 'expired') {
+                
+                \Illuminate\Support\Facades\Log::info('Student assessment form deadline expired. Triggering match recalculation...');
+                $deadline->triggerMatchRecalculation();
             }
         });
     }
@@ -533,5 +548,54 @@ class Deadline extends Model
             ->where('status', 'active')
             ->where('end_date', '>', Carbon::now())
             ->first();
+    }
+
+    /**
+     * Trigger student match recalculation when assessment deadline expires
+     */
+    public function triggerMatchRecalculation(): void
+    {
+        try {
+            $matchingService = new \App\Services\MatchingService();
+            
+            // Get all active students who have submitted assessments
+            $students = \App\Models\Student::where('is_active', true)
+                ->where('is_submit', true)
+                ->get();
+            
+            if ($students->isEmpty()) {
+                \Illuminate\Support\Facades\Log::info('No students with submitted assessments found for match recalculation');
+                return;
+            }
+            
+            $recalculatedCount = 0;
+            
+            foreach ($students as $student) {
+                try {
+                    $matchingService->calculateAndStoreCompatibilityScores($student);
+                    $recalculatedCount++;
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::error('Failed to recalculate matches for student after assessment deadline', [
+                        'student_id' => $student->id,
+                        'deadline_id' => $this->id,
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
+            
+            \Illuminate\Support\Facades\Log::info('Recalculated student matches after assessment deadline expiration', [
+                'deadline_id' => $this->id,
+                'deadline_title' => $this->title,
+                'recalculated_count' => $recalculatedCount,
+                'total_eligible_students' => $students->count()
+            ]);
+            
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Failed to trigger match recalculation after assessment deadline', [
+                'deadline_id' => $this->id,
+                'deadline_title' => $this->title,
+                'error' => $e->getMessage()
+            ]);
+        }
     }
 }

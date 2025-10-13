@@ -1215,7 +1215,7 @@ class StudentController extends Controller
 
             // Find the student's next highest compatibility match
             // Look for pending endorsement matches (not yet endorsed by admin)
-            $nextMatch = StudentMatch::with(['internship.hte'])
+            $nextMatch = StudentMatch::with(['internship.hte:id,company_name'])
                 ->where('student_id', $student->id)
                 ->where('endorsement_status', 'pending')
                 ->orderBy('compatibility_score', 'desc')
@@ -1234,7 +1234,7 @@ class StudentController extends Controller
                 ]);
 
                 return response()->json([
-                    'message' => 'Student endorsement rejected and moved to next highest compatibility match. Student is now available for endorsement.',
+                    'message' => "Student endorsement rejected and moved to next highest compatibility match: {$nextMatch->internship->position_title} at {$nextMatch->internship->hte->company_name}. Student is now available for endorsement.",
                     'fallback' => true,
                     'new_internship' => [
                         'id' => $nextMatch->internship->id,
@@ -1970,7 +1970,7 @@ class StudentController extends Controller
 
             // Find the student's next highest compatibility match
             // Look for pending endorsement matches (not yet endorsed by admin)
-            $nextMatch = StudentMatch::with(['internship.hte'])
+            $nextMatch = StudentMatch::with(['internship.hte:id,company_name'])
                 ->where('student_id', $student->id)
                 ->where('endorsement_status', 'pending')
                 ->orderBy('compatibility_score', 'desc')
@@ -1989,7 +1989,7 @@ class StudentController extends Controller
                 ]);
 
                 return response()->json([
-                    'message' => 'Student endorsement rejected and moved to next highest compatibility match. Student is now available for endorsement.',
+                    'message' => "Student endorsement rejected and moved to next highest compatibility match: {$nextMatch->internship->position_title} at {$nextMatch->internship->hte->company_name}. Student is now available for endorsement.",
                     'fallback' => true,
                     'new_internship' => [
                         'id' => $nextMatch->internship->id,

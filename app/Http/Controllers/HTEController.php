@@ -201,6 +201,39 @@ class HTEController extends Controller
                 'weights_successfully_created' => $weightsCreated
             ]);
 
+            // Recalculate student matches for new/updated internship
+            try {
+                $matchingService = new \App\Services\MatchingService();
+                $students = \App\Models\Student::where('is_active', true)
+                    ->where('is_submit', true)
+                    ->get();
+                
+                $recalculatedCount = 0;
+                foreach ($students as $student) {
+                    try {
+                        $matchingService->calculateAndStoreCompatibilityScores($student);
+                        $recalculatedCount++;
+                    } catch (\Throwable $e) {
+                        Log::error('Failed to recalculate matches for student after internship creation', [
+                            'student_id' => $student->id,
+                            'internship_id' => $internship->id,
+                            'error' => $e->getMessage()
+                        ]);
+                    }
+                }
+                
+                Log::info('Recalculated student matches after internship creation/update', [
+                    'internship_id' => $internship->id,
+                    'recalculated_count' => $recalculatedCount,
+                    'total_eligible_students' => $students->count()
+                ]);
+            } catch (\Throwable $e) {
+                Log::error('Failed to trigger match recalculation after internship creation', [
+                    'internship_id' => $internship->id,
+                    'error' => $e->getMessage()
+                ]);
+            }
+
             return redirect()->route('hte.dashboard')->with('success', 'HTE form submitted successfully!');
 
         } catch (\Exception $e) {
@@ -547,6 +580,39 @@ class HTEController extends Controller
                     'internship_id' => $internship->id,
                     'subcategory_id' => $subcategoryId,
                     'weight' => (int) $weight,
+                ]);
+            }
+
+            // Recalculate student matches for new internship
+            try {
+                $matchingService = new \App\Services\MatchingService();
+                $students = \App\Models\Student::where('is_active', true)
+                    ->where('is_submit', true)
+                    ->get();
+                
+                $recalculatedCount = 0;
+                foreach ($students as $student) {
+                    try {
+                        $matchingService->calculateAndStoreCompatibilityScores($student);
+                        $recalculatedCount++;
+                    } catch (\Throwable $e) {
+                        Log::error('Failed to recalculate matches for student after internship creation', [
+                            'student_id' => $student->id,
+                            'internship_id' => $internship->id,
+                            'error' => $e->getMessage()
+                        ]);
+                    }
+                }
+                
+                Log::info('Recalculated student matches after internship creation', [
+                    'internship_id' => $internship->id,
+                    'recalculated_count' => $recalculatedCount,
+                    'total_eligible_students' => $students->count()
+                ]);
+            } catch (\Throwable $e) {
+                Log::error('Failed to trigger match recalculation after internship creation', [
+                    'internship_id' => $internship->id,
+                    'error' => $e->getMessage()
                 ]);
             }
 

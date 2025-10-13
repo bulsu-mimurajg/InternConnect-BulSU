@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { CalendarIcon, PlusIcon, ArchiveIcon, CheckCircleIcon, ClockIcon, UsersIcon, CalendarDaysIcon, ArrowLeftIcon } from 'lucide-react';
+import { CalendarIcon, PlusIcon, CheckCircleIcon, ClockIcon, UsersIcon, CalendarDaysIcon, ArrowLeftIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Calendar } from '@/components/ui/calendar';
@@ -110,13 +110,13 @@ export default function SeasonsManagement({ seasons, activeSeason }: Props) {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'active':
-        return <Badge className="bg-green-100 text-green-800">🟢 Active</Badge>;
+        return <Badge className="bg-green-100 text-green-800">Active</Badge>;
       case 'inactive':
-        return <Badge className="bg-gray-100 text-gray-800">⚪ Inactive</Badge>;
+        return <Badge className="bg-gray-100 text-gray-800">Inactive</Badge>;
       case 'completed':
-        return <Badge className="bg-blue-100 text-blue-800">✅ Completed</Badge>;
+        return <Badge className="bg-blue-100 text-blue-800">Completed</Badge>;
       case 'archived':
-        return <Badge className="bg-gray-100 text-gray-800">📁 Archived</Badge>;
+        return <Badge className="bg-gray-100 text-gray-800">Archived</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
@@ -318,117 +318,188 @@ export default function SeasonsManagement({ seasons, activeSeason }: Props) {
         {/* Seasons List */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {seasons.map((season) => (
-            <Card key={season.id} className="relative">
+            <Card key={season.id} className="relative flex flex-col h-full">
               <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="space-y-1">
-                    <CardTitle className="text-lg">{season.name}</CardTitle>
+                <div className="space-y-2">
+                  <CardTitle className="text-lg">{season.name}</CardTitle>
+                  <div className="flex items-center justify-between">
                     <CardDescription>
                       {formatDate(season.start_date)} - {formatDate(season.end_date)}
                     </CardDescription>
-                  </div>
-                  <div className="flex flex-col items-end gap-1">
                     {getStatusBadge(season.status)}
                   </div>
                 </div>
               </CardHeader>
               
-              <CardContent className="space-y-4">
-                {/* Statistics */}
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div className="flex items-center gap-2">
-                    <CalendarDaysIcon className="h-4 w-4 text-gray-500" />
-                    <span>{season.deadlines_count} deadlines</span>
+              <CardContent className="flex flex-col h-full">
+                <div className="flex-1 space-y-4">
+                  {/* Statistics */}
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div className="flex items-center gap-2">
+                      <CalendarDaysIcon className="h-4 w-4 text-gray-500" />
+                      <span>{season.deadlines_count} deadlines</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <UsersIcon className="h-4 w-4 text-gray-500" />
+                      <span>{season.students_count} students</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <UsersIcon className="h-4 w-4 text-gray-500" />
-                    <span>{season.students_count} students</span>
-                  </div>
+
+                  {/* Deadline Requirements */}
+                  {season.status === 'inactive' && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="text-sm font-medium text-gray-700">Deadline Requirements:</div>
+                        <div className="text-xs text-gray-500">
+                          {season.deadlines_count}/5 completed
+                        </div>
+                      </div>
+                      
+                      {/* Progress Bar */}
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div 
+                          className="bg-green-500 h-2 rounded-full transition-all duration-300" 
+                          style={{ width: `${(season.deadlines_count / 5) * 100}%` }}
+                        />
+                      </div>
+                      
+                      <div className="grid grid-cols-1 gap-1 text-xs">
+                        {[
+                          { key: 'hte_assessment_form', label: 'HTE Assessment Form' },
+                          { key: 'student_verification', label: 'Student Verification' },
+                          { key: 'student_assessment_form', label: 'Student Assessment Form' },
+                          { key: 'internship_placement', label: 'Internship Placement' },
+                          { key: 'archive_students', label: 'Archive Students' }
+                        ].map((category) => (
+                          <div key={category.key} className="flex items-center gap-2">
+                            <div className={`w-2 h-2 rounded-full ${
+                              season.deadlines_count >= 5 ? 'bg-green-500' : 'bg-gray-300'
+                            }`} />
+                            <span className={`${
+                              season.deadlines_count >= 5 ? 'text-green-700' : 'text-gray-500'
+                            }`}>
+                              {category.label}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                      
+                      {season.deadlines_count < 5 && (
+                        <div className="text-xs text-amber-600 bg-amber-50 p-2 rounded border border-amber-200">
+                          <div className="flex items-center gap-1 mb-1">
+                            <ClockIcon className="h-3 w-3" />
+                            <strong>Activation Pending</strong>
+                          </div>
+                          <div className="mb-2">
+                            {5 - season.deadlines_count} more deadline{5 - season.deadlines_count !== 1 ? 's' : ''} required to activate this season.
+                          </div>
+                          <div>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => router.get('/admin/events')}
+                              className="text-xs h-6 px-2"
+                            >
+                              Create Deadlines
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {season.deadlines_count >= 5 && (
+                        <div className="text-xs text-green-600 bg-green-50 p-2 rounded border border-green-200">
+                          <div className="flex items-center gap-1 mb-1">
+                            <CheckCircleIcon className="h-3 w-3" />
+                            <strong>Ready for Activation</strong>
+                          </div>
+                          <div>
+                            All deadline categories created. This season can now be activated.
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Deadline Status */}
+                  {(season.status === 'active' || season.status === 'completed') && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="text-sm font-medium text-gray-700">Deadline Status:</div>
+                        <div className="text-xs text-gray-500">
+                          {season.deadlines_count} deadlines
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 gap-1 text-xs">
+                        {[
+                          { key: 'hte_assessment_form', label: 'HTE Assessment Form', status: 'active' },
+                          { key: 'student_verification', label: 'Student Verification', status: 'active' },
+                          { key: 'student_assessment_form', label: 'Student Assessment Form', status: 'active' },
+                          { key: 'internship_placement', label: 'Internship Placement', status: 'active' },
+                          { key: 'archive_students', label: 'Archive Students', status: 'completed' }
+                        ].map((category) => (
+                          <div key={category.key} className="flex items-center gap-2">
+                            <div className={`w-2 h-2 rounded-full ${
+                              category.status === 'active' ? 'bg-green-500' : 
+                              category.status === 'completed' ? 'bg-blue-500' : 
+                              'bg-gray-300'
+                            }`} />
+                            <span className={`${
+                              category.status === 'active' ? 'text-green-700' : 
+                              category.status === 'completed' ? 'text-blue-700' : 
+                              'text-gray-500'
+                            }`}>
+                              {category.label}
+                            </span>
+                            <span className={`text-xs ml-auto ${
+                              category.status === 'active' ? 'text-green-600' : 
+                              category.status === 'completed' ? 'text-blue-600' : 
+                              'text-gray-400'
+                            }`}>
+                              {category.status === 'active' ? 'Active' : 
+                               category.status === 'completed' ? 'Completed' : 
+                               'Pending'}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                      
+                      {season.status === 'active' && (
+                        <div className="text-xs text-blue-600 bg-blue-50 p-2 rounded border border-blue-200">
+                          <div className="flex items-center gap-1 mb-1">
+                            <CheckCircleIcon className="h-3 w-3" />
+                            <strong>Season Active</strong>
+                          </div>
+                          <div>
+                            Deadlines are currently active and students can submit their requirements.
+                          </div>
+                        </div>
+                      )}
+                      
+                      {season.status === 'completed' && (
+                        <div className="text-xs text-gray-600 bg-gray-50 p-2 rounded border border-gray-200">
+                          <div className="flex items-center gap-1 mb-1">
+                            <ClockIcon className="h-3 w-3" />
+                            <strong>Season Completed</strong>
+                          </div>
+                          <div>
+                            All deadlines have been processed and the season is now completed.
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
-                {/* Deadline Requirements */}
-                {season.status === 'inactive' && (
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="text-sm font-medium text-gray-700">Deadline Requirements:</div>
-                      <div className="text-xs text-gray-500">
-                        {season.deadlines_count}/5 completed
-                      </div>
-                    </div>
-                    
-                    {/* Progress Bar */}
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div 
-                        className="bg-green-500 h-2 rounded-full transition-all duration-300" 
-                        style={{ width: `${(season.deadlines_count / 5) * 100}%` }}
-                      />
-                    </div>
-                    
-                    <div className="grid grid-cols-1 gap-1 text-xs">
-                      {[
-                        { key: 'hte_assessment_form', label: 'HTE Assessment Form' },
-                        { key: 'student_verification', label: 'Student Verification' },
-                        { key: 'student_assessment_form', label: 'Student Assessment Form' },
-                        { key: 'internship_placement', label: 'Internship Placement' },
-                        { key: 'archive_students', label: 'Archive Students' }
-                      ].map((category) => (
-                        <div key={category.key} className="flex items-center gap-2">
-                          <div className={`w-2 h-2 rounded-full ${
-                            season.deadlines_count >= 5 ? 'bg-green-500' : 'bg-gray-300'
-                          }`} />
-                          <span className={`${
-                            season.deadlines_count >= 5 ? 'text-green-700' : 'text-gray-500'
-                          }`}>
-                            {category.label}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                    
-                    {season.deadlines_count < 5 && (
-                      <div className="text-xs text-amber-600 bg-amber-50 p-2 rounded border border-amber-200">
-                        <div className="flex items-center gap-1 mb-1">
-                          <ClockIcon className="h-3 w-3" />
-                          <strong>Activation Pending</strong>
-                        </div>
-                        <div className="mb-2">
-                          {5 - season.deadlines_count} more deadline{5 - season.deadlines_count !== 1 ? 's' : ''} required to activate this season.
-                        </div>
-                        <div>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => router.get('/admin/events')}
-                            className="text-xs h-6 px-2"
-                          >
-                            Create Deadlines
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {season.deadlines_count >= 5 && (
-                      <div className="text-xs text-green-600 bg-green-50 p-2 rounded border border-green-200">
-                        <div className="flex items-center gap-1 mb-1">
-                          <CheckCircleIcon className="h-3 w-3" />
-                          <strong>Ready for Activation</strong>
-                        </div>
-                        <div>
-                          All deadline categories created. This season can now be activated.
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Actions */}
-                <div className="flex flex-wrap gap-2">
+                {/* Actions - Pushed to bottom */}
+                <div className="mt-auto pt-4 space-y-2">
                   {season.status === 'active' ? (
                     <Button
                       size="sm"
                       variant="destructive"
                       onClick={() => handleDeactivateSeason(season)}
                       disabled={isLoading}
+                      className="w-full"
                     >
                       Deactivate
                     </Button>
@@ -439,34 +510,17 @@ export default function SeasonsManagement({ seasons, activeSeason }: Props) {
                       onClick={() => handleActivateSeason(season)}
                       disabled={isLoading || season.deadlines_count < 5}
                       title={season.deadlines_count < 5 ? 'All 5 deadline categories required' : ''}
+                      className="w-full"
                     >
                       Activate
                     </Button>
                   ) : null}
                   
-                  {season.status === 'completed' && (
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => {
-                        if (confirm('Are you sure you want to archive all students in this season? This action cannot be undone.')) {
-                          setIsLoading(true);
-                          router.post(`/admin/seasons/${season.id}/archive-students`, {}, {
-                            onFinish: () => setIsLoading(false),
-                          });
-                        }
-                      }}
-                      disabled={isLoading}
-                    >
-                      <ArchiveIcon className="h-4 w-4 mr-1" />
-                      Archive Students
-                    </Button>
-                  )}
-                  
                   <Button
                     size="sm"
                     variant="outline"
                     onClick={() => router.get(`/admin/seasons/${season.id}/stats`)}
+                    className="w-full"
                   >
                     View Stats
                   </Button>
