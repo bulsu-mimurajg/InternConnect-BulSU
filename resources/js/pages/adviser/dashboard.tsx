@@ -374,6 +374,7 @@ export default function AdviserDashboard({ stats, recentAssessments, placementOv
                     </Card>
                 </div>
             </div>
+        </div>
         </AppLayout>
     );
 }
