@@ -2,6 +2,7 @@
 
 use App\Models\User;
 use App\Models\AcademeAccount;
+use App\Models\InternshipSeason;
 use App\Models\Section;
 use App\Models\Request as RequestModel;
 use Database\Seeders\RolePermissionSeeder;
@@ -90,4 +91,91 @@ test('registration requires valid section_id', function () {
 
     // Check that no academe account was created
     $this->assertDatabaseCount('academe_accounts', 0);
+});
+
+test('registration screen shows closed message when no active season', function () {
+    // Ensure no active season exists
+    InternshipSeason::where('status', 'active')->update(['status' => 'completed']);
+    
+    $response = $this->get('/register');
+    
+    $response->assertStatus(200);
+    $response->assertInertia(fn ($page) => 
+        $page->component('auth/register')
+            ->has('hasActiveSeason', false)
+            ->has('message')
+    );
+});
+
+test('registration is blocked when no active season exists', function () {
+    // Ensure no active season exists
+    InternshipSeason::where('status', 'active')->update(['status' => 'completed']);
+    
+    // Create a section for the test
+    $section = Section::create([
+        'section_name' => 'BSIT-1A',
+        'status' => 'active'
+    ]);
+
+    $response = $this->post('/register', [
+        'username' => '2022100123',
+        'email' => 'test@example.com',
+        'password' => '@Pass123',
+        'password_confirmation' => '@Pass123',
+        'section_id' => $section->section_id,
+    ]);
+
+    $response->assertSessionHasErrors(['season']);
+    
+    // Check that no user was created
+    $this->assertDatabaseMissing('users', [
+        'email' => 'test@example.com'
+    ]);
+});
+
+test('registration works when active season exists', function () {
+    // Create an active internship season
+    InternshipSeason::create([
+        'name' => 'Test Season 2024',
+        'start_date' => now()->subDays(30),
+        'end_date' => now()->addDays(30),
+        'status' => 'active'
+    ]);
+    
+    // Create a section for the test
+    $section = Section::create([
+        'section_name' => 'BSIT-1A',
+        'status' => 'active'
+    ]);
+
+    $response = $this->post('/register', [
+        'username' => '2022100123',
+        'email' => 'test@example.com',
+        'password' => '@Pass123',
+        'password_confirmation' => '@Pass123',
+        'section_id' => $section->section_id,
+    ]);
+
+    $response->assertRedirect(route('login', absolute: false));
+    $response->assertSessionHas('status', 'Registration successful! Please check your email and click the verification link to complete your registration.');
+});
+
+test('registration screen shows active season info when season exists', function () {
+    // Create an active internship season
+    $season = InternshipSeason::create([
+        'name' => 'Test Season 2024',
+        'start_date' => now()->subDays(30),
+        'end_date' => now()->addDays(30),
+        'status' => 'active'
+    ]);
+    
+    $response = $this->get('/register');
+    
+    $response->assertStatus(200);
+    $response->assertInertia(fn ($page) => 
+        $page->component('auth/register')
+            ->has('hasActiveSeason', true)
+            ->has('activeSeason')
+            ->where('activeSeason.name', $season->name)
+    );
 });

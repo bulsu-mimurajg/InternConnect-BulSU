@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\AcademeAccount;
 use App\Models\EmailVerificationAttempt;
+use App\Models\InternshipSeason;
 use App\Models\Request as RequestModel;
 use App\Models\Section;
 use App\Models\User;
@@ -36,10 +37,16 @@ class RegisteredUserController extends Controller
      */
     public function create(): Response
     {
+        // Check if there's an active internship season
+        $activeSeason = InternshipSeason::getActiveSeason();
+        
         $sections = Section::where('status', 'active')->get(['section_id', 'section_name']);
 
         return Inertia::render('auth/register', [
-            'sections' => $sections
+            'sections' => $sections,
+            'hasActiveSeason' => $activeSeason !== null,
+            'activeSeason' => $activeSeason,
+            'message' => $activeSeason ? null : 'Registration is currently closed. No active internship season is available.'
         ]);
     }
 
@@ -50,6 +57,15 @@ class RegisteredUserController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        // Check if there's an active internship season
+        $activeSeason = InternshipSeason::getActiveSeason();
+        
+        if (!$activeSeason) {
+            return back()->withErrors([
+                'season' => 'Registration is currently closed. No active internship season is available.'
+            ])->withInput();
+        }
+
         // Check rate limiting for email verification attempts
         if (!EmailVerificationAttempt::canAttemptVerification($request->email)) {
             $timeRemaining = EmailVerificationAttempt::getFormattedTimeUntilNextAttempt($request->email);

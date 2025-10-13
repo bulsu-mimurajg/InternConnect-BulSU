@@ -1638,10 +1638,6 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                                                                             <span className="text-muted-foreground">Total Matches:</span>
                                                                             <span className="ml-1 font-medium">{student.total_matches}</span>
                                                                         </div>
-                                                                        <div>
-                                                                            <span className="text-muted-foreground">Rejected:</span>
-                                                                            <span className="ml-1 font-medium">{student.rejected_matches}</span>
-                                                                        </div>
                                                                     </div>
                                                                 </div>
 
@@ -1706,9 +1702,6 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                                                                         <td className="p-2 text-center">
                                                                     <div className="text-sm">
                                                                                 <div className="font-medium">{student.total_matches}</div>
-                                                                                <div className="text-xs text-muted-foreground">
-                                                                                    {student.rejected_matches} rejected
-                                                                        </div>
                                                                     </div>
                                                                 </td>
                                                                         <td className="p-2 text-center">

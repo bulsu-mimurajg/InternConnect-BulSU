@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Log;
 class StudentArchiveService
 {
     /**
-     * Archive students by season
+     * Archive students by season (preserves placement history)
      */
     public function archiveStudentsBySeason(int $seasonId): int
     {
@@ -24,11 +24,11 @@ class StudentArchiveService
             $archivedCount = 0;
 
             foreach ($students as $student) {
-                $this->archiveStudent($student);
+                $this->archiveStudentForSeason($student);
                 $archivedCount++;
             }
 
-            Log::info('Bulk archived students by season', [
+            Log::info('Bulk archived students by season (preserving placement history)', [
                 'season_id' => $seasonId,
                 'archived_count' => $archivedCount,
             ]);
@@ -38,7 +38,53 @@ class StudentArchiveService
     }
 
     /**
-     * Archive a single student
+     * Archive a single student for season completion (preserves placement history)
+     */
+    public function archiveStudentForSeason(Student $student): bool
+    {
+        return DB::transaction(function () use ($student) {
+            // Check if student is already archived
+            if (!$student->is_active) {
+                return false;
+            }
+
+            // Reset student_matches endorsement status to pending before deleting endorsements
+            StudentMatch::where('student_id', $student->id)
+                ->where('endorsement_status', 'endorsed')
+                ->update(['endorsement_status' => 'pending']);
+
+            // Delete any active endorsements for this student to free up slots
+            Endorsement::where('student_id', $student->id)
+                ->where('status', 'endorsed')
+                ->delete();
+
+            // Archive the student (preserve placement status for historical records)
+            $student->update(['is_active' => false]);
+
+            // Archive the associated user account
+            if ($student->user) {
+                $student->user->update(['status' => 'archived']);
+            }
+
+            // Note: We preserve placement status and approved placements for historical records
+            // This allows the system to maintain a complete record of student placements
+            // across seasons without losing important placement history
+
+            Log::info('Archived student for season completion (preserving placement history)', [
+                'student_id' => $student->id,
+                'student_number' => $student->student_number,
+                'name' => $student->first_name . ' ' . $student->last_name,
+                'user_id' => $student->user_id,
+                'user_status' => 'archived',
+                'placement_status_preserved' => true,
+            ]);
+
+            return true;
+        });
+    }
+
+    /**
+     * Archive a single student (frees up slots for active students)
      */
     public function archiveStudent(Student $student): bool
     {
@@ -79,12 +125,13 @@ class StudentArchiveService
             // Reset the student's placement status since they've been removed from placements
             $student->update(['is_placed' => false]);
 
-            Log::info('Archived student and user account', [
+            Log::info('Archived student and user account (freed up slots)', [
                 'student_id' => $student->id,
                 'student_number' => $student->student_number,
                 'name' => $student->first_name . ' ' . $student->last_name,
                 'user_id' => $student->user_id,
                 'user_status' => 'archived',
+                'slots_freed' => true,
             ]);
 
             return true;

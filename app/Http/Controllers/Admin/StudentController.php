@@ -339,47 +339,29 @@ class StudentController extends Controller
      */
     public function archive(Student $student)
     {
-        // Check if student is already archived
-        if (!$student->is_active) {
+        try {
+            // Use the StudentArchiveService for consistent archiving logic
+            $archiveService = app(\App\Services\StudentArchiveService::class);
+            
+            $success = $archiveService->archiveStudent($student);
+            
+            if (!$success) {
+                return redirect()->route('student-list')->withErrors([
+                    'error' => 'This student is already archived and cannot be archived again.'
+                ]);
+            }
+
+            return redirect()->route('student-list')->with('success', 'Student archived successfully');
+        } catch (\Exception $e) {
+            \Log::error('Failed to archive student', [
+                'student_id' => $student->id,
+                'error' => $e->getMessage()
+            ]);
+
             return redirect()->route('student-list')->withErrors([
-                'error' => 'This student is already archived and cannot be archived again.'
+                'error' => 'Failed to archive student. Please try again.'
             ]);
         }
-
-        // Archive the student
-        $student->update(['is_active' => false]);
-
-        // Archive the associated user account
-        if ($student->user) {
-            $student->user->update(['status' => 'archived']);
-        }
-
-        // Reset student_matches endorsement status to pending before deleting endorsements
-        StudentMatch::where('student_id', $student->id)
-            ->where('endorsement_status', 'endorsed')
-            ->update(['endorsement_status' => 'pending']);
-
-        // Delete any active endorsements for this student to free up slots
-        // This ensures that archived students don't count toward endorsement limits
-        Endorsement::where('student_id', $student->id)
-            ->where('status', 'endorsed')
-            ->delete();
-
-        // Reset student_matches placement status to pending before deleting placements
-        StudentMatch::where('student_id', $student->id)
-            ->where('placement_status', 'approved')
-            ->update(['placement_status' => 'pending']);
-
-        // Delete any approved placements for this student to free up slots
-        // This ensures that archived students don't occupy approved slots
-        StudentPlacement::where('student_id', $student->id)
-            ->where('status', 'approved')
-            ->delete();
-
-        // Reset the student's placement status since they've been removed from placements
-        $student->update(['is_placed' => false]);
-
-        return redirect()->route('student-list')->with('success', 'Student archived successfully');
     }
 
     /**
@@ -387,20 +369,35 @@ class StudentController extends Controller
      */
     public function restore(Student $student)
     {
-        $student->update(['is_active' => true]);
+        try {
+            // Use the StudentArchiveService for consistent restore logic
+            $archiveService = app(\App\Services\StudentArchiveService::class);
+            
+            $success = $archiveService->restoreStudent($student);
+            
+            if (!$success) {
+                return redirect()->route('student-list')->withErrors([
+                    'error' => 'This student is already active and cannot be restored.'
+                ]);
+            }
 
-        // Restore the associated user account
-        if ($student->user) {
-            $student->user->update(['status' => 'verified']);
+            // Recalculate compatibility scores to ensure fresh matches
+            if ($student->is_submit) {
+                $matchingService = new \App\Services\MatchingService();
+                $matchingService->calculateAndStoreCompatibilityScores($student);
+            }
+            
+            return redirect()->route('student-list')->with('success', 'Student restored successfully and matches recalculated');
+        } catch (\Exception $e) {
+            \Log::error('Failed to restore student', [
+                'student_id' => $student->id,
+                'error' => $e->getMessage()
+            ]);
+
+            return redirect()->route('student-list')->withErrors([
+                'error' => 'Failed to restore student. Please try again.'
+            ]);
         }
-        
-        // Recalculate compatibility scores to ensure fresh matches
-        if ($student->is_submit) {
-            $matchingService = new \App\Services\MatchingService();
-            $matchingService->calculateAndStoreCompatibilityScores($student);
-        }
-        
-        return redirect()->route('student-list')->with('success', 'Student restored successfully and matches recalculated');
     }
 
     /**
