@@ -14,7 +14,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Cache;
+use App\Rules\UniqueActiveStudentNumber;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules;
@@ -98,7 +98,7 @@ class RegisteredUserController extends Controller
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
             'middle_name' => 'nullable|string|max:255',
-            'username' => 'required|digits:10|unique:'.User::class,
+            'username' => ['required', 'digits:10', new UniqueActiveStudentNumber],
             'email' => 'required|string|lowercase|email|max:255|unique:'.User::class,
             'contact_number' => 'required|string|max:11',
             'section_id' => 'required|exists:sections,section_id',

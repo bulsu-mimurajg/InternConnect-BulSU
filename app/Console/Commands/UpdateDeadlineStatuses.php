@@ -4,10 +4,17 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use App\Models\Deadline;
+use App\Services\InternshipSeasonService;
 use Carbon\Carbon;
 
 class UpdateDeadlineStatuses extends Command
 {
+    public function __construct(
+        private InternshipSeasonService $seasonService
+    ) {
+        parent::__construct();
+    }
+
     /**
      * The name and signature of the console command.
      *
@@ -61,6 +68,12 @@ class UpdateDeadlineStatuses extends Command
                 $updatedCount++;
                 
                 $this->line("Updated deadline '{$deadline->title}' ({$deadline->category}) from '{$oldStatus}' to '{$deadline->status}'");
+                
+                // Check if this is an archive students deadline that just expired
+                if ($deadline->isArchiveStudentsDeadline() && $deadline->status === 'expired') {
+                    $this->info("Archive students deadline expired. Triggering automatic archiving...");
+                    $this->seasonService->handleArchiveDeadlineExpiration($deadline->internship_season_id);
+                }
             }
         }
         

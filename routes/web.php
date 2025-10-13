@@ -1,6 +1,6 @@
 <?php
 
-use App\Http\Controllers\Admin\StudentController;
+use App\Http\Controllers\InternshipSeasonController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AssessmentController;
 use App\Http\Controllers\AdviserController;
@@ -66,6 +66,15 @@ Route::middleware(['auth', 'verified', 'role_redirect:admin'])->group(function (
     Route::put('admin/deadlines/{deadline}', [AdminController::class, 'updateDeadline'])->name('admin.deadlines.update');
     Route::patch('admin/deadlines/{deadline}/extend', [AdminController::class, 'extendDeadline'])->name('admin.deadlines.extend');
     Route::delete('admin/deadlines/{deadline}', [AdminController::class, 'deleteDeadline'])->name('admin.deadlines.delete');
+
+    // Season Management routes
+    Route::get('admin/seasons', [InternshipSeasonController::class, 'index'])->name('admin.seasons');
+    Route::post('admin/seasons', [InternshipSeasonController::class, 'store'])->name('admin.seasons.store');
+    Route::put('admin/seasons/{season}', [InternshipSeasonController::class, 'update'])->name('admin.seasons.update');
+    Route::post('admin/seasons/{season}/activate', [InternshipSeasonController::class, 'activate'])->name('admin.seasons.activate');
+    Route::post('admin/seasons/{season}/archive-students', [InternshipSeasonController::class, 'archiveStudents'])->name('admin.seasons.archive-students');
+    Route::get('admin/seasons/{season}/stats', [InternshipSeasonController::class, 'stats'])->name('admin.seasons.stats');
+    Route::get('admin/seasons/{season}/archived-students', [InternshipSeasonController::class, 'archivedStudents'])->name('admin.seasons.archived-students');
 
     // Automatic deadline processing routes
     Route::post('admin/deadlines/process-placement', [AdminController::class, 'processInternshipPlacements'])->name('admin.deadlines.process-placement');

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Carbon\Carbon;
 
 class Deadline extends Model
@@ -13,6 +14,7 @@ class Deadline extends Model
         'start_date',
         'end_date',
         'status',
+        'internship_season_id',
     ];
 
     public $timestamps = true;
@@ -21,6 +23,14 @@ class Deadline extends Model
         'start_date' => 'datetime',
         'end_date' => 'datetime',
     ];
+
+    /**
+     * Get the internship season that owns this deadline
+     */
+    public function internshipSeason(): BelongsTo
+    {
+        return $this->belongsTo(InternshipSeason::class);
+    }
 
     protected static function boot()
     {
@@ -57,6 +67,7 @@ class Deadline extends Model
             'student_assessment_form' => 'Student Assessment Form',
             'hte_assessment_form' => 'HTE Assessment Form',
             'internship_placement' => 'Internship Placement (SIP Endorsement & HTE Placement)',
+            'archive_students' => 'Archive Students',
             // Legacy support for old categories
             'sip_endorsement' => 'SIP Endorsement',
             'student_placements_by_hte' => 'Student Placements by HTE',
@@ -127,6 +138,7 @@ class Deadline extends Model
             'student_verification' => 2,
             'student_assessment_form' => 3,
             'internship_placement' => 4,
+            'archive_students' => 5,
         ];
     }
 
@@ -200,5 +212,47 @@ class Deadline extends Model
         }
         
         return ['valid' => true];
+    }
+
+    /**
+     * Check if this deadline is for archiving students
+     */
+    public function isArchiveStudentsDeadline(): bool
+    {
+        return $this->category === 'archive_students';
+    }
+
+    /**
+     * Check if deadline exists for a specific category within a season
+     */
+    public static function hasDeadlineForCategoryInSeason(string $category, int $seasonId): bool
+    {
+        return self::where('category', $category)
+            ->where('internship_season_id', $seasonId)
+            ->exists();
+    }
+
+    /**
+     * Check if deadline is currently active for a specific category within a season
+     */
+    public static function isActiveForCategoryInSeason(string $category, int $seasonId): bool
+    {
+        return self::where('category', $category)
+            ->where('internship_season_id', $seasonId)
+            ->where('status', 'active')
+            ->where('end_date', '>', Carbon::now())
+            ->exists();
+    }
+
+    /**
+     * Get active deadline for a specific category within a season
+     */
+    public static function getActiveForCategoryInSeason(string $category, int $seasonId): ?self
+    {
+        return self::where('category', $category)
+            ->where('internship_season_id', $seasonId)
+            ->where('status', 'active')
+            ->where('end_date', '>', Carbon::now())
+            ->first();
     }
 }

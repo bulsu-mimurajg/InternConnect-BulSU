@@ -54,9 +54,16 @@ interface EventsPageProps {
             order: number;
         };
     };
+    activeSeason?: {
+        id: number;
+        name: string;
+        start_date: string;
+        end_date: string;
+        status: string;
+    } | null;
 }
 
-export default function EventsPage({ activeDeadlines, expiredDeadlines, categoryOptions, nextCategory, sequenceInfo }: EventsPageProps) {
+export default function EventsPage({ activeDeadlines, expiredDeadlines, categoryOptions, nextCategory, sequenceInfo, activeSeason }: EventsPageProps) {
     const [showAddDialog, setShowAddDialog] = useState(false);
     const [editingDeadline, setEditingDeadline] = useState<Deadline | null>(null);
     const [showArchived, setShowArchived] = useState(false);
@@ -310,16 +317,79 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
                         </div>
                     </div>
 
+                    {/* Active Season Info */}
+                    {activeSeason ? (
+                        <Card className="border-green-200 bg-green-50">
+                            <CardContent className="pt-6">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <CalendarIcon className="h-5 w-5 text-green-600" />
+                                    <span className="font-medium text-green-800">Current Active Season</span>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div>
+                                        <p className="font-semibold text-green-900">{activeSeason.name}</p>
+                                        <p className="text-sm text-green-700">
+                                            {new Date(activeSeason.start_date).toLocaleDateString()} - {new Date(activeSeason.end_date).toLocaleDateString()}
+                                        </p>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <ClockIcon className="h-4 w-4 text-green-600" />
+                                        <span className="text-sm text-green-700">
+                                            {activeDeadlines.length} active deadlines
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-sm text-green-700">
+                                            Status: <Badge className="bg-green-100 text-green-800">🟢 Active</Badge>
+                                        </span>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ) : (
+                        <Card className="border-red-200 bg-red-50">
+                            <CardContent className="pt-6">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <CalendarIcon className="h-5 w-5 text-red-600" />
+                                    <span className="font-medium text-red-800">No Active Season</span>
+                                </div>
+                                <div className="space-y-2">
+                                    <p className="text-red-700">
+                                        You must create and activate an internship season before creating deadlines.
+                                    </p>
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => router.get('/admin/seasons')}
+                                        className="flex items-center gap-2 text-red-700 border-red-300 hover:bg-red-100"
+                                    >
+                                        <CalendarIcon className="h-4 w-4" />
+                                        Manage Seasons
+                                    </Button>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
+
                     {/* Action Buttons */}
                     <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                         {/* Primary Actions */}
                         <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                             <Button
                                 onClick={() => setShowAddDialog(true)}
+                                disabled={!activeSeason}
                                 className="flex items-center gap-2 h-9"
+                                title={!activeSeason ? "Create and activate an internship season first" : ""}
                             >
                                 <PlusIcon className="h-4 w-4" />
                                 Add Deadline
+                            </Button>
+                            <Button
+                                variant="outline"
+                                onClick={() => router.get('/admin/seasons')}
+                                className="flex items-center gap-2 h-9"
+                            >
+                                <CalendarIcon className="h-4 w-4" />
+                                Manage Seasons
                             </Button>
                             <Button
                                 variant="outline"

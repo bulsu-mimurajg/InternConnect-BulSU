@@ -3,7 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
-use App\Models\Student;
+use App\Models\InternshipSeason;
+use App\Services\InternshipSeasonService;
 use App\Models\AcademeAccount;
 use App\Models\StudentScore;
 use App\Models\Section;
@@ -16,6 +17,10 @@ use Inertia\Response;
 
 class AdviserController extends Controller
 {
+    public function __construct(
+        private InternshipSeasonService $seasonService
+    ) {}
+
     /**
      * Display the adviser dashboard with comprehensive statistics.
      */
@@ -675,6 +680,9 @@ class AdviserController extends Controller
                     // Get registration data from cache using user's email
                     $registrationData = Cache::get("registration_data_{$user->email}");
 
+                    // Get active season
+                    $activeSeason = $this->seasonService->getActiveSeason();
+
                     // Create student record with registration data
                     $student = Student::create([
                         'user_id' => $user->id,
@@ -688,6 +696,7 @@ class AdviserController extends Controller
                         'is_active' => true,
                         'is_submit' => false,
                         'is_placed' => false,
+                        'internship_season_id' => $activeSeason?->id,
                     ]);
 
                     // Load the section relationship

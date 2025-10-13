@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Deadline;
 use App\Models\User;
 use App\Models\Student;
 use App\Models\HTE;
@@ -12,7 +13,8 @@ use App\Models\StudentMatch;
 use App\Models\StudentPlacement;
 use App\Models\StudentScore;
 use App\Models\Endorsement;
-use App\Models\Deadline;
+use App\Models\InternshipSeason;
+use App\Services\InternshipSeasonService;
 use App\Models\Question;
 use App\Models\Category;
 use App\Services\ChartGeneratorService;
@@ -41,6 +43,10 @@ use Inertia\Response;
 
 class AdminController extends Controller
 {
+    public function __construct(
+        private InternshipSeasonService $seasonService
+    ) {}
+
     /**
      * Display the admin dashboard with comprehensive statistics.
      */
@@ -1263,7 +1269,7 @@ class AdminController extends Controller
 
             // Check if there's an active student assessment deadline
             $studentAssessmentDeadline = Deadline::getActiveForCategory('student_assessment_form');
-            
+
             if ($studentAssessmentDeadline) {
                 return redirect()->back()->withErrors([
                     'error' => 'Cannot archive HTE during an active Student Assessment deadline. Please wait until the deadline expires on ' . $studentAssessmentDeadline->end_date->format('M d, Y g:i A') . '.'
@@ -2075,6 +2081,7 @@ class AdminController extends Controller
             ['value' => 'student_assessment_form', 'label' => 'Student Assessment Form (Student Side)'],
             ['value' => 'hte_assessment_form', 'label' => 'HTE Assessment Form (HTE Side)'],
             ['value' => 'internship_placement', 'label' => 'Internship Placement (Endorsement & HTE Placement)'],
+            ['value' => 'archive_students', 'label' => 'Archive Students'],
         ];
 
         // Get next category that should be created
@@ -2104,14 +2111,14 @@ class AdminController extends Controller
 
         // Get sequence validation info for all categories
         $sequenceInfo = [];
-        foreach (['hte_assessment_form', 'student_verification', 'student_assessment_form', 'internship_placement'] as $category) {
+        foreach (['hte_assessment_form', 'student_verification', 'student_assessment_form', 'internship_placement', 'archive_students'] as $category) {
             $validation = Deadline::canCreateCategory($category);
             $sequenceInfo[$category] = [
                 'can_create' => $validation['can_create'],
                 'missing_categories' => $validation['missing_categories'],
                 'order' => $validation['current_order'],
             ];
-            
+
             // Debug logging for each category
             Log::info("Sequence validation for {$category}", [
                 'can_create' => $validation['can_create'],
@@ -2127,6 +2134,7 @@ class AdminController extends Controller
             'categoryOptions' => $categoryOptions,
             'nextCategory' => $nextCategoryInfo,
             'sequenceInfo' => $sequenceInfo,
+            'activeSeason' => $this->seasonService->getActiveSeason(),
         ]);
     }
 
@@ -2147,7 +2155,7 @@ class AdminController extends Controller
         try {
             $request->validate([
                 'title' => 'required|string|max:255',
-                'category' => 'required|in:student_verification,student_assessment_form,hte_assessment_form,internship_placement',
+                'category' => 'required|in:student_verification,student_assessment_form,hte_assessment_form,internship_placement,archive_students',
                 'start_date' => 'required|date',
                 'end_date' => 'required|date|after:start_date',
             ]);
@@ -2175,11 +2183,19 @@ class AdminController extends Controller
             if ($existingDeadline) {
                 $deadlineStatus = $existingDeadline->isExpired() ? 'expired' : 'active';
                 $deadlineEndDate = $existingDeadline->end_date->format('M d, Y g:i A');
-                
+
                 // Return validation error that will be caught by Inertia
                 return back()->withErrors([
                     'category' => "A {$deadlineStatus} deadline already exists for this category ({$existingDeadline->getCategoryDisplayName()}). The existing deadline ends on {$deadlineEndDate}. Please extend or update the existing deadline instead of creating a new one."
                 ])->withInput();
+            }
+
+            // Get active season
+            $activeSeason = $this->seasonService->getActiveSeason();
+            if (!$activeSeason) {
+                return redirect()->back()
+                    ->withErrors(['error' => 'No active internship season found. Please create and activate a season first.'])
+                    ->withInput();
             }
 
             $deadline = Deadline::create([
@@ -2187,6 +2203,7 @@ class AdminController extends Controller
                 'category' => $request->category,
                 'start_date' => $request->start_date,
                 'end_date' => $request->end_date,
+                'internship_season_id' => $activeSeason->id,
             ]);
 
             Log::info('Deadline created successfully', [

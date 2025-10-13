@@ -2,7 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Student;
+use App\Models\InternshipSeason;
+use App\Services\InternshipSeasonService;
 use App\Models\Section;
 use App\Models\User;
 use App\Services\AdviserNotificationService;
@@ -13,6 +14,10 @@ use Illuminate\Support\Facades\Validator;
 
 class StudentController extends Controller
 {
+    public function __construct(
+        private InternshipSeasonService $seasonService
+    ) {}
+
     /**
      * Show the student signup form
      */
@@ -57,6 +62,9 @@ class StudentController extends Controller
         // Assign student role
         $user->assignRole('student');
 
+        // Get active season
+        $activeSeason = $this->seasonService->getActiveSeason();
+
         // Create the student record
         $student = Student::create([
             'user_id' => $user->id,
@@ -72,6 +80,7 @@ class StudentController extends Controller
             'is_submit' => false,
             'is_placed' => false,
             'is_active' => true,
+            'internship_season_id' => $activeSeason?->id,
         ]);
 
         // Load the section relationship for the notification

@@ -19,6 +19,7 @@ return new class extends Migration
                 'student_verification',
                 'student_assessment_form',
                 'internship_placement',
+                'archive students',
             ]);
             $table->dateTime('start_date');
             $table->dateTime('end_date');
