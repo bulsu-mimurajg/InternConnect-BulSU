@@ -2028,7 +2028,10 @@ class StudentController extends Controller
 
         // Base query for endorsed students
         $query = Endorsement::with(['student.section', 'internship.hte'])
-            ->where('status', 'endorsed'); // Only show endorsed students
+            ->where('status', 'endorsed') // Only show endorsed students
+            ->whereHas('student', function($q) {
+                $q->where('is_placed', false); // Exclude students who are already placed
+            });
 
         // Apply section filter
         if ($sectionFilter && $sectionFilter !== 'all') {
@@ -2109,6 +2112,9 @@ class StudentController extends Controller
         // Get section options for filter
         $sectionOptions = Endorsement::with(['student.section'])
             ->where('status', 'endorsed')
+            ->whereHas('student', function($q) {
+                $q->where('is_placed', false); // Exclude students who are already placed
+            })
             ->get()
             ->groupBy('student.section.section_name')
             ->map(function ($endorsements, $sectionName) {
@@ -2122,6 +2128,9 @@ class StudentController extends Controller
         // Get internship options for filter
         $internshipOptions = Endorsement::with(['internship.hte'])
             ->where('status', 'endorsed')
+            ->whereHas('student', function($q) {
+                $q->where('is_placed', false); // Exclude students who are already placed
+            })
             ->get()
             ->groupBy('internship.id')
             ->map(function ($endorsements, $internshipId) {

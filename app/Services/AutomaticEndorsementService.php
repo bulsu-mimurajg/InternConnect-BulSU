@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Student;
 use App\Models\StudentMatch;
+use App\Models\StudentPlacement;
 use App\Models\Endorsement;
 use App\Models\Deadline;
 use App\Models\Internship;
@@ -147,5 +148,83 @@ class AutomaticEndorsementService
                 $internship->id
             );
         }
+    }
+    
+    /**
+     * Process endorsements for matched students (Tier 2)
+     */
+    public function processMatchedStudentsEndorsement(): array
+    {
+        $results = [
+            'endorsed_count' => 0,
+            'errors' => [],
+            'skipped_count' => 0
+        ];
+
+        try {
+            // Get all students who have submitted assessments and are not yet placed
+            $students = Student::with(['compatibilityScores.internship.hte'])
+                ->where('is_submit', true)
+                ->where('is_active', true)
+                ->where('is_placed', false)
+                ->whereDoesntHave('endorsements', function($q) {
+                    $q->where('status', 'endorsed');
+                })
+                ->get();
+
+            Log::info("Found {$students->count()} matched students for auto-endorsement");
+
+            foreach ($students as $student) {
+                try {
+                    // Get student's matches by highest compatibility
+                    $matches = $student->compatibilityScores()
+                        ->with(['internship.hte'])
+                        ->where('endorsement_status', 'pending')
+                        ->orderBy('compatibility_score', 'desc')
+                        ->get();
+
+                    if ($matches->isEmpty()) {
+                        $results['skipped_count']++;
+                        Log::warning("No pending matches found for student {$student->id}");
+                        continue;
+                    }
+
+                    $endorsed = false;
+                    foreach ($matches as $candidateMatch) {
+                        // Check available slots
+                        $availableSlots = $candidateMatch->internship->slot_count -
+                            StudentPlacement::where('internship_id', $candidateMatch->internship_id)
+                                ->where('status', 'approved')
+                                ->count();
+
+                        if ($availableSlots > 0) {
+                            // Endorse the student to this internship
+                            $this->endorseStudent($student, $candidateMatch);
+                            $results['endorsed_count']++;
+                            $endorsed = true;
+                            Log::info("Auto-endorsed student {$student->id} for internship {$candidateMatch->internship_id}");
+                            break;
+                        }
+                    }
+
+                    if (!$endorsed) {
+                        $results['skipped_count']++;
+                        Log::warning("No available slots for student {$student->id} in any matched internship");
+                    }
+
+                } catch (\Exception $e) {
+                    $error = "Error processing student {$student->id}: " . $e->getMessage();
+                    $results['errors'][] = $error;
+                    Log::error($error);
+                }
+            }
+
+        } catch (\Exception $e) {
+            $error = "Matched student endorsement processing failed: " . $e->getMessage();
+            $results['errors'][] = $error;
+            Log::error($error, ['trace' => $e->getTraceAsString()]);
+        }
+
+        return $results;
     }
 }

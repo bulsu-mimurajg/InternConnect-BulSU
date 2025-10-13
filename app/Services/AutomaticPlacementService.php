@@ -103,27 +103,13 @@ class AutomaticPlacementService
     public function processEndorsedStudentsPlacements(): array
     {
         $results = [
-            'endorsed_placed_count' => 0,
-            'errors' => []
+            'placed_count' => 0,
+            'errors' => [],
+            'skipped_count' => 0,
         ];
 
         try {
-            // Check if internship placement deadline is within 30 minutes
-            $deadline = Deadline::where(function($query) {
-                    $query->where('category', 'internship_placement')
-                        ->orWhere('category', 'student_placements_by_hte');
-                })
-                ->where('status', 'active')
-                ->where('end_date', '<=', now()->addMinutes(30))
-                ->where('end_date', '>', now())
-                ->first();
-
-            if (!$deadline) {
-                Log::info('No active internship placement deadline within 30 minutes');
-                return $results;
-            }
-
-            Log::info('Endorsed students placement trigger: Deadline within 30 minutes, placing already-endorsed students');
+            Log::info('Processing endorsed students for placement');
 
             // Get all endorsed students who haven't been placed yet
             $endorsedStudents = Endorsement::with(['student', 'internship.hte'])
@@ -134,7 +120,7 @@ class AutomaticPlacementService
                 ->get();
 
             if ($endorsedStudents->isEmpty()) {
-                Log::info('No endorsed students found needing placement');
+                Log::info('No endorsed students found for placement');
                 return $results;
             }
 
@@ -156,7 +142,11 @@ class AutomaticPlacementService
                     $availableSlots = $totalSlots - $currentPlacements;
 
                     if ($availableSlots <= 0) {
-                        Log::info("No available slots for internship {$internshipId}, skipping");
+                        Log::info("No available slots for internship {$internshipId}, trying fallback");
+                        // Try fallback for these students
+                        foreach ($endorsements as $endorsement) {
+                            $this->tryFallbackPlacement($endorsement, $results);
+                        }
                         continue;
                     }
 
@@ -172,13 +162,13 @@ class AutomaticPlacementService
                         if ($placedCount < $availableSlots) {
                             // Place this student
                             $this->placeStudent($endorsement);
+                            $results['placed_count']++;
                             $placedCount++;
-                            $results['endorsed_placed_count']++;
 
-                            Log::info("Placed endorsed student {$endorsement->student_id} in internship {$internshipId} (rank: " . ($index + 1) . ", compatibility: {$endorsement->compatibility_score}%)");
+                            Log::info("Placed student {$endorsement->student_id} in internship {$internshipId} (rank: " . ($index + 1) . ")");
                         } else {
-                            // No more slots available, try fallback
-                            $this->processStudentFallback($endorsement, $results);
+                            // No more slots, try fallback
+                            $this->tryFallbackPlacement($endorsement, $results);
                         }
                     }
 
@@ -357,22 +347,7 @@ class AutomaticPlacementService
         ];
 
         try {
-            // Check if internship placement deadline is within 10 minutes
-            $deadline = Deadline::where(function($query) {
-                    $query->where('category', 'internship_placement')
-                        ->orWhere('category', 'student_placements_by_hte');
-                })
-                ->where('status', 'active')
-                ->where('end_date', '<=', now()->addMinutes(10))
-                ->where('end_date', '>', now())
-                ->first();
-
-            if (!$deadline) {
-                Log::info('No active internship placement deadline within 10 minutes');
-                return $results;
-            }
-
-            Log::info('Emergency placement trigger: Deadline within 10 minutes, processing students with no fallbacks');
+            Log::info('Processing emergency placements for remaining students');
 
             // Find students who:
             // 1. Are not placed yet
@@ -399,6 +374,8 @@ class AutomaticPlacementService
 
             foreach ($studentsNeedingEmergencyPlacement as $student) {
                 try {
+                    $placed = false;
+                    
                     // Check if student has ANY pending matches left
                     $pendingMatches = $student->matches->where('endorsement_status', 'pending');
                     
@@ -515,10 +492,24 @@ class AutomaticPlacementService
                             }
 
                             $results['emergency_placed_count']++;
+                            $placed = true;
                             Log::info("Emergency placement successful for student {$student->id} in internship {$bestAvailableInternship->id}");
                         } else {
                             Log::warning("No suitable internship found for emergency placement for student {$student->id}");
                         }
+                    }
+
+                    if (!$placed) {
+                        // Mark student as unplaced and requiring manual intervention
+                        \App\Models\UnplacedStudent::updateOrCreate(
+                            ['student_id' => $student->id],
+                            [
+                                'reason' => 'All internships have no available slots',
+                                'requires_manual_intervention' => true,
+                            ]
+                        );
+                        
+                        Log::warning("Student {$student->id} marked as unplaced - no available slots in any internship");
                     }
 
                 } catch (\Exception $e) {
@@ -712,5 +703,46 @@ class AutomaticPlacementService
         // No available internships for fallback
         $results['skipped_count']++;
         Log::warning("No available internships for fallback for student {$student->id}");
+    }
+    
+    /**
+     * Try fallback placement for an endorsed student
+     */
+    private function tryFallbackPlacement(Endorsement $endorsement, array &$results): void
+    {
+        // Get student's other matches sorted by compatibility
+        $fallbackMatches = $endorsement->student->compatibilityScores()
+            ->with('internship')
+            ->where('internship_id', '!=', $endorsement->internship_id)
+            ->orderBy('compatibility_score', 'desc')
+            ->get();
+
+        foreach ($fallbackMatches as $match) {
+            $availableSlots = $match->internship->slot_count -
+                StudentPlacement::where('internship_id', $match->internship_id)
+                    ->where('status', 'approved')
+                    ->count();
+
+            if ($availableSlots > 0) {
+                // Place in fallback internship
+                StudentPlacement::create([
+                    'student_id' => $endorsement->student_id,
+                    'internship_id' => $match->internship_id,
+                    'status' => 'approved',
+                    'compatibility_score' => $match->compatibility_score,
+                    'placement_date' => now(),
+                ]);
+
+                $endorsement->student->update(['is_placed' => true]);
+                $results['placed_count']++;
+
+                Log::info("Placed student {$endorsement->student_id} in fallback internship {$match->internship_id}");
+                return;
+            }
+        }
+
+        // No fallback available
+        $results['skipped_count']++;
+        Log::warning("No fallback placement available for student {$endorsement->student_id}");
     }
 }

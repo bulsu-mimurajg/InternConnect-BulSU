@@ -106,6 +106,12 @@ class InternshipSeasonService
             // Get count of active deadlines before expiring them
             $activeDeadlinesCount = $season->deadlines()->where('status', 'active')->count();
             
+            // Check if internship placement deadline is active
+            $hasActivePlacementDeadline = $season->deadlines()
+                ->where('category', 'internship_placement')
+                ->where('status', 'active')
+                ->exists();
+            
             // Expire all active deadlines in the season
             $expiredCount = $season->deadlines()->where('status', 'active')->update(['status' => 'expired']);
             
@@ -117,7 +123,14 @@ class InternshipSeasonService
                 'season_name' => $season->name,
                 'active_deadlines_count' => $activeDeadlinesCount,
                 'expired_deadlines_count' => $expiredCount,
+                'had_active_placement_deadline' => $hasActivePlacementDeadline,
             ]);
+            
+            // Trigger automatic placement if internship placement deadline was active
+            if ($hasActivePlacementDeadline) {
+                Log::info('Triggering automatic placement due to season deactivation');
+                $this->triggerAutomaticPlacementForSeason($season);
+            }
             
             return true;
         });
@@ -272,5 +285,34 @@ class InternshipSeasonService
                 'season_id' => $seasonId,
             ]);
         }
+    }
+    
+    /**
+     * Trigger automatic placement for a season
+     */
+    private function triggerAutomaticPlacementForSeason(InternshipSeason $season): void
+    {
+        // Tier 1: Place endorsed students
+        $placementService = app(\App\Services\AutomaticPlacementService::class);
+        $tier1Results = $placementService->processEndorsedStudentsPlacements();
+        
+        // Tier 2: Auto-endorse and place matched students
+        $endorsementService = app(\App\Services\AutomaticEndorsementService::class);
+        $tier2EndorseResults = $endorsementService->processMatchedStudentsEndorsement();
+        $tier2PlaceResults = $placementService->processEndorsedStudentsPlacements();
+        
+        // Tier 3: Emergency placement
+        $tier3Results = $placementService->processEmergencyPlacements();
+        
+        $totalPlaced = $tier1Results['placed_count'] + $tier2PlaceResults['placed_count'] + $tier3Results['emergency_placed_count'];
+        
+        Log::info('Automatic placement completed for season deactivation', [
+            'season_id' => $season->id,
+            'tier1_placed' => $tier1Results['placed_count'],
+            'tier2_endorsed' => $tier2EndorseResults['endorsed_count'],
+            'tier2_placed' => $tier2PlaceResults['placed_count'],
+            'tier3_emergency' => $tier3Results['emergency_placed_count'],
+            'total_placed' => $totalPlaced,
+        ]);
     }
 }

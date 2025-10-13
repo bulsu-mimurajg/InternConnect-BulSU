@@ -11,3 +11,6 @@ Artisan::command('inspire', function () {
 // Schedule deadline notification checks every hour
 Schedule::command('deadlines:check-notifications')->hourly();
 Schedule::command('student-deadlines:check-notifications')->hourly();
+
+// Update deadline statuses every minute
+Schedule::command('deadlines:update-statuses')->everyMinute();
