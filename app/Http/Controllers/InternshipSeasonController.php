@@ -273,6 +273,14 @@ class InternshipSeasonController extends Controller
         $stats = $this->seasonService->getSeasonStats($season->id);
         $archivedStudents = $this->archiveService->getArchivedStudentsBySeason($season->id);
         
+        // Get placed students for this season (students with approved placements)
+        $placedStudents = \App\Models\Student::where('internship_season_id', $season->id)
+            ->whereHas('placements', function($q) {
+                $q->where('status', 'approved');
+            })
+            ->with(['section', 'placements.internship'])
+            ->get();
+        
         // Get unplaced students for this season
         $unplacedStudents = UnplacedStudent::whereHas('student', function($q) use ($season) {
                 $q->where('internship_season_id', $season->id);
@@ -285,6 +293,7 @@ class InternshipSeasonController extends Controller
             'season' => $season,
             'stats' => $stats,
             'archivedStudents' => $archivedStudents,
+            'placedStudents' => $placedStudents,
             'unplacedStudents' => $unplacedStudents,
         ]);
     }

@@ -41,6 +41,30 @@ interface SeasonStats {
   next_category?: string;
 }
 
+interface PlacedStudent {
+  id: number;
+  student_number: string;
+  first_name: string;
+  last_name: string;
+  middle_name?: string;
+  section: {
+    section_name: string;
+  };
+  is_active: boolean;
+  created_at: string;
+  placements: {
+    id: number;
+    status: string;
+    compatibility_score: number;
+    placement_date: string;
+    internship: {
+      id: number;
+      company_name: string;
+      position_title: string;
+    };
+  }[];
+}
+
 interface UnplacedStudent {
   id: number;
   student_id: number;
@@ -54,10 +78,11 @@ interface Props {
   season: InternshipSeason;
   stats: SeasonStats;
   archivedStudents: Student[];
+  placedStudents: PlacedStudent[];
   unplacedStudents: UnplacedStudent[];
 }
 
-export default function SeasonStats({ season, stats, archivedStudents, unplacedStudents }: Props) {
+export default function SeasonStats({ season, stats, archivedStudents, placedStudents, unplacedStudents }: Props) {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'active':
@@ -188,6 +213,20 @@ export default function SeasonStats({ season, stats, archivedStudents, unplacedS
             </CardContent>
           </Card>
 
+          {/* Placed Students */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Placed Students</CardTitle>
+              <CheckCircleIcon className="h-4 w-4 text-green-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">{placedStudents.length}</div>
+              <p className="text-xs text-muted-foreground">
+                Successfully placed
+              </p>
+            </CardContent>
+          </Card>
+
           {/* Unplaced Students */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -301,6 +340,128 @@ export default function SeasonStats({ season, stats, archivedStudents, unplacedS
                   <div className="text-center py-8 text-gray-500">
                     <ArchiveIcon className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                     <p>No archived students for this season</p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Placed Students List */}
+        {placedStudents.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CheckCircleIcon className="h-5 w-5 text-green-600" />
+                Placed Students ({placedStudents.length})
+              </CardTitle>
+              <CardDescription>
+                Students who have been successfully placed in internships for this season
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {/* Mobile Cards */}
+                <div className="block md:hidden space-y-3">
+                  {placedStudents.map((student) => {
+                    const approvedPlacement = student.placements.find(p => p.status === 'approved');
+                    return (
+                      <Card key={student.id} className="p-4 border-green-200 bg-green-50">
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <h4 className="font-medium">
+                              {student.last_name}, {student.first_name}
+                              {student.middle_name && ` ${student.middle_name}`}
+                            </h4>
+                            <Badge className="bg-green-100 text-green-800 text-xs">
+                              Placed
+                            </Badge>
+                          </div>
+                          <div className="text-sm text-gray-600 space-y-1">
+                            <p>Student Number: {student.student_number}</p>
+                            <p>Section: {student.section.section_name}</p>
+                            {approvedPlacement && (
+                              <>
+                                <p className="text-green-700">
+                                  <strong>Company:</strong> {approvedPlacement.internship.company_name}
+                                </p>
+                                <p className="text-green-700">
+                                  <strong>Position:</strong> {approvedPlacement.internship.position_title}
+                                </p>
+                                <p className="text-green-700">
+                                  <strong>Compatibility Score:</strong> {approvedPlacement.compatibility_score}%
+                                </p>
+                                <p className="text-green-700">
+                                  <strong>Placed:</strong> {formatDateTime(approvedPlacement.placement_date)}
+                                </p>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </Card>
+                    );
+                  })}
+                </div>
+
+                {/* Desktop Table */}
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-3 px-4 font-medium">Student Name</th>
+                        <th className="text-left py-3 px-4 font-medium">Student Number</th>
+                        <th className="text-left py-3 px-4 font-medium">Section</th>
+                        <th className="text-left py-3 px-4 font-medium">Company</th>
+                        <th className="text-left py-3 px-4 font-medium">Position</th>
+                        <th className="text-left py-3 px-4 font-medium">Score</th>
+                        <th className="text-left py-3 px-4 font-medium">Placed Date</th>
+                        <th className="text-left py-3 px-4 font-medium">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {placedStudents.map((student) => {
+                        const approvedPlacement = student.placements.find(p => p.status === 'approved');
+                        return (
+                          <tr key={student.id} className="border-b">
+                            <td className="py-3 px-4">
+                              {student.last_name}, {student.first_name}
+                              {student.middle_name && ` ${student.middle_name}`}
+                            </td>
+                            <td className="py-3 px-4 font-mono text-sm">
+                              {student.student_number}
+                            </td>
+                            <td className="py-3 px-4">
+                              {student.section.section_name}
+                            </td>
+                            <td className="py-3 px-4 text-green-700">
+                              {approvedPlacement?.internship.company_name || 'N/A'}
+                            </td>
+                            <td className="py-3 px-4 text-green-700">
+                              {approvedPlacement?.internship.position_title || 'N/A'}
+                            </td>
+                            <td className="py-3 px-4 text-green-700">
+                              {approvedPlacement?.compatibility_score || 'N/A'}%
+                            </td>
+                            <td className="py-3 px-4 text-gray-600">
+                              {approvedPlacement ? formatDateTime(approvedPlacement.placement_date) : 'N/A'}
+                            </td>
+                            <td className="py-3 px-4">
+                              <Badge className="bg-green-100 text-green-800 text-xs">
+                                Successfully Placed
+                              </Badge>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Empty State */}
+                {placedStudents.length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    <CheckCircleIcon className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                    <p>No placed students for this season</p>
                   </div>
                 )}
               </div>
