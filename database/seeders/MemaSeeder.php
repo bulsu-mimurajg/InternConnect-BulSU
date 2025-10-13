@@ -25,7 +25,7 @@ class MemaSeeder extends Seeder
             'password' => bcrypt('password'),
         ]);
 
-        User::factory()->adviser()->create([
+        $emmanUser = User::factory()->adviser()->create([
             'username' => 'emman',
             'email' => 'emman@example.com',
             'status' => 'verified',
@@ -50,7 +50,7 @@ class MemaSeeder extends Seeder
                 'adviser_lname' => 'Santos',
                 'is_active' => true,
                 'section_ids' => [$sections->first()->section_id ?? 1], // Single section
-                'user_id' => $emmanUser->id ?? 1,
+                'user_id' => $emmanUser->id,
             ],
         ];
 
