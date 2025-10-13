@@ -48,6 +48,7 @@ interface CriteriaProps {
     highlightInvalidCategories?: boolean;
     lockedSubcategories: Set<number>;
     onToggleSubcategoryLock: (subcategoryId: number) => void;
+    onWeightChange?: () => void;
 }
 
 export default function Criteria({
@@ -62,6 +63,7 @@ export default function Criteria({
     highlightInvalidCategories = false,
     lockedSubcategories,
     onToggleSubcategoryLock,
+    onWeightChange,
 }: CriteriaProps) {
     const { control, watch, setValue } = useFormContext();
     const { auth } = usePage<SharedData>().props;
@@ -127,6 +129,16 @@ export default function Criteria({
             // Calculate remaining weight to distribute among unlocked subcategories
             // This is: 100% - (new weight + all locked weights)
             const remainingWeight = 100 - clampedWeight - lockedSubcategoriesTotal;
+            
+            // CRITICAL FIX: Prevent total from exceeding 100%
+            // If the new weight plus locked weights would exceed 100%, cap the new weight
+            const maxAllowedWeight = 100 - lockedSubcategoriesTotal;
+            if (clampedWeight > maxAllowedWeight) {
+                // Cap the weight to prevent exceeding 100% total
+                const cappedWeight = Math.max(0, maxAllowedWeight);
+                setValue(`subcategoryWeights.${subcategoryId}`, cappedWeight);
+                return;
+            }
             
             // If there are no unlocked subcategories to redistribute to, just set the weight
             if (otherUnlockedSubcategories.length === 0) {
@@ -207,8 +219,18 @@ export default function Criteria({
             }
 
             setValue(`subcategoryWeights.${subcategoryId}`, clampedWeight);
+            
+            // Notify parent component of weight change
+            if (onWeightChange) {
+                onWeightChange();
+            }
+            
+            // Force form validation update
+            setTimeout(() => {
+                console.log('Weight changed, triggering form validation update');
+            }, 0);
         },
-        [categories, subcategoryWeights, setValue, lockedSubcategories],
+        [categories, subcategoryWeights, setValue, lockedSubcategories, onWeightChange],
     );
 
     const resetToEqualWeights = useCallback(
@@ -233,25 +255,15 @@ export default function Criteria({
                 const weight = index < remainder ? baseWeight + 1 : baseWeight;
                 setValue(`subcategoryWeights.${subcat.id}`, weight);
             });
+            
+            // Notify parent component of weight change
+            if (onWeightChange) {
+                onWeightChange();
+            }
         },
-        [categories, setValue, lockedSubcategories, onToggleSubcategoryLock],
+        [categories, setValue, lockedSubcategories, onToggleSubcategoryLock, onWeightChange],
     );
 
-    const ensureAllWeightsSet = useCallback(() => {
-        categories.forEach((category) => {
-            if (category.subCategories && category.subCategories.length > 0) {
-                const subcategoryCount = category.subCategories.length;
-                const baseWeight = Math.floor(100 / subcategoryCount);
-                const remainder = 100 % subcategoryCount;
-
-                // Distribute weights evenly, with remainder distributed to first subcategories
-                category.subCategories.forEach((subcat: SubCategory, index: number) => {
-                    const weight = index < remainder ? baseWeight + 1 : baseWeight;
-                    setValue(`subcategoryWeights.${subcat.id}`, weight);
-                });
-            }
-        });
-    }, [categories, setValue]);
 
     // Memoize computed values to prevent unnecessary recalculations
     const getPieChartData = useCallback(
@@ -290,30 +302,6 @@ export default function Criteria({
     }, [categories]);
 
     // Validate that all subcategories have weights and they add up to 100% for each category
-    const validateWeights = useCallback(() => {
-        const weights = watch('subcategoryWeights') || {};
-        const validationErrors: string[] = [];
-
-        categories.forEach((category) => {
-            if (category.subCategories && category.subCategories.length > 0) {
-                const categoryWeights = category.subCategories.map((subcat) => weights[subcat.id] || 0);
-                const totalWeight = categoryWeights.reduce((sum, weight) => sum + weight, 0);
-
-                if (totalWeight !== 100) {
-                    validationErrors.push(`Category "${category.category_name}" weights must total 100% (currently ${totalWeight}%)`);
-                }
-
-                // Check if any unlocked subcategory is missing a weight
-                category.subCategories.forEach((subcat) => {
-                    if (!lockedSubcategories.has(subcat.id) && (weights[subcat.id] === undefined || weights[subcat.id] === null)) {
-                        validationErrors.push(`Subcategory "${subcat.subcategory_name}" is missing a weight`);
-                    }
-                });
-            }
-        });
-
-        return validationErrors;
-    }, [categories, watch, lockedSubcategories]);
 
 
     // Calculate overall weight status and find unset subcategories
@@ -440,7 +428,7 @@ export default function Criteria({
             {/* Categories */}
             <div className="space-y-2">
                 <h2 className="text-xl font-semibold">Assessment Criteria</h2>
-                <p className="text-muted-foreground">Assign weights to each subcategory of each category.</p>
+                <p className="text-muted-foreground">Assign weights to each subcategory of each category. Each category must total exactly 100%.</p>
                 {highlightInvalidCategories && (
                     <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
                         <div className="flex-shrink-0">
@@ -449,7 +437,10 @@ export default function Criteria({
                             </svg>
                         </div>
                         <div className="text-sm text-red-800">
-                            <strong>Validation Error:</strong> Some categories need weight adjustment. Please ensure all categories total exactly 100%.
+                            <strong>Cannot proceed:</strong> Each category must total exactly 100%. Please adjust the weights below to continue.
+                            <div className="mt-2 text-xs text-red-700">
+                                Check the progress indicator above to see which categories need adjustment.
+                            </div>
                         </div>
                     </div>
                 )}
@@ -480,6 +471,49 @@ export default function Criteria({
                 )}
             />
 
+            {/* Overall Progress Indicator */}
+            <div className="bg-muted/30 rounded-lg p-4 border border-border/50">
+                <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-medium text-foreground">Overall Progress</h3>
+                    <div className="text-sm text-muted-foreground">
+                        {categoriesWithSubcategories.filter(cat => calculateCategoryTotal(cat.id) === 100).length} of {categoriesWithSubcategories.length} categories complete
+                    </div>
+                </div>
+                <div className="space-y-2">
+                    {categoriesWithSubcategories.map((category) => {
+                        const total = calculateCategoryTotal(category.id);
+                        const isComplete = total === 100;
+                        return (
+                            <div key={category.id} className="flex items-center gap-3">
+                                <div className="flex-shrink-0 w-4 h-4">
+                                    {isComplete ? (
+                                        <div className="w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
+                                            <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                            </svg>
+                                        </div>
+                                    ) : (
+                                        <div className={`w-4 h-4 rounded-full ${
+                                            total > 100 ? 'bg-red-500' : 'bg-yellow-500'
+                                        }`}></div>
+                                    )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <div className="text-sm font-medium text-foreground truncate">
+                                        {category.category_name}
+                                    </div>
+                                </div>
+                                <div className="flex-shrink-0 text-sm font-medium">
+                                    <span className={isComplete ? 'text-green-600' : total > 100 ? 'text-red-600' : 'text-yellow-600'}>
+                                        {total}%
+                                    </span>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+
             <div className="space-y-6">
                 {categoriesWithSubcategories.map((category) => {
                     expandedCategories.has(category.id);
@@ -493,8 +527,10 @@ export default function Criteria({
                             id={`category-card-${category.category_name.toLowerCase().replace(/\s+/g, '-')}`}
                             className={`border-2 transition-all duration-300 ${
                                 highlightInvalidCategories && isInvalid 
-                                    ? 'ring-2 ring-red-500 ring-opacity-50 bg-red-50 border-red-200' 
-                                    : ''
+                                    ? 'ring-2 ring-red-500 ring-opacity-50 bg-red-50 border-red-200 shadow-lg' 
+                                    : isInvalid
+                                    ? 'border-yellow-200 bg-yellow-50/30'
+                                    : 'border-green-200 bg-green-50/30'
                             }`}
                         >
                             <CardHeader>
@@ -597,9 +633,12 @@ export default function Criteria({
                                             }`}>
                                                 {categoryTotal}%
                                             </div>
-                                                <div className="text-xs text-muted-foreground">
-                                                {categoryTotal === 100 ? 'Complete' : 
-                                                     categoryTotal > 100 ? 'Exceeds' : 'Incomplete'}
+                                                <div className={`text-xs font-medium ${
+                                                    categoryTotal === 100 ? 'text-green-600' : 
+                                                    categoryTotal > 100 ? 'text-red-600' : 'text-yellow-600'
+                                                }`}>
+                                                    {categoryTotal === 100 ? '✓ Complete' : 
+                                                     categoryTotal > 100 ? '✗ Exceeds Limit' : '⚠ Incomplete'}
                                                 </div>
                                             </div>
 

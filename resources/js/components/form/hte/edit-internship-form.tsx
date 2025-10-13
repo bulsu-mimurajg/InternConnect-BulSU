@@ -8,6 +8,9 @@ import { useState, useEffect } from 'react';
 import { Path, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { router } from '@inertiajs/react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { TooltipProvider } from '@radix-ui/react-tooltip';
+import { HelpCircle } from 'lucide-react';
 
 // Form validation schema for internship only
 const FormSchema = z.object({
@@ -55,7 +58,7 @@ interface EditInternshipFormProps {
 export default function EditInternshipForm({ categories, internship, existingWeights }: EditInternshipFormProps) {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [currentStep, setCurrentStep] = useState(0);
-    
+
     const [expandedCategories, setExpandedCategories] = useState<Set<number>>(new Set());
     const [expandedSubcategories, setExpandedSubcategories] = useState<Set<number>>(new Set());
     const [expandedQuestions, setExpandedQuestions] = useState<Set<number>>(new Set());
@@ -95,7 +98,7 @@ export default function EditInternshipForm({ categories, internship, existingWei
 
     function onSubmit(values: FormData) {
         setIsSubmitting(true);
-        
+
         router.put(`/hte/edit-internship/${internship.id}`, values, {
             onSuccess: () => {
                 setIsSubmitting(false);
@@ -114,50 +117,14 @@ export default function EditInternshipForm({ categories, internship, existingWei
 
     const next = async () => {
         let fieldsToValidate: Path<FormData>[] = [];
-        
+
         switch (currentStep) {
             case 0:
                 fieldsToValidate = ['position', 'department', 'numberOfInterns', 'duration'];
                 break;
-            case 1: {
+            case 1:
                 fieldsToValidate = ['subcategoryWeights'];
-                
-                // Check if each category totals 100%
-                const weights = form.watch('subcategoryWeights') || {};
-                const categoriesWithInvalidWeights: Array<{name: string, total: number, missing: number}> = [];
-                
-                categories.forEach((category) => {
-                    if (category.subCategories && category.subCategories.length > 0) {
-                        const categoryWeights = category.subCategories.map((subcat) => weights[subcat.id] || 0);
-                        const totalWeight = categoryWeights.reduce((sum, weight) => sum + weight, 0);
-                        
-                        if (totalWeight !== 100) {
-                            categoriesWithInvalidWeights.push({
-                                name: category.category_name,
-                                total: totalWeight,
-                                missing: 100 - totalWeight
-                            });
-                        }
-                    }
-                });
-
-                if (categoriesWithInvalidWeights.length > 0) {
-                    // Focus on the first invalid category card
-                    const firstInvalidCategory = categoriesWithInvalidWeights[0];
-                    setTimeout(() => {
-                        const categoryCard = document.getElementById(`category-card-${firstInvalidCategory.name.toLowerCase().replace(/\s+/g, '-')}`);
-                        if (categoryCard) {
-                            categoryCard.scrollIntoView({ 
-                                behavior: 'smooth', 
-                                block: 'center' 
-                            });
-                        }
-                    }, 100);
-                    
-                    return;
-                }
                 break;
-            }
         }
 
         if (fieldsToValidate.length > 0) {
@@ -168,6 +135,40 @@ export default function EditInternshipForm({ categories, internship, existingWei
         } else {
             setCurrentStep((prev) => prev + 1);
         }
+    };
+
+    // Calculate total weight for a category
+    const calculateCategoryTotal = (categoryId: number) => {
+        const category = categories.find(c => c.id === categoryId);
+        if (!category) return 0;
+
+        return category.subCategories.reduce((sum, subcat) => {
+            const weight = form.watch(`subcategoryWeights.${subcat.id}`);
+            return sum + weight;
+        }, 0);
+    };
+
+    // Check if all categories have exactly 100% weight distribution
+    const areAllCategoriesValid = () => {
+        return categories.every(category => {
+            const total = calculateCategoryTotal(category.id);
+            return total === 100;
+        });
+    };
+
+    // Lock/unlock subcategory weights
+    const [lockedSubcategories, setLockedSubcategories] = useState<Set<number>>(new Set());
+
+    const toggleSubcategoryLock = (subcategoryId: number) => {
+        setLockedSubcategories((prev) => {
+            const newSet = new Set(prev);
+            if (newSet.has(subcategoryId)) {
+                newSet.delete(subcategoryId);
+            } else {
+                newSet.add(subcategoryId);
+            }
+            return newSet;
+        });
     };
 
     return (
@@ -182,7 +183,7 @@ export default function EditInternshipForm({ categories, internship, existingWei
                             <form onSubmit={form.handleSubmit(onSubmit)}>
                                 {currentStep === 0 && <InternshipOffered />}
                                 {currentStep === 1 && (
-                                    <Criteria 
+                                    <Criteria
                                         categories={categories}
                                         loading={false}
                                         expandedCategories={expandedCategories}
@@ -191,6 +192,8 @@ export default function EditInternshipForm({ categories, internship, existingWei
                                         setExpandedCategories={setExpandedCategories}
                                         setExpandedSubcategories={setExpandedSubcategories}
                                         setExpandedQuestions={setExpandedQuestions}
+                                        lockedSubcategories={lockedSubcategories}
+                                        onToggleSubcategoryLock={toggleSubcategoryLock}
                                     />
                                 )}
                                 {currentStep === 2 && (
@@ -201,9 +204,9 @@ export default function EditInternshipForm({ categories, internship, existingWei
                                                 Please review your updated internship details and criteria weights before submitting.
                                             </p>
                                         </div>
-                                        
-                                        <Button 
-                                            type="submit" 
+
+                                        <Button
+                                            type="submit"
                                             disabled={isSubmitting}
                                             className="w-full"
                                         >
@@ -224,9 +227,27 @@ export default function EditInternshipForm({ categories, internship, existingWei
                             <Button onClick={prev} disabled={currentStep === 0} variant="outline">
                                 Previous
                             </Button>
-                            <Button onClick={next} disabled={currentStep === steps.length - 1}>
-                                Next
-                            </Button>
+                            {currentStep === 1 && !areAllCategoriesValid() ? (
+                                <div className="flex items-center gap-2">
+                                    <Button onClick={next} disabled={true}>
+                                        Next
+                                    </Button>
+                                    <TooltipProvider>
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <HelpCircle className="h-5 w-5 text-gray-400 hover:text-gray-600 cursor-help" />
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                                <p>Incomplete weights for some category</p>
+                                            </TooltipContent>
+                                        </Tooltip>
+                                    </TooltipProvider>
+                                </div>
+                            ) : (
+                                <Button onClick={next} disabled={currentStep === steps.length - 1}>
+                                    Next
+                                </Button>
+                            )}
                         </div>
                     </div>
                 </div>

@@ -10,6 +10,9 @@ import { z } from 'zod';
 import { router, usePage } from '@inertiajs/react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { TooltipProvider } from '@radix-ui/react-tooltip';
+import { HelpCircle } from 'lucide-react';
 
 // Form validation schema for internship only
 const FormSchema = z.object({
@@ -194,6 +197,34 @@ export default function AddInternshipForm() {
     const getSubcategoryWeight = (subcatId: number) => {
         return form.watch(`subcategoryWeights.${subcatId}`);
     };
+
+    // Check if all categories have exactly 100% weight distribution
+    const areAllCategoriesValid = () => {
+        return typedCategories.every(category => {
+            const total = calculateCategoryTotal(category.id);
+            return total === 100;
+        });
+    };
+
+    // Get tooltip message for disabled next button
+    const getNextButtonTooltip = () => {
+        if (currentStep === 1 && !areAllCategoriesValid()) {
+            return "Incomplete weights for some category";
+        }
+        return "";
+    };
+
+    // Check if next button should be disabled
+    const isNextButtonDisabled = () => {
+        if (currentStep === steps.length - 1) {
+            return true;
+        }
+        if (currentStep === 1 && !areAllCategoriesValid()) {
+            return true;
+        }
+        return false;
+    };
+
 
     return (
         <>
@@ -406,13 +437,16 @@ export default function AddInternshipForm() {
                                             </div>
                                         )}
 
-                                        <Button
-                                            type="submit"
-                                            disabled={isSubmitting}
-                                            className="w-full"
-                                        >
-                                            {isSubmitting ? 'Submitting...' : 'Submit Internship'}
-                                        </Button>
+                                        {/* Navigation and Submission */}
+                                        <div className="mt-6">
+                                            <Button
+                                                type="submit"
+                                                disabled={isSubmitting}
+                                                className="w-full mt-4"
+                                            >
+                                                {isSubmitting ? 'Submitting...' : 'Submit Internship'}
+                                            </Button>
+                                        </div>
                                     </div>
                                 )}
                             </form>
@@ -428,9 +462,27 @@ export default function AddInternshipForm() {
                             <Button onClick={prev} disabled={currentStep === 0} variant="outline">
                                 Previous
                             </Button>
-                            <Button onClick={next} disabled={currentStep === steps.length - 1}>
-                                Next
-                            </Button>
+                            {currentStep === 1 && !areAllCategoriesValid() ? (
+                                <div className="flex items-center gap-2">
+                                    <Button onClick={next} disabled={true}>
+                                        Next
+                                    </Button>
+                                    <TooltipProvider>
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <HelpCircle className="h-5 w-5 text-gray-400 hover:text-gray-600 cursor-help" />
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                                <p>Incomplete weights for some category</p>
+                                            </TooltipContent>
+                                        </Tooltip>
+                                    </TooltipProvider>
+                                </div>
+                            ) : (
+                                <Button onClick={next} disabled={currentStep === steps.length - 1}>
+                                    Next
+                                </Button>
+                            )}
                         </div>
                     </div>
                 </div>
