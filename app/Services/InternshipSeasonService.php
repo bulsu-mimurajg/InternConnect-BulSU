@@ -27,7 +27,7 @@ class InternshipSeasonService
                 'name' => $name,
                 'start_date' => $startDate,
                 'end_date' => $endDate,
-                'status' => 'active',
+                'status' => 'inactive',
             ]);
 
             Log::info('Created new internship season', [
@@ -42,27 +42,84 @@ class InternshipSeasonService
     }
 
     /**
-     * Activate a season and deactivate others
+     * Check if a season can be activated (all 5 deadline categories must exist)
      */
-    public function activateSeason(int $seasonId): InternshipSeason
+    public function canActivateSeason(InternshipSeason $season): array
     {
-        return DB::transaction(function () use ($seasonId) {
-            $season = InternshipSeason::findOrFail($seasonId);
+        // Check if all 5 deadline categories exist for this season
+        $requiredCategories = [
+            'hte_assessment_form',
+            'student_verification', 
+            'student_assessment_form',
+            'internship_placement',
+            'archive_students'
+        ];
+        
+        $existingCategories = $season->deadlines()->pluck('category')->toArray();
+        $missingCategories = array_diff($requiredCategories, $existingCategories);
+        
+        if (!empty($missingCategories)) {
+            return [
+                'can_activate' => false,
+                'message' => 'All 5 deadline categories must be created before activating the season.',
+                'missing_categories' => $missingCategories
+            ];
+        }
+        
+        return ['can_activate' => true];
+    }
 
-            // Deactivate all other seasons
-            InternshipSeason::where('id', '!=', $seasonId)
-                ->where('status', 'active')
-                ->update(['status' => 'completed']);
+    /**
+     * Activate a season with validation
+     */
+    public function activateSeason(InternshipSeason $season): bool
+    {
+        // Check if another season is active
+        $activeSeason = InternshipSeason::where('status', 'active')
+            ->where('id', '!=', $season->id)
+            ->first();
+        
+        if ($activeSeason) {
+            throw new \Exception('Another season is currently active. Please deactivate it first.');
+        }
+        
+        // Validate all categories exist
+        $validation = $this->canActivateSeason($season);
+        if (!$validation['can_activate']) {
+            throw new \Exception($validation['message']);
+        }
+        
+        $season->update(['status' => 'active']);
+        return true;
+    }
 
-            // Activate the selected season
-            $season->update(['status' => 'active']);
-
-            Log::info('Activated internship season', [
+    /**
+     * Deactivate a season with confirmation
+     */
+    public function deactivateSeason(InternshipSeason $season, bool $confirmed = false): bool
+    {
+        if (!$confirmed) {
+            throw new \Exception('Deactivation requires confirmation.');
+        }
+        
+        return DB::transaction(function () use ($season) {
+            // Get count of active deadlines before expiring them
+            $activeDeadlinesCount = $season->deadlines()->where('status', 'active')->count();
+            
+            // Expire all active deadlines in the season
+            $expiredCount = $season->deadlines()->where('status', 'active')->update(['status' => 'expired']);
+            
+            // Mark season as completed
+            $season->update(['status' => 'completed']);
+            
+            Log::info('Deactivated internship season and expired deadlines', [
                 'season_id' => $season->id,
-                'name' => $season->name,
+                'season_name' => $season->name,
+                'active_deadlines_count' => $activeDeadlinesCount,
+                'expired_deadlines_count' => $expiredCount,
             ]);
-
-            return $season->fresh();
+            
+            return true;
         });
     }
 

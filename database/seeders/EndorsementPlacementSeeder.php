@@ -9,6 +9,7 @@ use App\Models\StudentPlacement;
 use App\Models\StudentMatch;
 use App\Models\Section;
 use App\Models\User;
+use App\Models\InternshipSeason;
 use Illuminate\Database\Seeder;
 
 class EndorsementPlacementSeeder extends Seeder
@@ -41,6 +42,9 @@ class EndorsementPlacementSeeder extends Seeder
             $this->command->warn('No sections found. Please run SectionSeeder first.');
             return;
         }
+
+        // Get or create a season for the students
+        $season = $this->getOrCreateSeason();
 
         // Get all subcategories for assessment scores
         $subCategories = \App\Models\SubCategory::all();
@@ -130,6 +134,7 @@ class EndorsementPlacementSeeder extends Seeder
                 'is_submit' => true,
                 'is_placed' => $studentData['status'] === 'placed',
                 'is_active' => true,
+                'internship_season_id' => $season->id,
             ]);
 
             // Create academe account
@@ -213,5 +218,32 @@ class EndorsementPlacementSeeder extends Seeder
         $this->command->info("  • 1 placed student (for placed.tsx)");
         $this->command->info("All students are associated with Maria's HTE (MariaTech Solutions)");
         $this->command->info("Created {$endorsementCount} endorsements and {$placementCount} placements!");
+    }
+
+    /**
+     * Get or create a season for the students
+     */
+    private function getOrCreateSeason(): InternshipSeason
+    {
+        // First, try to find an existing season
+        $season = InternshipSeason::first();
+        
+        if ($season) {
+            $this->command->info("Using existing season: {$season->name}");
+            return $season;
+        }
+
+        // If no season exists, create a default one
+        $this->command->warn('No internship season found. Creating a default season for students...');
+        
+        $season = InternshipSeason::create([
+            'name' => 'AY 2024-2025 First Semester (Endorsement Students)',
+            'start_date' => now()->subMonths(3),
+            'end_date' => now()->addMonths(3),
+            'status' => 'inactive', // Start as inactive
+        ]);
+
+        $this->command->info("Created default season: {$season->name}");
+        return $season;
     }
 }

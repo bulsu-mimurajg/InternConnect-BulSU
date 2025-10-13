@@ -32,7 +32,7 @@ class StudentController extends Controller
         $statusFilter = $request->get('status', 'all');
         $assessmentFilter = $request->get('assessment', 'all');
         // Build students query with filters
-        $studentsQuery = Student::with(['section', 'user'])
+        $studentsQuery = Student::with(['section', 'user', 'internshipSeason'])
             ->select([
                 'id',
                 'student_number',
@@ -43,7 +43,8 @@ class StudentController extends Controller
                 'specialization',
                 'is_active',
                 'is_submit',
-                'user_id'
+                'user_id',
+                'internship_season_id'
             ]);
 
         // Apply status filter
@@ -122,7 +123,7 @@ class StudentController extends Controller
         });
 
         // Get archived students for the Show Archived functionality
-        $archivedStudents = Student::with(['section', 'user'])
+        $archivedStudents = Student::with(['section', 'user', 'internshipSeason'])
             ->select([
                 'id',
                 'student_number',
@@ -133,7 +134,8 @@ class StudentController extends Controller
                 'specialization',
                 'is_active',
                 'is_submit',
-                'user_id'
+                'user_id',
+                'internship_season_id'
             ])
             ->where('is_active', false)
             ->orderBy('last_name')

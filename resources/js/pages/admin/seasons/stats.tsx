@@ -12,7 +12,7 @@ interface InternshipSeason {
   name: string;
   start_date: string;
   end_date: string;
-  status: 'active' | 'completed' | 'archived';
+  status: 'active' | 'inactive' | 'completed' | 'archived';
   created_at: string;
   updated_at: string;
 }
@@ -52,6 +52,8 @@ export default function SeasonStats({ season, stats, archivedStudents }: Props) 
     switch (status) {
       case 'active':
         return <Badge className="bg-green-100 text-green-800">🟢 Active</Badge>;
+      case 'inactive':
+        return <Badge className="bg-gray-100 text-gray-800">⚪ Inactive</Badge>;
       case 'completed':
         return <Badge className="bg-blue-100 text-blue-800">✅ Completed</Badge>;
       case 'archived':

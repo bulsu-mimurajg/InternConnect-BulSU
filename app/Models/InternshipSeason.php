@@ -127,6 +127,7 @@ class InternshipSeason extends Model
     {
         $statusBadge = match($this->status) {
             'active' => '🟢',
+            'inactive' => '⚪',
             'completed' => '✅',
             'archived' => '📁',
             default => '❓'

@@ -14,40 +14,47 @@ class DeadlineSeeder extends Seeder
      */
     public function run(): void
     {
-        // First, ensure we have an active season
-        $activeSeason = InternshipSeason::where('status', 'active')->first();
+        // First, check if we have any seasons
+        $seasons = InternshipSeason::all();
         
-        if (!$activeSeason) {
-            $this->command->warn('No active internship season found. Creating a default season first...');
+        if ($seasons->isEmpty()) {
+            $this->command->warn('No internship seasons found. Creating a default season first...');
             
-            $activeSeason = InternshipSeason::create([
+            $defaultSeason = InternshipSeason::create([
                 'name' => 'AY 2024-2025 First Semester (Default)',
                 'start_date' => Carbon::now()->subMonths(3),
                 'end_date' => Carbon::now()->addMonths(3),
-                'status' => 'active',
+                'status' => 'inactive', // Start as inactive
             ]);
             
-            $this->command->info("Created default active season: {$activeSeason->name}");
+            $this->command->info("Created default season: {$defaultSeason->name}");
+            $seasons = collect([$defaultSeason]);
         }
 
+        // Use the first season if no active season exists
+        $targetSeason = InternshipSeason::where('status', 'active')->first() ?? $seasons->first();
+        
+        $this->command->info("Creating deadlines for season: {$targetSeason->name} (Status: {$targetSeason->status})");
+
         $categories = [
-            'student_verification',
-            'student_assessment_form', 
-            'hte_assessment_form',
-            'internship_placement',
-            'archive_students'  // Added the new archive_students category
+            'hte_assessment_form',        // 1st - HTE Assessment
+            'student_verification',       // 2nd - Student Verification  
+            'student_assessment_form',    // 3rd - Student Assessment
+            'internship_placement',       // 4th - Internship Placement
+            'archive_students'            // 5th - Archive Students
         ];
 
         $now = Carbon::now();
+        $createdCount = 0;
         
-        foreach ($categories as $category) {
-            // Create a 1-day duration deadline starting from now
-            $startDate = $now->copy();
-            $endDate = $now->copy()->addDay(); // 1 day duration
+        foreach ($categories as $index => $category) {
+            // Create deadlines with staggered start times (1 day apart)
+            $startDate = $now->copy()->addDays($index);
+            $endDate = $startDate->copy()->addDays(7); // 7-day duration for each deadline
             
-            // Check if deadline already exists for this category in the active season
+            // Check if deadline already exists for this category in the target season
             $existingDeadline = Deadline::where('category', $category)
-                ->where('internship_season_id', $activeSeason->id)
+                ->where('internship_season_id', $targetSeason->id)
                 ->first();
             
             if (!$existingDeadline) {
@@ -57,13 +64,21 @@ class DeadlineSeeder extends Seeder
                     'start_date' => $startDate,
                     'end_date' => $endDate,
                     'status' => 'active',
-                    'internship_season_id' => $activeSeason->id,  // Associate with active season
+                    'internship_season_id' => $targetSeason->id,
                 ]);
                 
-                $this->command->info("Created deadline for category: {$category} in season: {$activeSeason->name}");
+                $this->command->info("Created deadline for category: {$category} in season: {$targetSeason->name} (Start: {$startDate->format('M d, Y')})");
+                $createdCount++;
             } else {
-                $this->command->warn("Deadline already exists for category: {$category} in season: {$activeSeason->name}");
+                $this->command->warn("Deadline already exists for category: {$category} in season: {$targetSeason->name}");
             }
+        }
+        
+        $this->command->info("Deadline seeding completed. Created {$createdCount} new deadlines.");
+        
+        // Show season activation status
+        if ($targetSeason->status === 'inactive') {
+            $this->command->info("Note: Season '{$targetSeason->name}' is inactive. You can activate it after all 5 deadlines are created.");
         }
     }
 
@@ -88,39 +103,47 @@ class DeadlineSeeder extends Seeder
      */
     public function runWithCustomDuration(int $durationDays = 1): void
     {
-        // First, ensure we have an active season
-        $activeSeason = InternshipSeason::where('status', 'active')->first();
+        // First, check if we have any seasons
+        $seasons = InternshipSeason::all();
         
-        if (!$activeSeason) {
-            $this->command->warn('No active internship season found. Creating a default season first...');
+        if ($seasons->isEmpty()) {
+            $this->command->warn('No internship seasons found. Creating a default season first...');
             
-            $activeSeason = InternshipSeason::create([
+            $defaultSeason = InternshipSeason::create([
                 'name' => 'AY 2024-2025 First Semester (Default)',
                 'start_date' => Carbon::now()->subMonths(3),
                 'end_date' => Carbon::now()->addMonths(3),
-                'status' => 'active',
+                'status' => 'inactive',
             ]);
             
-            $this->command->info("Created default active season: {$activeSeason->name}");
+            $this->command->info("Created default season: {$defaultSeason->name}");
+            $seasons = collect([$defaultSeason]);
         }
 
+        // Use the first season if no active season exists
+        $targetSeason = InternshipSeason::where('status', 'active')->first() ?? $seasons->first();
+        
+        $this->command->info("Creating {$durationDays}-day deadlines for season: {$targetSeason->name}");
+
         $categories = [
-            'student_verification',
-            'student_assessment_form', 
-            'hte_assessment_form',
-            'internship_placement',
-            'archive_students'  // Added the new archive_students category
+            'hte_assessment_form',        // 1st - HTE Assessment
+            'student_verification',       // 2nd - Student Verification  
+            'student_assessment_form',    // 3rd - Student Assessment
+            'internship_placement',       // 4th - Internship Placement
+            'archive_students'            // 5th - Archive Students
         ];
 
         $now = Carbon::now();
+        $createdCount = 0;
         
-        foreach ($categories as $category) {
-            $startDate = $now->copy();
-            $endDate = $now->copy()->addDays($durationDays);
+        foreach ($categories as $index => $category) {
+            // Create deadlines with staggered start times (1 day apart)
+            $startDate = $now->copy()->addDays($index);
+            $endDate = $startDate->copy()->addDays($durationDays);
             
-            // Check if deadline already exists for this category in the active season
+            // Check if deadline already exists for this category in the target season
             $existingDeadline = Deadline::where('category', $category)
-                ->where('internship_season_id', $activeSeason->id)
+                ->where('internship_season_id', $targetSeason->id)
                 ->first();
             
             if (!$existingDeadline) {
@@ -130,14 +153,17 @@ class DeadlineSeeder extends Seeder
                     'start_date' => $startDate,
                     'end_date' => $endDate,
                     'status' => 'active',
-                    'internship_season_id' => $activeSeason->id,  // Associate with active season
+                    'internship_season_id' => $targetSeason->id,
                 ]);
                 
-                $this->command->info("Created {$durationDays}-day deadline for category: {$category} in season: {$activeSeason->name}");
+                $this->command->info("Created {$durationDays}-day deadline for category: {$category} in season: {$targetSeason->name}");
+                $createdCount++;
             } else {
-                $this->command->warn("Deadline already exists for category: {$category} in season: {$activeSeason->name}");
+                $this->command->warn("Deadline already exists for category: {$category} in season: {$targetSeason->name}");
             }
         }
+        
+        $this->command->info("Deadline seeding completed. Created {$createdCount} new deadlines.");
     }
 
     /**
@@ -153,19 +179,23 @@ class DeadlineSeeder extends Seeder
             return;
         }
 
+        $this->command->info("Creating deadlines for season: {$season->name} (Status: {$season->status})");
+
         $categories = [
-            'student_verification',
-            'student_assessment_form', 
-            'hte_assessment_form',
-            'internship_placement',
-            'archive_students'
+            'hte_assessment_form',        // 1st - HTE Assessment
+            'student_verification',       // 2nd - Student Verification  
+            'student_assessment_form',    // 3rd - Student Assessment
+            'internship_placement',       // 4th - Internship Placement
+            'archive_students'            // 5th - Archive Students
         ];
 
         $now = Carbon::now();
+        $createdCount = 0;
         
-        foreach ($categories as $category) {
-            $startDate = $now->copy();
-            $endDate = $now->copy()->addDay();
+        foreach ($categories as $index => $category) {
+            // Create deadlines with staggered start times (1 day apart)
+            $startDate = $now->copy()->addDays($index);
+            $endDate = $startDate->copy()->addDays(7); // 7-day duration for each deadline
             
             // Check if deadline already exists for this category in the specified season
             $existingDeadline = Deadline::where('category', $category)
@@ -182,10 +212,18 @@ class DeadlineSeeder extends Seeder
                     'internship_season_id' => $season->id,
                 ]);
                 
-                $this->command->info("Created deadline for category: {$category} in season: {$season->name}");
+                $this->command->info("Created deadline for category: {$category} in season: {$season->name} (Start: {$startDate->format('M d, Y')})");
+                $createdCount++;
             } else {
                 $this->command->warn("Deadline already exists for category: {$category} in season: {$season->name}");
             }
+        }
+        
+        $this->command->info("Deadline seeding completed. Created {$createdCount} new deadlines.");
+        
+        // Show season activation status
+        if ($season->status === 'inactive') {
+            $this->command->info("Note: Season '{$season->name}' is inactive. You can activate it after all 5 deadlines are created.");
         }
     }
 }

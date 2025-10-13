@@ -61,9 +61,19 @@ interface EventsPageProps {
         end_date: string;
         status: string;
     } | null;
+    seasons: {
+        id: number;
+        name: string;
+        start_date: string;
+        end_date: string;
+        status: string;
+        deadlines_count: number;
+        students_count: number;
+        active_students_count: number;
+    }[];
 }
 
-export default function EventsPage({ activeDeadlines, expiredDeadlines, categoryOptions, nextCategory, sequenceInfo, activeSeason }: EventsPageProps) {
+export default function EventsPage({ activeDeadlines, expiredDeadlines, categoryOptions, nextCategory, sequenceInfo, activeSeason, seasons }: EventsPageProps) {
     const [showAddDialog, setShowAddDialog] = useState(false);
     const [editingDeadline, setEditingDeadline] = useState<Deadline | null>(null);
     const [showArchived, setShowArchived] = useState(false);
@@ -80,6 +90,7 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
         category: '',
         start_date: null as Date | null,
         end_date: null as Date | null,
+        season_id: seasons.length > 0 ? seasons[0].id : '',
     });
 
     const { patch, processing: extending, errors: extendErrors, reset: resetExtend } = useForm({});
@@ -157,6 +168,7 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
             category: deadline.category,
             start_date: start,
             end_date: end,
+            season_id: seasons.length > 0 ? seasons[0].id : '',
         });
         setShowEditDialog(true);
     };
@@ -347,24 +359,19 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
                             </CardContent>
                         </Card>
                     ) : (
-                        <Card className="border-red-200 bg-red-50">
-                            <CardContent className="pt-6">
+                        <Card className="border-amber-200 bg-amber-50">
+                            <CardContent>
                                 <div className="flex items-center gap-2 mb-2">
-                                    <CalendarIcon className="h-5 w-5 text-red-600" />
-                                    <span className="font-medium text-red-800">No Active Season</span>
+                                    <CalendarIcon className="h-5 w-5 text-amber-600" />
+                                    <span className="font-medium text-amber-800">No Active Season</span>
                                 </div>
                                 <div className="space-y-2">
-                                    <p className="text-red-700">
-                                        You must create and activate an internship season before creating deadlines.
+                                    <p className="text-amber-700">
+                                        You can still create deadlines for any season by selecting it in the form below.
                                     </p>
-                                    <Button
-                                        variant="outline"
-                                        onClick={() => router.get('/admin/seasons')}
-                                        className="flex items-center gap-2 text-red-700 border-red-300 hover:bg-red-100"
-                                    >
-                                        <CalendarIcon className="h-4 w-4" />
-                                        Manage Seasons
-                                    </Button>
+                                    <p className="text-sm text-amber-600">
+                                        To activate a season, go to Seasons Management and ensure all 5 deadline categories are created.
+                                    </p>
                                 </div>
                             </CardContent>
                         </Card>
@@ -374,15 +381,14 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
                     <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                         {/* Primary Actions */}
                         <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-                            <Button
-                                onClick={() => setShowAddDialog(true)}
-                                disabled={!activeSeason}
-                                className="flex items-center gap-2 h-9"
-                                title={!activeSeason ? "Create and activate an internship season first" : ""}
-                            >
-                                <PlusIcon className="h-4 w-4" />
-                                Add Deadline
-                            </Button>
+                                <Button
+                                    onClick={() => setShowAddDialog(true)}
+                                    className="flex items-center gap-2 h-9"
+                                    title={seasons.length === 0 ? "Create an internship season first" : ""}
+                                >
+                                    <PlusIcon className="h-4 w-4" />
+                                    Add Deadline
+                                </Button>
                             <Button
                                 variant="outline"
                                 onClick={() => router.get('/admin/seasons')}
@@ -848,6 +854,34 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
                                         />
                                         {errors.title && (
                                             <p className="text-sm text-destructive">{errors.title}</p>
+                                        )}
+                                    </div>
+
+                                    <div className="space-y-3">
+                                        <Label htmlFor="add_season" className="text-sm font-medium text-foreground">
+                                            Internship Season
+                                        </Label>
+                                        <Select value={data.season_id.toString()} onValueChange={(value) => {
+                                            setData('season_id', parseInt(value));
+                                        }}>
+                                            <SelectTrigger className="h-10">
+                                                <SelectValue placeholder="Select a season" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {seasons.map((season) => (
+                                                    <SelectItem key={season.id} value={season.id.toString()}>
+                                                        <div className="flex items-center gap-2">
+                                                            <span>{season.name}</span>
+                                                            <span className="text-xs text-gray-500">
+                                                                ({season.deadlines_count}/5 deadlines)
+                                                            </span>
+                                                        </div>
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        {errors.season_id && (
+                                            <p className="text-sm text-destructive">{errors.season_id}</p>
                                         )}
                                     </div>
 

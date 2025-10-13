@@ -12,7 +12,7 @@ interface InternshipSeason {
   name: string;
   start_date: string;
   end_date: string;
-  status: 'active' | 'completed' | 'archived';
+  status: 'active' | 'inactive' | 'completed' | 'archived';
 }
 
 interface Student {
@@ -96,10 +96,12 @@ export default function ArchivedStudents({ season, archivedStudents }: Props) {
                 <p className="text-sm font-medium text-gray-500">Status</p>
                 <Badge className={
                   season.status === 'active' ? 'bg-green-100 text-green-800' :
+                  season.status === 'inactive' ? 'bg-gray-100 text-gray-800' :
                   season.status === 'completed' ? 'bg-blue-100 text-blue-800' :
                   'bg-gray-100 text-gray-800'
                 }>
                   {season.status === 'active' ? '🟢 Active' :
+                   season.status === 'inactive' ? '⚪ Inactive' :
                    season.status === 'completed' ? '✅ Completed' :
                    '📁 Archived'}
                 </Badge>

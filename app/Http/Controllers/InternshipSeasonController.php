@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\InternshipSeason;
+use App\Models\Deadline;
 use App\Services\InternshipSeasonService;
 use App\Services\StudentArchiveService;
 use Illuminate\Http\Request;
@@ -125,7 +126,31 @@ class InternshipSeasonController extends Controller
     public function activate(InternshipSeason $season): RedirectResponse
     {
         try {
-            $this->seasonService->activateSeason($season->id);
+            // Check if another season is active
+            $activeSeason = InternshipSeason::where('status', 'active')
+                ->where('id', '!=', $season->id)
+                ->first();
+            
+            if ($activeSeason) {
+                return redirect()->back()->withErrors([
+                    'error' => "Season '{$activeSeason->name}' is currently active. Please deactivate it first before activating another season."
+                ]);
+            }
+            
+            // Validate all categories exist
+            $validation = $this->seasonService->canActivateSeason($season);
+            if (!$validation['can_activate']) {
+                $missing = implode(', ', array_map(
+                    fn($cat) => Deadline::getCategoryDisplayName($cat),
+                    $validation['missing_categories']
+                ));
+                
+                return redirect()->back()->withErrors([
+                    'error' => "Cannot activate season. Missing deadline categories: {$missing}"
+                ]);
+            }
+            
+            $this->seasonService->activateSeason($season);
 
             // Log the activity
             activity()
@@ -151,12 +176,22 @@ class InternshipSeasonController extends Controller
     }
 
     /**
-     * Mark season as completed
+     * Deactivate a season with confirmation
      */
-    public function complete(InternshipSeason $season): RedirectResponse
+    public function deactivate(Request $request, InternshipSeason $season): RedirectResponse
     {
         try {
-            $this->seasonService->completeSeason($season->id);
+            // Require confirmation
+            $request->validate([
+                'confirmation' => 'required|in:I understand'
+            ], [
+                'confirmation.in' => 'You must type "I understand" to confirm deactivation.'
+            ]);
+            
+            // Get count of active deadlines before deactivation
+            $activeDeadlinesCount = $season->deadlines()->where('status', 'active')->count();
+            
+            $this->seasonService->deactivateSeason($season, true);
 
             // Log the activity
             activity()
@@ -165,19 +200,24 @@ class InternshipSeasonController extends Controller
                 ->withProperties([
                     'season_id' => $season->id,
                     'name' => $season->name,
+                    'expired_deadlines_count' => $activeDeadlinesCount,
                 ])
-                ->log('completed internship season');
+                ->log('deactivated internship season');
+
+            $message = $activeDeadlinesCount > 0 
+                ? "Season deactivated successfully. {$activeDeadlinesCount} deadline(s) have been expired and the season is now marked as completed."
+                : 'Season deactivated and marked as completed.';
 
             return redirect()->route('admin.seasons')
-                ->with('success', 'Season completed successfully.');
+                ->with('success', $message);
         } catch (\Exception $e) {
-            Log::error('Failed to complete internship season', [
+            Log::error('Failed to deactivate internship season', [
                 'error' => $e->getMessage(),
                 'season_id' => $season->id,
             ]);
 
             return redirect()->back()
-                ->withErrors(['error' => 'Failed to complete season: ' . $e->getMessage()]);
+                ->withErrors(['error' => 'Failed to deactivate season: ' . $e->getMessage()]);
         }
     }
 

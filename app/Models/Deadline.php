@@ -78,18 +78,33 @@ class Deadline extends Model
     /**
      * Check if deadline exists for a specific category (for sequence validation)
      * This checks if any deadline exists for the category, regardless of current status
+     * Now checks within the active season only
      */
     public static function hasDeadlineForCategory(string $category): bool
     {
-        return self::where('category', $category)->exists();
+        $activeSeason = InternshipSeason::getActiveSeason();
+        if (!$activeSeason) {
+            return false; // No active season, so no deadlines can exist
+        }
+        
+        return self::where('category', $category)
+            ->where('internship_season_id', $activeSeason->id)
+            ->exists();
     }
 
     /**
      * Check if deadline is currently active for a specific category
+     * Now checks within the active season only
      */
     public static function isActiveForCategory(string $category): bool
     {
+        $activeSeason = InternshipSeason::getActiveSeason();
+        if (!$activeSeason) {
+            return false; // No active season, so no deadlines can be active
+        }
+        
         return self::where('category', $category)
+            ->where('internship_season_id', $activeSeason->id)
             ->where('status', 'active')
             ->where('end_date', '>', Carbon::now())
             ->exists();
@@ -97,10 +112,17 @@ class Deadline extends Model
 
     /**
      * Get active deadline for a specific category
+     * Now checks within the active season only
      */
     public static function getActiveForCategory(string $category): ?self
     {
+        $activeSeason = InternshipSeason::getActiveSeason();
+        if (!$activeSeason) {
+            return null; // No active season, so no deadlines can be active
+        }
+        
         return self::where('category', $category)
+            ->where('internship_season_id', $activeSeason->id)
             ->where('status', 'active')
             ->where('end_date', '>', Carbon::now())
             ->first();
@@ -108,21 +130,37 @@ class Deadline extends Model
 
     /**
      * Get all expired deadlines
+     * Now filters by active season only
      */
     public static function getExpired(): \Illuminate\Database\Eloquent\Collection
     {
-        return self::where('status', 'expired')
-            ->orWhere('end_date', '<=', Carbon::now())
+        $activeSeason = InternshipSeason::getActiveSeason();
+        if (!$activeSeason) {
+            return self::whereRaw('1 = 0')->get(); // Return empty Eloquent collection
+        }
+        
+        return self::where('internship_season_id', $activeSeason->id)
+            ->where(function($query) {
+                $query->where('status', 'expired')
+                    ->orWhere('end_date', '<=', Carbon::now());
+            })
             ->orderBy('end_date', 'desc')
             ->get();
     }
 
     /**
      * Get all active deadlines
+     * Now filters by active season only
      */
     public static function getActive(): \Illuminate\Database\Eloquent\Collection
     {
-        return self::where('status', 'active')
+        $activeSeason = InternshipSeason::getActiveSeason();
+        if (!$activeSeason) {
+            return self::whereRaw('1 = 0')->get(); // Return empty Eloquent collection
+        }
+        
+        return self::where('internship_season_id', $activeSeason->id)
+            ->where('status', 'active')
             ->where('end_date', '>', Carbon::now())
             ->orderBy('end_date', 'asc')
             ->get();
@@ -188,6 +226,50 @@ class Deadline extends Model
         }
         
         return null; // All categories have deadlines
+    }
+
+    /**
+     * Check if a category can be created based on chronological sequence for a specific season
+     */
+    public static function canCreateCategoryForSeason(string $category, int $seasonId): array
+    {
+        $sequence = self::getCategorySequence();
+        $currentOrder = $sequence[$category] ?? 999;
+        
+        // Check if any previous categories in sequence don't have deadlines created in this season
+        $missingCategories = [];
+        foreach ($sequence as $cat => $order) {
+            if ($order < $currentOrder && !self::hasDeadlineForCategoryInSeason($cat, $seasonId)) {
+                $missingCategories[] = $cat;
+            }
+        }
+
+        return [
+            'can_create' => empty($missingCategories),
+            'missing_categories' => $missingCategories,
+            'current_order' => $currentOrder,
+        ];
+    }
+
+    /**
+     * Validate sequence for a specific season
+     */
+    public static function validateSequenceForSeason(string $category, int $seasonId): array
+    {
+        $validation = self::canCreateCategoryForSeason($category, $seasonId);
+        
+        if (!$validation['can_create']) {
+            $missingNames = array_map(function($cat) {
+                return (new self(['category' => $cat]))->getCategoryDisplayName();
+            }, $validation['missing_categories']);
+            
+            return [
+                'valid' => false,
+                'message' => 'Cannot create this deadline yet. Please create deadlines in chronological order. Missing: ' . implode(', ', $missingNames)
+            ];
+        }
+        
+        return ['valid' => true];
     }
 
     /**

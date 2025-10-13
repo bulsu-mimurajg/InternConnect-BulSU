@@ -2135,6 +2135,7 @@ class AdminController extends Controller
             'nextCategory' => $nextCategoryInfo,
             'sequenceInfo' => $sequenceInfo,
             'activeSeason' => $this->seasonService->getActiveSeason(),
+            'seasons' => $this->seasonService->getAllSeasonsWithStats(),
         ]);
     }
 
@@ -2158,6 +2159,7 @@ class AdminController extends Controller
                 'category' => 'required|in:student_verification,student_assessment_form,hte_assessment_form,internship_placement,archive_students',
                 'start_date' => 'required|date',
                 'end_date' => 'required|date|after:start_date',
+                'season_id' => 'required|exists:internship_seasons,id',
             ]);
             Log::info('Deadline validation passed');
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -2169,16 +2171,21 @@ class AdminController extends Controller
         }
 
         try {
-            // Validate chronological sequence
-            $sequenceValidation = Deadline::validateSequence($request->category);
+            // Validate chronological sequence for the selected season
+            $sequenceValidation = Deadline::validateSequenceForSeason($request->category, $request->season_id);
             if (!$sequenceValidation['valid']) {
                 return redirect()->back()
                     ->withErrors(['category' => $sequenceValidation['message']])
                     ->withInput();
             }
 
-            // Check if there's already a deadline for this category (regardless of status)
-            $existingDeadline = Deadline::where('category', $request->category)->first();
+            // Get the selected season
+            $selectedSeason = InternshipSeason::findOrFail($request->season_id);
+
+            // Check if there's already a deadline for this category in the selected season (regardless of status)
+            $existingDeadline = Deadline::where('category', $request->category)
+                ->where('internship_season_id', $selectedSeason->id)
+                ->first();
 
             if ($existingDeadline) {
                 $deadlineStatus = $existingDeadline->isExpired() ? 'expired' : 'active';
@@ -2186,16 +2193,8 @@ class AdminController extends Controller
 
                 // Return validation error that will be caught by Inertia
                 return back()->withErrors([
-                    'category' => "A {$deadlineStatus} deadline already exists for this category ({$existingDeadline->getCategoryDisplayName()}). The existing deadline ends on {$deadlineEndDate}. Please extend or update the existing deadline instead of creating a new one."
+                    'category' => "A {$deadlineStatus} deadline already exists for this category ({$existingDeadline->getCategoryDisplayName()}) in season '{$selectedSeason->name}'. The existing deadline ends on {$deadlineEndDate}. Please extend or update the existing deadline instead of creating a new one."
                 ])->withInput();
-            }
-
-            // Get active season
-            $activeSeason = $this->seasonService->getActiveSeason();
-            if (!$activeSeason) {
-                return redirect()->back()
-                    ->withErrors(['error' => 'No active internship season found. Please create and activate a season first.'])
-                    ->withInput();
             }
 
             $deadline = Deadline::create([
@@ -2203,7 +2202,7 @@ class AdminController extends Controller
                 'category' => $request->category,
                 'start_date' => $request->start_date,
                 'end_date' => $request->end_date,
-                'internship_season_id' => $activeSeason->id,
+                'internship_season_id' => $selectedSeason->id,
             ]);
 
             Log::info('Deadline created successfully', [

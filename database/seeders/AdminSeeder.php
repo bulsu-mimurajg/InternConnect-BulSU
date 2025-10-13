@@ -452,7 +452,7 @@ class AdminSeeder extends Seeder
             }
         }
 
-        $this->call(DeadlineSeeder::class);
+//        $this->call(DeadlineSeeder::class);
 
 //        // Create adviser user if it doesn't exist
 //        $adviserUser = User::firstOrCreate(

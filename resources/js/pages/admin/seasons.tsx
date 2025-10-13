@@ -19,7 +19,7 @@ interface InternshipSeason {
   name: string;
   start_date: string;
   end_date: string;
-  status: 'active' | 'completed' | 'archived';
+  status: 'active' | 'inactive' | 'completed' | 'archived';
   created_at: string;
   updated_at: string;
   deadlines_count: number;
@@ -35,6 +35,11 @@ interface Props {
 export default function SeasonsManagement({ seasons, activeSeason }: Props) {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [deactivateDialog, setDeactivateDialog] = useState<{
+    open: boolean;
+    season: InternshipSeason | null;
+  }>({ open: false, season: null });
+  const [confirmationText, setConfirmationText] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     start_date: '',
@@ -54,17 +59,44 @@ export default function SeasonsManagement({ seasons, activeSeason }: Props) {
     });
   };
 
-  const handleActivateSeason = (seasonId: number) => {
+  const handleActivateSeason = (season: InternshipSeason) => {
+    if (activeSeason) {
+      alert(`Season "${activeSeason.name}" is currently active. Please deactivate it first.`);
+      return;
+    }
+    
+    // Check if all 5 categories exist
+    if (season.deadlines_count < 5) {
+      alert('All 5 deadline categories must be created before activating this season.');
+      return;
+    }
+    
     setIsLoading(true);
-    router.post(`/admin/seasons/${seasonId}/activate`, {}, {
+    router.post(`/admin/seasons/${season.id}/activate`, {}, {
       onFinish: () => setIsLoading(false),
     });
   };
 
-  const handleArchiveStudents = (seasonId: number) => {
-    if (confirm('Are you sure you want to archive all students in this season? This action cannot be undone.')) {
+  const handleDeactivateSeason = (season: InternshipSeason) => {
+    setDeactivateDialog({ open: true, season });
+    setConfirmationText('');
+  };
+
+  const confirmDeactivate = () => {
+    if (confirmationText !== 'I understand') {
+      alert('Please type "I understand" to confirm.');
+      return;
+    }
+    
+    if (deactivateDialog.season) {
       setIsLoading(true);
-      router.post(`/admin/seasons/${seasonId}/archive-students`, {}, {
+      router.post(`/admin/seasons/${deactivateDialog.season.id}/deactivate`, {
+        confirmation: confirmationText
+      }, {
+        onSuccess: () => {
+          setDeactivateDialog({ open: false, season: null });
+          setConfirmationText('');
+        },
         onFinish: () => setIsLoading(false),
       });
     }
@@ -74,6 +106,8 @@ export default function SeasonsManagement({ seasons, activeSeason }: Props) {
     switch (status) {
       case 'active':
         return <Badge className="bg-green-100 text-green-800">🟢 Active</Badge>;
+      case 'inactive':
+        return <Badge className="bg-gray-100 text-gray-800">⚪ Inactive</Badge>;
       case 'completed':
         return <Badge className="bg-blue-100 text-blue-800">✅ Completed</Badge>;
       case 'archived':
@@ -176,6 +210,70 @@ export default function SeasonsManagement({ seasons, activeSeason }: Props) {
           </Dialog>
         </div>
 
+        {/* Deactivation Confirmation Dialog */}
+        <Dialog open={deactivateDialog.open} onOpenChange={(open) => {
+          if (!open) {
+            setDeactivateDialog({ open: false, season: null });
+            setConfirmationText('');
+          }
+        }}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Deactivate Season</DialogTitle>
+              <DialogDescription>
+                This will mark the season as completed and expire all active deadlines. 
+                This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-4">
+              <div className="bg-red-50 border border-red-200 rounded-md p-4">
+                <p className="text-sm text-red-800 font-medium">
+                  Warning: This action is permanent
+                </p>
+                <ul className="text-sm text-red-700 mt-2 space-y-1 list-disc list-inside">
+                  <li>All active deadlines will be expired</li>
+                  <li>Season will be marked as completed</li>
+                  <li>This cannot be undone</li>
+                </ul>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="confirmation">
+                  Type "I understand" to confirm
+                </Label>
+                <Input
+                  id="confirmation"
+                  value={confirmationText}
+                  onChange={(e) => setConfirmationText(e.target.value)}
+                  placeholder="I understand"
+                />
+              </div>
+              
+              <div className="flex justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setDeactivateDialog({ open: false, season: null });
+                    setConfirmationText('');
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={confirmDeactivate}
+                  disabled={confirmationText !== 'I understand'}
+                >
+                  Deactivate Season
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
         {/* Active Season Info */}
         {activeSeason && (
           <Card className="border-green-200 bg-green-50">
@@ -239,25 +337,116 @@ export default function SeasonsManagement({ seasons, activeSeason }: Props) {
                   </div>
                 </div>
 
+                {/* Deadline Requirements */}
+                {season.status === 'inactive' && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm font-medium text-gray-700">Deadline Requirements:</div>
+                      <div className="text-xs text-gray-500">
+                        {season.deadlines_count}/5 completed
+                      </div>
+                    </div>
+                    
+                    {/* Progress Bar */}
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-green-500 h-2 rounded-full transition-all duration-300" 
+                        style={{ width: `${(season.deadlines_count / 5) * 100}%` }}
+                      />
+                    </div>
+                    
+                    <div className="grid grid-cols-1 gap-1 text-xs">
+                      {[
+                        { key: 'hte_assessment_form', label: 'HTE Assessment Form' },
+                        { key: 'student_verification', label: 'Student Verification' },
+                        { key: 'student_assessment_form', label: 'Student Assessment Form' },
+                        { key: 'internship_placement', label: 'Internship Placement' },
+                        { key: 'archive_students', label: 'Archive Students' }
+                      ].map((category) => (
+                        <div key={category.key} className="flex items-center gap-2">
+                          <div className={`w-2 h-2 rounded-full ${
+                            season.deadlines_count >= 5 ? 'bg-green-500' : 'bg-gray-300'
+                          }`} />
+                          <span className={`${
+                            season.deadlines_count >= 5 ? 'text-green-700' : 'text-gray-500'
+                          }`}>
+                            {category.label}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    {season.deadlines_count < 5 && (
+                      <div className="text-xs text-amber-600 bg-amber-50 p-2 rounded border border-amber-200">
+                        <div className="flex items-center gap-1 mb-1">
+                          <ClockIcon className="h-3 w-3" />
+                          <strong>Activation Pending</strong>
+                        </div>
+                        <div className="mb-2">
+                          {5 - season.deadlines_count} more deadline{5 - season.deadlines_count !== 1 ? 's' : ''} required to activate this season.
+                        </div>
+                        <div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => router.get('/admin/events')}
+                            className="text-xs h-6 px-2"
+                          >
+                            Create Deadlines
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {season.deadlines_count >= 5 && (
+                      <div className="text-xs text-green-600 bg-green-50 p-2 rounded border border-green-200">
+                        <div className="flex items-center gap-1 mb-1">
+                          <CheckCircleIcon className="h-3 w-3" />
+                          <strong>Ready for Activation</strong>
+                        </div>
+                        <div>
+                          All deadline categories created. This season can now be activated.
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Actions */}
                 <div className="flex flex-wrap gap-2">
-                  {season.status !== 'active' && (
+                  {season.status === 'active' ? (
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => handleDeactivateSeason(season)}
+                      disabled={isLoading}
+                    >
+                      Deactivate
+                    </Button>
+                  ) : season.status === 'inactive' ? (
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => handleActivateSeason(season.id)}
-                      disabled={isLoading}
+                      onClick={() => handleActivateSeason(season)}
+                      disabled={isLoading || season.deadlines_count < 5}
+                      title={season.deadlines_count < 5 ? 'All 5 deadline categories required' : ''}
                     >
-                      <CheckCircleIcon className="h-4 w-4 mr-1" />
                       Activate
                     </Button>
-                  )}
+                  ) : null}
                   
                   {season.status === 'completed' && (
                     <Button
                       size="sm"
                       variant="destructive"
-                      onClick={() => handleArchiveStudents(season.id)}
+                      onClick={() => {
+                        if (confirm('Are you sure you want to archive all students in this season? This action cannot be undone.')) {
+                          setIsLoading(true);
+                          router.post(`/admin/seasons/${season.id}/archive-students`, {}, {
+                            onFinish: () => setIsLoading(false),
+                          });
+                        }
+                      }}
                       disabled={isLoading}
                     >
                       <ArchiveIcon className="h-4 w-4 mr-1" />
@@ -285,12 +474,8 @@ export default function SeasonsManagement({ seasons, activeSeason }: Props) {
               <CalendarIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No Seasons Found</h3>
               <p className="text-gray-600 mb-4">
-                Create your first internship season to start managing deadlines and student archiving.
+                Create your internship season to start managing deadlines and student archiving.
               </p>
-              <Button onClick={() => setIsCreateDialogOpen(true)}>
-                <PlusIcon className="h-4 w-4 mr-2" />
-                Create First Season
-              </Button>
             </CardContent>
           </Card>
         )}

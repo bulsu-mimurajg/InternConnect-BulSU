@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\StudentController;
 use App\Http\Controllers\InternshipSeasonController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AssessmentController;
@@ -72,6 +73,7 @@ Route::middleware(['auth', 'verified', 'role_redirect:admin'])->group(function (
     Route::post('admin/seasons', [InternshipSeasonController::class, 'store'])->name('admin.seasons.store');
     Route::put('admin/seasons/{season}', [InternshipSeasonController::class, 'update'])->name('admin.seasons.update');
     Route::post('admin/seasons/{season}/activate', [InternshipSeasonController::class, 'activate'])->name('admin.seasons.activate');
+    Route::post('admin/seasons/{season}/deactivate', [InternshipSeasonController::class, 'deactivate'])->name('admin.seasons.deactivate');
     Route::post('admin/seasons/{season}/archive-students', [InternshipSeasonController::class, 'archiveStudents'])->name('admin.seasons.archive-students');
     Route::get('admin/seasons/{season}/stats', [InternshipSeasonController::class, 'stats'])->name('admin.seasons.stats');
     Route::get('admin/seasons/{season}/archived-students', [InternshipSeasonController::class, 'archivedStudents'])->name('admin.seasons.archived-students');
@@ -347,12 +349,12 @@ Route::middleware(['auth', 'verified', 'role_redirect:adviser', 'adviser_section
 
         // Check if adviser has any active sections
         $activeSections = $adviserRecord->sections()->where('status', 'active')->get();
-        
+
         if ($activeSections->isEmpty()) {
             // Check if adviser has any sections (including archived ones)
             $allAdviserSections = $adviserRecord->sections;
             $archivedSections = $allAdviserSections->where('status', 'archived');
-            
+
             if ($archivedSections->isNotEmpty()) {
                 // Show archived section warning instead of redirecting
                 return Inertia::render('adviser/report', [

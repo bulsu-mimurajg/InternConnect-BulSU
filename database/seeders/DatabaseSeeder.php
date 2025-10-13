@@ -53,6 +53,9 @@ class DatabaseSeeder extends Seeder
         // Create student record for clairo after sections are seeded
         $section = \App\Models\Section::where('section_name', 'BSIT-4A')->first();
         if ($section) {
+            // Get or create a season for the student
+            $season = $this->getOrCreateSeasonForManualStudents();
+            
             Student::create([
                 'user_id' => $clairoUser->id,
                 'student_number' => '2022100100',
@@ -65,6 +68,7 @@ class DatabaseSeeder extends Seeder
                 'is_submit' => true, // Set to true so it appears in reports
                 'is_placed' => false,
                 'is_active' => true,
+                'internship_season_id' => $season->id,
             ]);
 
             // Create academe account for clairo
@@ -155,7 +159,84 @@ class DatabaseSeeder extends Seeder
         $this->call(DeadlineSeeder::class);
         $this->call(AdditionalInfoSeeder::class);
 
+        // Associate existing students with the default season
+        $this->associateStudentsWithDefaultSeason();
+
         // Ensure all endorsements have corresponding notifications
         $this->call(NotificationSeeder::class);
+    }
+
+    /**
+     * Associate existing students with the default internship season
+     */
+    private function associateStudentsWithDefaultSeason(): void
+    {
+        // Find the default season created by DeadlineSeeder
+        $defaultSeason = \App\Models\InternshipSeason::where('name', 'AY 2024-2025 First Semester (Default)')->first();
+        
+        if (!$defaultSeason) {
+            $this->command->warn('Default season not found. Students will not be associated with any season.');
+            return;
+        }
+
+        // Get all students that don't have a season assigned
+        $studentsWithoutSeason = Student::whereNull('internship_season_id')->get();
+        
+        if ($studentsWithoutSeason->isEmpty()) {
+            $this->command->info('All students already have seasons assigned.');
+            return;
+        }
+
+        // Associate students with the default season
+        $updatedCount = Student::whereNull('internship_season_id')
+            ->update(['internship_season_id' => $defaultSeason->id]);
+
+        $this->command->info("Associated {$updatedCount} students with default season: {$defaultSeason->name}");
+        
+        // Also associate the manually created students in DatabaseSeeder
+        $this->associateManualStudentsWithSeason($defaultSeason);
+    }
+
+    /**
+     * Associate manually created students (like Clairo) with the season
+     */
+    private function associateManualStudentsWithSeason(\App\Models\InternshipSeason $season): void
+    {
+        // Associate Clairo's student record
+        $clairoStudent = Student::where('student_number', '2022100100')->first();
+        if ($clairoStudent && !$clairoStudent->internship_season_id) {
+            $clairoStudent->update(['internship_season_id' => $season->id]);
+            $this->command->info("Associated Clairo's student record with season: {$season->name}");
+        }
+
+        // Associate George Miller's student record if it exists (after approval)
+        $georgeStudent = Student::where('student_number', '2024100123')->first();
+        if ($georgeStudent && !$georgeStudent->internship_season_id) {
+            $georgeStudent->update(['internship_season_id' => $season->id]);
+            $this->command->info("Associated George Miller's student record with season: {$season->name}");
+        }
+    }
+
+    /**
+     * Get or create a season for manually created students
+     */
+    private function getOrCreateSeasonForManualStudents(): \App\Models\InternshipSeason
+    {
+        // First, try to find an existing season
+        $season = \App\Models\InternshipSeason::first();
+        
+        if ($season) {
+            return $season;
+        }
+
+        // If no season exists, create a default one
+        $season = \App\Models\InternshipSeason::create([
+            'name' => 'AY 2024-2025 First Semester (Manual Students)',
+            'start_date' => now()->subMonths(3),
+            'end_date' => now()->addMonths(3),
+            'status' => 'inactive', // Start as inactive
+        ]);
+
+        return $season;
     }
 }
