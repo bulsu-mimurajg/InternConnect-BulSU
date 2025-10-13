@@ -81,29 +81,43 @@
         }
 
         .stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
             margin-bottom: 25px;
+            background: #fafafa;
+            padding: 20px;
+            display: flex;
+            gap: 20px;
         }
-        .stat-card {
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 8px;
-            border-left: 4px solid #e67e22;
-            text-align: center;
+        .stats-column {
+            flex: 1;
+            width: 50%;
+        }
+        .stat-item {
+            margin-bottom: 15px;
+            position: relative;
+            padding-left: 20px;
+        }
+        .stat-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 8px;
+            width: 8px;
+            height: 1px;
+            background: #e67e22;
         }
         .stat-label {
-            font-size: 12px;
-            color: #7f8c8d;
+            font-size: 11px;
+            color: #666;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            margin-bottom: 5px;
+            margin-bottom: 3px;
+            font-weight: 600;
         }
         .stat-value {
-            font-size: 24px;
+            font-size: 16px;
             font-weight: bold;
-            color: #2c3e50;
+            color: #333;
+            margin: 0;
         }
 
         table {
@@ -145,7 +159,12 @@
         @media print {
             body { margin: 0; padding: 15px; }
             .section { page-break-inside: avoid; }
-            .stats { grid-template-columns: repeat(3, 1fr); }
+            .stats { display: flex; }
+            .stats-column { width: 50%; }
+        }
+        @media (max-width: 768px) {
+            .stats { flex-direction: column; }
+            .stats-column { width: 100%; }
         }
     </style>
 </head>
@@ -168,12 +187,26 @@
             <div class="section">
                 <h2 class="section-title">System Overview</h2>
                 <div class="stats">
-                    @foreach($overallStatsFormatted as $stat)
-                        <div class="stat-card">
-                            <div class="stat-label">{{ $stat['label'] }}</div>
-                            <div class="stat-value">{{ $stat['value'] }}</div>
-                        </div>
-                    @endforeach
+                    <div class="stats-column">
+                        @foreach($overallStatsFormatted as $index => $stat)
+                            @if($index % 2 == 0)
+                                <div class="stat-item">
+                                    <div class="stat-label">{{ $stat['label'] }}</div>
+                                    <div class="stat-value">{{ $stat['value'] }}</div>
+                                </div>
+                            @endif
+                        @endforeach
+                    </div>
+                    <div class="stats-column">
+                        @foreach($overallStatsFormatted as $index => $stat)
+                            @if($index % 2 == 1)
+                                <div class="stat-item">
+                                    <div class="stat-label">{{ $stat['label'] }}</div>
+                                    <div class="stat-value">{{ $stat['value'] }}</div>
+                                </div>
+                            @endif
+                        @endforeach
+                    </div>
                 </div>
             </div>
 
@@ -181,12 +214,26 @@
             <div class="section">
                 <h2 class="section-title">Student Statistics</h2>
                 <div class="stats">
-                    @foreach($studentStats as $stat)
-                        <div class="stat-card">
-                            <div class="stat-label">{{ $stat['label'] }}</div>
-                            <div class="stat-value">{{ $stat['value'] }}</div>
-                        </div>
-                    @endforeach
+                    <div class="stats-column">
+                        @foreach($studentStats as $index => $stat)
+                            @if($index % 2 == 0)
+                                <div class="stat-item">
+                                    <div class="stat-label">{{ $stat['label'] }}</div>
+                                    <div class="stat-value">{{ $stat['value'] }}</div>
+                                </div>
+                            @endif
+                        @endforeach
+                    </div>
+                    <div class="stats-column">
+                        @foreach($studentStats as $index => $stat)
+                            @if($index % 2 == 1)
+                                <div class="stat-item">
+                                    <div class="stat-label">{{ $stat['label'] }}</div>
+                                    <div class="stat-value">{{ $stat['value'] }}</div>
+                                </div>
+                            @endif
+                        @endforeach
+                    </div>
                 </div>
             </div>
 
@@ -194,12 +241,26 @@
             <div class="section">
                 <h2 class="section-title">HTE Statistics</h2>
                 <div class="stats">
-                    @foreach($hteStats as $stat)
-                        <div class="stat-card">
-                            <div class="stat-label">{{ $stat['label'] }}</div>
-                            <div class="stat-value">{{ $stat['value'] }}</div>
-                        </div>
-                    @endforeach
+                    <div class="stats-column">
+                        @foreach($hteStats as $index => $stat)
+                            @if($index % 2 == 0)
+                                <div class="stat-item">
+                                    <div class="stat-label">{{ $stat['label'] }}</div>
+                                    <div class="stat-value">{{ $stat['value'] }}</div>
+                                </div>
+                            @endif
+                        @endforeach
+                    </div>
+                    <div class="stats-column">
+                        @foreach($hteStats as $index => $stat)
+                            @if($index % 2 == 1)
+                                <div class="stat-item">
+                                    <div class="stat-label">{{ $stat['label'] }}</div>
+                                    <div class="stat-value">{{ $stat['value'] }}</div>
+                                </div>
+                            @endif
+                        @endforeach
+                    </div>
                 </div>
             </div>
 
@@ -207,12 +268,26 @@
             <div class="section">
                 <h2 class="section-title">Placement Statistics</h2>
                 <div class="stats">
-                    @foreach($placementStats as $stat)
-                        <div class="stat-card">
-                            <div class="stat-label">{{ $stat['label'] }}</div>
-                            <div class="stat-value">{{ $stat['value'] }}</div>
-                        </div>
-                    @endforeach
+                    <div class="stats-column">
+                        @foreach($placementStats as $index => $stat)
+                            @if($index % 2 == 0)
+                                <div class="stat-item">
+                                    <div class="stat-label">{{ $stat['label'] }}</div>
+                                    <div class="stat-value">{{ $stat['value'] }}</div>
+                                </div>
+                            @endif
+                        @endforeach
+                    </div>
+                    <div class="stats-column">
+                        @foreach($placementStats as $index => $stat)
+                            @if($index % 2 == 1)
+                                <div class="stat-item">
+                                    <div class="stat-label">{{ $stat['label'] }}</div>
+                                    <div class="stat-value">{{ $stat['value'] }}</div>
+                                </div>
+                            @endif
+                        @endforeach
+                    </div>
                 </div>
             </div>
 
@@ -220,12 +295,26 @@
             <div class="section">
                 <h2 class="section-title">Endorsement Statistics</h2>
                 <div class="stats">
-                    @foreach($endorsementStats as $stat)
-                        <div class="stat-card">
-                            <div class="stat-label">{{ $stat['label'] }}</div>
-                            <div class="stat-value">{{ $stat['value'] }}</div>
-                        </div>
-                    @endforeach
+                    <div class="stats-column">
+                        @foreach($endorsementStats as $index => $stat)
+                            @if($index % 2 == 0)
+                                <div class="stat-item">
+                                    <div class="stat-label">{{ $stat['label'] }}</div>
+                                    <div class="stat-value">{{ $stat['value'] }}</div>
+                                </div>
+                            @endif
+                        @endforeach
+                    </div>
+                    <div class="stats-column">
+                        @foreach($endorsementStats as $index => $stat)
+                            @if($index % 2 == 1)
+                                <div class="stat-item">
+                                    <div class="stat-label">{{ $stat['label'] }}</div>
+                                    <div class="stat-value">{{ $stat['value'] }}</div>
+                                </div>
+                            @endif
+                        @endforeach
+                    </div>
                 </div>
             </div>
 

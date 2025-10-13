@@ -81,29 +81,34 @@
         }
 
         .stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
             margin-bottom: 25px;
+            background: #fafafa;
+            padding: 20px;
+            display: flex;
+            gap: 20px;
         }
-        .stat-card {
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 8px;
-            border-left: 4px solid #e67e22;
-            text-align: center;
+        .stats-column {
+            flex: 1;
+            width: 50%;
+        }
+        .stat-item {
+            margin-bottom: 15px;
+            position: relative;
+            padding-left: 20px;
         }
         .stat-label {
-            font-size: 12px;
-            color: #7f8c8d;
+            font-size: 11px;
+            color: #666;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            margin-bottom: 5px;
+            margin-bottom: 3px;
+            font-weight: 600;
         }
         .stat-value {
-            font-size: 24px;
+            font-size: 16px;
             font-weight: bold;
-            color: #2c3e50;
+            color: #333;
+            margin: 0;
         }
 
         table {
@@ -129,9 +134,7 @@
         tr:nth-child(even) {
             background-color: #f8f9fa;
         }
-        tr:hover {
-            background-color: #e8f4f8;
-        }
+        
 
         .footer {
             margin-top: 40px;
@@ -145,7 +148,67 @@
         @media print {
             body { margin: 0; padding: 15px; }
             .section { page-break-inside: avoid; }
-            .stats { grid-template-columns: repeat(3, 1fr); }
+            .stats {
+            margin-bottom: 25px;
+            background: #fafafa;
+            padding: 20px;
+            display: flex;
+            gap: 20px;
+        }
+        .stats-column {
+            flex: 1;
+            width: 50%;
+        }
+        }
+    
+        
+        
+        .stat-item {
+            margin-bottom: 15px;
+            position: relative;
+            padding-left: 20px;
+        }
+        .stat-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 8px;
+            width: 8px;
+            height: 1px;
+            background: #e67e22;
+        }
+        .stat-label {
+            font-size: 11px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 3px;
+            font-weight: 600;
+        }
+        .stat-value {
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+            margin: 0;
+        }
+    
+        @media print {
+            .stats { display: flex; }
+            .stats-column { width: 50%; }
+        }
+        .stats-column {
+            flex: 1;
+            width: 50%;
+        }
+        }
+        @media (max-width: 768px) {
+            .stats { flex-direction: column; }
+            .stats-column { width: 100%; }
+        }
+        .stats-column {
+            flex: 1;
+            width: 50%;
+        }
         }
     </style>
 </head>
@@ -169,7 +232,7 @@
                 <h2 class="section-title">Statistics Overview</h2>
                 <div class="stats">
                     @foreach($stats as $stat)
-                        <div class="stat-card">
+                        <div class="stat-item">
                             <div class="stat-label">{{ $stat['label'] }}</div>
                             <div class="stat-value">{{ $stat['value'] }}</div>
                         </div>

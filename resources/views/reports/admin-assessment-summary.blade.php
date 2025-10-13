@@ -51,10 +51,10 @@
             text-align: center; 
             margin-bottom: 40px; 
             padding: 20px 0;
-            background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+            background: #f8f9fa;
             color: white;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            
+            
         }
         .header h1 { 
             color: white; 
@@ -67,9 +67,9 @@
             text-align: center;
             margin-bottom: 25px;
             padding: 30px 20px;
-            background: linear-gradient(135deg, #e67e22 0%, #f39c12 100%);
-            border-radius: 12px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+            background: #f8f9fa;
+            
+            
             border: 2px solid #d35400;
         }
         .report-title h1 {
@@ -85,7 +85,7 @@
             margin-bottom: 30px;
             padding: 15px;
             background: #f8f9fa;
-            border-radius: 8px;
+            
             border-left: 4px solid #e67e22;
         }
         .generation-info p {
@@ -99,13 +99,13 @@
         .section { 
             margin-bottom: 40px; 
             background: #ffffff;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            
+            
             overflow: hidden;
         }
         .section h2 { 
             color: #e67e22; 
-            background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+            background: #f8f9fa;
             color: white;
             margin: 0;
             padding: 20px 25px;
@@ -117,12 +117,16 @@
             padding: 25px;
         }
         
-        .stats { 
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); 
-            border-radius: 12px; 
-            margin-bottom: 25px; 
-            border: 2px solid #e67e22;
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        .stats {
+            margin-bottom: 25px;
+            background: #fafafa;
+            padding: 20px;
+            display: flex;
+            gap: 20px;
+        }
+        .stats-column {
+            flex: 1;
+            width: 50%;
         }
         .stats h3 { 
             margin-top: 0; 
@@ -153,31 +157,28 @@
             justify-content: space-between;
         }
         .stats-row .stat-item {
-            flex: 1 !important;
-            margin-bottom: 0 !important;
-            min-width: 0 !important;
+            margin-bottom: 15px;
+            position: relative;
+            padding-left: 20px;
         }
-        .stat-item { 
-            text-align: center; 
-            background: white;
-            padding: 25px 12px;
-            border-radius: 12px;
-            border: 2px solid #f39c12;
+        .stat-item {
+            margin-bottom: 15px;
+            position: relative;
+            padding-left: 20px;
         }
-        .stat-value { 
-            font-size: 32px; 
-            font-weight: bold; 
-            color: #e67e22; 
-            margin-bottom: 12px;
-            line-height: 1.2;
+        .stat-value {
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+            margin: 0;
         }
-        .stat-label { 
-            font-size: 13px; 
-            color: #495057; 
-            text-transform: uppercase; 
+        .stat-label {
+            font-size: 11px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 3px;
             font-weight: 600;
-            letter-spacing: 1px;
-            line-height: 1.3;
         }
         
         table { 
@@ -188,9 +189,9 @@
             table-layout: fixed; 
             font-size: 11px; 
             background: white;
-            border-radius: 8px;
+            
             overflow: hidden;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            
         }
         th, td { 
             border: 1px solid #dee2e6; 
@@ -204,7 +205,7 @@
             background-color: #ffffff !important;
         }
         th { 
-            background: linear-gradient(135deg, #e67e22 0%, #f39c12 100%); 
+            background: #f8f9fa; 
             color: white;
             font-weight: bold; 
             font-size: 11px; 
@@ -215,9 +216,7 @@
         tr:nth-child(even) {
             background-color: #f8f9fa;
         }
-        tr:hover {
-            background-color: #fff3cd;
-        }
+        
         
         .col-category { width: 40%; }
         .col-score { width: 30%; }
@@ -229,8 +228,8 @@
             color: #6c757d; 
             font-size: 12px; 
             padding: 20px;
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-            border-radius: 10px;
+            background: #f8f9fa;
+            
             border-top: 3px solid #e67e22;
         }
         .page-break { page-break-before: always; }
@@ -238,8 +237,58 @@
         /* Responsive adjustments */
         @media print {
             body { padding: 10px; }
-            .section { box-shadow: none; }
-            .stat-item:hover { transform: none; }
+            .section {  }
+            
+        }
+    
+        
+        
+        .stat-item {
+            margin-bottom: 15px;
+            position: relative;
+            padding-left: 20px;
+        }
+        .stat-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 8px;
+            width: 8px;
+            height: 1px;
+            background: #e67e22;
+        }
+        .stat-label {
+            font-size: 11px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 3px;
+            font-weight: 600;
+        }
+        .stat-value {
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+            margin: 0;
+        }
+    
+        @media print {
+            .stats { display: flex; }
+            .stats-column { width: 50%; }
+        }
+        .stats-column {
+            flex: 1;
+            width: 50%;
+        }
+        }
+        @media (max-width: 768px) {
+            .stats { flex-direction: column; }
+            .stats-column { width: 100%; }
+        }
+        .stats-column {
+            flex: 1;
+            width: 50%;
+        }
         }
     </style>
 </head>
