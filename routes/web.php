@@ -194,7 +194,7 @@ Route::middleware(['auth', 'verified', 'role_redirect:admin'])->group(function (
     Route::get('email-preview/account-verification', function () {
         return view('emails.account-verification', [
             'userName' => 'John Doe',
-            'verificationUrl' => 'https://example.com/verify?token=abc123',
+            'verificationUrl' => url('/login'),
             'headerSubtitle' => 'Account Verification'
         ]);
     })->name('email.preview.account-verification');
@@ -205,7 +205,7 @@ Route::middleware(['auth', 'verified', 'role_redirect:admin'])->group(function (
             'username' => 'adviser001',
             'password' => 'tempPassword123',
             'email' => 'jane.smith@bulsu.edu.ph',
-            'loginUrl' => 'https://example.com/login',
+            'loginUrl' => url('/login'),
             'sections' => ['CS-3A', 'CS-3B', 'IT-3A'],
             'headerSubtitle' => 'Adviser Account Created'
         ]);
@@ -215,7 +215,7 @@ Route::middleware(['auth', 'verified', 'role_redirect:admin'])->group(function (
         return view('emails.assessment-reminder', [
             'studentName' => 'John Doe',
             'assessmentType' => 'Technical Skills',
-            'dashboardUrl' => 'https://example.com/dashboard',
+            'dashboardUrl' => url('/login'),
             'headerSubtitle' => 'Assessment Reminder'
         ]);
     })->name('email.preview.assessment-reminder');
@@ -226,7 +226,7 @@ Route::middleware(['auth', 'verified', 'role_redirect:admin'])->group(function (
             'username' => 'hte001',
             'password' => 'tempPassword123',
             'email' => 'contact@techsolutions.com',
-            'loginUrl' => 'https://example.com/login',
+            'loginUrl' => url('/login'),
             'headerSubtitle' => 'HTE Account Created'
         ]);
     })->name('email.preview.hte-credentials');
@@ -247,7 +247,7 @@ Route::middleware(['auth', 'verified', 'role_redirect:admin'])->group(function (
     Route::get('email-preview/password-reset', function () {
         return view('emails.password-reset', [
             'userName' => 'John Doe',
-            'resetUrl' => 'https://example.com/reset?token=abc123',
+            'resetUrl' => url('/login'),
             'headerSubtitle' => 'Password Reset'
         ]);
     })->name('email.preview.password-reset');
@@ -264,7 +264,7 @@ Route::middleware(['auth', 'verified', 'role_redirect:admin'])->group(function (
             'hoursRemaining' => null,
             'actionText' => 'Please complete your assessment before the deadline.',
             'roleSpecificContent' => 'As a student, ensure all required fields are completed.',
-            'actionUrl' => 'https://example.com/assessment',
+            'actionUrl' => url('/login'),
             'headerSubtitle' => 'Deadline Notification'
         ]);
     })->name('email.preview.unified-deadline');

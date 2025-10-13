@@ -18,7 +18,7 @@ class EmailService
         $this->fromEmail = env('PHPMAILER_FROM_EMAIL', 'internconnectbulsu@gmail.com');
         $this->fromName = env('PHPMAILER_FROM_NAME', 'InternConnect BULSU');
         $this->appPassword = env('PHPMAILER_APP_PASSWORD', 'qtun paed puzf bycw');
-        
+
         $this->mailer = new PHPMailer(true);
         $this->configureMailer();
     }
@@ -51,7 +51,7 @@ class EmailService
         try {
             // Clear previous recipients
             $this->mailer->clearAddresses();
-            
+
             // Add recipient
             if ($toName) {
                 $this->mailer->addAddress($to, $toName);
@@ -80,7 +80,7 @@ class EmailService
             // Clear previous recipients and attachments
             $this->mailer->clearAddresses();
             $this->mailer->clearAttachments();
-            
+
             // Add recipient
             if ($toName) {
                 $this->mailer->addAddress($to, $toName);
@@ -115,7 +115,7 @@ class EmailService
         try {
             // Clear previous recipients
             $this->mailer->clearAddresses();
-            
+
             // Add multiple recipients
             foreach ($recipients as $recipient) {
                 if (is_array($recipient) && isset($recipient['email'])) {
@@ -144,7 +144,7 @@ class EmailService
     public function sendInternshipNotification($studentEmail, $studentName, $internshipDetails)
     {
         $subject = "Internship Placement Notification - BULSU InternConnect";
-        
+
         // Generate HTML body using Blade template
         $body = view('emails.internship-notification', [
             'studentName' => $studentName,
@@ -160,7 +160,7 @@ class EmailService
     public function sendAssessmentReminder($studentEmail, $studentName, $assessmentType)
     {
         $subject = "Assessment Reminder - BULSU InternConnect";
-        
+
         // Generate HTML body using Blade template
         $body = view('emails.assessment-reminder', [
             'studentName' => $studentName,
@@ -176,9 +176,9 @@ class EmailService
     public function sendAccountVerification($userEmail, $userName, $verificationToken)
     {
         $subject = "Account Verification - BULSU InternConnect";
-        
+
         $verificationUrl = url("/verify-account?token={$verificationToken}");
-        
+
         // Generate HTML body using Blade template
         $body = view('emails.account-verification', [
             'userName' => $userName,

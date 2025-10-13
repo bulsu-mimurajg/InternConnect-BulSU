@@ -9,7 +9,7 @@
     </div>
     
     <div class="button-container">
-        <a href="{{ $dashboardUrl ?? '#' }}" class="button">Complete Assessment</a>
+        <a href="{{ url('/assessment') }}" class="button">Log In to Complete Assessment</a>
     </div>
     
     <p style="margin: 20px 0 15px 0;">Log in to your dashboard to access and complete the assessment.</p>

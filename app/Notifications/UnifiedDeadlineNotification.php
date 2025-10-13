@@ -249,13 +249,7 @@ class UnifiedDeadlineNotification extends Notification implements ShouldQueue
      */
     private function getActionUrl(): string
     {
-        return match($this->userRole) {
-            'admin' => '/admin/events',
-            'adviser' => '/adviser/dashboard',
-            'student' => '/student/dashboard',
-            'hte' => '/hte/dashboard',
-            default => '/dashboard',
-        };
+        return url('/login');
     }
 
     /**

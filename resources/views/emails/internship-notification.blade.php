@@ -20,6 +20,10 @@
         </div>
     </div>
     
+    <div class="button-container">
+        <a href="{{ url('/login') }}" class="button">Log In to View Details</a>
+    </div>
+    
     <p style="margin: 20px 0 15px 0;">Please check your dashboard for more details and next steps.</p>
     <p style="margin-bottom: 0;">If you have any questions, please contact your adviser or the internship coordinator.</p>
 @endsection
