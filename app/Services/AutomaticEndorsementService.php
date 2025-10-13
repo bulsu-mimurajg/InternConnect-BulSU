@@ -191,19 +191,33 @@ class AutomaticEndorsementService
 
                     $endorsed = false;
                     foreach ($matches as $candidateMatch) {
-                        // Check available slots
-                        $availableSlots = $candidateMatch->internship->slot_count -
-                            StudentPlacement::where('internship_id', $candidateMatch->internship_id)
-                                ->where('status', 'approved')
-                                ->count();
+                        // Check available slots more accurately
+                        $internship = $candidateMatch->internship;
+                        
+                        // Count both approved placements AND pending endorsements
+                        $approvedPlacements = StudentPlacement::where('internship_id', $internship->id)
+                            ->where('status', 'approved')
+                            ->count();
+                        
+                        $pendingEndorsements = Endorsement::where('internship_id', $internship->id)
+                            ->where('status', 'endorsed')
+                            ->whereHas('student', function($q) {
+                                $q->where('is_placed', false);
+                            })
+                            ->count();
+                        
+                        $totalCommitted = $approvedPlacements + $pendingEndorsements;
+                        $availableSlots = $internship->slot_count - $totalCommitted;
 
                         if ($availableSlots > 0) {
                             // Endorse the student to this internship
                             $this->endorseStudent($student, $candidateMatch);
                             $results['endorsed_count']++;
                             $endorsed = true;
-                            Log::info("Auto-endorsed student {$student->id} for internship {$candidateMatch->internship_id}");
+                            Log::info("Auto-endorsed student {$student->id} for internship {$candidateMatch->internship_id} (available slots: {$availableSlots})");
                             break;
+                        } else {
+                            Log::debug("Skipping internship {$internship->id} for student {$student->id} - no slots available (approved: {$approvedPlacements}, endorsed: {$pendingEndorsements}, total: {$internship->slot_count})");
                         }
                     }
 

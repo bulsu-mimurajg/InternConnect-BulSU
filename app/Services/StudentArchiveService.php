@@ -71,13 +71,20 @@ class StudentArchiveService
             // Archive the student
             $student->update(['is_active' => false]);
 
+            // Archive the associated user account
+            if ($student->user) {
+                $student->user->update(['status' => 'archived']);
+            }
+
             // Reset the student's placement status since they've been removed from placements
             $student->update(['is_placed' => false]);
 
-            Log::info('Archived student', [
+            Log::info('Archived student and user account', [
                 'student_id' => $student->id,
                 'student_number' => $student->student_number,
                 'name' => $student->first_name . ' ' . $student->last_name,
+                'user_id' => $student->user_id,
+                'user_status' => 'archived',
             ]);
 
             return true;
@@ -167,10 +174,17 @@ class StudentArchiveService
 
             $student->update(['is_active' => true]);
 
-            Log::info('Restored archived student', [
+            // Restore the associated user account
+            if ($student->user) {
+                $student->user->update(['status' => 'verified']);
+            }
+
+            Log::info('Restored archived student and user account', [
                 'student_id' => $student->id,
                 'student_number' => $student->student_number,
                 'name' => $student->first_name . ' ' . $student->last_name,
+                'user_id' => $student->user_id,
+                'user_status' => 'verified',
             ]);
 
             return true;

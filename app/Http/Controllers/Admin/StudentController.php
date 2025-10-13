@@ -349,6 +349,11 @@ class StudentController extends Controller
         // Archive the student
         $student->update(['is_active' => false]);
 
+        // Archive the associated user account
+        if ($student->user) {
+            $student->user->update(['status' => 'archived']);
+        }
+
         // Reset student_matches endorsement status to pending before deleting endorsements
         StudentMatch::where('student_id', $student->id)
             ->where('endorsement_status', 'endorsed')
@@ -383,6 +388,11 @@ class StudentController extends Controller
     public function restore(Student $student)
     {
         $student->update(['is_active' => true]);
+
+        // Restore the associated user account
+        if ($student->user) {
+            $student->user->update(['status' => 'verified']);
+        }
         
         // Recalculate compatibility scores to ensure fresh matches
         if ($student->is_submit) {

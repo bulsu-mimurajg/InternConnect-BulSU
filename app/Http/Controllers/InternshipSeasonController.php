@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\InternshipSeason;
 use App\Models\Deadline;
+use App\Models\UnplacedStudent;
 use App\Services\InternshipSeasonService;
 use App\Services\StudentArchiveService;
 use Illuminate\Http\Request;
@@ -271,11 +272,20 @@ class InternshipSeasonController extends Controller
     {
         $stats = $this->seasonService->getSeasonStats($season->id);
         $archivedStudents = $this->archiveService->getArchivedStudentsBySeason($season->id);
+        
+        // Get unplaced students for this season
+        $unplacedStudents = UnplacedStudent::whereHas('student', function($q) use ($season) {
+                $q->where('internship_season_id', $season->id);
+            })
+            ->with(['student.section'])
+            ->where('requires_manual_intervention', true)
+            ->get();
 
         return Inertia::render('admin/seasons/stats', [
             'season' => $season,
             'stats' => $stats,
             'archivedStudents' => $archivedStudents,
+            'unplacedStudents' => $unplacedStudents,
         ]);
     }
 

@@ -3,7 +3,7 @@ import { Head, router } from '@inertiajs/react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeftIcon, CalendarIcon, UsersIcon, ClockIcon, ArchiveIcon, CheckCircleIcon } from 'lucide-react';
+import { AlertTriangleIcon, ArrowLeftIcon, CalendarIcon, UsersIcon, ClockIcon, ArchiveIcon, CheckCircleIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import AdminLayout from '@/layouts/admin/layout';
 
@@ -41,13 +41,23 @@ interface SeasonStats {
   next_category?: string;
 }
 
+interface UnplacedStudent {
+  id: number;
+  student_id: number;
+  reason: string;
+  requires_manual_intervention: boolean;
+  created_at: string;
+  student: Student;
+}
+
 interface Props {
   season: InternshipSeason;
   stats: SeasonStats;
   archivedStudents: Student[];
+  unplacedStudents: UnplacedStudent[];
 }
 
-export default function SeasonStats({ season, stats, archivedStudents }: Props) {
+export default function SeasonStats({ season, stats, archivedStudents, unplacedStudents }: Props) {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'active':
@@ -178,6 +188,20 @@ export default function SeasonStats({ season, stats, archivedStudents }: Props) 
             </CardContent>
           </Card>
 
+          {/* Unplaced Students */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Unplaced Students</CardTitle>
+              <AlertTriangleIcon className="h-4 w-4 text-destructive" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-destructive">{unplacedStudents.length}</div>
+              <p className="text-xs text-muted-foreground">
+                Require manual placement
+              </p>
+            </CardContent>
+          </Card>
+
           {/* Next Category */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -279,6 +303,92 @@ export default function SeasonStats({ season, stats, archivedStudents }: Props) 
                     <p>No archived students for this season</p>
                   </div>
                 )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Unplaced Students List */}
+        {unplacedStudents.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <AlertTriangleIcon className="h-5 w-5 text-destructive" />
+                Unplaced Students ({unplacedStudents.length})
+              </CardTitle>
+              <CardDescription>
+                Students who could not be automatically placed due to no available slots
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {/* Mobile Cards */}
+                <div className="block md:hidden space-y-3">
+                  {unplacedStudents.map((unplaced) => (
+                    <Card key={unplaced.id} className="p-4 border-destructive/50">
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-medium">
+                            {unplaced.student.last_name}, {unplaced.student.first_name}
+                            {unplaced.student.middle_name && ` ${unplaced.student.middle_name}`}
+                          </h4>
+                          <Badge variant="destructive" className="text-xs">
+                            Unplaced
+                          </Badge>
+                        </div>
+                        <div className="text-sm text-gray-600 space-y-1">
+                          <p>Student Number: {unplaced.student.student_number}</p>
+                          <p>Section: {unplaced.student.section.section_name}</p>
+                          <p className="text-destructive">Reason: {unplaced.reason}</p>
+                          <p>Flagged: {formatDateTime(unplaced.created_at)}</p>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+
+                {/* Desktop Table */}
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-3 px-4 font-medium">Student Name</th>
+                        <th className="text-left py-3 px-4 font-medium">Student Number</th>
+                        <th className="text-left py-3 px-4 font-medium">Section</th>
+                        <th className="text-left py-3 px-4 font-medium">Reason</th>
+                        <th className="text-left py-3 px-4 font-medium">Flagged Date</th>
+                        <th className="text-left py-3 px-4 font-medium">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {unplacedStudents.map((unplaced) => (
+                        <tr key={unplaced.id} className="border-b">
+                          <td className="py-3 px-4">
+                            {unplaced.student.last_name}, {unplaced.student.first_name}
+                            {unplaced.student.middle_name && ` ${unplaced.student.middle_name}`}
+                          </td>
+                          <td className="py-3 px-4 font-mono text-sm">
+                            {unplaced.student.student_number}
+                          </td>
+                          <td className="py-3 px-4">
+                            {unplaced.student.section.section_name}
+                          </td>
+                          <td className="py-3 px-4 text-destructive">
+                            {unplaced.reason}
+                          </td>
+                          <td className="py-3 px-4 text-gray-600">
+                            {formatDateTime(unplaced.created_at)}
+                          </td>
+                          <td className="py-3 px-4">
+                            <Badge variant="destructive" className="text-xs">
+                              Requires Manual Placement
+                            </Badge>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </CardContent>
           </Card>
