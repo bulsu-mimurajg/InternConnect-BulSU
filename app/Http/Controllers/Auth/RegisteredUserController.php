@@ -9,6 +9,7 @@ use App\Models\Request as RequestModel;
 use App\Models\Section;
 use App\Models\User;
 use App\Services\EmailService;
+use Cache;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
