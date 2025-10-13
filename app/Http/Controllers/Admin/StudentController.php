@@ -387,7 +387,7 @@ class StudentController extends Controller
                 $matchingService->calculateAndStoreCompatibilityScores($student);
             }
             
-            return redirect()->route('student-list')->with('success', 'Student restored successfully and matches recalculated');
+            return redirect()->route('student-list')->with('success', 'Student restored successfully. All previous matches have been reset to pending status and compatibility scores recalculated.');
         } catch (\Exception $e) {
             \Log::error('Failed to restore student', [
                 'student_id' => $student->id,

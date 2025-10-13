@@ -226,12 +226,31 @@ class StudentArchiveService
                 $student->user->update(['status' => 'verified']);
             }
 
+            // Reset all previously approved or rejected matches back to 'pending' status
+            // This ensures they appear again under Student > Matches in the SIP side
+            $resetMatchesCount = StudentMatch::where('student_id', $student->id)
+                ->whereIn('placement_status', ['approved', 'rejected'])
+                ->update(['placement_status' => 'pending']);
+
+            // Reset endorsement status to pending for previously endorsed or rejected matches
+            $resetEndorsementsCount = StudentMatch::where('student_id', $student->id)
+                ->whereIn('endorsement_status', ['endorsed', 'rejected'])
+                ->update(['endorsement_status' => 'pending']);
+
+            // Reset student placements status to pending
+            $resetPlacementsCount = StudentPlacement::where('student_id', $student->id)
+                ->whereIn('status', ['approved', 'rejected'])
+                ->update(['status' => 'pending']);
+
             Log::info('Restored archived student and user account', [
                 'student_id' => $student->id,
                 'student_number' => $student->student_number,
                 'name' => $student->first_name . ' ' . $student->last_name,
                 'user_id' => $student->user_id,
                 'user_status' => 'verified',
+                'matches_reset_to_pending' => $resetMatchesCount,
+                'endorsements_reset_to_pending' => $resetEndorsementsCount,
+                'placements_reset_to_pending' => $resetPlacementsCount,
             ]);
 
             return true;
