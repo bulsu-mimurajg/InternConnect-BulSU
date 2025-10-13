@@ -665,7 +665,7 @@ class ReportController extends Controller
             $sheet->getStyle("A{$row}")->getFont()->setBold(true)->setSize(14);
             $row += 2;
 
-            $headers = ['Section Name', 'Total Students', 'Assessed Students', 'Average Score', 'Placements', 'Placement Rate'];
+            $headers = ['Section Name', 'Total Students', 'Average Score', 'Placement Rate', 'Endorsement Rate'];
             $col = 'A';
             foreach ($headers as $header) {
                 $sheet->setCellValue("{$col}{$row}", $header);
@@ -675,24 +675,23 @@ class ReportController extends Controller
             $row++;
 
             foreach ($reportData['sectionStats'] as $stat) {
-                $sheet->setCellValue("A{$row}", $stat['section']->section_name);
-                $sheet->setCellValue("B{$row}", $stat['section']->students_count ?? 0);
-                $sheet->setCellValue("C{$row}", $stat['assessedCount']);
-                $sheet->setCellValue("D{$row}", $stat['averageScore']);
-                $sheet->setCellValue("E{$row}", $stat['placementCount']);
-                $sheet->setCellValue("F{$row}", $stat['placementRate'] . '%');
+                $sheet->setCellValue("A{$row}", $stat['section_name']);
+                $sheet->setCellValue("B{$row}", $stat['total_students']);
+                $sheet->setCellValue("C{$row}", $stat['average_score']);
+                $sheet->setCellValue("D{$row}", $stat['placement_rate'] . '%');
+                $sheet->setCellValue("E{$row}", $stat['endorsement_rate'] . '%');
                 $row++;
             }
             $row += 2;
         }
 
         // Top performing HTEs
-        if (isset($reportData['hteStats'])) {
+        if (isset($reportData['htePerformanceStats'])) {
             $sheet->setCellValue("A{$row}", "=== TOP PERFORMING HTEs ===");
             $sheet->getStyle("A{$row}")->getFont()->setBold(true)->setSize(14);
             $row += 2;
 
-            $headers = ['Company Name', 'Contact Person', 'Total Slots', 'Used Slots', 'Utilization Rate', 'Status'];
+            $headers = ['Company Name', 'Total Internships', 'Total Slots', 'Utilization Rate', 'Placed Students'];
             $col = 'A';
             foreach ($headers as $header) {
                 $sheet->setCellValue("{$col}{$row}", $header);
@@ -701,13 +700,12 @@ class ReportController extends Controller
             }
             $row++;
 
-            foreach ($reportData['hteStats'] as $stat) {
-                $sheet->setCellValue("A{$row}", $stat['hte']->company_name ?? 'N/A');
-                $sheet->setCellValue("B{$row}", $stat['hte']->getContactPersonFullNameAttribute() ?? 'N/A');
-                $sheet->setCellValue("C{$row}", $stat['totalSlots']);
-                $sheet->setCellValue("D{$row}", $stat['usedSlots']);
-                $sheet->setCellValue("E{$row}", $stat['utilizationRate'] . '%');
-                $sheet->setCellValue("F{$row}", $stat['hte']->is_active ? 'Active' : 'Inactive');
+            foreach ($reportData['htePerformanceStats'] as $stat) {
+                $sheet->setCellValue("A{$row}", $stat['company_name']);
+                $sheet->setCellValue("B{$row}", $stat['total_internships']);
+                $sheet->setCellValue("C{$row}", $stat['total_slots']);
+                $sheet->setCellValue("D{$row}", $stat['utilization_rate'] . '%');
+                $sheet->setCellValue("E{$row}", $stat['placed_students']);
                 $row++;
             }
             $row += 2;

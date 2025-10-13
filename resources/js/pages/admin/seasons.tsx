@@ -25,6 +25,10 @@ interface InternshipSeason {
   deadlines_count: number;
   students_count: number;
   active_students_count: number;
+  // New fields for automatic status management
+  automatic_status?: string;
+  status_transition_reason?: string;
+  needs_attention?: boolean;
 }
 
 interface Props {
@@ -76,6 +80,7 @@ export default function SeasonsManagement({ seasons, activeSeason }: Props) {
       onFinish: () => setIsLoading(false),
     });
   };
+
 
   const handleDeactivateSeason = (season: InternshipSeason) => {
     setDeactivateDialog({ open: true, season });
@@ -140,17 +145,18 @@ export default function SeasonsManagement({ seasons, activeSeason }: Props) {
             </Button>
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Internship Seasons</h1>
-              <p className="text-gray-600">Manage internship seasons and student archiving</p>
+              <p className="text-gray-600">Manage internship seasons, deadlines, and student archiving</p>
             </div>
           </div>
           
-          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="flex items-center gap-2">
-                <PlusIcon className="h-4 w-4" />
-                Create Season
-              </Button>
-            </DialogTrigger>
+          <div className="flex items-center gap-2">
+            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="flex items-center gap-2">
+                  <PlusIcon className="h-4 w-4" />
+                  Create Season
+                </Button>
+              </DialogTrigger>
             <DialogContent className="sm:max-w-md">
               <DialogHeader>
                 <DialogTitle>Create New Internship Season</DialogTitle>
@@ -208,6 +214,7 @@ export default function SeasonsManagement({ seasons, activeSeason }: Props) {
               </form>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
 
         {/* Deactivation Confirmation Dialog */}
@@ -320,7 +327,9 @@ export default function SeasonsManagement({ seasons, activeSeason }: Props) {
                       {formatDate(season.start_date)} - {formatDate(season.end_date)}
                     </CardDescription>
                   </div>
-                  {getStatusBadge(season.status)}
+                  <div className="flex flex-col items-end gap-1">
+                    {getStatusBadge(season.status)}
+                  </div>
                 </div>
               </CardHeader>
               

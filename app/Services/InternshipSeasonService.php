@@ -106,13 +106,31 @@ class InternshipSeasonService
             // Get count of active deadlines before expiring them
             $activeDeadlinesCount = $season->deadlines()->where('status', 'active')->count();
             
-            // Check if internship placement deadline is active
-            $hasActivePlacementDeadline = $season->deadlines()
+            // Check if internship placement deadline exists (regardless of status)
+            $hasPlacementDeadline = $season->deadlines()
                 ->where('category', 'internship_placement')
-                ->where('status', 'active')
                 ->exists();
             
-            // Expire all active deadlines in the season
+            // Always trigger automatic placement when deactivating (admin override)
+            // This allows admins to force placement processing regardless of deadline timing
+            if ($hasPlacementDeadline) {
+                $placementDeadlineStatus = $season->deadlines()
+                    ->where('category', 'internship_placement')
+                    ->value('status');
+                
+                Log::info('Triggering automatic placement on season deactivation (admin override)', [
+                    'season_id' => $season->id,
+                    'placement_deadline_status' => $placementDeadlineStatus,
+                ]);
+                
+                $this->triggerAutomaticPlacementForSeason($season);
+            } else {
+                Log::warning('No internship placement deadline found for season, skipping automatic placement', [
+                    'season_id' => $season->id,
+                ]);
+            }
+            
+            // THEN expire all active deadlines in the season
             $expiredCount = $season->deadlines()->where('status', 'active')->update(['status' => 'expired']);
             
             // Mark season as completed
@@ -123,14 +141,8 @@ class InternshipSeasonService
                 'season_name' => $season->name,
                 'active_deadlines_count' => $activeDeadlinesCount,
                 'expired_deadlines_count' => $expiredCount,
-                'had_active_placement_deadline' => $hasActivePlacementDeadline,
+                'had_placement_deadline' => $hasPlacementDeadline,
             ]);
-            
-            // Trigger automatic placement if internship placement deadline was active
-            if ($hasActivePlacementDeadline) {
-                Log::info('Triggering automatic placement due to season deactivation');
-                $this->triggerAutomaticPlacementForSeason($season);
-            }
             
             return true;
         });
@@ -315,4 +327,162 @@ class InternshipSeasonService
             'total_placed' => $totalPlaced,
         ]);
     }
+
+    /**
+     * Check and update season statuses based on dates and deadlines
+     */
+    public function checkAndUpdateSeasonStatuses(): array
+    {
+        $results = [
+            'activated' => [],
+            'deactivated' => [],
+            'errors' => []
+        ];
+
+        try {
+            DB::transaction(function () use (&$results) {
+                // First, update all deadline statuses
+                $deadlineResults = \App\Models\Deadline::checkAndUpdateStatuses();
+                
+                // Get all seasons that need status updates
+                $seasons = InternshipSeason::whereIn('status', ['inactive', 'active'])->get();
+                
+                foreach ($seasons as $season) {
+                    $automaticStatus = $season->getAutomaticStatus();
+                    
+                    // Skip if status is already correct
+                    if ($season->status === $automaticStatus) {
+                        continue;
+                    }
+                    
+                    try {
+                        if ($automaticStatus === 'active' && $season->status === 'inactive') {
+                            // Auto-activate season
+                            $this->autoActivateSeason($season);
+                            $results['activated'][] = [
+                                'id' => $season->id,
+                                'name' => $season->name,
+                                'reason' => $season->getStatusTransitionReason()
+                            ];
+                        } elseif ($automaticStatus === 'completed' && $season->status === 'active') {
+                            // Auto-deactivate season
+                            $this->autoDeactivateSeason($season);
+                            $results['deactivated'][] = [
+                                'id' => $season->id,
+                                'name' => $season->name,
+                                'reason' => $season->getStatusTransitionReason()
+                            ];
+                        }
+                    } catch (\Exception $e) {
+                        $results['errors'][] = [
+                            'season_id' => $season->id,
+                            'season_name' => $season->name,
+                            'error' => $e->getMessage()
+                        ];
+                        
+                        Log::error('Failed to auto-update season status', [
+                            'season_id' => $season->id,
+                            'season_name' => $season->name,
+                            'current_status' => $season->status,
+                            'target_status' => $automaticStatus,
+                            'error' => $e->getMessage()
+                        ]);
+                    }
+                }
+                
+                // Add deadline results to the main results
+                if (!empty($deadlineResults['activated'])) {
+                    $results['deadline_activated'] = $deadlineResults['activated'];
+                }
+                if (!empty($deadlineResults['deactivated'])) {
+                    $results['deadline_deactivated'] = $deadlineResults['deactivated'];
+                }
+                if (!empty($deadlineResults['expired'])) {
+                    $results['deadline_expired'] = $deadlineResults['expired'];
+                }
+                if (!empty($deadlineResults['errors'])) {
+                    $results['deadline_errors'] = $deadlineResults['errors'];
+                }
+            });
+            
+            Log::info('Season and deadline status check completed', $results);
+            
+        } catch (\Exception $e) {
+            Log::error('Failed to check season statuses', [
+                'error' => $e->getMessage()
+            ]);
+            
+            $results['errors'][] = [
+                'error' => 'Failed to check season statuses: ' . $e->getMessage()
+            ];
+        }
+        
+        return $results;
+    }
+
+    /**
+     * Automatically activate a season
+     */
+    private function autoActivateSeason(InternshipSeason $season): void
+    {
+        // Check if another season is active
+        $activeSeason = InternshipSeason::where('status', 'active')
+            ->where('id', '!=', $season->id)
+            ->first();
+        
+        if ($activeSeason) {
+            // Auto-deactivate the current active season first
+            $this->autoDeactivateSeason($activeSeason);
+        }
+        
+        // Validate all categories exist
+        if (!$season->hasAllRequiredDeadlines()) {
+            throw new \Exception('Cannot auto-activate season: Missing required deadline categories');
+        }
+        
+        $season->update(['status' => 'active']);
+        
+        Log::info('Automatically activated internship season', [
+            'season_id' => $season->id,
+            'season_name' => $season->name,
+            'start_date' => $season->start_date,
+            'end_date' => $season->end_date,
+        ]);
+    }
+
+    /**
+     * Automatically deactivate a season
+     */
+    private function autoDeactivateSeason(InternshipSeason $season): void
+    {
+        // Get count of active deadlines before expiring them
+        $activeDeadlinesCount = $season->deadlines()->where('status', 'active')->count();
+        
+        // Check if internship placement deadline is active
+        $hasActivePlacementDeadline = $season->deadlines()
+            ->where('category', 'internship_placement')
+            ->where('status', 'active')
+            ->exists();
+        
+        // Expire all active deadlines in the season
+        $expiredCount = $season->deadlines()->where('status', 'active')->update(['status' => 'expired']);
+        
+        // Mark season as completed
+        $season->update(['status' => 'completed']);
+        
+        Log::info('Automatically deactivated internship season and expired deadlines', [
+            'season_id' => $season->id,
+            'season_name' => $season->name,
+            'active_deadlines_count' => $activeDeadlinesCount,
+            'expired_deadlines_count' => $expiredCount,
+            'had_active_placement_deadline' => $hasActivePlacementDeadline,
+        ]);
+        
+        // Trigger automatic placement if internship placement deadline was active
+        if ($hasActivePlacementDeadline) {
+            Log::info('Triggering automatic placement due to auto season deactivation');
+            $this->triggerAutomaticPlacementForSeason($season);
+        }
+    }
+
 }

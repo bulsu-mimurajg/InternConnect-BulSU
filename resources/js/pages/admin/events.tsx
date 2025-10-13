@@ -27,9 +27,10 @@ interface Deadline {
     category_display: string;
     start_date: string;
     end_date: string;
-    status: 'active' | 'expired';
+    status: 'active' | 'inactive' | 'expired';
     is_active: boolean;
     is_expired: boolean;
+    is_inactive: boolean;
     created_at: string;
     updated_at: string;
 }
@@ -40,6 +41,7 @@ interface CategoryOption {
 }
 
 interface EventsPageProps {
+    allDeadlines: Deadline[];
     activeDeadlines: Deadline[];
     expiredDeadlines: Deadline[];
     categoryOptions: CategoryOption[];
@@ -73,7 +75,7 @@ interface EventsPageProps {
     }[];
 }
 
-export default function EventsPage({ activeDeadlines, expiredDeadlines, categoryOptions, nextCategory, sequenceInfo, activeSeason, seasons }: EventsPageProps) {
+export default function EventsPage({ allDeadlines, activeDeadlines, expiredDeadlines, categoryOptions, nextCategory, sequenceInfo, activeSeason, seasons }: EventsPageProps) {
     const [showAddDialog, setShowAddDialog] = useState(false);
     const [editingDeadline, setEditingDeadline] = useState<Deadline | null>(null);
     const [showArchived, setShowArchived] = useState(false);
@@ -97,8 +99,8 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
 
     const { patch, processing: extending, errors: extendErrors, reset: resetExtend } = useForm({});
 
-    // Get current deadlines based on filter
-    const currentDeadlines = showArchived ? expiredDeadlines : activeDeadlines;
+    // Get current deadlines based on filter - now using allDeadlines
+    const currentDeadlines = showArchived ? expiredDeadlines : allDeadlines;
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -281,6 +283,12 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
                     Active
                 </Badge>
             );
+        } else if (deadline.is_inactive) {
+            return (
+                <Badge variant="outline" className="bg-gray-100 text-gray-800">
+                    Inactive
+                </Badge>
+            );
         } else {
             return (
                 <Badge variant="outline" className="bg-gray-100 text-gray-800">
@@ -404,7 +412,7 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
                                     <div className="flex items-center gap-2">
                                         <ClockIcon className="h-4 w-4 text-green-600" />
                                         <span className="text-sm text-green-700">
-                                            {activeDeadlines.length} active deadlines
+                                            {allDeadlines.length} total deadlines ({activeDeadlines.length} active, {expiredDeadlines.length} expired)
                                         </span>
                                     </div>
                                     <div className="flex items-center gap-2">
@@ -447,20 +455,11 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
                                     Add Deadline
                                 </Button>
                             <Button
-                                variant="outline"
                                 onClick={() => router.get('/admin/seasons')}
                                 className="flex items-center gap-2 h-9"
                             >
                                 <CalendarIcon className="h-4 w-4" />
                                 Manage Seasons
-                            </Button>
-                            <Button
-                                variant="outline"
-                                onClick={() => setShowArchived(!showArchived)}
-                                className="flex items-center gap-2 h-9"
-                            >
-                                <CalendarIcon className="h-4 w-4" />
-                                {showArchived ? 'Show Active' : 'Show Expired'}
                             </Button>
                         </div>
                     </div>
@@ -502,7 +501,7 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
                     <CardHeader className="pb-4 space-y-2">
                         <CardTitle className="flex items-center gap-2 text-xl font-semibold text-foreground">
                             <CalendarIcon className="h-5 w-5" />
-                            {showArchived ? 'Expired Deadlines' : 'Active Deadlines'}
+                            {showArchived ? 'Expired Deadlines' : 'All Deadlines for Active Season'}
                             <Badge variant="secondary" className="ml-2 bg-muted text-muted-foreground">
                                 {currentDeadlines.length}
                             </Badge>
@@ -510,7 +509,7 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
                         <CardDescription className="text-sm text-muted-foreground">
                             {showArchived
                                 ? 'Manage expired application deadlines'
-                                : 'Manage active application deadlines'
+                                : 'Manage all deadlines for the current active season regardless of status'
                             }
                         </CardDescription>
                     </CardHeader>
@@ -528,19 +527,10 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
                                         <p className="text-sm text-muted-foreground max-w-sm">
                                             {showArchived
                                                 ? 'No deadlines have expired yet.'
-                                                : 'Get started by creating your first deadline.'
+                                                : 'No deadlines exist for the current active season. Get started by creating your first deadline.'
                                             }
                                         </p>
                                     </div>
-                                    {!showArchived && (
-                                        <Button
-                                            onClick={() => setShowAddDialog(true)}
-                                            className="h-9 px-6"
-                                        >
-                                            <PlusIcon className="h-4 w-4 mr-2" />
-                                            Add Deadline
-                                        </Button>
-                                    )}
                                 </div>
                             </div>
                         ) : (

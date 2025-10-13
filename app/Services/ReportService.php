@@ -793,7 +793,8 @@ class ReportService
             'htes' => $htes,
             'placements' => $placements,
             'endorsements' => $endorsements,
-            'overallStats' => [
+            'overallStats' => $overallStats,
+            'overallStatsFormatted' => [
                 ['label' => 'Total Sections', 'value' => $overallStats['totalSections']],
                 ['label' => 'Total Students', 'value' => $overallStats['totalStudents']],
                 ['label' => 'Active Students', 'value' => $overallStats['activeStudents']],

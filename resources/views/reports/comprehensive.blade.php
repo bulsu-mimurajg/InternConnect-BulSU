@@ -168,7 +168,7 @@
             <div class="section">
                 <h2 class="section-title">System Overview</h2>
                 <div class="stats">
-                    @foreach($overallStats as $stat)
+                    @foreach($overallStatsFormatted as $stat)
                         <div class="stat-card">
                             <div class="stat-label">{{ $stat['label'] }}</div>
                             <div class="stat-value">{{ $stat['value'] }}</div>

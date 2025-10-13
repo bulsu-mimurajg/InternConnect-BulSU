@@ -1,11 +1,26 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Head, router } from '@inertiajs/react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { AlertTriangleIcon, ArrowLeftIcon, CalendarIcon, UsersIcon, ClockIcon, ArchiveIcon, CheckCircleIcon } from 'lucide-react';
+import { AlertTriangleIcon, ArrowLeftIcon, CalendarIcon, UsersIcon, ClockIcon, ArchiveIcon, CheckCircleIcon, XIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import AdminLayout from '@/layouts/admin/layout';
+
+interface Deadline {
+  id: number;
+  title: string;
+  category: string;
+  category_display: string;
+  start_date: string;
+  end_date: string;
+  status: 'active' | 'inactive' | 'expired';
+  is_active: boolean;
+  is_expired: boolean;
+  internship_season_id: number;
+  created_at: string;
+  updated_at: string;
+}
 
 interface InternshipSeason {
   id: number;
@@ -80,19 +95,25 @@ interface Props {
   archivedStudents: Student[];
   placedStudents: PlacedStudent[];
   unplacedStudents: UnplacedStudent[];
+  activeDeadlines: Deadline[];
+  inactiveDeadlines: Deadline[];
+  expiredDeadlines: Deadline[];
 }
 
-export default function SeasonStats({ season, stats, archivedStudents, placedStudents, unplacedStudents }: Props) {
+export default function SeasonStats({ season, stats, archivedStudents, placedStudents, unplacedStudents, activeDeadlines, inactiveDeadlines, expiredDeadlines }: Props) {
+  const [showInactiveDeadlines, setShowInactiveDeadlines] = useState(false);
+  const [showDeadlinesSection, setShowDeadlinesSection] = useState(true);
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'active':
-        return <Badge className="bg-green-100 text-green-800">🟢 Active</Badge>;
+        return <Badge className="bg-green-100 text-green-800">Active</Badge>;
       case 'inactive':
-        return <Badge className="bg-gray-100 text-gray-800">⚪ Inactive</Badge>;
+        return <Badge className="bg-gray-100 text-gray-800">Inactive</Badge>;
       case 'completed':
-        return <Badge className="bg-blue-100 text-blue-800">✅ Completed</Badge>;
+        return <Badge className="bg-blue-100 text-blue-800 py-2.5">Completed</Badge>;
       case 'archived':
-        return <Badge className="bg-gray-100 text-gray-800">📁 Archived</Badge>;
+        return <Badge className="bg-gray-100 text-gray-800">Archived</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
@@ -104,6 +125,27 @@ export default function SeasonStats({ season, stats, archivedStudents, placedStu
 
   const formatDateTime = (dateString: string) => {
     return format(new Date(dateString), 'MMM dd, yyyy HH:mm');
+  };
+
+  // Helper functions for deadline filtering
+  const getFilteredDeadlines = () => {
+    if (showInactiveDeadlines) {
+      return [...inactiveDeadlines, ...expiredDeadlines];
+    }
+    return activeDeadlines;
+  };
+
+  const getDeadlineStatusBadge = (deadline: Deadline) => {
+    switch (deadline.status) {
+      case 'active':
+        return <Badge className="bg-green-100 text-green-800">🟢 Active</Badge>;
+      case 'inactive':
+        return <Badge className="bg-gray-100 text-gray-800">⚪ Inactive</Badge>;
+      case 'expired':
+        return <Badge className="bg-red-100 text-red-800">🔴 Expired</Badge>;
+      default:
+        return <Badge variant="secondary">{deadline.status}</Badge>;
+    }
   };
 
   return (
@@ -128,7 +170,28 @@ export default function SeasonStats({ season, stats, archivedStudents, placedStu
               <p className="text-gray-600">Season Statistics & Overview</p>
             </div>
           </div>
-          {getStatusBadge(season.status)}
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (!showDeadlinesSection) {
+                  setShowDeadlinesSection(true);
+                } else {
+                  setShowInactiveDeadlines(!showInactiveDeadlines);
+                }
+              }}
+              className={`flex items-center gap-2 h-9 ${showInactiveDeadlines ? 'bg-gray-100' : 'bg-green-50 border-green-200'}`}
+            >
+              <CalendarIcon className="h-4 w-4" />
+              {!showDeadlinesSection 
+                ? 'Show Deadlines' 
+                : showInactiveDeadlines 
+                  ? 'Show Active Deadlines' 
+                  : 'Show Inactive Deadlines'
+              }
+            </Button>
+            {getStatusBadge(season.status)}
+          </div>
         </div>
 
         {/* Season Overview */}
@@ -168,6 +231,85 @@ export default function SeasonStats({ season, stats, archivedStudents, placedStu
             </div>
           </CardContent>
         </Card>
+
+        {/* Deadlines Display */}
+        {showDeadlinesSection && (
+          <Card className="border-border shadow-sm">
+            <CardHeader className="pb-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2 text-xl font-semibold text-foreground">
+                  <CalendarIcon className="h-5 w-5" />
+                  {showInactiveDeadlines ? 'Inactive & Expired Deadlines' : 'Active Deadlines'}
+                  <Badge variant="secondary" className="ml-2 bg-muted text-muted-foreground">
+                    {getFilteredDeadlines().length}
+                  </Badge>
+                </CardTitle>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowDeadlinesSection(false)}
+                  className="h-8 w-8 p-0 hover:bg-gray-100"
+                >
+                  <XIcon className="h-4 w-4" />
+                </Button>
+              </div>
+              <CardDescription className="text-sm text-muted-foreground">
+                {showInactiveDeadlines 
+                  ? 'View inactive and expired deadlines for this season'
+                  : 'View active deadlines for this season'
+                }
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {getFilteredDeadlines().length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {getFilteredDeadlines().map((deadline) => (
+                    <Card key={deadline.id} className="border-border">
+                      <CardHeader className="pb-3">
+                        <div className="flex items-start justify-between">
+                          <div className="space-y-1">
+                            <CardTitle className="text-sm font-medium">{deadline.title}</CardTitle>
+                            <CardDescription className="text-xs">
+                              {deadline.category_display}
+                            </CardDescription>
+                          </div>
+                          {getDeadlineStatusBadge(deadline)}
+                        </div>
+                      </CardHeader>
+                      <CardContent className="pt-0">
+                        <div className="space-y-2 text-xs text-muted-foreground">
+                          <div className="flex items-center gap-2">
+                            <CalendarIcon className="h-3 w-3" />
+                            <span>Start: {formatDateTime(deadline.start_date)}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <CalendarIcon className="h-3 w-3" />
+                            <span>End: {formatDateTime(deadline.end_date)}</span>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <div className="p-4 rounded-full bg-muted mx-auto w-fit mb-4">
+                    <CalendarIcon className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-foreground mb-2">
+                    No {showInactiveDeadlines ? 'inactive or expired' : 'active'} deadlines found
+                  </h3>
+                  <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+                    {showInactiveDeadlines
+                      ? 'No deadlines are currently inactive or expired for this season.'
+                      : 'No deadlines are currently active for this season.'
+                    }
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Statistics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

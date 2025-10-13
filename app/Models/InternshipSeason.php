@@ -189,6 +189,104 @@ class InternshipSeason extends Model
     }
 
     /**
+     * Check if season should be automatically activated based on start date
+     */
+    public function shouldBeActivated(): bool
+    {
+        $now = Carbon::now();
+        return $this->status === 'inactive' && 
+               $now->isAfter($this->start_date) && 
+               $now->isBefore($this->end_date) &&
+               $this->hasAllRequiredDeadlines();
+    }
+
+    /**
+     * Check if season should be automatically deactivated based on end date
+     */
+    public function shouldBeDeactivated(): bool
+    {
+        $now = Carbon::now();
+        return $this->status === 'active' && $now->isAfter($this->end_date);
+    }
+
+    /**
+     * Check if season has all required deadline categories
+     */
+    public function hasAllRequiredDeadlines(): bool
+    {
+        $requiredCategories = [
+            'hte_assessment_form',
+            'student_verification', 
+            'student_assessment_form',
+            'internship_placement',
+            'archive_students'
+        ];
+        
+        $existingCategories = $this->deadlines()->pluck('category')->toArray();
+        return empty(array_diff($requiredCategories, $existingCategories));
+    }
+
+    /**
+     * Get the automatic status based on current date and deadlines
+     */
+    public function getAutomaticStatus(): string
+    {
+        $now = Carbon::now();
+        
+        // If before start date
+        if ($now->isBefore($this->start_date)) {
+            return 'inactive';
+        }
+        
+        // If after end date
+        if ($now->isAfter($this->end_date)) {
+            return 'completed';
+        }
+        
+        // If within date range and has all deadlines
+        if ($now->between($this->start_date, $this->end_date) && $this->hasAllRequiredDeadlines()) {
+            return 'active';
+        }
+        
+        // If within date range but missing deadlines
+        if ($now->between($this->start_date, $this->end_date) && !$this->hasAllRequiredDeadlines()) {
+            return 'inactive';
+        }
+        
+        return 'inactive';
+    }
+
+    /**
+     * Check if the current status matches what it should be automatically
+     */
+    public function isStatusCorrect(): bool
+    {
+        return $this->status === $this->getAutomaticStatus();
+    }
+
+    /**
+     * Get status transition reason
+     */
+    public function getStatusTransitionReason(): string
+    {
+        $now = Carbon::now();
+        
+        if ($now->isBefore($this->start_date)) {
+            return 'Season has not started yet';
+        }
+        
+        if ($now->isAfter($this->end_date)) {
+            return 'Season has ended';
+        }
+        
+        if (!$this->hasAllRequiredDeadlines()) {
+            return 'Missing required deadline categories';
+        }
+        
+        return 'Season is within active period';
+    }
+
+    /**
      * Get the next category that should be created for this season
      */
     public function getNextCategoryToCreate(): ?string

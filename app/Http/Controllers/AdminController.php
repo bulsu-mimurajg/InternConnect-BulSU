@@ -2039,8 +2039,8 @@ class AdminController extends Controller
             ]);
         }
 
-        // Get active deadlines
-        $activeDeadlines = Deadline::getActive()
+        // Get all deadlines for the active season regardless of status
+        $allDeadlines = Deadline::getAllForActiveSeason()
             ->map(function ($deadline) {
                 return [
                     'id' => $deadline->id,
@@ -2052,28 +2052,20 @@ class AdminController extends Controller
                     'status' => $deadline->status,
                     'is_active' => $deadline->isActive(),
                     'is_expired' => $deadline->isExpired(),
+                    'is_inactive' => $deadline->isInactive(),
                     'created_at' => $deadline->created_at->format('M d, Y'),
                     'updated_at' => $deadline->updated_at->format('M d, Y'),
                 ];
             });
 
-        // Get expired deadlines
-        $expiredDeadlines = Deadline::getExpired()
-            ->map(function ($deadline) {
-                return [
-                    'id' => $deadline->id,
-                    'title' => $deadline->title,
-                    'category' => $deadline->category,
-                    'category_display' => $deadline->getCategoryDisplayName(),
-                    'start_date' => $deadline->start_date->format('Y-m-d\TH:i'),
-                    'end_date' => $deadline->end_date->format('Y-m-d\TH:i'),
-                    'status' => $deadline->status,
-                    'is_active' => $deadline->isActive(),
-                    'is_expired' => $deadline->isExpired(),
-                    'created_at' => $deadline->created_at->format('M d, Y'),
-                    'updated_at' => $deadline->updated_at->format('M d, Y'),
-                ];
-            });
+        // Separate deadlines by status for backward compatibility
+        $activeDeadlines = $allDeadlines->filter(function ($deadline) {
+            return $deadline['is_active'];
+        })->values();
+
+        $expiredDeadlines = $allDeadlines->filter(function ($deadline) {
+            return $deadline['is_expired'];
+        })->values();
 
         // Get category options
         $categoryOptions = [
@@ -2129,6 +2121,7 @@ class AdminController extends Controller
         }
 
         return Inertia::render('admin/events', [
+            'allDeadlines' => $allDeadlines,
             'activeDeadlines' => $activeDeadlines,
             'expiredDeadlines' => $expiredDeadlines,
             'categoryOptions' => $categoryOptions,

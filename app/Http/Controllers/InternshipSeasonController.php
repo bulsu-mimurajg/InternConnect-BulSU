@@ -289,12 +289,89 @@ class InternshipSeasonController extends Controller
             ->where('requires_manual_intervention', true)
             ->get();
 
+        // Get active deadlines for this specific season
+        $activeDeadlines = Deadline::where('internship_season_id', $season->id)
+            ->where('status', 'active')
+            ->where('end_date', '>', Carbon::now())
+            ->where('start_date', '<=', Carbon::now())
+            ->orderBy('end_date', 'asc')
+            ->get()
+            ->map(function ($deadline) {
+                return [
+                    'id' => $deadline->id,
+                    'title' => $deadline->title,
+                    'category' => $deadline->category,
+                    'category_display' => $deadline->getCategoryDisplayName(),
+                    'start_date' => $deadline->start_date->format('Y-m-d\TH:i'),
+                    'end_date' => $deadline->end_date->format('Y-m-d\TH:i'),
+                    'status' => $deadline->status,
+                    'is_active' => $deadline->isActive(),
+                    'is_expired' => $deadline->isExpired(),
+                    'internship_season_id' => $deadline->internship_season_id,
+                    'created_at' => $deadline->created_at->format('M d, Y'),
+                    'updated_at' => $deadline->updated_at->format('M d, Y'),
+                ];
+            });
+
+        // Get inactive deadlines for this specific season
+        $inactiveDeadlines = Deadline::where('internship_season_id', $season->id)
+            ->where(function($query) {
+                $query->where('status', 'inactive')
+                      ->orWhere('start_date', '>', Carbon::now());
+            })
+            ->orderBy('start_date', 'asc')
+            ->get()
+            ->map(function ($deadline) {
+                return [
+                    'id' => $deadline->id,
+                    'title' => $deadline->title,
+                    'category' => $deadline->category,
+                    'category_display' => $deadline->getCategoryDisplayName(),
+                    'start_date' => $deadline->start_date->format('Y-m-d\TH:i'),
+                    'end_date' => $deadline->end_date->format('Y-m-d\TH:i'),
+                    'status' => $deadline->status,
+                    'is_active' => $deadline->isActive(),
+                    'is_expired' => $deadline->isExpired(),
+                    'internship_season_id' => $deadline->internship_season_id,
+                    'created_at' => $deadline->created_at->format('M d, Y'),
+                    'updated_at' => $deadline->updated_at->format('M d, Y'),
+                ];
+            });
+
+        // Get expired deadlines for this specific season
+        $expiredDeadlines = Deadline::where('internship_season_id', $season->id)
+            ->where(function($query) {
+                $query->where('status', 'expired')
+                      ->orWhere('end_date', '<=', Carbon::now());
+            })
+            ->orderBy('end_date', 'desc')
+            ->get()
+            ->map(function ($deadline) {
+                return [
+                    'id' => $deadline->id,
+                    'title' => $deadline->title,
+                    'category' => $deadline->category,
+                    'category_display' => $deadline->getCategoryDisplayName(),
+                    'start_date' => $deadline->start_date->format('Y-m-d\TH:i'),
+                    'end_date' => $deadline->end_date->format('Y-m-d\TH:i'),
+                    'status' => $deadline->status,
+                    'is_active' => $deadline->isActive(),
+                    'is_expired' => $deadline->isExpired(),
+                    'internship_season_id' => $deadline->internship_season_id,
+                    'created_at' => $deadline->created_at->format('M d, Y'),
+                    'updated_at' => $deadline->updated_at->format('M d, Y'),
+                ];
+            });
+
         return Inertia::render('admin/seasons/stats', [
             'season' => $season,
             'stats' => $stats,
             'archivedStudents' => $archivedStudents,
             'placedStudents' => $placedStudents,
             'unplacedStudents' => $unplacedStudents,
+            'activeDeadlines' => $activeDeadlines,
+            'inactiveDeadlines' => $inactiveDeadlines,
+            'expiredDeadlines' => $expiredDeadlines,
         ]);
     }
 
@@ -310,4 +387,5 @@ class InternshipSeasonController extends Controller
             'archivedStudents' => $archivedStudents,
         ]);
     }
+
 }
