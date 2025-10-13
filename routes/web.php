@@ -63,6 +63,7 @@ Route::middleware(['auth', 'verified', 'role_redirect:admin'])->group(function (
 
     // Events Management routes
     Route::get('admin/events', [AdminController::class, 'eventsManagement'])->name('admin.events');
+    Route::get('admin/deadlines/sequence-info/{seasonId}', [AdminController::class, 'getSequenceInfoForSeason'])->name('admin.deadlines.sequence-info');
     Route::post('admin/deadlines', [AdminController::class, 'storeDeadline'])->name('admin.deadlines.store');
     Route::put('admin/deadlines/{deadline}', [AdminController::class, 'updateDeadline'])->name('admin.deadlines.update');
     Route::patch('admin/deadlines/{deadline}/extend', [AdminController::class, 'extendDeadline'])->name('admin.deadlines.extend');

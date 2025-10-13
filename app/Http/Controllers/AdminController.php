@@ -2140,6 +2140,49 @@ class AdminController extends Controller
     }
 
     /**
+     * Get sequence info for a specific season
+     */
+    public function getSequenceInfoForSeason(int $seasonId)
+    {
+        try {
+            $season = InternshipSeason::findOrFail($seasonId);
+            
+            // Get sequence validation info for all categories for this season
+            $sequenceInfo = [];
+            foreach (['hte_assessment_form', 'student_verification', 'student_assessment_form', 'internship_placement', 'archive_students'] as $category) {
+                $validation = Deadline::canCreateCategoryForSeason($category, $seasonId);
+                $sequenceInfo[$category] = [
+                    'can_create' => $validation['can_create'],
+                    'missing_categories' => $validation['missing_categories'],
+                    'order' => $validation['current_order'],
+                ];
+            }
+
+            // Get next category that should be created for this season
+            $nextCategory = $season->getNextCategoryToCreate();
+            $nextCategoryInfo = null;
+            if ($nextCategory) {
+                $nextCategoryInfo = [
+                    'value' => $nextCategory,
+                    'label' => (new Deadline(['category' => $nextCategory]))->getCategoryDisplayName(),
+                ];
+            }
+
+            return response()->json([
+                'sequenceInfo' => $sequenceInfo,
+                'nextCategory' => $nextCategoryInfo,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to get sequence info for season', [
+                'season_id' => $seasonId,
+                'error' => $e->getMessage(),
+            ]);
+            
+            return response()->json(['error' => 'Failed to get sequence info'], 500);
+        }
+    }
+
+    /**
      * Store a new deadline
      */
     public function storeDeadline(Request $request)

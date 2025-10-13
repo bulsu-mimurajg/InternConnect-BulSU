@@ -83,6 +83,8 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
     const [deletingDeadline, setDeletingDeadline] = useState<Deadline | null>(null);
     const [showEditDialog, setShowEditDialog] = useState(false);
     const [manualErrors, setManualErrors] = useState<{ [key: string]: string }>({});
+    const [currentSequenceInfo, setCurrentSequenceInfo] = useState(sequenceInfo);
+    const [currentNextCategory, setCurrentNextCategory] = useState(nextCategory);
     const { flash } = usePage().props as any;
 
     const { data, setData, post, put, delete: destroy, processing, errors, reset } = useForm({
@@ -102,8 +104,8 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
         e.preventDefault();
     
         // Validation checks
-        if (data.category && sequenceInfo[data.category] && !sequenceInfo[data.category].can_create) {
-            const missingCategories = sequenceInfo[data.category].missing_categories.map(cat => getCategoryDisplayName(cat)).join(', ');
+        if (data.category && currentSequenceInfo[data.category] && !currentSequenceInfo[data.category].can_create) {
+            const missingCategories = currentSequenceInfo[data.category].missing_categories.map(cat => getCategoryDisplayName(cat)).join(', ');
             alert(`Cannot create this deadline yet. Please create deadlines in chronological order. Missing: ${missingCategories}`);
             return;
         }
@@ -137,6 +139,16 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
                     setShowAddDialog(false);
                     setShowEditDialog(false);
                     setEditingDeadline(null);
+                    
+                    // Refresh sequence info for the selected season
+                    if (data.season_id && typeof data.season_id === 'number') {
+                        getSequenceInfoForSeason(data.season_id).then((seasonInfo) => {
+                            if (seasonInfo) {
+                                setCurrentSequenceInfo(seasonInfo.sequenceInfo);
+                                setCurrentNextCategory(seasonInfo.nextCategory);
+                            }
+                        });
+                    }
                 },
                 onError: (errors: any) => console.error('Update errors:', errors),
             });
@@ -146,6 +158,16 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
                     reset();
                     setManualErrors({});
                     setShowAddDialog(false);
+                    
+                    // Refresh sequence info for the selected season
+                    if (data.season_id && typeof data.season_id === 'number') {
+                        getSequenceInfoForSeason(data.season_id).then((seasonInfo) => {
+                            if (seasonInfo) {
+                                setCurrentSequenceInfo(seasonInfo.sequenceInfo);
+                                setCurrentNextCategory(seasonInfo.nextCategory);
+                            }
+                        });
+                    }
                 },
                 onError: (errors: any) => {
                     console.error('Creation errors:', errors);
@@ -204,6 +226,16 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
                 onSuccess: () => {
                     setShowDeleteDialog(false);
                     setDeletingDeadline(null);
+                    
+                    // Refresh sequence info for the selected season
+                    if (data.season_id && typeof data.season_id === 'number') {
+                        getSequenceInfoForSeason(data.season_id).then((seasonInfo) => {
+                            if (seasonInfo) {
+                                setCurrentSequenceInfo(seasonInfo.sequenceInfo);
+                                setCurrentNextCategory(seasonInfo.nextCategory);
+                            }
+                        });
+                    }
                 },
                 onError: (errors) => {
                     console.error('Delete errors:', errors);
@@ -286,10 +318,35 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
 
     const getAvailableCategories = () => {
         return categoryOptions.filter(option => {
-            const info = sequenceInfo[option.value];
+            const info = currentSequenceInfo[option.value];
             return info && info.can_create;
         });
     };
+
+    // Get sequence info for the selected season
+    const getSequenceInfoForSeason = async (seasonId: number) => {
+        try {
+            const response = await fetch(`/admin/deadlines/sequence-info/${seasonId}`);
+            if (response.ok) {
+                return await response.json();
+            }
+        } catch (error) {
+            console.error('Failed to fetch sequence info:', error);
+        }
+        return null;
+    };
+
+    // Update sequence info when season changes
+    useEffect(() => {
+        if (data.season_id && typeof data.season_id === 'number') {
+            getSequenceInfoForSeason(data.season_id).then((seasonInfo) => {
+                if (seasonInfo) {
+                    setCurrentSequenceInfo(seasonInfo.sequenceInfo);
+                    setCurrentNextCategory(seasonInfo.nextCategory);
+                }
+            });
+        }
+    }, [data.season_id]);
 
     // Debug: Log errors when they change
     useEffect(() => {
@@ -826,11 +883,15 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
                                             <span className="font-medium">4.</span>
                                             <span>Internship Placement</span>
                                         </div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-medium">5.</span>
+                                            <span>Archive Students</span>
+                                        </div>
                                     </div>
-                                    {nextCategory && (
+                                    {currentNextCategory && (
                                         <div className="mt-3 p-2 bg-green-100 dark:bg-green-900/30 rounded border border-green-200 dark:border-green-800">
                                             <p className="text-sm font-medium text-green-800 dark:text-green-200">
-                                                Next: {nextCategory.label}
+                                                Next: {currentNextCategory.label}
                                             </p>
                                         </div>
                                     )}
@@ -901,8 +962,8 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
                                             </SelectTrigger>
                                             <SelectContent>
                                                 {getAvailableCategories().map((option) => {
-                                                    const info = sequenceInfo[option.value];
-                                                    const isRecommended = nextCategory?.value === option.value;
+                                                    const info = currentSequenceInfo[option.value];
+                                                    const isRecommended = currentNextCategory?.value === option.value;
                                                     return (
                                                         <SelectItem key={option.value} value={option.value}>
                                                             <div className="flex items-center gap-2">
@@ -921,10 +982,10 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
                                         {errors.category && (
                                             <p className="text-sm text-destructive">{errors.category}</p>
                                         )}
-                                        {data.category && sequenceInfo[data.category] && !sequenceInfo[data.category].can_create && (
+                                        {data.category && currentSequenceInfo[data.category] && !currentSequenceInfo[data.category].can_create && (
                                             <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
                                                 <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                                                    <strong>Cannot create this deadline yet.</strong> Please create deadlines in chronological order. Missing: {sequenceInfo[data.category].missing_categories.map(cat => getCategoryDisplayName(cat)).join(', ')}
+                                                    <strong>Cannot create this deadline yet.</strong> Please create deadlines in chronological order. Missing: {currentSequenceInfo[data.category].missing_categories.map(cat => getCategoryDisplayName(cat)).join(', ')}
                                                 </p>
                                             </div>
                                         )}
@@ -966,7 +1027,7 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
                                 <div className="flex flex-col sm:flex-row gap-2 justify-end">
                                     <Button
                                         type="submit"
-                                        disabled={processing || !!errors.category || !!manualErrors.category}
+                                        disabled={processing || !!errors.category || !!manualErrors.category || (!!data.category && currentSequenceInfo[data.category] && !currentSequenceInfo[data.category].can_create)}
                                         className="flex-1 sm:flex-none h-9"
                                     >
                                         {processing ? 'Saving...' : 'Create Deadline'}

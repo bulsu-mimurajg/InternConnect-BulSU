@@ -2,15 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Student;
 use App\Models\User;
 use App\Models\InternshipSeason;
 use App\Services\InternshipSeasonService;
 use App\Models\AcademeAccount;
 use App\Models\StudentScore;
 use App\Models\Section;
+use Cache;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -49,7 +50,7 @@ class AdviserController extends Controller
             // Check if adviser has any sections (including archived ones)
             $allAdviserSections = $adviserRecord->sections;
             $archivedSections = $allAdviserSections->where('status', 'archived');
-            
+
             if ($archivedSections->isNotEmpty()) {
                 return Inertia::render('adviser/dashboard', [
                     'stats' => [],
@@ -62,7 +63,7 @@ class AdviserController extends Controller
                     'archivedSectionNames' => $archivedSections->pluck('section_name')->toArray(),
                 ]);
             }
-            
+
             return Inertia::render('adviser/dashboard', [
                 'stats' => [],
                 'recentAssessments' => [],
@@ -415,7 +416,7 @@ class AdviserController extends Controller
             // Check if adviser has any sections (including archived ones)
             $allAdviserSections = $adviserRecord->sections;
             $archivedSections = $allAdviserSections->where('status', 'archived');
-            
+
             if ($archivedSections->isNotEmpty()) {
                 return Inertia::render('adviser/application', [
                     'pendingStudents' => [],
@@ -427,7 +428,7 @@ class AdviserController extends Controller
                     'archivedSectionNames' => $archivedSections->pluck('section_name')->toArray(),
                 ]);
             }
-            
+
             return Inertia::render('adviser/application', [
                 'pendingStudents' => [],
                 'verifiedStudents' => [],
@@ -924,7 +925,7 @@ class AdviserController extends Controller
             // Check if adviser has any sections (including archived ones)
             $allAdviserSections = $adviserRecord->sections;
             $archivedSections = $allAdviserSections->where('status', 'archived');
-            
+
             if ($archivedSections->isNotEmpty()) {
                 return Inertia::render('adviser/students', [
                     'students' => [],
@@ -935,7 +936,7 @@ class AdviserController extends Controller
                     'archivedSectionNames' => $archivedSections->pluck('section_name')->toArray(),
                 ]);
             }
-            
+
             return Inertia::render('adviser/students', [
                 'students' => [],
                 'adviserSection' => null,
@@ -1101,11 +1102,11 @@ class AdviserController extends Controller
                 ->where('section_id', $sectionId)
                 ->where('status', 'archived')
                 ->exists();
-                
+
             if ($isArchived) {
                 return redirect()->back()->withErrors(['error' => 'Cannot switch to archived section. Please contact an administrator.']);
             }
-            
+
             return redirect()->back()->withErrors(['error' => 'You do not have access to this section.']);
         }
 
@@ -1140,7 +1141,7 @@ class AdviserController extends Controller
             // Check if adviser has any sections (including archived ones)
             $allAdviserSections = $adviserRecord->sections;
             $archivedSections = $allAdviserSections->where('status', 'archived');
-            
+
             if ($archivedSections->isNotEmpty()) {
                 return Inertia::render('adviser/report', [
                     'adviserSection' => null,
@@ -1150,7 +1151,7 @@ class AdviserController extends Controller
                     'archivedSectionNames' => $archivedSections->pluck('section_name')->toArray(),
                 ]);
             }
-            
+
             return Inertia::render('adviser/report', [
                 'adviserSection' => null,
                 'adviserSections' => [],
