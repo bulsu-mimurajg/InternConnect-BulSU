@@ -44,16 +44,18 @@ export function DateTimePicker({
     setTempDate(date)
   }
 
-  const handleTimeChange = (time: string) => {
-    setTempTime(time)
+  const handleTimeChange = (timeValue: string) => {
+    setTempTime(timeValue)
   }
 
   const handleApply = () => {
-    if (tempDate) {
+    if (tempDate && tempTime) {
       const [hours, minutes] = tempTime.split(":").map(Number)
       const newDateTime = new Date(tempDate)
       newDateTime.setHours(hours || 0, minutes || 0, 0, 0)
       onChange?.(newDateTime)
+    } else if (tempDate) {
+      onChange?.(tempDate)
     }
     setOpen(false)
   }

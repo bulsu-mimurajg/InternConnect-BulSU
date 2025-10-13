@@ -82,22 +82,21 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-
-        // Client-side validation for sequence
+    
+        // Validation checks
         if (data.category && sequenceInfo[data.category] && !sequenceInfo[data.category].can_create) {
             const missingCategories = sequenceInfo[data.category].missing_categories.map(cat => getCategoryDisplayName(cat)).join(', ');
             alert(`Cannot create this deadline yet. Please create deadlines in chronological order. Missing: ${missingCategories}`);
             return;
         }
-
-        // Check if there are any validation errors
+    
         if (errors.category || manualErrors.category) {
             alert('Please resolve the category error before submitting.');
             return;
         }
-
-        // Convert Date objects to local date strings for API (avoid timezone issues)
-        const formatDateForAPI = (date: Date) => {
+    
+        // Format dates for Laravel (Asia/Manila timezone)
+        const formatDate = (date: Date) => {
             const year = date.getFullYear();
             const month = String(date.getMonth() + 1).padStart(2, '0');
             const day = String(date.getDate()).padStart(2, '0');
@@ -106,24 +105,22 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
             const seconds = String(date.getSeconds()).padStart(2, '0');
             return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
         };
-
+    
         const submitData = {
             ...data,
-            start_date: data.start_date ? formatDateForAPI(data.start_date) : '',
-            end_date: data.end_date ? formatDateForAPI(data.end_date) : '',
+            start_date: data.start_date ? formatDate(data.start_date) : '',
+            end_date: data.end_date ? formatDate(data.end_date) : '',
         };
-
+    
         if (editingDeadline) {
-            put(`/admin/deadlines/${editingDeadline.id}`, {
+            router.put(`/admin/deadlines/${editingDeadline.id}`, submitData, {
                 onSuccess: () => {
                     reset();
                     setShowAddDialog(false);
                     setShowEditDialog(false);
                     setEditingDeadline(null);
                 },
-                onError: (errors: any) => {
-                    console.error('Update errors:', errors);
-                },
+                onError: (errors: any) => console.error('Update errors:', errors),
             });
         } else {
             router.post('/admin/deadlines', submitData, {
@@ -134,20 +131,25 @@ export default function EventsPage({ activeDeadlines, expiredDeadlines, category
                 },
                 onError: (errors: any) => {
                     console.error('Creation errors:', errors);
-                    // Manually set the errors in the form
                     setManualErrors(errors);
                 },
             });
         }
     };
+    
 
     const handleEdit = (deadline: Deadline) => {
         setEditingDeadline(deadline);
+    
+        // Parse backend string as local time (Asia/Manila)
+        const start = new Date(deadline.start_date.replace(' ', 'T'));
+        const end = new Date(deadline.end_date.replace(' ', 'T'));
+    
         setData({
             title: deadline.title,
             category: deadline.category,
-            start_date: new Date(deadline.start_date),
-            end_date: new Date(deadline.end_date),
+            start_date: start,
+            end_date: end,
         });
         setShowEditDialog(true);
     };
