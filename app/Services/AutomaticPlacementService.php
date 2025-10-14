@@ -8,21 +8,11 @@ use App\Models\StudentPlacement;
 use App\Models\Endorsement;
 use App\Models\Deadline;
 use App\Models\Internship;
-use App\Models\InternshipSeason;
 use App\Services\NotificationService;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Database\Eloquent\Collection;
 
 class AutomaticPlacementService
 {
-    /**
-     * Get the current active internship season
-     */
-    private function getCurrentActiveSeason(): ?InternshipSeason
-    {
-        return InternshipSeason::getActiveSeason();
-    }
-
     /**
      * Automatically place students based on HTE placement deadline
      */
@@ -59,21 +49,11 @@ class AutomaticPlacementService
 
             Log::info('Internship placement deadline expired, processing automatic placements');
 
-            // Get current active season
-            $activeSeason = $this->getCurrentActiveSeason();
-            if (!$activeSeason) {
-                Log::warning('No active internship season found, skipping automatic placements');
-                return $results;
-            }
-
-            Log::info("Processing automatic placements for active season: {$activeSeason->name} (ID: {$activeSeason->id})");
-
-            // Get all endorsed students who haven't been placed yet and belong to the current season
+            // Get all endorsed students who haven't been placed yet
             $endorsedStudents = Endorsement::with(['student', 'internship.hte'])
                 ->where('status', 'endorsed')
-                ->whereHas('student', function($q) use ($activeSeason) {
-                    $q->where('is_placed', false)
-                      ->where('internship_season_id', $activeSeason->id);
+                ->whereHas('student', function($q) {
+                    $q->where('is_placed', false);
                 })
                 ->get();
 
@@ -131,21 +111,11 @@ class AutomaticPlacementService
         try {
             Log::info('Processing endorsed students for placement');
 
-            // Get current active season
-            $activeSeason = $this->getCurrentActiveSeason();
-            if (!$activeSeason) {
-                Log::warning('No active internship season found, skipping endorsed students placement');
-                return $results;
-            }
-
-            Log::info("Processing endorsed students for active season: {$activeSeason->name} (ID: {$activeSeason->id})");
-
-            // Get all endorsed students who haven't been placed yet and belong to the current season
+            // Get all endorsed students who haven't been placed yet
             $endorsedStudents = Endorsement::with(['student', 'internship.hte'])
                 ->where('status', 'endorsed')
-                ->whereHas('student', function($q) use ($activeSeason) {
-                    $q->where('is_placed', false)
-                      ->where('internship_season_id', $activeSeason->id);
+                ->whereHas('student', function($q) {
+                    $q->where('is_placed', false);
                 })
                 ->get();
 
@@ -250,24 +220,15 @@ class AutomaticPlacementService
                 return $results;
             }
 
-            // Get current active season
-            $activeSeason = $this->getCurrentActiveSeason();
-            if (!$activeSeason) {
-                Log::warning('No active internship season found, skipping matched students placement');
-                return $results;
-            }
-
-            Log::info("Matched students auto-placement trigger: Deadline within 20 minutes, processing students by compatibility for season: {$activeSeason->name}");
+            Log::info('Matched students auto-placement trigger: Deadline within 20 minutes, processing students by compatibility');
 
             // Find students who:
             // 1. Are not placed yet
             // 2. Have completed their assessment
             // 3. Have pending matches (visible in matched page)
             // 4. Are not yet endorsed
-            // 5. Belong to the current active season
             $studentsWithMatches = Student::where('is_placed', false)
                 ->where('is_submit', true)
-                ->where('internship_season_id', $activeSeason->id)
                 ->whereDoesntHave('endorsements', function($q) {
                     $q->where('status', 'endorsed');
                 })
@@ -377,7 +338,6 @@ class AutomaticPlacementService
     /**
      * Emergency placement for ALL students with submitted assessments (10 minutes before deadline)
      * This places ALL unplaced students who have completed assessments into ANY available internship
-     * TIER 3: Places students regardless of rejection status - only requirement is available slots
      */
     public function processEmergencyPlacements(): array
     {
@@ -387,35 +347,23 @@ class AutomaticPlacementService
         ];
 
         try {
-            Log::info('Processing Tier 3 emergency placements for ALL remaining students - placing regardless of rejection status');
-
-            // Get current active season
-            $activeSeason = $this->getCurrentActiveSeason();
-            if (!$activeSeason) {
-                Log::warning('No active internship season found, skipping Tier 3 emergency placement');
-                return $results;
-            }
-
-            Log::info("Processing Tier 3 emergency placements for active season: {$activeSeason->name} (ID: {$activeSeason->id})");
+            Log::info('Processing emergency placements for ALL remaining students');
 
             // Find ALL students who:
             // 1. Are not placed yet
             // 2. Have completed their assessment (is_submit = true)
-            // 3. Belong to the current active season
             $studentsNeedingEmergencyPlacement = Student::where('is_placed', false)
                 ->where('is_submit', true)
-                ->where('internship_season_id', $activeSeason->id)
                 ->with(['scores.subcategory'])
                 ->get();
 
-            Log::info("Found {$studentsNeedingEmergencyPlacement->count()} students needing Tier 3 emergency placement");
+            Log::info("Found {$studentsNeedingEmergencyPlacement->count()} students needing emergency placement");
 
             foreach ($studentsNeedingEmergencyPlacement as $student) {
                 try {
-                    Log::info("Processing Tier 3 emergency placement for student {$student->id} - ignoring any previous rejections");
+                    Log::info("Processing emergency placement for student {$student->id}");
                     
-                    // Get all active internships with available slots
-                    // TIER 3: Check ALL internships regardless of previous rejection status
+                    // Get all active internships with available slots (after Tier 1 & 2)
                     $availableInternships = Internship::where('is_active', true)
                         ->with(['subcategoryWeights.subcategory', 'hte'])
                         ->get()
@@ -425,13 +373,13 @@ class AutomaticPlacementService
                         });
 
                     if ($availableInternships->isEmpty()) {
-                        Log::warning("No available internship slots remaining for Tier 3 placement - student {$student->id} will be marked as unplaced");
+                        Log::warning("No available internships for emergency placement for student {$student->id}");
                         
-                        // Create a record for admin visibility - only when NO slots are available
+                        // Create a record for admin visibility
                         \App\Models\UnplacedStudent::updateOrCreate(
                             ['student_id' => $student->id],
                             [
-                                'reason' => 'No available internship slots remaining',
+                                'reason' => 'No available internship slots',
                                 'requires_manual_intervention' => true,
                                 'created_at' => now(),
                                 'updated_at' => now(),
@@ -454,7 +402,7 @@ class AutomaticPlacementService
                     $bestInternship = $bestMatch['internship'];
                     $bestCompatibilityScore = $bestMatch['compatibility_score'];
 
-                    // TIER 3: Create or update the match, overriding any previous rejection status
+                    // Create or update the match
                     $match = StudentMatch::updateOrCreate(
                         [
                             'student_id' => $student->id,
@@ -463,7 +411,7 @@ class AutomaticPlacementService
                         [
                             'compatibility_score' => $bestCompatibilityScore,
                             'endorsement_status' => 'endorsed',
-                            'placement_status' => 'approved', // Override any previous rejection
+                            'placement_status' => 'approved',
                         ]
                     );
 
@@ -506,10 +454,10 @@ class AutomaticPlacementService
                     }
 
                     $results['emergency_placed_count']++;
-                    Log::info("Tier 3 emergency placement successful for student {$student->id} in internship {$bestInternship->id} (compatibility: {$bestCompatibilityScore}%) - placed despite any previous rejections");
+                    Log::info("Emergency placement successful for student {$student->id} in internship {$bestInternship->id} (compatibility: {$bestCompatibilityScore}%)");
 
                 } catch (\Exception $e) {
-                    $error = "Failed Tier 3 emergency placement for student {$student->id}: " . $e->getMessage();
+                    $error = "Failed emergency placement for student {$student->id}: " . $e->getMessage();
                     $results['errors'][] = $error;
                     Log::error($error, [
                         'student_id' => $student->id,
@@ -519,7 +467,7 @@ class AutomaticPlacementService
             }
 
         } catch (\Exception $e) {
-            $error = "Tier 3 emergency placement processing failed: " . $e->getMessage();
+            $error = "Emergency placement processing failed: " . $e->getMessage();
             $results['errors'][] = $error;
             Log::error($error, [
                 'trace' => $e->getTraceAsString()
@@ -745,7 +693,7 @@ class AutomaticPlacementService
     /**
      * Calculate fresh compatibility scores for a student with all available internships
      */
-    private function calculateFreshCompatibilityScores(Student $student, Collection $internships): \Illuminate\Support\Collection
+    private function calculateFreshCompatibilityScores(Student $student, Collection $internships): Collection
     {
         $compatibilityScores = collect();
 

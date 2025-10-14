@@ -483,7 +483,7 @@ export default function EventsPage({ allDeadlines, activeDeadlines, expiredDeadl
                                     </p>
                                     <div className="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-lg border border-amber-200 dark:border-amber-800">
                                         <p className="text-sm text-amber-800 dark:text-amber-200">
-                                            <strong>Tip:</strong> To activate a season, go to Seasons Management and ensure all 5 deadline categories are created.
+                                            <strong>Tip:</strong> To activate a season, go to Manage Seasons and ensure all 5 deadline categories are created.
                                         </p>
                                     </div>
                                 </div>

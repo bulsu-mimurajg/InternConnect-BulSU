@@ -102,7 +102,8 @@ interface Props {
 
 export default function SeasonStats({ season, stats, archivedStudents, placedStudents, unplacedStudents, activeDeadlines, inactiveDeadlines, expiredDeadlines }: Props) {
   const [showInactiveDeadlines, setShowInactiveDeadlines] = useState(false);
-  const [showDeadlinesSection, setShowDeadlinesSection] = useState(true);
+  const [showDeadlinesSection, setShowDeadlinesSection] = useState(false);
+  const [showArchivedStudentsSection, setShowArchivedStudentsSection] = useState(false);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -130,8 +131,18 @@ export default function SeasonStats({ season, stats, archivedStudents, placedStu
   // Helper functions for deadline filtering
   const getFilteredDeadlines = () => {
     if (showInactiveDeadlines) {
+      // If season is completed, only show expired deadlines to avoid duplication
+      if (season.status === 'completed') {
+        return expiredDeadlines;
+      }
       return [...inactiveDeadlines, ...expiredDeadlines];
     }
+    
+    // If season is completed, show expired deadlines by default (no active deadlines)
+    if (season.status === 'completed') {
+      return expiredDeadlines;
+    }
+    
     return activeDeadlines;
   };
 
@@ -189,47 +200,130 @@ export default function SeasonStats({ season, stats, archivedStudents, placedStu
               {!showDeadlinesSection 
                 ? 'Show Deadlines' 
                 : showInactiveDeadlines 
-                  ? 'Show Active Deadlines' 
-                  : 'Show Inactive Deadlines'
+                  ? (season.status === 'completed' ? 'Show Expired Deadlines' : 'Show Active Deadlines')
+                  : season.status === 'completed' 
+                    ? 'Show Expired Deadlines'
+                    : 'Show Inactive Deadlines'
               }
             </Button>
+            
+            <Button
+              variant="outline"
+              onClick={() => setShowArchivedStudentsSection(!showArchivedStudentsSection)}
+              className={`flex items-center gap-2 h-9 ${showArchivedStudentsSection ? 'bg-muted' : ''}`}
+            >
+              <ArchiveIcon className="h-4 w-4" />
+              {showArchivedStudentsSection ? 'Hide Archived Students' : 'View All Archived Students'}
+            </Button>
+            
             {getStatusBadge(season.status)}
           </div>
         </div>
 
-        {/* Season Overview */}
+        {/* Season Information Card */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <CalendarIcon className="h-5 w-5" />
-              Season Overview
+              Season Information
             </CardTitle>
+            <CardDescription>
+              Overview and statistics for {season.name}
+            </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-muted-foreground">Start Date</p>
-                <p className="text-lg font-semibold">{formatDateTime(season.start_date)}</p>
-              </div>
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-muted-foreground">End Date</p>
-                <p className="text-lg font-semibold">{formatDateTime(season.end_date)}</p>
-              </div>
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-muted-foreground">Duration</p>
-                <p className="text-lg font-semibold">
-                  {Math.ceil((new Date(season.end_date).getTime() - new Date(season.start_date).getTime()) / (1000 * 60 * 60 * 24))} days
-                </p>
-              </div>
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-muted-foreground">Status</p>
-                <div className="flex items-center gap-2">
-                  {stats.is_in_progress && <ClockIcon className="h-4 w-4 text-blue-500" />}
-                  {stats.has_ended && <CheckCircleIcon className="h-4 w-4 text-green-500" />}
-                  <span className="text-lg font-semibold">
-                    {stats.is_in_progress ? 'In Progress' : stats.has_ended ? 'Ended' : 'Upcoming'}
-                  </span>
+          <CardContent className="space-y-6">
+            {/* Season Overview */}
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Season Overview</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-muted-foreground">Start Date</p>
+                  <p className="text-lg font-semibold">{formatDateTime(season.start_date)}</p>
                 </div>
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-muted-foreground">End Date</p>
+                  <p className="text-lg font-semibold">{formatDateTime(season.end_date)}</p>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-muted-foreground">Duration</p>
+                  <p className="text-lg font-semibold">
+                    {Math.ceil((new Date(season.end_date).getTime() - new Date(season.start_date).getTime()) / (1000 * 60 * 60 * 24))} days
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-muted-foreground">Status</p>
+                  <div className="flex items-center gap-2">
+                    {stats.is_in_progress && <ClockIcon className="h-4 w-4 text-blue-500" />}
+                    {stats.has_ended && <CheckCircleIcon className="h-4 w-4 text-green-500" />}
+                    <span className="text-lg font-semibold">
+                      {stats.is_in_progress ? 'In Progress' : stats.has_ended ? 'Ended' : 'Upcoming'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Statistics Cards */}
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Statistics</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {/* Deadlines */}
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Total Deadlines</CardTitle>
+                    <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{stats.deadline_count}</div>
+                    <p className="text-xs text-muted-foreground">
+                      {stats.active_deadline_count} currently active
+                    </p>
+                  </CardContent>
+                </Card>
+
+                {/* Students */}
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Total Students</CardTitle>
+                    <UsersIcon className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{stats.student_count}</div>
+                    <p className="text-xs text-muted-foreground">
+                      {stats.active_student_count} currently active
+                    </p>
+                  </CardContent>
+                </Card>
+
+                {/* Archived Students */}
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Archived Students</CardTitle>
+                    <ArchiveIcon className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{archivedStudents.length}</div>
+                    <p className="text-xs text-muted-foreground">
+                      {stats.student_count - stats.active_student_count} total archived
+                    </p>
+                  </CardContent>
+                </Card>
+
+                {/* Next Category */}
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Next Category</CardTitle>
+                    <ClockIcon className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {stats.next_category ? 'Available' : 'Complete'}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {stats.next_category || 'All categories created'}
+                    </p>
+                  </CardContent>
+                </Card>
               </div>
             </div>
           </CardContent>
@@ -242,7 +336,12 @@ export default function SeasonStats({ season, stats, archivedStudents, placedStu
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2 text-xl font-semibold text-foreground">
                   <CalendarIcon className="h-5 w-5" />
-                  {showInactiveDeadlines ? 'Inactive & Expired Deadlines' : 'Active Deadlines'}
+                  {season.status === 'completed' 
+                    ? 'Expired Deadlines'
+                    : showInactiveDeadlines 
+                      ? 'Inactive & Expired Deadlines'
+                      : 'Active Deadlines'
+                  }
                   <Badge variant="secondary" className="ml-2 bg-muted text-muted-foreground">
                     {getFilteredDeadlines().length}
                   </Badge>
@@ -257,9 +356,11 @@ export default function SeasonStats({ season, stats, archivedStudents, placedStu
                 </Button>
               </div>
               <CardDescription className="text-sm text-muted-foreground">
-                {showInactiveDeadlines 
-                  ? 'View inactive and expired deadlines for this season'
-                  : 'View active deadlines for this season'
+                {season.status === 'completed' 
+                  ? 'View expired deadlines for this completed season'
+                  : showInactiveDeadlines 
+                    ? 'View inactive and expired deadlines for this season'
+                    : 'View active deadlines for this season'
                 }
               </CardDescription>
             </CardHeader>
@@ -300,12 +401,14 @@ export default function SeasonStats({ season, stats, archivedStudents, placedStu
                     <CalendarIcon className="h-8 w-8 text-muted-foreground" />
                   </div>
                   <h3 className="text-lg font-semibold text-foreground mb-2">
-                    No {showInactiveDeadlines ? 'inactive or expired' : 'active'} deadlines found
+                    No {season.status === 'completed' ? 'expired' : showInactiveDeadlines ? 'inactive or expired' : 'active'} deadlines found
                   </h3>
                   <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-                    {showInactiveDeadlines
-                      ? 'No deadlines are currently inactive or expired for this season.'
-                      : 'No deadlines are currently active for this season.'
+                    {season.status === 'completed' 
+                      ? 'No deadlines have expired for this completed season.'
+                      : showInactiveDeadlines
+                        ? 'No deadlines are currently inactive or expired for this season.'
+                        : 'No deadlines are currently active for this season.'
                     }
                   </p>
                 </div>
@@ -314,106 +417,29 @@ export default function SeasonStats({ season, stats, archivedStudents, placedStu
           </Card>
         )}
 
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {/* Deadlines */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Deadlines</CardTitle>
-              <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.deadline_count}</div>
-              <p className="text-xs text-muted-foreground">
-                {stats.active_deadline_count} currently active
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Students */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Students</CardTitle>
-              <UsersIcon className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.student_count}</div>
-              <p className="text-xs text-muted-foreground">
-                {stats.active_student_count} currently active
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Archived Students */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Archived Students</CardTitle>
-              <ArchiveIcon className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{archivedStudents.length}</div>
-              <p className="text-xs text-muted-foreground">
-                {stats.student_count - stats.active_student_count} total archived
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Placed Students */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Placed Students</CardTitle>
-              <CheckCircleIcon className="h-4 w-4 text-green-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">{placedStudents.length}</div>
-              <p className="text-xs text-muted-foreground">
-                Successfully placed
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Unplaced Students */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Unplaced Students</CardTitle>
-              <AlertTriangleIcon className="h-4 w-4 text-destructive" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-destructive">{unplacedStudents.length}</div>
-              <p className="text-xs text-muted-foreground">
-                Require manual placement
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Next Category */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Next Category</CardTitle>
-              <ClockIcon className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {stats.next_category ? 'Available' : 'Complete'}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {stats.next_category || 'All categories created'}
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
         {/* Archived Students List */}
-        {archivedStudents.length > 0 && (
+        {showArchivedStudentsSection && archivedStudents.length > 0 && (
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <ArchiveIcon className="h-5 w-5" />
-                Archived Students ({archivedStudents.length})
-              </CardTitle>
-              <CardDescription>
-                Students who have been archived for this season
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <ArchiveIcon className="h-5 w-5" />
+                    Archived Students ({archivedStudents.length})
+                  </CardTitle>
+                  <CardDescription>
+                    Students who have been archived for this season
+                  </CardDescription>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowArchivedStudentsSection(false)}
+                  className="h-8 w-8 p-0 hover:bg-muted"
+                >
+                  <XIcon className="h-4 w-4" />
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -491,6 +517,37 @@ export default function SeasonStats({ season, stats, archivedStudents, placedStu
             </CardContent>
           </Card>
         )}
+
+        {/* Placed and Unplaced Students Summary */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Placed Students */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Placed Students</CardTitle>
+              <CheckCircleIcon className="h-4 w-4 text-green-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">{placedStudents.length}</div>
+              <p className="text-xs text-muted-foreground">
+                Successfully placed
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Unplaced Students */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Unplaced Students</CardTitle>
+              <AlertTriangleIcon className="h-4 w-4 text-destructive" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-destructive">{unplacedStudents.length}</div>
+              <p className="text-xs text-muted-foreground">
+                Require manual placement
+              </p>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Placed Students List */}
         {placedStudents.length > 0 && (
@@ -712,32 +769,6 @@ export default function SeasonStats({ season, stats, archivedStudents, placedStu
           </Card>
         )}
 
-        {/* Actions */}
-        <div className="flex flex-col sm:flex-row gap-4">
-          <Button
-            variant="outline"
-            onClick={() => router.get(`/admin/seasons/${season.id}/archived-students`)}
-            className="flex items-center gap-2"
-          >
-            <ArchiveIcon className="h-4 w-4" />
-            View All Archived Students
-          </Button>
-          
-          {season.status === 'completed' && (
-            <Button
-              variant="destructive"
-              onClick={() => {
-                if (confirm('Are you sure you want to archive all students in this season? This action cannot be undone.')) {
-                  router.post(`/admin/seasons/${season.id}/archive-students`);
-                }
-              }}
-              className="flex items-center gap-2"
-            >
-              <ArchiveIcon className="h-4 w-4" />
-              Archive All Students
-            </Button>
-          )}
-        </div>
       </div>
     </AdminLayout>
   );
