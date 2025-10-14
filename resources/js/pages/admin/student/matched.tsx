@@ -136,6 +136,10 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
         search: filters.currentSearch || '',
     });
 
+    // Add ref to track if we're reloading data after an action
+    const isReloadingDataRef = React.useRef(false);
+    const rejectingRef = React.useRef(false);
+
     // Determine if the "Students Without Matches" card should be shown
     const showStudentsWithoutMatchesCard = (statistics?.students_without_matches || 0) > 0;
 
@@ -328,12 +332,21 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
         }
     };
 
-    // handleApprovePlacement function removed as it's unused
-
-    // handleRejectPlacement function removed as it's unused
-
-
     const handleSingleApprove = async (student: MatchedStudent) => {
+        // Check if data is being reloaded from a previous action
+        if (isReloadingDataRef.current) {
+            setErrorMessage('Loading New Match, Please wait . . .');
+            setErrorType('info');
+            return;
+        }
+
+        // Check if another action is in progress
+        if (isLoading || rejectingRef.current) {
+            setErrorMessage('Loading New Match, Please wait . . .');
+            setErrorType('info');
+            return;
+        }
+
         if (!student || !student.best_match?.internship) {
             setErrorMessage('Invalid student data or missing internship information');
             setErrorType('error');
@@ -384,8 +397,11 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                     await retryResponse.json();
                     setErrorMessage('Student placement approved successfully!');
                     setErrorType('success');
+                    isReloadingDataRef.current = true;
                     setTimeout(() => {
-                        router.reload({ only: ['matchedStudents'] });
+                        router.reload({ only: ['matchedStudents'], onFinish: () => {
+                            isReloadingDataRef.current = false;
+                        } });
                     }, 1500);
                     return;
                 }
@@ -413,8 +429,11 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
             if (response.ok) {
                 setErrorMessage('Student placement approved successfully!');
                 setErrorType('success');
+                isReloadingDataRef.current = true;
                 setTimeout(() => {
-                    router.reload({ only: ['matchedStudents'] });
+                    router.reload({ only: ['matchedStudents'], onFinish: () => {
+                        isReloadingDataRef.current = false;
+                    } });
                 }, 1500);
             } else {
                 // Handle errors
@@ -437,9 +456,14 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
         }
     };
 
-    const rejectingRef = React.useRef(false);
-
     const handleSingleReject = async (student: MatchedStudent) => {
+        // Check if data is being reloaded from a previous action
+        if (isReloadingDataRef.current) {
+            setErrorMessage('Loading New Match, Please wait . . .');
+            setErrorType('info');
+            return;
+        }
+
         // Hard guard to avoid rapid double-clicks before state updates flush
         if (rejectingRef.current) {
             setErrorMessage('Loading New Match, Please wait . . .');
@@ -462,6 +486,7 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
 
         try {
             rejectingRef.current = true;
+            isReloadingDataRef.current = true;
             setIsLoading(true);
             // Immediate feedback while the next match is being loaded
             setErrorMessage('Loading New Match, Please wait . . .');
@@ -509,7 +534,9 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                     }
                     setErrorType('success');
                     setTimeout(() => {
-                        router.reload({ only: ['matchedStudents'] });
+                        router.reload({ only: ['matchedStudents'], onFinish: () => {
+                            isReloadingDataRef.current = false;
+                        } });
                     }, 1500);
                     return;
                 }
@@ -529,11 +556,12 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                     setErrorMessage('Server returned an unexpected response format. Please try again or contact support.');
                     setErrorType('error');
                 }
+                isReloadingDataRef.current = false;
                 return;
             }
 
             const result = await response.json();
-            
+
             // Debug logging to see what's happening
             console.log('Rejection response:', { status: response.status, ok: response.ok, result });
 
@@ -547,18 +575,22 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
 
             if (isSuccess) {
                 // Define success messages
-                const fallbackMessage = `Student rejected and moved to next match: ${result.new_internship.position_title} at ${result.new_internship.company_name} (${result.new_internship.compatibility_score}% compatibility)`;
+                const fallbackMessage = result.new_internship
+                    ? `Student rejected and moved to next match: ${result.new_internship.position_title} at ${result.new_internship.company_name} (${result.new_internship.compatibility_score}% compatibility)`
+                    : 'Successfully Rejected';
                 const regularSuccessMessage = 'Student placement rejected successfully! The student has been removed from this internship and will be considered for the next available match in the queue.';
 
                 // Show appropriate success message based on response content
-                if (result.fallback) {
+                if (result.fallback && result.new_internship) {
                     setErrorMessage(fallbackMessage);
                 } else {
                     setErrorMessage(regularSuccessMessage);
                 }
                 setErrorType('success');
                 setTimeout(() => {
-                    router.reload({ only: ['matchedStudents'] });
+                    router.reload({ only: ['matchedStudents'], onFinish: () => {
+                        isReloadingDataRef.current = false;
+                    } });
                 }, 1500);
             } else {
                 // Only show error messages for actual errors
@@ -571,7 +603,9 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                     setErrorType('success');
                 }
                 setTimeout(() => {
-                    router.reload({ only: ['matchedStudents'] });
+                    router.reload({ only: ['matchedStudents'], onFinish: () => {
+                        isReloadingDataRef.current = false;
+                    } });
                 }, 1000);
             }
         } catch (error) {
@@ -587,6 +621,7 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                 setErrorMessage(msg);
                 setErrorType(error instanceof Error && error.message ? 'error' : 'info');
             }
+            isReloadingDataRef.current = false;
         } finally {
             rejectingRef.current = false;
             setIsLoading(false);
