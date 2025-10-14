@@ -18,7 +18,7 @@
     </div>
     
     <div class="button-container">
-        <a href="{{ url('/hte/dashboard') }}" class="button">Access HTE Dashboard</a>
+        <a href="{{ $loginUrl }}" class="button">Access HTE Dashboard</a>
     </div>
     
     <div class="warning">

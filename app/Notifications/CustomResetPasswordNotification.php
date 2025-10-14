@@ -38,10 +38,10 @@ class CustomResetPasswordNotification extends ResetPasswordNotification
     }
 
     /**
-     * Override the resetUrl method to use relative URL instead of APP_URL
+     * Override the resetUrl method to use proper URL generation
      */
     protected function resetUrl($notifiable): string
     {
-        return '/reset-password/' . $this->token . '?email=' . urlencode($notifiable->email);
+        return url('/reset-password/' . $this->token . '?email=' . urlencode($notifiable->email));
     }
 }

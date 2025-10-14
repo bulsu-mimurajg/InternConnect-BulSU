@@ -45,7 +45,7 @@ class AdviserCredentialsNotification extends Notification implements ShouldQueue
     public function toMail(object $notifiable): void
     {
         $userName = $this->adviserName ?: $notifiable->username ?? 'Adviser';
-        $loginUrl = '/login';
+        $loginUrl = url('/login');
         $sectionsList = !empty($this->sections) ? implode(', ', $this->sections) : 'No sections assigned';
         
         // Use the custom EmailService to send the credentials email

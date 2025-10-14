@@ -18,7 +18,7 @@
     </div>
     
     <div class="button-container">
-        <a href="{{ url('/adviser/dashboard') }}" class="button">Access Adviser Dashboard</a>
+        <a href="{{ $loginUrl }}" class="button">Access Adviser Dashboard</a>
     </div>
     
     <div class="warning">
