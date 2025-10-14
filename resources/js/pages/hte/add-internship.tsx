@@ -35,7 +35,7 @@ export default function AddInternshipPage() {
                     <Card>
                         <CardContent className="p-6">
                             <div className="text-center">
-                                <AlertCircle className="mx-auto h-12 w-12 text-yellow-500 mb-4" />
+                                <AlertCircle className="mx-auto h-12 w-12 text-yellow-500 dark:text-yellow-400 mb-4" />
                                 <h2 className="text-xl font-semibold mb-2">Assessment Not Submitted</h2>
                                 <p className="text-muted-foreground mb-4">
                                     You need to complete your assessment form to add internship opportunities.
@@ -62,7 +62,7 @@ export default function AddInternshipPage() {
                     <Card>
                         <CardContent className="p-6">
                             <div className="text-center">
-                                <AlertCircle className="mx-auto h-12 w-12 text-amber-500 mb-4" />
+                                <AlertCircle className="mx-auto h-12 w-12 text-amber-500 dark:text-amber-400 mb-4" />
                                 <h2 className="text-xl font-semibold mb-2">Student Assessment Period Active</h2>
                                 <p className="text-muted-foreground mb-4">
                                     {studentAssessmentDeadline?.title} is currently active (ends {studentAssessmentDeadline?.end_date}).

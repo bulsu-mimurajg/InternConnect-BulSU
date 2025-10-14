@@ -18,15 +18,9 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, MoreHorizontal, Edit, Archive, Eye, ArchiveRestore, Filter, ChevronRight, ChevronDown, ArrowUpDown, Search, BriefcaseBusinessIcon, Building2Icon, UserIcon, MailIcon, PhoneIcon, MapPinIcon, CalendarIcon, BriefcaseIcon } from 'lucide-react';
+import { Plus, Edit, Archive, Eye, ArchiveRestore, Filter, ChevronRight, ChevronDown, ArrowUpDown, Search, BriefcaseBusinessIcon, Building2Icon, UserIcon, MailIcon, PhoneIcon, MapPinIcon, CalendarIcon, BriefcaseIcon } from 'lucide-react';
 import { type BreadcrumbItem } from '@/types';
 
 interface Internship {
@@ -192,19 +186,21 @@ export default function HTEManagement({ htes, showArchived = false, filters = {}
         setIsEditDialogOpen(true);
     };
 
-    // Check if HTE archiving is restricted due to deadlines
+    // Check if HTE management is restricted due to deadlines
     const isHTEArchivingRestricted = useMemo(() => {
         return deadlineStatus?.restrictions.some(restriction => 
             restriction.affected_functionality.includes('hte_archive') ||
-            restriction.affected_functionality.includes('hte_restore')
+            restriction.affected_functionality.includes('hte_restore') ||
+            restriction.affected_functionality.includes('hte_management')
         ) || false;
     }, [deadlineStatus]);
 
-    // Get restriction message for archiving
+    // Get restriction message for HTE management
     const archivingRestrictionMessage = useMemo(() => {
         const restriction = deadlineStatus?.restrictions.find(restriction => 
             restriction.affected_functionality.includes('hte_archive') ||
-            restriction.affected_functionality.includes('hte_restore')
+            restriction.affected_functionality.includes('hte_restore') ||
+            restriction.affected_functionality.includes('hte_management')
         );
         return restriction?.message || '';
     }, [deadlineStatus]);
@@ -506,7 +502,7 @@ export default function HTEManagement({ htes, showArchived = false, filters = {}
                             </div>
                             <div className="ml-3">
                                 <h3 className="text-sm font-medium text-amber-800">
-                                    HTE Archiving Restricted
+                                    HTE Management Restricted
                                 </h3>
                                 <div className="mt-2 text-sm text-amber-700">
                                     <p>{archivingRestrictionMessage}</p>
@@ -553,11 +549,6 @@ export default function HTEManagement({ htes, showArchived = false, filters = {}
                             <DialogTrigger asChild>
                                 <Button 
                                     disabled={isHTEArchivingRestricted}
-                                    onClick={() => {
-                                        if (isHTEArchivingRestricted) {
-                                            setIsDeadlineModalOpen(true);
-                                        }
-                                    }}
                                 >
                                     <Plus className="mr-2 h-4 w-4" />
                                     Add HTE
@@ -771,13 +762,7 @@ export default function HTEManagement({ htes, showArchived = false, filters = {}
                                     {!showArchivedHTEs && (
                                         <Button 
                                             disabled={isHTEArchivingRestricted}
-                                            onClick={() => {
-                                                if (isHTEArchivingRestricted) {
-                                                    setIsDeadlineModalOpen(true);
-                                                } else {
-                                                    setIsCreateDialogOpen(true);
-                                                }
-                                            }}
+                                            onClick={() => setIsCreateDialogOpen(true)}
                                         >
                                             <Plus className="h-4 w-4 mr-2" />
                                             Add HTE
@@ -853,52 +838,46 @@ export default function HTEManagement({ htes, showArchived = false, filters = {}
                                                             {new Date(hte.created_at).toLocaleDateString()}
                                                         </td>
                                                         <td className="py-3 px-4 text-right">
-                                                            <DropdownMenu>
-                                                                <DropdownMenuTrigger asChild>
-                                                                    <Button 
-                                                                        variant="ghost" 
-                                                                        size="sm" 
-                                                                        className="h-8 w-8 p-0"
-                                                                        onClick={(e) => e.stopPropagation()}
-                                                                    >
-                                                                        <MoreHorizontal className="h-4 w-4" />
-                                                                    </Button>
-                                                                </DropdownMenuTrigger>
-                                                                <DropdownMenuContent align="end">
-                                                                    <DropdownMenuItem onClick={(e) => {
+                                                            <div className="flex items-center gap-2 justify-end">
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    onClick={(e) => {
                                                                         e.stopPropagation();
                                                                         handleEdit(hte);
-                                                                    }}>
-                                                                        <Edit className="mr-2 h-4 w-4" />
-                                                                        Edit
-                                                                    </DropdownMenuItem>
-                                                                    {hte.status === 'archived' ? (
-                                                                        <DropdownMenuItem 
-                                                                            onClick={(e) => {
-                                                                                e.stopPropagation();
-                                                                                handleUnarchive(hte);
-                                                                            }}
-                                                                            disabled={isHTEArchivingRestricted}
-                                                                            className="text-green-600 focus:text-green-600"
-                                                                        >
-                                                                            <ArchiveRestore className="mr-2 h-4 w-4" />
-                                                                            Unarchive
-                                                                        </DropdownMenuItem>
-                                                                    ) : (
-                                                                        <DropdownMenuItem 
-                                                                            onClick={(e) => {
-                                                                                e.stopPropagation();
-                                                                                handleArchive(hte);
-                                                                            }}
-                                                                            disabled={isHTEArchivingRestricted}
-                                                                            className="text-destructive focus:text-destructive"
-                                                                        >
-                                                                            <Archive className="mr-2 h-4 w-4" />
-                                                                            Archive
-                                                                        </DropdownMenuItem>
-                                                                    )}
-                                                                </DropdownMenuContent>
-                                                            </DropdownMenu>
+                                                                    }}
+                                                                    className="h-8 w-8 p-0"
+                                                                >
+                                                                    <Edit className="h-4 w-4" />
+                                                                </Button>
+                                                                {hte.status === 'archived' ? (
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="sm"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            handleUnarchive(hte);
+                                                                        }}
+                                                                        disabled={isHTEArchivingRestricted}
+                                                                        className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-100"
+                                                                    >
+                                                                        <ArchiveRestore className="h-4 w-4" />
+                                                                    </Button>
+                                                                ) : (
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="sm"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            handleArchive(hte);
+                                                                        }}
+                                                                        disabled={isHTEArchivingRestricted}
+                                                                        className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                                                    >
+                                                                        <Archive className="h-4 w-4" />
+                                                                    </Button>
+                                                                )}
+                                                            </div>
                                                         </td>
                                                     </tr>
                                                     {isExpanded && hasDetails && (

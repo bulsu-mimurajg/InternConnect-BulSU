@@ -225,7 +225,6 @@ export default function SectionManagement({ sections, showArchived = false, dead
                         <Button
                             variant="outline"
                             onClick={handleToggleArchived}
-                            disabled={isSectionArchivingRestricted}
                         >
                             {showArchivedSections ? (
                                 <>
@@ -243,6 +242,7 @@ export default function SectionManagement({ sections, showArchived = false, dead
                             <DialogTrigger asChild>
                                 <Button 
                                     className="flex items-center gap-2"
+                                    disabled={isSectionArchivingRestricted}
                                 >
                                     <Plus className="h-4 w-4" />
                                     Add Section

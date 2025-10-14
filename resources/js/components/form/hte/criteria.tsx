@@ -371,10 +371,10 @@ export default function Criteria({
         return (
             <div className="space-y-4">
                 <div className="animate-pulse">
-                    <div className="mb-4 h-4 w-1/4 rounded bg-gray-200"></div>
+                    <div className="mb-4 h-4 w-1/4 rounded bg-muted"></div>
                     <div className="space-y-3">
-                        <div className="h-4 rounded bg-gray-200"></div>
-                        <div className="h-4 w-5/6 rounded bg-gray-200"></div>
+                        <div className="h-4 rounded bg-muted"></div>
+                        <div className="h-4 w-5/6 rounded bg-muted"></div>
                     </div>
                 </div>
             </div>
@@ -395,8 +395,8 @@ export default function Criteria({
                         />
                     </svg>
                 </div>
-                <h3 className="mb-2 text-lg font-medium text-gray-900">Authentication Error</h3>
-                <p className="text-gray-600">You must be logged in as an HTE user to access this page.</p>
+                <h3 className="mb-2 text-lg font-medium text-foreground">Authentication Error</h3>
+                <p className="text-muted-foreground">You must be logged in as an HTE user to access this page.</p>
             </div>
         );
     }
@@ -404,8 +404,8 @@ export default function Criteria({
     if (categoriesWithSubcategories.length === 0) {
         return (
             <div className="py-8 text-center">
-                <div className="mb-4 text-gray-500">
-                    <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div className="mb-4 text-muted-foreground">
+                    <svg className="mx-auto h-12 w-12 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path
                             strokeLinecap="round"
                             strokeLinejoin="round"
@@ -414,8 +414,8 @@ export default function Criteria({
                         />
                     </svg>
                 </div>
-                <h3 className="mb-2 text-lg font-medium text-gray-900">No Assessment Criteria Available</h3>
-                <p className="text-gray-600">
+                <h3 className="mb-2 text-lg font-medium text-foreground">No Assessment Criteria Available</h3>
+                <p className="text-muted-foreground">
                     There are currently no categories with subcategories set up in the system. Please contact an administrator to configure the
                     assessment criteria.
                 </p>
@@ -430,15 +430,15 @@ export default function Criteria({
                 <h2 className="text-xl font-semibold">Assessment Criteria</h2>
                 <p className="text-muted-foreground">Assign weights to each subcategory of each category. Each category must total exactly 100%.</p>
                 {highlightInvalidCategories && (
-                    <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg">
                         <div className="flex-shrink-0">
                             <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
                                 <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                             </svg>
                         </div>
-                        <div className="text-sm text-red-800">
+                        <div className="text-sm text-red-800 dark:text-red-200">
                             <strong>Cannot proceed:</strong> Each category must total exactly 100%. Please adjust the weights below to continue.
-                            <div className="mt-2 text-xs text-red-700">
+                            <div className="mt-2 text-xs text-red-700 dark:text-red-300">
                                 Check the progress indicator above to see which categories need adjustment.
                             </div>
                         </div>
@@ -487,14 +487,14 @@ export default function Criteria({
                             <div key={category.id} className="flex items-center gap-3">
                                 <div className="flex-shrink-0 w-4 h-4">
                                     {isComplete ? (
-                                        <div className="w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
+                                        <div className="w-4 h-4 bg-green-500 dark:bg-green-400 rounded-full flex items-center justify-center">
                                             <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
                                                 <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                                             </svg>
                                         </div>
                                     ) : (
                                         <div className={`w-4 h-4 rounded-full ${
-                                            total > 100 ? 'bg-red-500' : 'bg-yellow-500'
+                                            total > 100 ? 'bg-red-500 dark:bg-red-400' : 'bg-yellow-500 dark:bg-yellow-400'
                                         }`}></div>
                                     )}
                                 </div>
@@ -504,7 +504,7 @@ export default function Criteria({
                                     </div>
                                 </div>
                                 <div className="flex-shrink-0 text-sm font-medium">
-                                    <span className={isComplete ? 'text-green-600' : total > 100 ? 'text-red-600' : 'text-yellow-600'}>
+                                    <span className={isComplete ? 'text-green-600 dark:text-green-400' : total > 100 ? 'text-red-600 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'}>
                                         {total}%
                                     </span>
                                 </div>
@@ -527,10 +527,10 @@ export default function Criteria({
                             id={`category-card-${category.category_name.toLowerCase().replace(/\s+/g, '-')}`}
                             className={`border-2 transition-all duration-300 ${
                                 highlightInvalidCategories && isInvalid 
-                                    ? 'ring-2 ring-red-500 ring-opacity-50 bg-red-50 border-red-200 shadow-lg' 
+                                    ? 'ring-2 ring-red-500 ring-opacity-50 bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800 shadow-lg' 
                                     : isInvalid
-                                    ? 'border-yellow-200 bg-yellow-50/30'
-                                    : 'border-green-200 bg-green-50/30'
+                                    ? 'border-yellow-200 dark:border-yellow-800 bg-yellow-50/30 dark:bg-yellow-950/30'
+                                    : 'border-green-200 dark:border-green-800 bg-green-50/30 dark:bg-green-950/30'
                             }`}
                         >
                             <CardHeader>
@@ -628,14 +628,14 @@ export default function Criteria({
                                             {/* Completion Status */}
                                             <div className="text-center">
                                             <div className={`text-2xl font-bold ${
-                                                categoryTotal === 100 ? 'text-green-600' : 
-                                                categoryTotal > 100 ? 'text-red-600' : 'text-yellow-600'
+                                                categoryTotal === 100 ? 'text-green-600 dark:text-green-400' : 
+                                                categoryTotal > 100 ? 'text-red-600 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'
                                             }`}>
                                                 {categoryTotal}%
                                             </div>
                                                 <div className={`text-xs font-medium ${
-                                                    categoryTotal === 100 ? 'text-green-600' : 
-                                                    categoryTotal > 100 ? 'text-red-600' : 'text-yellow-600'
+                                                    categoryTotal === 100 ? 'text-green-600 dark:text-green-400' : 
+                                                    categoryTotal > 100 ? 'text-red-600 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'
                                                 }`}>
                                                     {categoryTotal === 100 ? '✓ Complete' : 
                                                      categoryTotal > 100 ? '✗ Exceeds Limit' : '⚠ Incomplete'}
@@ -675,9 +675,9 @@ export default function Criteria({
                                             return (
                                                 <div key={subcategory.id} className={`bg-muted/30 rounded-lg p-3 border border-border/50 transition-colors ${
                                                     lockedSubcategories.has(subcategory.id) 
-                                                        ? 'bg-blue-50/50 border-blue-200/50' 
+                                                        ? 'bg-blue-50/50 dark:bg-blue-950/30 border-blue-200/50 dark:border-blue-800/50' 
                                                         : isUnset
-                                                        ? 'bg-yellow-50/50 border-yellow-200/50 ring-1 ring-yellow-200/50'
+                                                        ? 'bg-yellow-50/50 dark:bg-yellow-950/30 border-yellow-200/50 dark:border-yellow-800/50 ring-1 ring-yellow-200/50 dark:ring-yellow-800/50'
                                                         : 'hover:bg-muted/50'
                                                 }`}>
                                                     <div className="flex items-center justify-between mb-2 gap-2">
@@ -692,10 +692,10 @@ export default function Criteria({
                                                             </h5>
                                                             <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
                                                                 <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
-                                                                    subcategoryWeight === 0 ? 'bg-gray-100 text-gray-600' :
-                                                                    subcategoryWeight < 25 ? 'bg-blue-100 text-blue-700' :
-                                                                    subcategoryWeight < 50 ? 'bg-green-100 text-green-700' :
-                                                                    'bg-orange-100 text-orange-700'
+                                                                    subcategoryWeight === 0 ? 'bg-muted text-muted-foreground' :
+                                                                    subcategoryWeight < 25 ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' :
+                                                                    subcategoryWeight < 50 ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' :
+                                                                    'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300'
                                                                 }`}>
                                                                     {subcategoryWeight === 0 ? 'Unset' :
                                                                      subcategoryWeight < 25 ? 'Low' :
@@ -767,10 +767,10 @@ export default function Criteria({
                                                         <div className="h-1.5 w-full rounded-full bg-muted relative overflow-hidden">
                                                             <div
                                                                 className={`h-1.5 rounded-full transition-all duration-300 ${
-                                                                    subcategoryWeight === 0 ? 'bg-gray-400' :
-                                                                    subcategoryWeight < 25 ? 'bg-blue-500' :
-                                                                    subcategoryWeight < 50 ? 'bg-green-500' :
-                                                                    'bg-orange-500'
+                                                                    subcategoryWeight === 0 ? 'bg-muted-foreground' :
+                                                                    subcategoryWeight < 25 ? 'bg-blue-500 dark:bg-blue-400' :
+                                                                    subcategoryWeight < 50 ? 'bg-green-500 dark:bg-green-400' :
+                                                                    'bg-orange-500 dark:bg-orange-400'
                                                                 }`}
                                                             style={{ width: `${subcategoryWeight}%` }}
                                                         ></div>

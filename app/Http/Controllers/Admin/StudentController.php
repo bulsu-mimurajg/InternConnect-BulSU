@@ -1297,7 +1297,10 @@ class StudentController extends Controller
 
         // Base query for placed students
         $query = StudentPlacement::with(['student.section', 'internship.hte'])
-            ->where('status', 'approved'); // Only show approved placements
+            ->where('status', 'approved') // Only show approved placements
+            ->whereHas('student', function($q) {
+                $q->where('is_active', true); // Exclude archived students
+            });
 
         // Apply section filter
         if ($sectionFilter && $sectionFilter !== 'all') {
@@ -1352,6 +1355,9 @@ class StudentController extends Controller
         // Get available sections with placement counts
         $availableSections = StudentPlacement::with(['student.section'])
             ->where('status', 'approved')
+            ->whereHas('student', function($q) {
+                $q->where('is_active', true); // Exclude archived students
+            })
             ->get()
             ->groupBy('student.section.section_name')
             ->map(function ($sectionPlacements, $sectionName) {
@@ -1370,6 +1376,9 @@ class StudentController extends Controller
         // Get available internships with placement counts
         $availableInternships = StudentPlacement::with(['internship.hte'])
             ->where('status', 'approved')
+            ->whereHas('student', function($q) {
+                $q->where('is_active', true); // Exclude archived students
+            })
             ->get()
             ->groupBy('internship.id')
             ->map(function ($internshipPlacements, $internshipId) {

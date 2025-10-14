@@ -2049,7 +2049,10 @@ class AdviserController extends Controller
      */
     private function getPlacedStudents($sectionId, $adviserSections): array
     {
-        $query = \App\Models\StudentPlacement::with(['student.user', 'internship.hte']);
+        $query = \App\Models\StudentPlacement::with(['student.user', 'internship.hte'])
+            ->whereHas('student', function($q) {
+                $q->where('is_active', true); // Exclude archived students
+            });
 
         // Apply section filter
         $this->applySectionFilter($query, $sectionId, $adviserSections, 'student.user.academeAccounts');

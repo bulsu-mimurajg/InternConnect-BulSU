@@ -186,18 +186,7 @@ export default function Profile({ student, categories, additional_info = [], has
                                         {info.info_name}
                                     </label>
                                     <p className="text-lg break-all">
-                                        {info.info_value ? (
-                                            <a
-                                                href={info.info_value}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="text-blue-600 hover:text-blue-800 underline"
-                                            >
-                                                {info.info_value}
-                                            </a>
-                                        ) : (
-                                            'Not provided'
-                                        )}
+                                        {info.info_value || 'Not provided'}
                                     </p>
                                 </div>
                             ))}

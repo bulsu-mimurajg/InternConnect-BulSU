@@ -55,7 +55,7 @@ interface EditInternshipFormProps {
 
 export default function EditInternshipForm({ categories, internship, existingWeights }: EditInternshipFormProps) {
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [currentStep, setCurrentStep] = useState(0);
+    const [currentStep, setCurrentStep] = useState<number>(0);
 
     const [expandedCategories, setExpandedCategories] = useState<Set<number>>(new Set());
     const [expandedSubcategories, setExpandedSubcategories] = useState<Set<number>>(new Set());
@@ -183,7 +183,10 @@ export default function EditInternshipForm({ categories, internship, existingWei
                 <div className="flex flex-col h-full">
                     <div className="flex-1 p-4 overflow-y-auto">
                         <Form {...form}>
-                            <form onSubmit={form.handleSubmit(onSubmit)}>
+                            <form onSubmit={(e) => {
+                                e.preventDefault();
+                                // Never auto-submit, only allow explicit button clicks
+                            }}>
                                 {currentStep === 0 && <InternshipOffered />}
                                 {currentStep === 1 && (
                                     <Criteria
@@ -208,46 +211,153 @@ export default function EditInternshipForm({ categories, internship, existingWei
                                             </p>
                                         </div>
 
-                                        <Button
-                                            type="submit"
-                                            disabled={isSubmitting}
-                                            className="w-full"
-                                        >
-                                            {isSubmitting ? 'Updating...' : 'Update Internship'}
-                                        </Button>
+                                        {/* Internship Details Summary */}
+                                        <div className="bg-muted/50 p-6 rounded-lg">
+                                            <h3 className="font-medium mb-6 text-foreground text-center">Internship Details</h3>
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                                <div className="text-center">
+                                                    <label className="text-sm font-medium text-foreground">Position</label>
+                                                    <p className="text-sm text-muted-foreground mt-2">{form.watch('position')}</p>
+                                                </div>
+                                                <div className="text-center">
+                                                    <label className="text-sm font-medium text-foreground">Department</label>
+                                                    <p className="text-sm text-muted-foreground mt-2">{form.watch('department')}</p>
+                                                </div>
+                                                <div className="text-center">
+                                                    <label className="text-sm font-medium text-foreground">Number of Interns</label>
+                                                    <p className="text-sm text-muted-foreground mt-2">{form.watch('numberOfInterns')}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Enhanced Assessment Criteria Summary */}
+                                        {categories.length > 0 && (
+                                            <div className="bg-muted/50 p-4 rounded-lg">
+                                                <h3 className="font-medium mb-4 text-foreground">Assessment Criteria & Weight Allocation</h3>
+
+                                                {/* Overall Weight Summary */}
+                                                <div className="mb-6 p-4 bg-card rounded-lg border border-border">
+                                                    <h4 className="font-medium text-card-foreground mb-3">Overall Weight Distribution</h4>
+                                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                        {categories.map((category: Category) => {
+                                                            const categoryTotal = calculateCategoryTotal(category.id);
+                                                            const getWeightStatus = (categoryTotal: number) => {
+                                                                if (categoryTotal === 100) {
+                                                                    return { status: 'valid', bgColor: 'bg-green-50 dark:bg-green-950/30', borderColor: 'border-green-200 dark:border-green-800', color: 'text-green-600 dark:text-green-400' };
+                                                                } else if (categoryTotal > 100) {
+                                                                    return { status: 'exceeded', bgColor: 'bg-red-50 dark:bg-red-950/30', borderColor: 'border-red-200 dark:border-red-800', color: 'text-red-600 dark:text-red-400' };
+                                                                } else {
+                                                                    return { status: 'incomplete', bgColor: 'bg-yellow-50 dark:bg-yellow-950/30', borderColor: 'border-yellow-200 dark:border-yellow-800', color: 'text-yellow-600 dark:text-yellow-400' };
+                                                                }
+                                                            };
+                                                            const weightStatus = getWeightStatus(categoryTotal);
+
+                                                            return (
+                                                                <div key={category.id} className={`p-3 rounded-lg border ${weightStatus.bgColor} ${weightStatus.borderColor}`}>
+                                                                    <div className="text-center">
+                                                                        <div className={`text-lg font-bold ${weightStatus.color}`}>
+                                                                            {categoryTotal}%
+                                                                        </div>
+                                                                        <div className="text-sm text-muted-foreground">{category.category_name}</div>
+                                                                        <div className={`text-xs font-medium mt-2 px-2 py-1 rounded ${
+                                                                            weightStatus.status === 'valid' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' :
+                                                                            weightStatus.status === 'exceeded' ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300' :
+                                                                            'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300'
+                                                                        }`}>
+                                                                            {weightStatus.status === 'valid' ? 'Complete' :
+                                                                             weightStatus.status === 'exceeded' ? 'Exceeded' : 'Incomplete'}
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+
+                                                {/* Final Validation Message */}
+                                                <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg">
+                                                    <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">Weight Allocation Validation</h4>
+                                                    <div className="text-sm text-blue-800 dark:text-blue-200">
+                                                        {categories.every(cat => calculateCategoryTotal(cat.id) === 100) ? (
+                                                            <div className="flex items-center gap-2 text-green-700 dark:text-green-300">
+                                                                <span>✓</span>
+                                                                <span>All categories have proper weight distribution (100% each)</span>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="space-y-2">
+                                                                <div className="flex items-center gap-2 text-red-700 dark:text-red-300">
+                                                                    <span>⚠️</span>
+                                                                    <span>Some categories need weight adjustment before submission</span>
+                                                                </div>
+                                                                <ul className="ml-6 list-disc space-y-1">
+                                                                    {categories.map((cat: Category) => {
+                                                                        const total = calculateCategoryTotal(cat.id);
+                                                                        if (total !== 100) {
+                                                                            return (
+                                                                                <li key={cat.id} className="text-red-600 dark:text-red-400">
+                                                                                    {cat.category_name}: {total}% (needs {100 - total}% more)
+                                                                                </li>
+                                                                            );
+                                                                        }
+                                                                        return null;
+                                                                    })}
+                                                                </ul>
                                     </div>
                                 )}
+                                                    </div>
+                                                </div>
+                    </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Navigation - Always visible */}
+                                <div className="mt-6 flex justify-between items-center">
+                                    <div className="text-sm text-muted-foreground">
+                                        {currentStep < steps.length - 1 && (
+                                            <span>Please complete all required fields before proceeding</span>
+                                        )}
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <Button type="button" onClick={prev} disabled={currentStep <= 0} variant="outline">
+                                            Previous
+                                        </Button>
+                                        {currentStep === 1 && !areAllCategoriesValid() ? (
+                                            <div className="flex items-center gap-2">
+                                                <Button type="button" onClick={next} disabled={true}>
+                                                    Next
+                                                </Button>
+                                                <TooltipProvider>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <HelpCircle className="h-5 w-5 text-muted-foreground hover:text-foreground cursor-help" />
+                                                        </TooltipTrigger>
+                                                        <TooltipContent>
+                                                            <p>Incomplete weights for some category</p>
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                </TooltipProvider>
+                                            </div>
+                                        ) : currentStep === 2 ? (
+                                            <Button 
+                                                type="button" 
+                                                disabled={isSubmitting}
+                                                onClick={() => {
+                                                    // Manually trigger form submission
+                                                    form.handleSubmit(onSubmit)();
+                                                }}
+                                            >
+                                                {isSubmitting ? 'Updating...' : 'Update Internship'}
+                                            </Button>
+                                        ) : (
+                                            <Button type="button" onClick={next}>
+                                                Next
+                                            </Button>
+                                        )}
+                                    </div>
+                                </div>
                             </form>
                         </Form>
-                    </div>
-                    <div className="border-t border-border bg-background p-4 flex justify-between items-center">
-                        <div className="text-sm text-gray-600">
-                            {currentStep < steps.length - 1 && (
-                                <span>Please complete all required fields before proceeding</span>
-                            )}
-                        </div>
-                        <div className="flex gap-2">
-                            <Button onClick={prev} disabled={currentStep === 0} variant="outline">
-                                Previous
-                            </Button>
-                            <div className="flex items-center gap-2">
-                                <Button onClick={next} disabled={currentStep === steps.length - 1}>
-                                    Next
-                                </Button>
-                                {currentStep === 1 && !areAllCategoriesValid() && (
-                                    <TooltipProvider>
-                                        <Tooltip>
-                                            <TooltipTrigger asChild>
-                                                <HelpCircle className="h-5 w-5 text-gray-400 hover:text-gray-600 cursor-help" />
-                                            </TooltipTrigger>
-                                            <TooltipContent>
-                                                <p>All categories must total exactly 100%</p>
-                                            </TooltipContent>
-                                        </Tooltip>
-                                    </TooltipProvider>
-                                )}
-                            </div>
-                        </div>
                     </div>
                 </div>
             </div>
