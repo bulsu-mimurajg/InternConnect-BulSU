@@ -15,13 +15,13 @@ export default function Contact() {
             </Head>
             <div className="flex min-h-screen flex-col items-center relative bg-background">
                 {/* Background Image */}
-                <div 
-                    className="fixed inset-0 bg-cover bg-center bg-no-repeat opacity-50 dark:opacity-25" 
-                    style={{backgroundImage: 'url(/images/pimentel.jpg)'}} 
+                <div
+                    className="fixed inset-0 bg-cover bg-center bg-no-repeat opacity-50 dark:opacity-25"
+                    style={{backgroundImage: 'url(/images/pimentel.jpg)'}}
                 />
                 {/* Background Overlay */}
                 <div className="fixed inset-0 bg-background/40 dark:bg-background/60" />
-                
+
                 {/* Content Container */}
                 <div className="relative z-10 flex min-h-screen flex-col items-center p-6 text-foreground lg:justify-center lg:p-8 w-full">
                 <header className="mb-6 w-full max-w-[335px] text-sm not-has-[nav]:hidden lg:max-w-5xl">
@@ -112,9 +112,9 @@ export default function Contact() {
                                         Get in touch with the InternConnect BSIT team
                                     </p>
                                 </div>
-                                
+
                                 <p className="text-md leading-relaxed text-center text-foreground">
-                                Have questions about the system? Encountered issues? 
+                                Have questions about the system? Encountered issues?
                                 You may reach out to us through the channels below.
                                 </p>
                             </div>
@@ -140,9 +140,9 @@ export default function Contact() {
                                             <CardDescription className="text-[#706f6c] dark:text-[#A1A09A] mb-2">
                                                 For technical issues and general inquiries
                                             </CardDescription>
-                                            <a 
+                                            <a
                                                 href="mailto:internconnectbulsu@gmail.com"
-                                                className="text-[#f53003] dark:text-[#FF4433] font-medium hover:underline"
+                                                className="text-[#f53003] dark:text-[#FF4433] font-medium hover:underline underline-offset-4"
                                             >
                                                 internconnectbulsu@gmail.com
                                             </a>
@@ -160,13 +160,27 @@ export default function Contact() {
                                             <CardDescription className="text-[#706f6c] dark:text-[#A1A09A] mb-2">
                                                 View source code and documentation
                                             </CardDescription>
-                                            <a 
+                                            <a
                                                 href="https://github.com/bulsu-mimurajg/InternConnect-BulSU"
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                className="text-[#f53003] dark:text-[#FF4433] font-medium hover:underline"
+                                                className="inline-flex items-center space-x-1 font-medium text-[#f53003] dark:text-[#FF4433] hover:underline underline-offset-4"
                                             >
-                                                View Repository
+                                                <span>Repository</span>
+                                                <svg
+                                                    width={10}
+                                                    height={11}
+                                                    viewBox="0 0 10 11"
+                                                    fill="none"
+                                                    xmlns="http://www.w3.org/2000/svg"
+                                                    className="h-2.5 w-2.5"
+                                                >
+                                                    <path
+                                                        d="M7.70833 6.95834V2.79167H3.54167M2.5 8L7.5 3.00001"
+                                                        stroke="currentColor"
+                                                        strokeLinecap="square"
+                                                    />
+                                                </svg>
                                             </a>
                                         </CardContent>
                                     </Card>
@@ -183,38 +197,32 @@ export default function Contact() {
                                                 BSIT 4EG2 | Capstone Project
                                             </CardDescription>
                                             <p className="text-[#1b1b18] dark:text-[#EDEDEC] text-sm">
-                                                Bulacan State University
+                                                <br />
+                                                <a
+                                                    href="https://bulsu.edu.ph/"
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="inline-flex items-center space-x-1 font-medium text-[#f53003] dark:text-[#FF4433] hover:underline underline-offset-4"
+                                                >
+                                                    <span>Bulacan State University</span>
+                                                    <svg
+                                                        width={10}
+                                                        height={11}
+                                                        viewBox="0 0 10 11"
+                                                        fill="none"
+                                                        xmlns="http://www.w3.org/2000/svg"
+                                                        className="h-2.5 w-2.5"
+                                                    >
+                                                        <path
+                                                            d="M7.70833 6.95834V2.79167H3.54167M2.5 8L7.5 3.00001"
+                                                            stroke="currentColor"
+                                                            strokeLinecap="square"
+                                                        />
+                                                    </svg>
+                                                </a>
                                             </p>
                                         </CardContent>
                                     </Card>
-                                </div>
-
-                                <div className="text-center space-y-4 pt-8">
-                                    <h3 className="text-xl font-semibold text-foreground">Visit the University Website</h3>
-                                    <div className="flex flex-wrap gap-4 justify-center">
-                                        <a 
-                                            href="https://bulsu.edu.ph/" 
-                                            target="_blank" 
-                                            rel="noopener noreferrer"
-                                            className="inline-flex items-center space-x-1 font-medium text-[#f53003] dark:text-[#FF4433] underline underline-offset-4"
-                                        >
-                                            <span>BulSU Website</span>
-                                            <svg
-                                                width={10}
-                                                height={11}
-                                                viewBox="0 0 10 11"
-                                                fill="none"
-                                                xmlns="http://www.w3.org/2000/svg"
-                                                className="h-2.5 w-2.5"
-                                            >
-                                                <path
-                                                    d="M7.70833 6.95834V2.79167H3.54167M2.5 8L7.5 3.00001"
-                                                    stroke="currentColor"
-                                                    strokeLinecap="square"
-                                                />
-                                            </svg>
-                                        </a>
-                                    </div>
                                 </div>
                             </div>
                         </div>

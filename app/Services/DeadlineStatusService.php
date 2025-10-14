@@ -23,6 +23,14 @@ class DeadlineStatusService
     }
 
     /**
+     * Get deadline status (alias for getAdminDeadlineStatus for compatibility)
+     */
+    public function getDeadlineStatus(): array
+    {
+        return $this->getAdminDeadlineStatus();
+    }
+
+    /**
      * Check if specific functionality is restricted
      */
     public function isFunctionalityRestricted(string $functionality): bool
@@ -34,19 +42,24 @@ class DeadlineStatusService
             case 'section_archive':
             case 'section_restore':
                 return $studentAssessmentDeadline !== null;
-            
+
             case 'section_management':
                 return $studentAssessmentDeadline !== null;
-            
+
             case 'forms_management':
                 return $studentAssessmentDeadline !== null;
-            
+
             case 'additional_info_management':
                 return $studentAssessmentDeadline !== null;
-            
+
+            case 'hte_archive':
+            case 'hte_restore':
+            case 'hte_management':
+                return $studentAssessmentDeadline !== null;
+
             case 'admin_management':
                 return $internshipPlacementDeadline !== null;
-            
+
             default:
                 return false;
         }
@@ -63,43 +76,64 @@ class DeadlineStatusService
         switch ($functionality) {
             case 'section_archive':
                 if ($studentAssessmentDeadline) {
-                    return "Section archiving is disabled during student assessment deadline period. Deadline ends: " . 
+                    return "Section archiving is disabled during student assessment deadline period. Deadline ends: " .
                            Carbon::parse($studentAssessmentDeadline->end_date)->format('M j, Y \a\t g:i A');
                 }
                 break;
-            
+
             case 'section_restore':
                 if ($studentAssessmentDeadline) {
-                    return "Section restoration is disabled during student assessment deadline period. Deadline ends: " . 
+                    return "Section restoration is disabled during student assessment deadline period. Deadline ends: " .
                            Carbon::parse($studentAssessmentDeadline->end_date)->format('M j, Y \a\t g:i A');
                 }
                 break;
-            
+
             case 'section_management':
                 if ($studentAssessmentDeadline) {
-                    return "Section archiving and restoration is disabled during student assessment deadline period. Deadline ends: " . 
+                    return "Section archiving and restoration is disabled during student assessment deadline period. Deadline ends: " .
                            Carbon::parse($studentAssessmentDeadline->end_date)->format('M j, Y \a\t g:i A');
                 }
                 break;
-            
+
             case 'forms_management':
                 if ($studentAssessmentDeadline) {
-                    return "Forms management is disabled during student assessment deadline period. Deadline ends: " . 
+                    return "Forms management is disabled during student assessment deadline period. Deadline ends: " .
                            Carbon::parse($studentAssessmentDeadline->end_date)->format('M j, Y \a\t g:i A');
                 }
                 break;
-            
+
             case 'additional_info_management':
                 if ($studentAssessmentDeadline) {
-                    return "Additional info management is disabled during student assessment deadline period. Deadline ends: " . 
+                    return "Additional info management is disabled during student assessment deadline period. Deadline ends: " .
                            Carbon::parse($studentAssessmentDeadline->end_date)->format('M j, Y \a\t g:i A');
                 }
                 break;
-            
+
             case 'admin_management':
                 if ($internshipPlacementDeadline) {
-                    return "Admin management functions are restricted during internship placement deadline period. Deadline ends: " . 
+                    return "Admin management functions are restricted during internship placement deadline period. Deadline ends: " .
                            Carbon::parse($internshipPlacementDeadline->end_date)->format('M j, Y \a\t g:i A');
+                }
+                break;
+
+            case 'hte_archive':
+                if ($studentAssessmentDeadline) {
+                    return "HTE archiving is disabled during student assessment deadline period. Deadline ends: " .
+                        Carbon::parse($studentAssessmentDeadline->end_date)->format('M j, Y \a\t g:i A');
+                }
+                break;
+
+            case 'hte_restore':
+                if ($studentAssessmentDeadline) {
+                    return "HTE restoration is disabled during student assessment deadline period. Deadline ends: " .
+                        Carbon::parse($studentAssessmentDeadline->end_date)->format('M j, Y \a\t g:i A');
+                }
+                break;
+
+            case 'hte_management':
+                if ($studentAssessmentDeadline) {
+                    return "HTE management functions are restricted during student assessment deadline period. Deadline ends: " .
+                        Carbon::parse($studentAssessmentDeadline->end_date)->format('M j, Y \a\t g:i A');
                 }
                 break;
         }
