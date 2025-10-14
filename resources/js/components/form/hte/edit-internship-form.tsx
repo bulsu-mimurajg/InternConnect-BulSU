@@ -17,7 +17,6 @@ const FormSchema = z.object({
     position: z.string().min(1, 'Position is required'),
     department: z.string().min(1, 'Department is required'),
     numberOfInterns: z.string().min(1, 'Number of interns is required'),
-    duration: z.string().min(1, 'Duration is required'),
     subcategoryWeights: z.record(z.string(), z.number().min(0).max(100)),
 });
 
@@ -49,7 +48,6 @@ interface EditInternshipFormProps {
         position: string;
         department: string;
         numberOfInterns: string;
-        duration: string;
         is_active: boolean;
     };
     existingWeights: Record<string, number>;
@@ -76,7 +74,6 @@ export default function EditInternshipForm({ categories, internship, existingWei
             position: internship.position,
             department: internship.department,
             numberOfInterns: internship.numberOfInterns,
-            duration: internship.duration,
             subcategoryWeights: existingWeights,
         },
     });
@@ -89,6 +86,9 @@ export default function EditInternshipForm({ categories, internship, existingWei
                     category.subCategories.forEach((subcat: SubCategory) => {
                         if (existingWeights[subcat.id] !== undefined) {
                             form.setValue(`subcategoryWeights.${subcat.id}`, existingWeights[subcat.id]);
+                        } else {
+                            // Initialize with 0 if no existing weight
+                            form.setValue(`subcategoryWeights.${subcat.id}`, 0);
                         }
                     });
                 }
@@ -117,19 +117,22 @@ export default function EditInternshipForm({ categories, internship, existingWei
 
     const next = async () => {
         let fieldsToValidate: Path<FormData>[] = [];
+        let customValidationPassed = true;
 
         switch (currentStep) {
             case 0:
-                fieldsToValidate = ['position', 'department', 'numberOfInterns', 'duration'];
+                fieldsToValidate = ['position', 'department', 'numberOfInterns'];
                 break;
             case 1:
                 fieldsToValidate = ['subcategoryWeights'];
+                // Add custom validation for weight distribution
+                customValidationPassed = areAllCategoriesValid();
                 break;
         }
 
         if (fieldsToValidate.length > 0) {
             const isValid = await form.trigger(fieldsToValidate, { shouldFocus: true });
-            if (isValid) {
+            if (isValid && customValidationPassed) {
                 setCurrentStep((prev) => prev + 1);
             }
         } else {
@@ -143,7 +146,7 @@ export default function EditInternshipForm({ categories, internship, existingWei
         if (!category) return 0;
 
         return category.subCategories.reduce((sum, subcat) => {
-            const weight = form.watch(`subcategoryWeights.${subcat.id}`);
+            const weight = form.watch(`subcategoryWeights.${subcat.id}`) || 0;
             return sum + weight;
         }, 0);
     };
@@ -227,27 +230,23 @@ export default function EditInternshipForm({ categories, internship, existingWei
                             <Button onClick={prev} disabled={currentStep === 0} variant="outline">
                                 Previous
                             </Button>
-                            {currentStep === 1 && !areAllCategoriesValid() ? (
-                                <div className="flex items-center gap-2">
-                                    <Button onClick={next} disabled={true}>
-                                        Next
-                                    </Button>
+                            <div className="flex items-center gap-2">
+                                <Button onClick={next} disabled={currentStep === steps.length - 1}>
+                                    Next
+                                </Button>
+                                {currentStep === 1 && !areAllCategoriesValid() && (
                                     <TooltipProvider>
                                         <Tooltip>
                                             <TooltipTrigger asChild>
                                                 <HelpCircle className="h-5 w-5 text-gray-400 hover:text-gray-600 cursor-help" />
                                             </TooltipTrigger>
                                             <TooltipContent>
-                                                <p>Incomplete weights for some category</p>
+                                                <p>All categories must total exactly 100%</p>
                                             </TooltipContent>
                                         </Tooltip>
                                     </TooltipProvider>
-                                </div>
-                            ) : (
-                                <Button onClick={next} disabled={currentStep === steps.length - 1}>
-                                    Next
-                                </Button>
-                            )}
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>

@@ -748,7 +748,7 @@ export default function HTEProfilePage() {
                                                                 <p className="text-sm font-semibold text-foreground">{selectedInternship.department}</p>
                                                             </div>
                                                             <div>
-                                                                <label className="text-sm font-medium text-muted-foreground">Available Slots</label>
+                                                                <label className="text-sm font-medium text-muted-foreground">Slots</label>
                                                                 <p className="text-sm font-semibold flex items-center gap-2 text-foreground">
                                                                     <Users className="h-4 w-4" />
                                                                     {selectedInternship.slot_count} slot{selectedInternship.slot_count !== 1 ? 's' : ''}
