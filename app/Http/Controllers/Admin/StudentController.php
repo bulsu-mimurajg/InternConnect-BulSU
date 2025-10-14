@@ -284,7 +284,7 @@ class StudentController extends Controller
             'id' => $student->id,
             'student_number' => $student->student_number,
             'first_name' => $student->first_name,
-            'middle_name' => $student->middle_name,
+            'middle_name' => $student->middle_name ?? '',
             'last_name' => $student->last_name,
             'section_id' => $student->section_id,
             'section' => $student->section->section_name ?? '',
@@ -322,7 +322,7 @@ class StudentController extends Controller
         // Update student data
         $student->update([
             'first_name' => $validated['first_name'],
-            'middle_name' => $validated['middle_name'],
+            'middle_name' => $validated['middle_name'] ?: null,
             'last_name' => $validated['last_name'],
             'student_number' => $validated['student_number'],
             'section_id' => $validated['section_id'],

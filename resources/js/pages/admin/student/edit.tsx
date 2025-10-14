@@ -34,7 +34,7 @@ export default function EditStudent({ student, sections }: Props) {
     const { data, setData, put, processing, errors } = useForm({
         student_number: student.student_number,
         first_name: student.first_name,
-        middle_name: student.middle_name || '',
+        middle_name: student.middle_name ?? '',
         last_name: student.last_name,
         section_id: student.section_id,
         specialization: student.specialization || '',

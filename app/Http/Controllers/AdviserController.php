@@ -683,8 +683,18 @@ class AdviserController extends Controller
                     // Get user's section
                     $userSection = $user->academeAccounts()->first()->section;
 
-                    // Get registration data from cache using user's email
-                    $registrationData = Cache::get("registration_data_{$user->email}");
+                    // Get registration data with better error handling
+                    $cacheKey = "registration_data_{$user->email}";
+                    $registrationData = Cache::get($cacheKey);
+
+                    // Log for debugging
+                    \Log::info('Retrieving registration data for approval', [
+                        'user_id' => $user->id,
+                        'email' => $user->email,
+                        'cache_key' => $cacheKey,
+                        'data_found' => $registrationData ? 'yes' : 'no',
+                        'data_content' => $registrationData ? array_keys($registrationData) : 'null'
+                    ]);
 
                     // Get active season
                     $activeSeason = $this->seasonService->getActiveSeason();
@@ -693,12 +703,12 @@ class AdviserController extends Controller
                     $student = Student::create([
                         'user_id' => $user->id,
                         'student_number' => $user->username,
-                        'first_name' => $registrationData ? $registrationData['first_name'] : 'Pending',
-                        'last_name' => $registrationData ? $registrationData['last_name'] : 'Student',
-                        'middle_name' => $registrationData ? $registrationData['middle_name'] : '',
-                        'phone' => $registrationData ? $registrationData['contact_number'] : '',
+                        'first_name' => $registrationData['first_name'] ?? 'Pending',
+                        'last_name' => $registrationData['last_name'] ?? 'Student',
+                        'middle_name' => $registrationData['middle_name'] ?? '',
+                        'phone' => $registrationData['contact_number'] ?? '',
                         'section_id' => $userSection->section_id,
-                        'specialization' => $registrationData ? $registrationData['specialization'] : '',
+                        'specialization' => $registrationData['specialization'] ?? '',
                         'is_active' => true,
                         'is_submit' => false,
                         'is_placed' => false,
@@ -708,8 +718,10 @@ class AdviserController extends Controller
                     // Load the section relationship
                     $student->load('section');
 
-                    // Clean up the cached registration data after creating student record
-                    Cache::forget("registration_data_{$user->email}");
+                    // Only delete cache if we successfully used the data
+                    if ($registrationData) {
+                        Cache::forget($cacheKey);
+                    }
                 }
 
                 $approvedCount++;
