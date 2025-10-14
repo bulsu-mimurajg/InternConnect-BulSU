@@ -253,10 +253,15 @@ export default function SeasonStats({ season, stats, archivedStudents, placedStu
                 <div className="space-y-2">
                   <p className="text-sm font-medium text-muted-foreground">Status</p>
                   <div className="flex items-center gap-2">
-                    {stats.is_in_progress && <ClockIcon className="h-4 w-4 text-blue-500" />}
-                    {stats.has_ended && <CheckCircleIcon className="h-4 w-4 text-green-500" />}
+                    {season.status === 'active' && <ClockIcon className="h-4 w-4 text-blue-500" />}
+                    {season.status === 'completed' && <CheckCircleIcon className="h-4 w-4 text-green-500" />}
+                    {season.status === 'inactive' && <ClockIcon className="h-4 w-4 text-gray-500" />}
+                    {season.status === 'archived' && <ArchiveIcon className="h-4 w-4 text-gray-500" />}
                     <span className="text-lg font-semibold">
-                      {stats.is_in_progress ? 'In Progress' : stats.has_ended ? 'Ended' : 'Upcoming'}
+                      {season.status === 'active' ? 'In Progress' : 
+                       season.status === 'completed' ? 'Completed' :
+                       season.status === 'inactive' ? 'Inactive' :
+                       season.status === 'archived' ? 'Archived' : 'Unknown'}
                     </span>
                   </div>
                 </div>

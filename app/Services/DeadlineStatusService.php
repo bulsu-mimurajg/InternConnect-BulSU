@@ -177,7 +177,7 @@ class DeadlineStatusService
         if ($studentAssessmentDeadline) {
             $restrictions[] = [
                 'type' => 'student_assessment',
-                'message' => 'HTE management functions are restricted during student assessment deadline period. Deadline ends: ' . Carbon::parse($studentAssessmentDeadline->end_date)->format('M j, Y \a\t g:i A'),
+                'message' => 'HTE management functions are restricted',
                 'deadline' => $this->formatDeadlineInfo($studentAssessmentDeadline),
                 'affected_functionality' => ['section_archive', 'section_restore', 'forms_management', 'additional_info_management', 'hte_archive', 'hte_restore', 'hte_management'],
             ];

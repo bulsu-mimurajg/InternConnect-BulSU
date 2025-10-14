@@ -3,8 +3,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Badge } from '@/components/ui/badge';
-import { PieChart, SimplePieChart } from '@/components/charts';
+import { SimplePieChart } from '@/components/charts';
 import { useFormContext } from 'react-hook-form';
 import React, { useCallback, useMemo } from 'react';
 import { ChevronDownIcon } from '@radix-ui/react-icons';
@@ -55,10 +54,7 @@ export default function Criteria({
     categories,
     loading,
     expandedCategories,
-    expandedSubcategories,
     expandedQuestions,
-    setExpandedCategories,
-    setExpandedSubcategories,
     setExpandedQuestions,
     highlightInvalidCategories = false,
     lockedSubcategories,
@@ -95,16 +91,16 @@ export default function Criteria({
         (categoryId: number, subcategoryId: number, newWeight: number) => {
             // Prevent weight changes if subcategory is locked
             if (lockedSubcategories.has(subcategoryId)) return;
-            
+
             const category = categories.find((cat) => cat.id === categoryId);
             if (!category || !category.subCategories) return;
 
             const clampedWeight = Math.max(0, Math.min(100, newWeight));
             const subcategories = category.subCategories;
-            
+
             // Minimum weight threshold to prevent subcategories from going to 0%
             const MIN_WEIGHT_THRESHOLD = 1;
-            
+
             // If only one subcategory, set it to the weight
             if (subcategories.length === 1) {
                 setValue(`subcategoryWeights.${subcategoryId}`, clampedWeight);
@@ -112,15 +108,15 @@ export default function Criteria({
             }
 
             // Get other unlocked subcategories (excluding the one being changed and locked ones)
-            const otherUnlockedSubcategories = subcategories.filter((subcat) => 
+            const otherUnlockedSubcategories = subcategories.filter((subcat) =>
                 subcat.id !== subcategoryId && !lockedSubcategories.has(subcat.id)
             );
-            
+
             // Calculate total weight of ALL locked subcategories (excluding the one being changed)
             const lockedSubcategoriesTotal = subcategories
                 .filter((subcat) => subcat.id !== subcategoryId && lockedSubcategories.has(subcat.id))
                 .reduce((sum, subcat) => sum + (subcategoryWeights[subcat.id] || 0), 0);
-            
+
             // Calculate total weight of other unlocked subcategories
             const otherUnlockedSubcategoriesTotal = otherUnlockedSubcategories.reduce((sum, subcat) => {
                 return sum + (subcategoryWeights[subcat.id] || 0);
@@ -129,7 +125,7 @@ export default function Criteria({
             // Calculate remaining weight to distribute among unlocked subcategories
             // This is: 100% - (new weight + all locked weights)
             const remainingWeight = 100 - clampedWeight - lockedSubcategoriesTotal;
-            
+
             // CRITICAL FIX: Prevent total from exceeding 100%
             // If the new weight plus locked weights would exceed 100%, cap the new weight
             const maxAllowedWeight = 100 - lockedSubcategoriesTotal;
@@ -139,13 +135,13 @@ export default function Criteria({
                 setValue(`subcategoryWeights.${subcategoryId}`, cappedWeight);
                 return;
             }
-            
+
             // If there are no unlocked subcategories to redistribute to, just set the weight
             if (otherUnlockedSubcategories.length === 0) {
                 setValue(`subcategoryWeights.${subcategoryId}`, clampedWeight);
                 return;
             }
-            
+
             // Check if the change would cause any unlocked subcategory to go below minimum threshold
             const minRequiredWeight = otherUnlockedSubcategories.length * MIN_WEIGHT_THRESHOLD;
             if (remainingWeight < minRequiredWeight) {
@@ -160,7 +156,7 @@ export default function Criteria({
                 setValue(`subcategoryWeights.${subcategoryId}`, adjustedWeight);
                 return;
             }
-            
+
             // If remaining weight is negative or zero, set all unlocked others to 0
             if (remainingWeight <= 0) {
                 otherUnlockedSubcategories.forEach((subcat) => {
@@ -175,7 +171,7 @@ export default function Criteria({
                 // Ensure each gets at least the minimum threshold
                 const equalWeight = Math.floor(remainingWeight / otherUnlockedSubcategories.length);
                 const remainder = remainingWeight % otherUnlockedSubcategories.length;
-                
+
                 otherUnlockedSubcategories.forEach((subcat, index) => {
                     const baseWeight = equalWeight + (index < remainder ? 1 : 0);
                     const weight = Math.max(MIN_WEIGHT_THRESHOLD, baseWeight);
@@ -190,7 +186,7 @@ export default function Criteria({
                     const weight = Math.max(MIN_WEIGHT_THRESHOLD, proportionalWeight);
                     setValue(`subcategoryWeights.${subcat.id}`, weight);
                 });
-                
+
                 // Adjust for rounding errors to ensure total is exactly 100
                 // Calculate the new total: new weight + locked weights + redistributed unlocked weights
                 const newUnlockedTotal = otherUnlockedSubcategories.reduce((sum, subcat) => {
@@ -199,9 +195,9 @@ export default function Criteria({
                     const weight = Math.max(MIN_WEIGHT_THRESHOLD, proportionalWeight);
                     return sum + weight;
                 }, 0);
-                
+
                 const newTotal = clampedWeight + lockedSubcategoriesTotal + newUnlockedTotal;
-                
+
                 if (newTotal !== 100) {
                     const difference = 100 - newTotal;
                     // Apply difference to the largest unlocked subcategory
@@ -210,7 +206,7 @@ export default function Criteria({
                         const largestWeight = subcategoryWeights[largest.id] || 0;
                         return currentWeight > largestWeight ? current : largest;
                     });
-                    
+
                     const currentWeight = subcategoryWeights[largestOther.id] || 0;
                     const proportionalWeight = Math.round((currentWeight / otherUnlockedSubcategoriesTotal) * remainingWeight);
                     const adjustedWeight = Math.max(MIN_WEIGHT_THRESHOLD, proportionalWeight + difference);
@@ -219,12 +215,12 @@ export default function Criteria({
             }
 
             setValue(`subcategoryWeights.${subcategoryId}`, clampedWeight);
-            
+
             // Notify parent component of weight change
             if (onWeightChange) {
                 onWeightChange();
             }
-            
+
             // Force form validation update
             setTimeout(() => {
                 console.log('Weight changed, triggering form validation update');
@@ -255,7 +251,7 @@ export default function Criteria({
                 const weight = index < remainder ? baseWeight + 1 : baseWeight;
                 setValue(`subcategoryWeights.${subcat.id}`, weight);
             });
-            
+
             // Notify parent component of weight change
             if (onWeightChange) {
                 onWeightChange();
@@ -522,12 +518,12 @@ export default function Criteria({
                     const isInvalid = categoryTotal !== 100;
 
                     return (
-                        <Card 
-                            key={category.id} 
+                        <Card
+                            key={category.id}
                             id={`category-card-${category.category_name.toLowerCase().replace(/\s+/g, '-')}`}
                             className={`border-2 transition-all duration-300 ${
-                                highlightInvalidCategories && isInvalid 
-                                    ? 'ring-2 ring-red-500 ring-opacity-50 bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800 shadow-lg' 
+                                highlightInvalidCategories && isInvalid
+                                    ? 'ring-2 ring-red-500 ring-opacity-50 bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800 shadow-lg'
                                     : isInvalid
                                     ? 'border-yellow-200 dark:border-yellow-800 bg-yellow-50/30 dark:bg-yellow-950/30'
                                     : 'border-green-200 dark:border-green-800 bg-green-50/30 dark:bg-green-950/30'
@@ -537,10 +533,10 @@ export default function Criteria({
                                 <div className="flex items-center justify-between">
                                     <CardTitle className="text-lg">{category.category_name}</CardTitle>
                                     <div className="flex items-center gap-4">
-                                        <Button 
+                                        <Button
                                             type="button"
-                                            variant="outline" 
-                                            size="sm" 
+                                            variant="outline"
+                                            size="sm"
                                             onClick={(e) => {
                                                 e.preventDefault();
                                                 resetToEqualWeights(category.id);
@@ -564,8 +560,8 @@ export default function Criteria({
                                                     {pieChartData.map((item, index) => (
                                                         <div key={index} className="flex items-center justify-between py-1.5 gap-3">
                                                             <div className="flex items-center gap-2 min-w-0 flex-1">
-                                                                <div 
-                                                                    className="w-2.5 h-2.5 rounded-full flex-shrink-0" 
+                                                                <div
+                                                                    className="w-2.5 h-2.5 rounded-full flex-shrink-0"
                                                                     style={{ backgroundColor: item.color }}
                                                                 />
                                                                 <span className="text-xs font-medium text-foreground truncate" title={item.name}>
@@ -591,7 +587,7 @@ export default function Criteria({
                                     {/* Middle: Large Prominent Pie Chart */}
                                     <div className="flex-shrink-0 flex items-center justify-center">
                                         {pieChartData.length > 0 && pieChartData.some(item => item.value > 0) ? (
-                                            <div className="relative" style={{ 
+                                            <div className="relative" style={{
                                                 width: `${Math.max(240, Math.min(320, 240 + (pieChartData.length * 12)))}px`,
                                                 height: `${Math.max(240, Math.min(320, 240 + (pieChartData.length * 12)))}px`
                                             }}>
@@ -628,16 +624,16 @@ export default function Criteria({
                                             {/* Completion Status */}
                                             <div className="text-center">
                                             <div className={`text-2xl font-bold ${
-                                                categoryTotal === 100 ? 'text-green-600 dark:text-green-400' : 
+                                                categoryTotal === 100 ? 'text-green-600 dark:text-green-400' :
                                                 categoryTotal > 100 ? 'text-red-600 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'
                                             }`}>
                                                 {categoryTotal}%
                                             </div>
                                                 <div className={`text-xs font-medium ${
-                                                    categoryTotal === 100 ? 'text-green-600 dark:text-green-400' : 
+                                                    categoryTotal === 100 ? 'text-green-600 dark:text-green-400' :
                                                     categoryTotal > 100 ? 'text-red-600 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'
                                                 }`}>
-                                                    {categoryTotal === 100 ? '✓ Complete' : 
+                                                    {categoryTotal === 100 ? '✓ Complete' :
                                                      categoryTotal > 100 ? '✗ Exceeds Limit' : '⚠ Incomplete'}
                                                 </div>
                                             </div>
@@ -671,11 +667,11 @@ export default function Criteria({
                                             const questionCount = subcategory.questions ? subcategory.questions.length : 0;
 
                                             const isUnset = (subcategoryWeight === 0 || subcategoryWeight === undefined || subcategoryWeight === null) && !lockedSubcategories.has(subcategory.id);
-                                            
+
                                             return (
                                                 <div key={subcategory.id} className={`bg-muted/30 rounded-lg p-3 border border-border/50 transition-colors ${
-                                                    lockedSubcategories.has(subcategory.id) 
-                                                        ? 'bg-blue-50/50 dark:bg-blue-950/30 border-blue-200/50 dark:border-blue-800/50' 
+                                                    lockedSubcategories.has(subcategory.id)
+                                                        ? 'bg-blue-50/50 dark:bg-blue-950/30 border-blue-200/50 dark:border-blue-800/50'
                                                         : isUnset
                                                         ? 'bg-yellow-50/50 dark:bg-yellow-950/30 border-yellow-200/50 dark:border-yellow-800/50 ring-1 ring-yellow-200/50 dark:ring-yellow-800/50'
                                                         : 'hover:bg-muted/50'
@@ -726,8 +722,8 @@ export default function Criteria({
                                                                     disabled={lockedSubcategories.has(subcategory.id)}
                                                                     title={lockedSubcategories.has(subcategory.id) ? 'This subcategory is locked. Unlock to edit weight.' : ''}
                                                                     className={`w-16 h-7 text-center text-xs pr-6 pl-1 ${
-                                                                        lockedSubcategories.has(subcategory.id) 
-                                                                            ? 'bg-muted text-muted-foreground cursor-not-allowed' 
+                                                                        lockedSubcategories.has(subcategory.id)
+                                                                            ? 'bg-muted text-muted-foreground cursor-not-allowed'
                                                                             : ''
                                                                     }`}
                                                                 />

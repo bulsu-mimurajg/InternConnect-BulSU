@@ -260,7 +260,7 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
         if (score >= 81.50) return '2.25';
         if (score >= 78.50) return '2.50';
         if (score >= 75.50) return '2.75';
-        if (score >= 75.00) return '3.00';
+        if (score >= 74.50) return '3.00';
         return '5.00';
     };
 
