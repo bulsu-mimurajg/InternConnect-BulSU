@@ -293,32 +293,64 @@ export default function SeasonsManagement({ seasons, activeSeason }: Props) {
 
         {/* Active Season Info */}
         {activeSeason && (
-          <Card className="border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-green-800 dark:text-green-200">
-                <CheckCircleIcon className="h-5 w-5" />
-                Current Active Season
-              </CardTitle>
+          <Card className="border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/50">
+            <CardHeader className="pb-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                    <CheckCircleIcon className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-green-900 dark:text-green-100">Current Active Season</h3>
+                    <p className="text-sm text-green-700 dark:text-green-300">{activeSeason.name}</p>
+                  </div>
+                </div>
+                <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                  Active
+                </Badge>
+              </div>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <p className="font-medium text-green-900 dark:text-green-100">{activeSeason.name}</p>
-                  <p className="text-sm text-green-700 dark:text-green-300">
-                    {formatDate(activeSeason.start_date)} - {formatDate(activeSeason.end_date)}
-                  </p>
+            <CardContent className="pt-0">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="flex items-start gap-3">
+                  <CalendarIcon className="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-green-800 dark:text-green-200">Duration</p>
+                    <p className="text-sm text-green-700 dark:text-green-300">
+                      {formatDate(activeSeason.start_date)} - {formatDate(activeSeason.end_date)}
+                    </p>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <CalendarDaysIcon className="h-4 w-4 text-green-600 dark:text-green-400" />
-                  <span className="text-sm text-green-700 dark:text-green-300">
-                    {activeSeason.deadlines_count} deadlines
-                  </span>
+                <div className="flex items-start gap-3">
+                  <ClockIcon className="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-green-800 dark:text-green-200">Deadlines</p>
+                    <p className="text-sm text-green-700 dark:text-green-300">
+                      {activeSeason.deadlines_count} total deadlines
+                    </p>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <UsersIcon className="h-4 w-4 text-green-600 dark:text-green-400" />
-                  <span className="text-sm text-green-700 dark:text-green-300">
-                    {activeSeason.active_students_count} active students
-                  </span>
+                <div className="flex items-start gap-3">
+                  <UsersIcon className="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-green-800 dark:text-green-200">Students</p>
+                    <p className="text-sm text-green-700 dark:text-green-300">
+                      {activeSeason.active_students_count} active ({activeSeason.students_count} total)
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <CheckCircleIcon className="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-green-800 dark:text-green-200">Placements</p>
+                    <p className="text-sm text-green-700 dark:text-green-300">
+                      {(() => {
+                        const placedCount = activeSeason.students_count - activeSeason.active_students_count;
+                        const placementRate = activeSeason.students_count > 0 ? Math.round((placedCount / activeSeason.students_count) * 100) : 0;
+                        return `${placedCount} placed (${placementRate}%)`;
+                      })()}
+                    </p>
+                  </div>
                 </div>
               </div>
             </CardContent>

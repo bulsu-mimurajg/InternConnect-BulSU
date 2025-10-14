@@ -105,17 +105,6 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                         <InputError message={errors.password} />
                     </div>
 
-                    <div className="flex items-center space-x-3">
-                        <Checkbox
-                            id="remember"
-                            name="remember"
-                            checked={data.remember}
-                            onClick={() => setData('remember', !data.remember)}
-                            tabIndex={3}
-                        />
-                        <Label htmlFor="remember">Remember me</Label>
-                    </div>
-
                     <Button 
                         type="submit" 
                         className="mt-4 w-full bg-[#f53003] hover:bg-[#e82903] text-white dark:bg-[#FF4433] dark:hover:bg-[#FF5544]" 
