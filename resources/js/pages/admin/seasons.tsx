@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { CalendarIcon, PlusIcon, CheckCircleIcon, ClockIcon, UsersIcon, CalendarDaysIcon, ArrowLeftIcon } from 'lucide-react';
+import { CalendarIcon, PlusIcon, CheckCircleIcon, ClockIcon, UsersIcon, CalendarDaysIcon, ArrowLeftIcon, ArchiveIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Calendar } from '@/components/ui/calendar';
@@ -42,9 +42,14 @@ interface InternshipSeason {
 interface Props {
   seasons: InternshipSeason[];
   activeSeason: InternshipSeason | null;
+  activeSeasonDeadlines?: {
+    all: any[];
+    active: any[];
+    expired: any[];
+  } | null;
 }
 
-export default function SeasonsManagement({ seasons, activeSeason }: Props) {
+export default function SeasonsManagement({ seasons, activeSeason, activeSeasonDeadlines }: Props) {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [deactivateDialog, setDeactivateDialog] = useState<{
@@ -156,7 +161,7 @@ export default function SeasonsManagement({ seasons, activeSeason }: Props) {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Internship Seasons</h1>
-            <p className="text-muted-foreground">Manage internship seasons, deadlines, and student archiving</p>
+            <p className="text-muted-foreground">Manage internship seasons and student archiving.</p>
           </div>
           
           <div className="flex items-center gap-2">
@@ -326,7 +331,10 @@ export default function SeasonsManagement({ seasons, activeSeason }: Props) {
                   <div className="space-y-1">
                     <p className="text-sm font-medium text-green-800 dark:text-green-200">Deadlines</p>
                     <p className="text-sm text-green-700 dark:text-green-300">
-                      {activeSeason.deadlines_count} total deadlines
+                      {activeSeasonDeadlines ? 
+                        `${activeSeasonDeadlines.all.length} total (${activeSeasonDeadlines.active.length} active, ${activeSeasonDeadlines.expired.length} expired)` :
+                        `${activeSeason.deadlines_count} total deadlines`
+                      }
                     </p>
                   </div>
                 </div>
@@ -376,7 +384,7 @@ export default function SeasonsManagement({ seasons, activeSeason }: Props) {
               <CardContent className="flex flex-col h-full">
                 <div className="flex-1 space-y-4">
                   {/* Statistics */}
-                  <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="flex items-center justify-between text-sm">
                     <div className="flex items-center gap-2">
                       <CalendarDaysIcon className="h-4 w-4 text-muted-foreground" />
                       <span>{season.deadlines_count} deadlines</span>
@@ -564,6 +572,22 @@ export default function SeasonsManagement({ seasons, activeSeason }: Props) {
                       Activate
                     </Button>
                   ) : null}
+                  
+                  {season.status === 'completed' && season.active_students_count > 0 && (
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => {
+                        if (confirm('Are you sure you want to archive all students in this season? This action cannot be undone.')) {
+                          router.post(`/admin/seasons/${season.id}/archive-students`);
+                        }
+                      }}
+                      className="w-full flex items-center gap-2"
+                    >
+                      <ArchiveIcon className="h-4 w-4" />
+                      Archive All Students
+                    </Button>
+                  )}
                   
                   <Button
                     size="sm"

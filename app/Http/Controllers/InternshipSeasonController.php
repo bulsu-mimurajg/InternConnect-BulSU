@@ -28,11 +28,36 @@ class InternshipSeasonController extends Controller
     public function index(): Response
     {
         $seasons = $this->seasonService->getAllSeasonsWithStats();
-        $activeSeason = $this->seasonService->getActiveSeason();
+        
+        // Get active season with statistics (same as seasons list)
+        $activeSeason = null;
+        $activeSeasonDeadlines = null;
+        
+        $activeSeasonFromDb = $this->seasonService->getActiveSeason();
+        if ($activeSeasonFromDb) {
+            // Find the active season from the seasons list to get the counts
+            $activeSeason = $seasons->where('id', $activeSeasonFromDb->id)->first();
+            
+            // Get detailed deadline information for active season
+            $activeSeasonDeadlines = [
+                'all' => Deadline::where('internship_season_id', $activeSeasonFromDb->id)->get(),
+                'active' => Deadline::where('internship_season_id', $activeSeasonFromDb->id)
+                    ->where('status', 'active')
+                    ->where('end_date', '>', Carbon::now())
+                    ->get(),
+                'expired' => Deadline::where('internship_season_id', $activeSeasonFromDb->id)
+                    ->where(function($query) {
+                        $query->where('status', 'expired')
+                              ->orWhere('end_date', '<=', Carbon::now());
+                    })
+                    ->get(),
+            ];
+        }
 
         return Inertia::render('admin/seasons', [
             'seasons' => $seasons,
             'activeSeason' => $activeSeason,
+            'activeSeasonDeadlines' => $activeSeasonDeadlines,
         ]);
     }
 

@@ -23,14 +23,6 @@ class DeadlineStatusService
     }
 
     /**
-     * Get deadline status (alias for getAdminDeadlineStatus for compatibility)
-     */
-    public function getDeadlineStatus(): array
-    {
-        return $this->getAdminDeadlineStatus();
-    }
-
-    /**
      * Check if specific functionality is restricted
      */
     public function isFunctionalityRestricted(string $functionality): bool
@@ -50,11 +42,6 @@ class DeadlineStatusService
                 return $studentAssessmentDeadline !== null;
             
             case 'additional_info_management':
-                return $studentAssessmentDeadline !== null;
-            
-            case 'hte_archive':
-            case 'hte_restore':
-            case 'hte_management':
                 return $studentAssessmentDeadline !== null;
             
             case 'admin_management':
@@ -109,27 +96,6 @@ class DeadlineStatusService
                 }
                 break;
             
-            case 'hte_archive':
-                if ($studentAssessmentDeadline) {
-                    return "HTE archiving is disabled during student assessment deadline period. Deadline ends: " . 
-                           Carbon::parse($studentAssessmentDeadline->end_date)->format('M j, Y \a\t g:i A');
-                }
-                break;
-            
-            case 'hte_restore':
-                if ($studentAssessmentDeadline) {
-                    return "HTE restoration is disabled during student assessment deadline period. Deadline ends: " . 
-                           Carbon::parse($studentAssessmentDeadline->end_date)->format('M j, Y \a\t g:i A');
-                }
-                break;
-            
-            case 'hte_management':
-                if ($studentAssessmentDeadline) {
-                    return "HTE management functions are restricted during student assessment deadline period. Deadline ends: " . 
-                           Carbon::parse($studentAssessmentDeadline->end_date)->format('M j, Y \a\t g:i A');
-                }
-                break;
-            
             case 'admin_management':
                 if ($internshipPlacementDeadline) {
                     return "Admin management functions are restricted during internship placement deadline period. Deadline ends: " . 
@@ -180,7 +146,7 @@ class DeadlineStatusService
                 'type' => 'student_assessment',
                 'message' => 'Student assessment deadline is active',
                 'deadline' => $this->formatDeadlineInfo($studentAssessmentDeadline),
-                'affected_functionality' => ['section_archive', 'section_restore', 'forms_management', 'additional_info_management', 'hte_archive', 'hte_restore', 'hte_management'],
+                'affected_functionality' => ['section_archive', 'section_restore', 'forms_management', 'additional_info_management'],
             ];
         }
 
