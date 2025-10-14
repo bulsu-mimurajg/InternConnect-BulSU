@@ -43,7 +43,7 @@ class HTECredentialsNotification extends Notification implements ShouldQueue
     public function toMail(object $notifiable): void
     {
         $userName = $this->companyName ?: $notifiable->username ?? 'HTE User';
-        $loginUrl = url('/login');
+        $loginUrl = config('app.url') . '/login';
         
         // Use the custom EmailService to send the credentials email
         $emailService = new EmailService();

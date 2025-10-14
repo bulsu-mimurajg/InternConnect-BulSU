@@ -9,6 +9,7 @@ use App\Models\Endorsement;
 use App\Models\Deadline;
 use App\Models\Internship;
 use App\Services\NotificationService;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Log;
 
 class AutomaticPlacementService
@@ -246,7 +247,7 @@ class AutomaticPlacementService
                 try {
                     // Get the best pending match
                     $bestMatch = $student->matches->first();
-                    
+
                     if (!$bestMatch) {
                         Log::info("Student {$student->id} has no pending matches, skipping");
                         continue;
@@ -362,7 +363,7 @@ class AutomaticPlacementService
             foreach ($studentsNeedingEmergencyPlacement as $student) {
                 try {
                     Log::info("Processing emergency placement for student {$student->id}");
-                    
+
                     // Get all active internships with available slots (after Tier 1 & 2)
                     $availableInternships = Internship::where('is_active', true)
                         ->with(['subcategoryWeights.subcategory', 'hte'])
@@ -374,7 +375,7 @@ class AutomaticPlacementService
 
                     if ($availableInternships->isEmpty()) {
                         Log::warning("No available internships for emergency placement for student {$student->id}");
-                        
+
                         // Create a record for admin visibility
                         \App\Models\UnplacedStudent::updateOrCreate(
                             ['student_id' => $student->id],
@@ -385,13 +386,13 @@ class AutomaticPlacementService
                                 'updated_at' => now(),
                             ]
                         );
-                        
+
                         continue;
                     }
 
                     // Calculate fresh compatibility scores for all available internships
                     $internshipsWithScores = $this->calculateFreshCompatibilityScores($student, $availableInternships);
-                    
+
                     if ($internshipsWithScores->isEmpty()) {
                         Log::warning("No internships with valid compatibility scores for student {$student->id}");
                         continue;
@@ -648,7 +649,7 @@ class AutomaticPlacementService
         $results['skipped_count']++;
         Log::warning("No available internships for fallback for student {$student->id}");
     }
-    
+
     /**
      * Try fallback placement for an endorsed student
      */
@@ -693,7 +694,7 @@ class AutomaticPlacementService
     /**
      * Calculate fresh compatibility scores for a student with all available internships
      */
-    private function calculateFreshCompatibilityScores(Student $student, Collection $internships): Collection
+    private function calculateFreshCompatibilityScores(Student $student, Collection $internships): \Illuminate\Support\Collection
     {
         $compatibilityScores = collect();
 
@@ -710,17 +711,17 @@ class AutomaticPlacementService
             foreach ($weights as $weight) {
                 $subcategoryId = $weight->subcategory_id;
                 $weightValue = $weight->weight;
-                
+
                 // Get student's score for this subcategory
                 $studentScore = $studentScores->get($subcategoryId);
-                
+
                 if ($studentScore) {
                     // Convert student score (1-5 scale) to percentage (0-100)
                     $scorePercentage = ($studentScore->score / 5) * 100;
-                    
+
                     // Apply weight to the score
                     $weightedScore = $scorePercentage * ($weightValue / 100);
-                    
+
                     $totalScore += $weightedScore;
                     $totalWeight += $weightValue;
                 }

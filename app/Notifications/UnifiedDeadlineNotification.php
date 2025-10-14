@@ -249,7 +249,7 @@ class UnifiedDeadlineNotification extends Notification implements ShouldQueue
      */
     private function getActionUrl(): string
     {
-        return url('/login');
+        return config('app.url') . '/login';
     }
 
     /**

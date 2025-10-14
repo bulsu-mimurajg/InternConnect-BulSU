@@ -461,10 +461,19 @@ class AdviserController extends Controller
             ->with(['academeAccounts.section', 'student']);
 
         // Build query for rejected students (archived status)
+        // Show students who are archived and either:
+        // 1. Have active student records (is_active = true), OR
+        // 2. Don't have student records (rejected before approval)
+        // This excludes students who have been permanently archived (is_active = false)
         $rejectedQuery = User::whereHas('roles', function ($query) {
                 $query->where('name', 'student');
             })
             ->where('status', 'archived')
+            ->where(function ($query) {
+                $query->whereHas('student', function ($subQuery) {
+                    $subQuery->where('is_active', true);
+                })->orWhereDoesntHave('student');
+            })
             ->with(['academeAccounts.section', 'student']);
 
         // Apply section filter
