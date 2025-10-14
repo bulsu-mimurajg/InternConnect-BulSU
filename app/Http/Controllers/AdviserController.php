@@ -673,8 +673,13 @@ class AdviserController extends Controller
                 // Update status to verified
                 $user->update(['status' => 'verified']);
 
-                // Only create student record if it doesn't exist
-                if (!$user->student) {
+                // Check if user already has an active student record
+                // (Should not exist for new registrations, but check to be safe)
+                $existingActiveStudent = Student::where('user_id', $user->id)
+                    ->where('is_active', true)
+                    ->first();
+
+                if (!$existingActiveStudent) {
                     // Get user's section
                     $userSection = $user->academeAccounts()->first()->section;
 

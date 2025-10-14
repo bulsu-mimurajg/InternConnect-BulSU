@@ -75,9 +75,30 @@ class EmailVerificationController extends Controller
         try {
             DB::beginTransaction();
 
-            // Check if user already exists (in case of race condition)
-            $existingUser = User::where('email', $registrationData['email'])->first();
-            if ($existingUser) {
+            // Check if a non-archived user already exists with this username
+            $existingActiveUser = User::where('username', $registrationData['username'])
+                ->whereIn('status', ['verified', 'unverified'])
+                ->first();
+                
+            if ($existingActiveUser) {
+                // Active user exists - this shouldn't happen if validation worked correctly
+                DB::rollBack();
+                Cache::forget("registration_verification_{$token}");
+                Log::warning('Email verification blocked: active user exists', [
+                    'username' => $registrationData['username'],
+                    'existing_user_id' => $existingActiveUser->id,
+                ]);
+                return redirect()->route('login')->withErrors([
+                    'verification' => 'This student number is already registered with an active account.'
+                ]);
+            }
+
+            // Check if email is already in use by a non-archived user
+            $existingEmailUser = User::where('email', $registrationData['email'])
+                ->whereIn('status', ['verified', 'unverified'])
+                ->first();
+                
+            if ($existingEmailUser) {
                 DB::rollBack();
                 Cache::forget("registration_verification_{$token}");
                 return redirect()->route('login')->withErrors([
@@ -85,13 +106,22 @@ class EmailVerificationController extends Controller
                 ]);
             }
 
-            // Create the user account
+            // Create a NEW user account (fresh start for returning students)
             $user = User::create([
                 'username' => $registrationData['username'],
                 'email' => $registrationData['email'],
                 'password' => $registrationData['password'],
                 'email_verified_at' => now(),
-                'status' => 'unverified', // User is created but needs adviser verification
+                'status' => 'unverified',
+            ]);
+
+            Log::info('Created new user account', [
+                'user_id' => $user->id,
+                'username' => $user->username,
+                'email' => $user->email,
+                'is_returning_student' => User::where('username', $registrationData['username'])
+                    ->where('status', 'archived')
+                    ->exists(),
             ]);
 
             $user->assignRole('student');
