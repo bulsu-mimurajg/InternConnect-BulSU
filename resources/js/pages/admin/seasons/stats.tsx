@@ -138,11 +138,11 @@ export default function SeasonStats({ season, stats, archivedStudents, placedStu
   const getDeadlineStatusBadge = (deadline: Deadline) => {
     switch (deadline.status) {
       case 'active':
-        return <Badge className="bg-green-100 text-green-800">🟢 Active</Badge>;
+        return <Badge className="bg-green-100 text-green-800">Active</Badge>;
       case 'inactive':
-        return <Badge className="bg-gray-100 text-gray-800">⚪ Inactive</Badge>;
+        return <Badge className="bg-gray-100 text-gray-800">Inactive</Badge>;
       case 'expired':
-        return <Badge className="bg-red-100 text-red-800">🔴 Expired</Badge>;
+        return <Badge className="bg-red-100 text-red-800">Expired</Badge>;
       default:
         return <Badge variant="secondary">{deadline.status}</Badge>;
     }
@@ -153,23 +153,26 @@ export default function SeasonStats({ season, stats, archivedStudents, placedStu
       <Head title={`${season.name} - Statistics`} />
       
       <div className="p-4 md:p-6 space-y-6">
+        {/* Back Button */}
+        <div className="flex items-center">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => router.get('/admin/seasons')}
+            className="flex items-center gap-2"
+          >
+            <ArrowLeftIcon className="h-4 w-4" />
+            Back to Seasons
+          </Button>
+        </div>
+        
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => router.get('/admin/seasons')}
-              className="flex items-center gap-2"
-            >
-              <ArrowLeftIcon className="h-4 w-4" />
-              Back to Seasons
-            </Button>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">{season.name}</h1>
-              <p className="text-gray-600">Season Statistics & Overview</p>
-            </div>
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">{season.name}</h1>
+            <p className="text-muted-foreground">Season Statistics & Overview</p>
           </div>
+          
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
@@ -180,7 +183,7 @@ export default function SeasonStats({ season, stats, archivedStudents, placedStu
                   setShowInactiveDeadlines(!showInactiveDeadlines);
                 }
               }}
-              className={`flex items-center gap-2 h-9 ${showInactiveDeadlines ? 'bg-gray-100' : 'bg-green-50 border-green-200'}`}
+              className={`flex items-center gap-2 h-9 ${showInactiveDeadlines ? 'bg-muted' : 'bg-green-50 dark:bg-green-950/50 border-green-200 dark:border-green-800'}`}
             >
               <CalendarIcon className="h-4 w-4" />
               {!showDeadlinesSection 
@@ -205,21 +208,21 @@ export default function SeasonStats({ season, stats, archivedStudents, placedStu
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <div className="space-y-2">
-                <p className="text-sm font-medium text-gray-500">Start Date</p>
+                <p className="text-sm font-medium text-muted-foreground">Start Date</p>
                 <p className="text-lg font-semibold">{formatDateTime(season.start_date)}</p>
               </div>
               <div className="space-y-2">
-                <p className="text-sm font-medium text-gray-500">End Date</p>
+                <p className="text-sm font-medium text-muted-foreground">End Date</p>
                 <p className="text-lg font-semibold">{formatDateTime(season.end_date)}</p>
               </div>
               <div className="space-y-2">
-                <p className="text-sm font-medium text-gray-500">Duration</p>
+                <p className="text-sm font-medium text-muted-foreground">Duration</p>
                 <p className="text-lg font-semibold">
                   {Math.ceil((new Date(season.end_date).getTime() - new Date(season.start_date).getTime()) / (1000 * 60 * 60 * 24))} days
                 </p>
               </div>
               <div className="space-y-2">
-                <p className="text-sm font-medium text-gray-500">Status</p>
+                <p className="text-sm font-medium text-muted-foreground">Status</p>
                 <div className="flex items-center gap-2">
                   {stats.is_in_progress && <ClockIcon className="h-4 w-4 text-blue-500" />}
                   {stats.has_ended && <CheckCircleIcon className="h-4 w-4 text-green-500" />}
@@ -248,7 +251,7 @@ export default function SeasonStats({ season, stats, archivedStudents, placedStu
                   variant="ghost"
                   size="sm"
                   onClick={() => setShowDeadlinesSection(false)}
-                  className="h-8 w-8 p-0 hover:bg-gray-100"
+                  className="h-8 w-8 p-0 hover:bg-muted"
                 >
                   <XIcon className="h-4 w-4" />
                 </Button>
@@ -428,7 +431,7 @@ export default function SeasonStats({ season, stats, archivedStudents, placedStu
                             Archived
                           </Badge>
                         </div>
-                        <div className="text-sm text-gray-600 space-y-1">
+                        <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
                           <p>Student Number: {student.student_number}</p>
                           <p>Section: {student.section.section_name}</p>
                           <p>Archived: {formatDate(student.created_at)}</p>
@@ -463,7 +466,7 @@ export default function SeasonStats({ season, stats, archivedStudents, placedStu
                           <td className="py-3 px-4">
                             {student.section.section_name}
                           </td>
-                          <td className="py-3 px-4 text-gray-600">
+                          <td className="py-3 px-4 text-muted-foreground">
                             {formatDate(student.created_at)}
                           </td>
                           <td className="py-3 px-4">
@@ -479,8 +482,8 @@ export default function SeasonStats({ season, stats, archivedStudents, placedStu
 
                 {/* Empty State */}
                 {archivedStudents.length === 0 && (
-                  <div className="text-center py-8 text-gray-500">
-                    <ArchiveIcon className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                  <div className="text-center py-8 text-muted-foreground">
+                    <ArchiveIcon className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
                     <p>No archived students for this season</p>
                   </div>
                 )}
@@ -508,32 +511,44 @@ export default function SeasonStats({ season, stats, archivedStudents, placedStu
                   {placedStudents.map((student) => {
                     const approvedPlacement = student.placements.find(p => p.status === 'approved');
                     return (
-                      <Card key={student.id} className="p-4 border-green-200 bg-green-50">
-                        <div className="space-y-2">
+                      <Card key={student.id} className="p-4 border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/50">
+                        <div className="space-y-3">
                           <div className="flex items-center justify-between">
                             <h4 className="font-medium">
                               {student.last_name}, {student.first_name}
                               {student.middle_name && ` ${student.middle_name}`}
                             </h4>
-                            <Badge className="bg-green-100 text-green-800 text-xs">
+                            <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs">
                               Placed
                             </Badge>
                           </div>
-                          <div className="text-sm text-gray-600 space-y-1">
+                          
+                          {/* Company & Position - Prominent Display */}
+                          {approvedPlacement && (
+                            <div className="bg-white dark:bg-gray-800/50 rounded-lg p-3 border border-green-200 dark:border-green-700">
+                              <div className="space-y-2">
+                                <div className="flex items-center gap-2">
+                                  <CheckCircleIcon className="h-3 w-3 text-green-500" />
+                                  <span className="font-semibold text-green-800 dark:text-green-200">
+                                    {approvedPlacement.internship.company_name}
+                                  </span>
+                                </div>
+                                <p className="text-sm text-green-700 dark:text-green-300 ml-4">
+                                  {approvedPlacement.internship.position_title}
+                                </p>
+                              </div>
+                            </div>
+                          )}
+                          
+                          <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
                             <p>Student Number: {student.student_number}</p>
                             <p>Section: {student.section.section_name}</p>
                             {approvedPlacement && (
                               <>
-                                <p className="text-green-700">
-                                  <strong>Company:</strong> {approvedPlacement.internship.company_name}
-                                </p>
-                                <p className="text-green-700">
-                                  <strong>Position:</strong> {approvedPlacement.internship.position_title}
-                                </p>
-                                <p className="text-green-700">
+                                <p className="text-green-700 dark:text-green-300">
                                   <strong>Compatibility Score:</strong> {approvedPlacement.compatibility_score}%
                                 </p>
-                                <p className="text-green-700">
+                                <p className="text-green-700 dark:text-green-300">
                                   <strong>Placed:</strong> {formatDateTime(approvedPlacement.placement_date)}
                                 </p>
                               </>
@@ -575,16 +590,16 @@ export default function SeasonStats({ season, stats, archivedStudents, placedStu
                             <td className="py-3 px-4">
                               {student.section.section_name}
                             </td>
-                            <td className="py-3 px-4 text-green-700">
+                            <td className="py-3 px-4 text-green-700 dark:text-green-300">
                               {approvedPlacement?.internship.company_name || 'N/A'}
                             </td>
-                            <td className="py-3 px-4 text-green-700">
+                            <td className="py-3 px-4 text-green-700 dark:text-green-300">
                               {approvedPlacement?.internship.position_title || 'N/A'}
                             </td>
-                            <td className="py-3 px-4 text-green-700">
+                            <td className="py-3 px-4 text-green-700 dark:text-green-300">
                               {approvedPlacement?.compatibility_score || 'N/A'}%
                             </td>
-                            <td className="py-3 px-4 text-gray-600">
+                            <td className="py-3 px-4 text-muted-foreground">
                               {approvedPlacement ? formatDateTime(approvedPlacement.placement_date) : 'N/A'}
                             </td>
                             <td className="py-3 px-4">
@@ -601,8 +616,8 @@ export default function SeasonStats({ season, stats, archivedStudents, placedStu
 
                 {/* Empty State */}
                 {placedStudents.length === 0 && (
-                  <div className="text-center py-8 text-gray-500">
-                    <CheckCircleIcon className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                  <div className="text-center py-8 text-muted-foreground">
+                    <CheckCircleIcon className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
                     <p>No placed students for this season</p>
                   </div>
                 )}
@@ -639,7 +654,7 @@ export default function SeasonStats({ season, stats, archivedStudents, placedStu
                             Unplaced
                           </Badge>
                         </div>
-                        <div className="text-sm text-gray-600 space-y-1">
+                        <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
                           <p>Student Number: {unplaced.student.student_number}</p>
                           <p>Section: {unplaced.student.section.section_name}</p>
                           <p className="text-destructive">Reason: {unplaced.reason}</p>
@@ -679,7 +694,7 @@ export default function SeasonStats({ season, stats, archivedStudents, placedStu
                           <td className="py-3 px-4 text-destructive">
                             {unplaced.reason}
                           </td>
-                          <td className="py-3 px-4 text-gray-600">
+                          <td className="py-3 px-4 text-muted-foreground">
                             {formatDateTime(unplaced.created_at)}
                           </td>
                           <td className="py-3 px-4">

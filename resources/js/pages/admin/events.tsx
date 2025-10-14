@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DateTimePicker } from '@/components/ui/date-time-picker';
-import { CalendarIcon, PlusIcon, EditIcon, TrashIcon } from 'lucide-react';
+import { CalendarIcon, PlusIcon, EditIcon, TrashIcon, CheckCircleIcon, UsersIcon, BarChartIcon } from 'lucide-react';
 import { ClockIcon } from 'lucide-react';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
@@ -396,47 +396,96 @@ export default function EventsPage({ allDeadlines, activeDeadlines, expiredDeadl
 
                     {/* Active Season Info */}
                     {activeSeason ? (
-                        <Card className="border-green-200 bg-green-50">
-                            <CardContent className="pt-6">
-                                <div className="flex items-center gap-2 mb-2">
-                                    <CalendarIcon className="h-5 w-5 text-green-600" />
-                                    <span className="font-medium text-green-800">Current Active Season</span>
+                        <Card className="border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/50">
+                            <CardHeader className="pb-4">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                                            <CheckCircleIcon className="h-5 w-5 text-green-600 dark:text-green-400" />
+                                        </div>
+                                        <div>
+                                            <h3 className="font-semibold text-green-900 dark:text-green-100">Current Active Season</h3>
+                                            <p className="text-sm text-green-700 dark:text-green-300">{activeSeason.name}</p>
+                                        </div>
+                                    </div>
+                                    <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                                        Active
+                                    </Badge>
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <div>
-                                        <p className="font-semibold text-green-900">{activeSeason.name}</p>
-                                        <p className="text-sm text-green-700">
-                                            {new Date(activeSeason.start_date).toLocaleDateString()} - {new Date(activeSeason.end_date).toLocaleDateString()}
-                                        </p>
+                            </CardHeader>
+                            <CardContent className="pt-0">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                    <div className="flex items-start gap-3">
+                                        <CalendarIcon className="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5" />
+                                        <div className="space-y-1">
+                                            <p className="text-sm font-medium text-green-800 dark:text-green-200">Duration</p>
+                                            <p className="text-sm text-green-700 dark:text-green-300">
+                                                {new Date(activeSeason.start_date).toLocaleDateString()} - {new Date(activeSeason.end_date).toLocaleDateString()}
+                                            </p>
+                                        </div>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        <ClockIcon className="h-4 w-4 text-green-600" />
-                                        <span className="text-sm text-green-700">
-                                            {allDeadlines.length} total deadlines ({activeDeadlines.length} active, {expiredDeadlines.length} expired)
-                                        </span>
+                                    <div className="flex items-start gap-3">
+                                        <ClockIcon className="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5" />
+                                        <div className="space-y-1">
+                                            <p className="text-sm font-medium text-green-800 dark:text-green-200">Deadlines</p>
+                                            <p className="text-sm text-green-700 dark:text-green-300">
+                                                {allDeadlines.length} total ({activeDeadlines.length} active, {expiredDeadlines.length} expired)
+                                            </p>
+                                        </div>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-sm text-green-700">
-                                            Status: <Badge className="bg-green-100 text-green-800">🟢 Active</Badge>
-                                        </span>
+                                    <div className="flex items-start gap-3">
+                                        <UsersIcon className="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5" />
+                                        <div className="space-y-1">
+                                            <p className="text-sm font-medium text-green-800 dark:text-green-200">Students</p>
+                                            <p className="text-sm text-green-700 dark:text-green-300">
+                                                {(() => {
+                                                    const currentSeason = seasons.find(s => s.id === activeSeason.id);
+                                                    return currentSeason ? `${currentSeason.active_students_count} active (${currentSeason.students_count} total)` : 'No data available';
+                                                })()}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-start gap-3">
+                                        <CheckCircleIcon className="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5" />
+                                        <div className="space-y-1">
+                                            <p className="text-sm font-medium text-green-800 dark:text-green-200">Placements</p>
+                                            <p className="text-sm text-green-700 dark:text-green-300">
+                                                {(() => {
+                                                    const currentSeason = seasons.find(s => s.id === activeSeason.id);
+                                                    if (!currentSeason) return 'No data available';
+                                                    const placedCount = currentSeason.students_count - currentSeason.active_students_count;
+                                                    const placementRate = currentSeason.students_count > 0 ? Math.round((placedCount / currentSeason.students_count) * 100) : 0;
+                                                    return `${placedCount} placed (${placementRate}%)`;
+                                                })()}
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
                             </CardContent>
                         </Card>
                     ) : (
-                        <Card className="border-amber-200 bg-amber-50">
-                            <CardContent>
-                                <div className="flex items-center gap-2 mb-2">
-                                    <CalendarIcon className="h-5 w-5 text-amber-600" />
-                                    <span className="font-medium text-amber-800">No Active Season</span>
+                        <Card className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/50">
+                            <CardHeader className="pb-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
+                                        <ClockIcon className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-semibold text-amber-900 dark:text-amber-100">No Active Season</h3>
+                                        <p className="text-sm text-amber-700 dark:text-amber-300">Create deadlines for any available season</p>
+                                    </div>
                                 </div>
-                                <div className="space-y-2">
-                                    <p className="text-amber-700">
+                            </CardHeader>
+                            <CardContent className="pt-0">
+                                <div className="space-y-3">
+                                    <p className="text-sm text-amber-700 dark:text-amber-300">
                                         You can still create deadlines for any season by selecting it in the form below.
                                     </p>
-                                    <p className="text-sm text-amber-600">
-                                        To activate a season, go to Seasons Management and ensure all 5 deadline categories are created.
-                                    </p>
+                                    <div className="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-lg border border-amber-200 dark:border-amber-800">
+                                        <p className="text-sm text-amber-800 dark:text-amber-200">
+                                            <strong>Tip:</strong> To activate a season, go to Seasons Management and ensure all 5 deadline categories are created.
+                                        </p>
+                                    </div>
                                 </div>
                             </CardContent>
                         </Card>

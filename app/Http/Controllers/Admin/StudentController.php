@@ -100,12 +100,13 @@ class StudentController extends Controller
             ];
         });
 
-        // Get unverified users for the Show Unverified functionality
+        // Get unverified users for the Show Unverified functionality (exclude users who have been verified)
         $unverifiedUsers = User::with(['academeAccounts.section'])
             ->where('status', 'unverified')
             ->whereHas('roles', function($query) {
                 $query->where('name', 'student');
             })
+            ->whereDoesntHave('student') // Exclude users who have been verified (have Student record)
             ->orderBy('username')
             ->get();
 
@@ -158,12 +159,13 @@ class StudentController extends Controller
             ];
         });
 
-        // Get archived unverified users
+        // Get archived unverified users (exclude users who have been verified)
         $archivedUnverifiedUsers = User::with(['academeAccounts.section'])
             ->where('status', 'archived')
             ->whereHas('roles', function($query) {
                 $query->where('name', 'student');
             })
+            ->whereDoesntHave('student') // Exclude users who have been verified (have Student record)
             ->orderBy('username')
             ->get();
 
@@ -217,6 +219,7 @@ class StudentController extends Controller
             ->whereHas('roles', function($query) {
                 $query->where('name', 'student');
             })
+            ->whereDoesntHave('student') // Exclude users who have been verified (have Student record)
             ->orderBy('username')
             ->get();
 
@@ -1213,13 +1216,31 @@ class StudentController extends Controller
                 'endorsement_date' => now(),
             ]);
 
-            // Find the student's next highest compatibility match
+            // Find the student's next highest compatibility match with available slots
             // Look for pending endorsement matches (not yet endorsed by admin)
-            $nextMatch = StudentMatch::with(['internship.hte:id,company_name'])
+            $allMatches = StudentMatch::with(['internship.hte:id,company_name'])
                 ->where('student_id', $student->id)
                 ->where('endorsement_status', 'pending')
                 ->orderBy('compatibility_score', 'desc')
-                ->first();
+                ->get();
+
+            // Find the first match with available slots
+            $nextMatch = null;
+            foreach ($allMatches as $match) {
+                // Calculate available slots (total slots - approved placements - endorsed slots)
+                $approvedPlacements = $match->internship->studentPlacements()
+                    ->where('status', 'approved')
+                    ->count();
+                $endorsedSlots = Endorsement::where('internship_id', $match->internship->id)
+                    ->where('status', 'endorsed')
+                    ->count();
+                $availableSlots = $match->internship->slot_count - $approvedPlacements - $endorsedSlots;
+                
+                if ($availableSlots > 0) {
+                    $nextMatch = $match;
+                    break;
+                }
+            }
 
             if ($nextMatch) {
                 // Keep the next match as 'pending' - do NOT auto-endorse
@@ -1244,8 +1265,8 @@ class StudentController extends Controller
                     ]
                 ]);
             } else {
-                // No more matches available
-                Log::info('Student rejected but no more matches available:', [
+                // No more matches available with slots
+                Log::info('Student rejected but no more matches available with slots:', [
                     'student_id' => $student->id,
                     'rejected_internship_id' => $validated['internship_id']
                 ]);
@@ -1968,13 +1989,31 @@ class StudentController extends Controller
                 'endorsement_date' => now(),
             ]);
 
-            // Find the student's next highest compatibility match
+            // Find the student's next highest compatibility match with available slots
             // Look for pending endorsement matches (not yet endorsed by admin)
-            $nextMatch = StudentMatch::with(['internship.hte:id,company_name'])
+            $allMatches = StudentMatch::with(['internship.hte:id,company_name'])
                 ->where('student_id', $student->id)
                 ->where('endorsement_status', 'pending')
                 ->orderBy('compatibility_score', 'desc')
-                ->first();
+                ->get();
+
+            // Find the first match with available slots
+            $nextMatch = null;
+            foreach ($allMatches as $match) {
+                // Calculate available slots (total slots - approved placements - endorsed slots)
+                $approvedPlacements = $match->internship->studentPlacements()
+                    ->where('status', 'approved')
+                    ->count();
+                $endorsedSlots = Endorsement::where('internship_id', $match->internship->id)
+                    ->where('status', 'endorsed')
+                    ->count();
+                $availableSlots = $match->internship->slot_count - $approvedPlacements - $endorsedSlots;
+                
+                if ($availableSlots > 0) {
+                    $nextMatch = $match;
+                    break;
+                }
+            }
 
             if ($nextMatch) {
                 // Keep the next match as 'pending' - do NOT auto-endorse
@@ -1999,8 +2038,8 @@ class StudentController extends Controller
                     ]
                 ]);
             } else {
-                // No more matches available
-                Log::info('Student rejected but no more matches available:', [
+                // No more matches available with slots
+                Log::info('Student rejected but no more matches available with slots:', [
                     'student_id' => $student->id,
                     'rejected_internship_id' => $validated['internship_id']
                 ]);

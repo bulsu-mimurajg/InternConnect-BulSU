@@ -68,11 +68,36 @@ interface Props {
         status?: string;
         submission?: string;
     };
-    hasActiveStudentAssessmentDeadline?: boolean;
-    studentAssessmentDeadline?: {
-        end_date: string;
-        title: string;
-    } | null;
+    deadlineStatus?: {
+        student_assessment?: {
+            id: number;
+            title: string;
+            category: string;
+            end_date: string;
+            formatted_end_date: string;
+            time_remaining_hours: number;
+            time_remaining_days: number;
+            is_active: boolean;
+            is_expired: boolean;
+        };
+        internship_placement?: {
+            id: number;
+            title: string;
+            category: string;
+            end_date: string;
+            formatted_end_date: string;
+            time_remaining_hours: number;
+            time_remaining_days: number;
+            is_active: boolean;
+            is_expired: boolean;
+        };
+        restrictions: Array<{
+            type: string;
+            message: string;
+            deadline: any;
+            affected_functionality: string[];
+        }>;
+    };
 }
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -82,7 +107,7 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-export default function HTEManagement({ htes, showArchived = false, filters = {}, hasActiveStudentAssessmentDeadline = false, studentAssessmentDeadline = null }: Props) {
+export default function HTEManagement({ htes, showArchived = false, filters = {}, deadlineStatus }: Props) {
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [selectedHTE, setSelectedHTE] = useState<HTE | null>(null);
@@ -167,9 +192,26 @@ export default function HTEManagement({ htes, showArchived = false, filters = {}
         setIsEditDialogOpen(true);
     };
 
+    // Check if HTE archiving is restricted due to deadlines
+    const isHTEArchivingRestricted = useMemo(() => {
+        return deadlineStatus?.restrictions.some(restriction => 
+            restriction.affected_functionality.includes('hte_archive') ||
+            restriction.affected_functionality.includes('hte_restore')
+        ) || false;
+    }, [deadlineStatus]);
+
+    // Get restriction message for archiving
+    const archivingRestrictionMessage = useMemo(() => {
+        const restriction = deadlineStatus?.restrictions.find(restriction => 
+            restriction.affected_functionality.includes('hte_archive') ||
+            restriction.affected_functionality.includes('hte_restore')
+        );
+        return restriction?.message || '';
+    }, [deadlineStatus]);
+
     const handleArchive = (hte: HTE) => {
-        // Check if there's an active student assessment deadline
-        if (hasActiveStudentAssessmentDeadline) {
+        // Check if there's an active deadline restriction
+        if (isHTEArchivingRestricted) {
             setIsDeadlineModalOpen(true);
             return;
         }
@@ -455,6 +497,25 @@ export default function HTEManagement({ htes, showArchived = false, filters = {}
             <Head title="HTE Management" />
             
             <div className="flex h-full flex-1 flex-col gap-6 p-4 md:p-6">
+                {/* Deadline Restriction Alert */}
+                {isHTEArchivingRestricted && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                        <div className="flex items-start">
+                            <div className="flex-shrink-0">
+                                <Archive className="h-5 w-5 text-amber-400" />
+                            </div>
+                            <div className="ml-3">
+                                <h3 className="text-sm font-medium text-amber-800">
+                                    HTE Archiving Restricted
+                                </h3>
+                                <div className="mt-2 text-sm text-amber-700">
+                                    <p>{archivingRestrictionMessage}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* Header Section */}
                 <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                     <div className="space-y-1">
@@ -491,9 +552,9 @@ export default function HTEManagement({ htes, showArchived = false, filters = {}
                         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
                             <DialogTrigger asChild>
                                 <Button 
-                                    disabled={hasActiveStudentAssessmentDeadline}
+                                    disabled={isHTEArchivingRestricted}
                                     onClick={() => {
-                                        if (hasActiveStudentAssessmentDeadline) {
+                                        if (isHTEArchivingRestricted) {
                                             setIsDeadlineModalOpen(true);
                                         }
                                     }}
@@ -709,9 +770,9 @@ export default function HTEManagement({ htes, showArchived = false, filters = {}
                                     </div>
                                     {!showArchivedHTEs && (
                                         <Button 
-                                            disabled={hasActiveStudentAssessmentDeadline}
+                                            disabled={isHTEArchivingRestricted}
                                             onClick={() => {
-                                                if (hasActiveStudentAssessmentDeadline) {
+                                                if (isHTEArchivingRestricted) {
                                                     setIsDeadlineModalOpen(true);
                                                 } else {
                                                     setIsCreateDialogOpen(true);
@@ -817,6 +878,7 @@ export default function HTEManagement({ htes, showArchived = false, filters = {}
                                                                                 e.stopPropagation();
                                                                                 handleUnarchive(hte);
                                                                             }}
+                                                                            disabled={isHTEArchivingRestricted}
                                                                             className="text-green-600 focus:text-green-600"
                                                                         >
                                                                             <ArchiveRestore className="mr-2 h-4 w-4" />
@@ -828,6 +890,7 @@ export default function HTEManagement({ htes, showArchived = false, filters = {}
                                                                                 e.stopPropagation();
                                                                                 handleArchive(hte);
                                                                             }}
+                                                                            disabled={isHTEArchivingRestricted}
                                                                             className="text-destructive focus:text-destructive"
                                                                         >
                                                                             <Archive className="mr-2 h-4 w-4" />
@@ -1029,13 +1092,19 @@ export default function HTEManagement({ htes, showArchived = false, filters = {}
                             <DialogDescription className="pt-4 space-y-3">
                                 <div className="p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
                                     <p className="text-sm text-amber-900 dark:text-amber-100 font-medium">
-                                        There's a Student Assessment Deadline ongoing. Adding new HTEs and archiving existing HTEs is restricted at the moment.
+                                        {archivingRestrictionMessage || 'HTE management actions are restricted due to an active deadline.'}
                                     </p>
                                 </div>
-                                {studentAssessmentDeadline && (
+                                {deadlineStatus?.student_assessment && (
                                     <div className="text-sm text-muted-foreground space-y-1">
-                                        <p><span className="font-medium">Deadline:</span> {studentAssessmentDeadline.title}</p>
-                                        <p><span className="font-medium">Ends:</span> {studentAssessmentDeadline.end_date}</p>
+                                        <p><span className="font-medium">Deadline:</span> {deadlineStatus.student_assessment.title}</p>
+                                        <p><span className="font-medium">Ends:</span> {deadlineStatus.student_assessment.formatted_end_date}</p>
+                                    </div>
+                                )}
+                                {deadlineStatus?.internship_placement && (
+                                    <div className="text-sm text-muted-foreground space-y-1">
+                                        <p><span className="font-medium">Deadline:</span> {deadlineStatus.internship_placement.title}</p>
+                                        <p><span className="font-medium">Ends:</span> {deadlineStatus.internship_placement.formatted_end_date}</p>
                                     </div>
                                 )}
                             </DialogDescription>

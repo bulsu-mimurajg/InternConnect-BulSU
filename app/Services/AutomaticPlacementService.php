@@ -336,8 +336,8 @@ class AutomaticPlacementService
     }
 
     /**
-     * Emergency placement for students with no remaining fallbacks (10 minutes before deadline)
-     * This is triggered separately and handles students who have exhausted all their matches
+     * Emergency placement for ALL students with submitted assessments (10 minutes before deadline)
+     * This places ALL unplaced students who have completed assessments into ANY available internship
      */
     public function processEmergencyPlacements(): array
     {
@@ -347,170 +347,114 @@ class AutomaticPlacementService
         ];
 
         try {
-            Log::info('Processing emergency placements for remaining students');
+            Log::info('Processing emergency placements for ALL remaining students');
 
-            // Find students who:
+            // Find ALL students who:
             // 1. Are not placed yet
-            // 2. Have no endorsed matches (all were rejected or no endorsement exists)
-            // 3. Have completed their assessment (is_submit = true)
-            // 4. Include HTE-rejected students
+            // 2. Have completed their assessment (is_submit = true)
             $studentsNeedingEmergencyPlacement = Student::where('is_placed', false)
                 ->where('is_submit', true)
-                ->where(function($q) {
-                    // Include students with no endorsements OR only rejected endorsements
-                    $q->whereDoesntHave('endorsements')
-                      ->orWhereHas('endorsements', function($subQ) {
-                          $subQ->where('status', 'rejected');
-                      })->whereDoesntHave('endorsements', function($subQ) {
-                          $subQ->where('status', 'endorsed');
-                      });
-                })
-                ->with(['matches' => function($q) {
-                    $q->with('internship.hte')->orderBy('compatibility_score', 'desc');
-                }])
+                ->with(['scores.subcategory'])
                 ->get();
 
             Log::info("Found {$studentsNeedingEmergencyPlacement->count()} students needing emergency placement");
 
             foreach ($studentsNeedingEmergencyPlacement as $student) {
                 try {
-                    $placed = false;
+                    Log::info("Processing emergency placement for student {$student->id}");
                     
-                    // Check if student has ANY pending matches left
-                    $pendingMatches = $student->matches->where('endorsement_status', 'pending');
-                    
-                    if ($pendingMatches->isEmpty()) {
-                        // Student has exhausted all matches, find ANY available internship
-                        Log::info("Student {$student->id} has no pending matches, attempting emergency placement");
+                    // Get all active internships with available slots (after Tier 1 & 2)
+                    $availableInternships = Internship::where('is_active', true)
+                        ->with(['subcategoryWeights.subcategory', 'hte'])
+                        ->get()
+                        ->filter(function($internship) {
+                            $currentPlacements = $internship->studentPlacements()->where('status', 'approved')->count();
+                            return ($internship->slot_count - $currentPlacements) > 0;
+                        });
+
+                    if ($availableInternships->isEmpty()) {
+                        Log::warning("No available internships for emergency placement for student {$student->id}");
                         
-                        // Get all active internships with available slots
-                        $availableInternships = Internship::where('is_active', true)
-                            ->get()
-                            ->filter(function($internship) {
-                                $currentPlacements = $internship->studentPlacements()->where('status', 'approved')->count();
-                                return ($internship->slot_count - $currentPlacements) > 0;
-                            });
-
-                        if ($availableInternships->isEmpty()) {
-                            Log::warning("No available internships for emergency placement for student {$student->id}");
-                            
-                            // Mark student as requiring manual intervention
-                            $student->update([
-                                'is_placed' => false,
-                                'placement_status' => 'requires_manual_intervention'
-                            ]);
-                            
-                            // Create a record for admin visibility
-                            \App\Models\UnplacedStudent::updateOrCreate(
-                                ['student_id' => $student->id],
-                                [
-                                    'reason' => 'No available internship slots',
-                                    'requires_manual_intervention' => true,
-                                    'created_at' => now(),
-                                    'updated_at' => now(),
-                                ]
-                            );
-                            
-                            continue;
-                        }
-
-                        // Find the best match from available internships based on existing compatibility scores
-                        // or create a new match with the first available internship
-                        $bestAvailableInternship = null;
-                        $bestCompatibilityScore = 0;
-
-                        foreach ($availableInternships as $internship) {
-                            // Check if there's an existing match (even if rejected)
-                            $existingMatch = StudentMatch::where('student_id', $student->id)
-                                ->where('internship_id', $internship->id)
-                                ->first();
-
-                            if ($existingMatch) {
-                                if ($existingMatch->compatibility_score > $bestCompatibilityScore) {
-                                    $bestCompatibilityScore = $existingMatch->compatibility_score;
-                                    $bestAvailableInternship = $internship;
-                                }
-                            } else {
-                                // No existing match, this is a new option
-                                if (!$bestAvailableInternship) {
-                                    $bestAvailableInternship = $internship;
-                                    $bestCompatibilityScore = 0; // Default score for emergency placement
-                                }
-                            }
-                        }
-
-                        if ($bestAvailableInternship) {
-                            // Create or update the match
-                            $match = StudentMatch::updateOrCreate(
-                                [
-                                    'student_id' => $student->id,
-                                    'internship_id' => $bestAvailableInternship->id,
-                                ],
-                                [
-                                    'compatibility_score' => $bestCompatibilityScore,
-                                    'endorsement_status' => 'endorsed',
-                                    'placement_status' => 'approved',
-                                ]
-                            );
-
-                            // Create endorsement
-                            $endorsement = Endorsement::create([
-                                'student_id' => $student->id,
-                                'internship_id' => $bestAvailableInternship->id,
-                                'status' => 'endorsed',
-                                'compatibility_score' => $bestCompatibilityScore,
-                                'endorsement_date' => now(),
-                            ]);
-
-                            // Create placement
-                            StudentPlacement::create([
-                                'student_id' => $student->id,
-                                'internship_id' => $bestAvailableInternship->id,
-                                'status' => 'approved',
-                                'compatibility_score' => $bestCompatibilityScore,
-                                'placement_date' => now(),
-                            ]);
-
-                            // Mark student as placed
-                            $student->update(['is_placed' => true]);
-
-                            // Update the endorsement status to 'approved' so it doesn't show in endorsed list anymore
-                            $endorsement->update(['status' => 'approved']);
-
-                            // Send notification to HTE
-                            if ($bestAvailableInternship->hte && $bestAvailableInternship->hte->user) {
-                                $notificationService = new NotificationService();
-                                $studentName = $student->first_name . ' ' . $student->last_name;
-                                $companyName = $bestAvailableInternship->hte->company_name;
-                                $notificationService->notifyHTEForEndorsement(
-                                    $bestAvailableInternship->hte->user_id,
-                                    $studentName,
-                                    $companyName,
-                                    $student->id,
-                                    $bestAvailableInternship->id
-                                );
-                            }
-
-                            $results['emergency_placed_count']++;
-                            $placed = true;
-                            Log::info("Emergency placement successful for student {$student->id} in internship {$bestAvailableInternship->id}");
-                        } else {
-                            Log::warning("No suitable internship found for emergency placement for student {$student->id}");
-                        }
-                    }
-
-                    if (!$placed) {
-                        // Mark student as unplaced and requiring manual intervention
+                        // Create a record for admin visibility
                         \App\Models\UnplacedStudent::updateOrCreate(
                             ['student_id' => $student->id],
                             [
-                                'reason' => 'All internships have no available slots',
+                                'reason' => 'No available internship slots',
                                 'requires_manual_intervention' => true,
+                                'created_at' => now(),
+                                'updated_at' => now(),
                             ]
                         );
                         
-                        Log::warning("Student {$student->id} marked as unplaced - no available slots in any internship");
+                        continue;
                     }
+
+                    // Calculate fresh compatibility scores for all available internships
+                    $internshipsWithScores = $this->calculateFreshCompatibilityScores($student, $availableInternships);
+                    
+                    if ($internshipsWithScores->isEmpty()) {
+                        Log::warning("No internships with valid compatibility scores for student {$student->id}");
+                        continue;
+                    }
+
+                    // Get the best matching internship (highest compatibility score)
+                    $bestMatch = $internshipsWithScores->first();
+                    $bestInternship = $bestMatch['internship'];
+                    $bestCompatibilityScore = $bestMatch['compatibility_score'];
+
+                    // Create or update the match
+                    $match = StudentMatch::updateOrCreate(
+                        [
+                            'student_id' => $student->id,
+                            'internship_id' => $bestInternship->id,
+                        ],
+                        [
+                            'compatibility_score' => $bestCompatibilityScore,
+                            'endorsement_status' => 'endorsed',
+                            'placement_status' => 'approved',
+                        ]
+                    );
+
+                    // Create endorsement
+                    $endorsement = Endorsement::create([
+                        'student_id' => $student->id,
+                        'internship_id' => $bestInternship->id,
+                        'status' => 'endorsed',
+                        'compatibility_score' => $bestCompatibilityScore,
+                        'endorsement_date' => now(),
+                    ]);
+
+                    // Create placement
+                    StudentPlacement::create([
+                        'student_id' => $student->id,
+                        'internship_id' => $bestInternship->id,
+                        'status' => 'approved',
+                        'compatibility_score' => $bestCompatibilityScore,
+                        'placement_date' => now(),
+                    ]);
+
+                    // Mark student as placed
+                    $student->update(['is_placed' => true]);
+
+                    // Update the endorsement status to 'approved' so it doesn't show in endorsed list anymore
+                    $endorsement->update(['status' => 'approved']);
+
+                    // Send notification to HTE
+                    if ($bestInternship->hte && $bestInternship->hte->user) {
+                        $notificationService = new NotificationService();
+                        $studentName = $student->first_name . ' ' . $student->last_name;
+                        $companyName = $bestInternship->hte->company_name;
+                        $notificationService->notifyHTEForEndorsement(
+                            $bestInternship->hte->user_id,
+                            $studentName,
+                            $companyName,
+                            $student->id,
+                            $bestInternship->id
+                        );
+                    }
+
+                    $results['emergency_placed_count']++;
+                    Log::info("Emergency placement successful for student {$student->id} in internship {$bestInternship->id} (compatibility: {$bestCompatibilityScore}%)");
 
                 } catch (\Exception $e) {
                     $error = "Failed emergency placement for student {$student->id}: " . $e->getMessage();
@@ -744,5 +688,57 @@ class AutomaticPlacementService
         // No fallback available
         $results['skipped_count']++;
         Log::warning("No fallback placement available for student {$endorsement->student_id}");
+    }
+
+    /**
+     * Calculate fresh compatibility scores for a student with all available internships
+     */
+    private function calculateFreshCompatibilityScores(Student $student, Collection $internships): Collection
+    {
+        $compatibilityScores = collect();
+
+        // Get student's scores keyed by subcategory ID
+        $studentScores = $student->scores->keyBy('sub_category_id');
+
+        foreach ($internships as $internship) {
+            $totalScore = 0;
+            $totalWeight = 0;
+
+            // Get the weights for this internship
+            $weights = $internship->subcategoryWeights;
+
+            foreach ($weights as $weight) {
+                $subcategoryId = $weight->subcategory_id;
+                $weightValue = $weight->weight;
+                
+                // Get student's score for this subcategory
+                $studentScore = $studentScores->get($subcategoryId);
+                
+                if ($studentScore) {
+                    // Convert student score (1-5 scale) to percentage (0-100)
+                    $scorePercentage = ($studentScore->score / 5) * 100;
+                    
+                    // Apply weight to the score
+                    $weightedScore = $scorePercentage * ($weightValue / 100);
+                    
+                    $totalScore += $weightedScore;
+                    $totalWeight += $weightValue;
+                }
+            }
+
+            // Calculate final compatibility score
+            $compatibilityScore = 0;
+            if ($totalWeight > 0) {
+                $compatibilityScore = round(($totalScore / $totalWeight) * 100, 2);
+            }
+
+            $compatibilityScores->push([
+                'internship' => $internship,
+                'compatibility_score' => $compatibilityScore,
+            ]);
+        }
+
+        // Sort by compatibility score (highest first)
+        return $compatibilityScores->sortByDesc('compatibility_score')->values();
     }
 }

@@ -278,8 +278,36 @@ class InternshipSeasonController extends Controller
             ->whereHas('placements', function($q) {
                 $q->where('status', 'approved');
             })
-            ->with(['section', 'placements.internship'])
-            ->get();
+            ->with(['section', 'placements.internship.hte'])
+            ->get()
+            ->map(function($student) {
+                $approvedPlacement = $student->placements->where('status', 'approved')->first();
+                return [
+                    'id' => $student->id,
+                    'student_number' => $student->student_number,
+                    'first_name' => $student->first_name,
+                    'last_name' => $student->last_name,
+                    'middle_name' => $student->middle_name,
+                    'section' => [
+                        'section_name' => $student->section->section_name ?? 'N/A',
+                    ],
+                    'is_active' => $student->is_active,
+                    'created_at' => $student->created_at->format('Y-m-d H:i:s'),
+                    'placements' => $student->placements->where('status', 'approved')->map(function($placement) {
+                        return [
+                            'id' => $placement->id,
+                            'status' => $placement->status,
+                            'compatibility_score' => $placement->compatibility_score,
+                            'placement_date' => $placement->placement_date ? $placement->placement_date->format('Y-m-d H:i:s') : null,
+                            'internship' => [
+                                'id' => $placement->internship->id,
+                                'company_name' => $placement->internship->hte->company_name ?? 'N/A',
+                                'position_title' => $placement->internship->position_title,
+                            ],
+                        ];
+                    }),
+                ];
+            });
         
         // Get unplaced students for this season
         $unplacedStudents = UnplacedStudent::whereHas('student', function($q) use ($season) {

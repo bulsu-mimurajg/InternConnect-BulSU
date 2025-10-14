@@ -29,6 +29,14 @@ interface InternshipSeason {
   automatic_status?: string;
   status_transition_reason?: string;
   needs_attention?: boolean;
+  // Deadline statuses for each category
+  deadline_statuses?: {
+    hte_assessment_form: string;
+    student_verification: string;
+    student_assessment_form: string;
+    internship_placement: string;
+    archive_students: string;
+  };
 }
 
 interface Props {
@@ -131,22 +139,24 @@ export default function SeasonsManagement({ seasons, activeSeason }: Props) {
       <Head title="Internship Seasons" />
       
       <div className="p-4 md:p-6 space-y-6">
+        {/* Back Button */}
+        <div className="flex items-center">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => router.get('/admin/events')}
+            className="flex items-center gap-2"
+          >
+            <ArrowLeftIcon className="h-4 w-4" />
+            Back to Events
+          </Button>
+        </div>
+        
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => router.get('/admin/events')}
-              className="flex items-center gap-2"
-            >
-              <ArrowLeftIcon className="h-4 w-4" />
-              Back to Events
-            </Button>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Internship Seasons</h1>
-              <p className="text-gray-600">Manage internship seasons, deadlines, and student archiving</p>
-            </div>
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Internship Seasons</h1>
+            <p className="text-muted-foreground">Manage internship seasons, deadlines, and student archiving</p>
           </div>
           
           <div className="flex items-center gap-2">
@@ -283,9 +293,9 @@ export default function SeasonsManagement({ seasons, activeSeason }: Props) {
 
         {/* Active Season Info */}
         {activeSeason && (
-          <Card className="border-green-200 bg-green-50">
+          <Card className="border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-green-800">
+              <CardTitle className="flex items-center gap-2 text-green-800 dark:text-green-200">
                 <CheckCircleIcon className="h-5 w-5" />
                 Current Active Season
               </CardTitle>
@@ -293,20 +303,20 @@ export default function SeasonsManagement({ seasons, activeSeason }: Props) {
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <p className="font-medium text-green-900">{activeSeason.name}</p>
-                  <p className="text-sm text-green-700">
+                  <p className="font-medium text-green-900 dark:text-green-100">{activeSeason.name}</p>
+                  <p className="text-sm text-green-700 dark:text-green-300">
                     {formatDate(activeSeason.start_date)} - {formatDate(activeSeason.end_date)}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <CalendarDaysIcon className="h-4 w-4 text-green-600" />
-                  <span className="text-sm text-green-700">
+                  <CalendarDaysIcon className="h-4 w-4 text-green-600 dark:text-green-400" />
+                  <span className="text-sm text-green-700 dark:text-green-300">
                     {activeSeason.deadlines_count} deadlines
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <UsersIcon className="h-4 w-4 text-green-600" />
-                  <span className="text-sm text-green-700">
+                  <UsersIcon className="h-4 w-4 text-green-600 dark:text-green-400" />
+                  <span className="text-sm text-green-700 dark:text-green-300">
                     {activeSeason.active_students_count} active students
                   </span>
                 </div>
@@ -336,11 +346,11 @@ export default function SeasonsManagement({ seasons, activeSeason }: Props) {
                   {/* Statistics */}
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div className="flex items-center gap-2">
-                      <CalendarDaysIcon className="h-4 w-4 text-gray-500" />
+                      <CalendarDaysIcon className="h-4 w-4 text-muted-foreground" />
                       <span>{season.deadlines_count} deadlines</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <UsersIcon className="h-4 w-4 text-gray-500" />
+                      <UsersIcon className="h-4 w-4 text-muted-foreground" />
                       <span>{season.students_count} students</span>
                     </div>
                   </div>
@@ -349,14 +359,14 @@ export default function SeasonsManagement({ seasons, activeSeason }: Props) {
                   {season.status === 'inactive' && (
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <div className="text-sm font-medium text-gray-700">Deadline Requirements:</div>
-                        <div className="text-xs text-gray-500">
+                        <div className="text-sm font-medium text-foreground">Deadline Requirements:</div>
+                        <div className="text-xs text-muted-foreground">
                           {season.deadlines_count}/5 completed
                         </div>
                       </div>
                       
                       {/* Progress Bar */}
-                      <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div className="w-full bg-muted rounded-full h-2">
                         <div 
                           className="bg-green-500 h-2 rounded-full transition-all duration-300" 
                           style={{ width: `${(season.deadlines_count / 5) * 100}%` }}
@@ -373,10 +383,10 @@ export default function SeasonsManagement({ seasons, activeSeason }: Props) {
                         ].map((category) => (
                           <div key={category.key} className="flex items-center gap-2">
                             <div className={`w-2 h-2 rounded-full ${
-                              season.deadlines_count >= 5 ? 'bg-green-500' : 'bg-gray-300'
+                              season.deadlines_count >= 5 ? 'bg-green-500' : 'bg-muted-foreground/50'
                             }`} />
                             <span className={`${
-                              season.deadlines_count >= 5 ? 'text-green-700' : 'text-gray-500'
+                              season.deadlines_count >= 5 ? 'text-green-700 dark:text-green-300' : 'text-muted-foreground'
                             }`}>
                               {category.label}
                             </span>
@@ -385,7 +395,7 @@ export default function SeasonsManagement({ seasons, activeSeason }: Props) {
                       </div>
                       
                       {season.deadlines_count < 5 && (
-                        <div className="text-xs text-amber-600 bg-amber-50 p-2 rounded border border-amber-200">
+                        <div className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 p-2 rounded border border-amber-200 dark:border-amber-800">
                           <div className="flex items-center gap-1 mb-1">
                             <ClockIcon className="h-3 w-3" />
                             <strong>Activation Pending</strong>
@@ -407,7 +417,7 @@ export default function SeasonsManagement({ seasons, activeSeason }: Props) {
                       )}
                       
                       {season.deadlines_count >= 5 && (
-                        <div className="text-xs text-green-600 bg-green-50 p-2 rounded border border-green-200">
+                        <div className="text-xs text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950/50 p-2 rounded border border-green-200 dark:border-green-800">
                           <div className="flex items-center gap-1 mb-1">
                             <CheckCircleIcon className="h-3 w-3" />
                             <strong>Ready for Activation</strong>
@@ -424,48 +434,55 @@ export default function SeasonsManagement({ seasons, activeSeason }: Props) {
                   {(season.status === 'active' || season.status === 'completed') && (
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <div className="text-sm font-medium text-gray-700">Deadline Status:</div>
-                        <div className="text-xs text-gray-500">
+                        <div className="text-sm font-medium text-foreground">Deadline Status:</div>
+                        <div className="text-xs text-muted-foreground">
                           {season.deadlines_count} deadlines
                         </div>
                       </div>
                       
                       <div className="grid grid-cols-1 gap-1 text-xs">
                         {[
-                          { key: 'hte_assessment_form', label: 'HTE Assessment Form', status: 'active' },
-                          { key: 'student_verification', label: 'Student Verification', status: 'active' },
-                          { key: 'student_assessment_form', label: 'Student Assessment Form', status: 'active' },
-                          { key: 'internship_placement', label: 'Internship Placement', status: 'active' },
-                          { key: 'archive_students', label: 'Archive Students', status: 'completed' }
-                        ].map((category) => (
-                          <div key={category.key} className="flex items-center gap-2">
-                            <div className={`w-2 h-2 rounded-full ${
-                              category.status === 'active' ? 'bg-green-500' : 
-                              category.status === 'completed' ? 'bg-blue-500' : 
-                              'bg-gray-300'
-                            }`} />
-                            <span className={`${
-                              category.status === 'active' ? 'text-green-700' : 
-                              category.status === 'completed' ? 'text-blue-700' : 
-                              'text-gray-500'
-                            }`}>
-                              {category.label}
-                            </span>
-                            <span className={`text-xs ml-auto ${
-                              category.status === 'active' ? 'text-green-600' : 
-                              category.status === 'completed' ? 'text-blue-600' : 
-                              'text-gray-400'
-                            }`}>
-                              {category.status === 'active' ? 'Active' : 
-                               category.status === 'completed' ? 'Completed' : 
-                               'Pending'}
-                            </span>
-                          </div>
-                        ))}
+                          { key: 'hte_assessment_form', label: 'HTE Assessment Form' },
+                          { key: 'student_verification', label: 'Student Verification' },
+                          { key: 'student_assessment_form', label: 'Student Assessment Form' },
+                          { key: 'internship_placement', label: 'Internship Placement' },
+                          { key: 'archive_students', label: 'Archive Students' }
+                        ].map((category) => {
+                          const status = season.deadline_statuses?.[category.key as keyof typeof season.deadline_statuses] || 'inactive';
+                          return (
+                            <div key={category.key} className="flex items-center gap-2">
+                              <div className={`w-2 h-2 rounded-full ${
+                                status === 'active' ? 'bg-green-500' : 
+                                status === 'expired' ? 'bg-red-500' :
+                                status === 'completed' ? 'bg-blue-500' : 
+                                'bg-gray-300'
+                              }`} />
+                              <span className={`${
+                                status === 'active' ? 'text-green-700 dark:text-green-300' : 
+                                status === 'expired' ? 'text-red-700 dark:text-red-300' :
+                                status === 'completed' ? 'text-blue-700 dark:text-blue-300' : 
+                                'text-muted-foreground'
+                              }`}>
+                                {category.label}
+                              </span>
+                              <span className={`text-xs ml-auto ${
+                                status === 'active' ? 'text-green-600 dark:text-green-400' : 
+                                status === 'expired' ? 'text-red-600 dark:text-red-400' :
+                                status === 'completed' ? 'text-blue-600 dark:text-blue-400' : 
+                                'text-muted-foreground'
+                              }`}>
+                                {status === 'active' ? 'Active' : 
+                                 status === 'expired' ? 'Expired' :
+                                 status === 'completed' ? 'Completed' : 
+                                 'Inactive'}
+                              </span>
+                            </div>
+                          );
+                        })}
                       </div>
                       
                       {season.status === 'active' && (
-                        <div className="text-xs text-blue-600 bg-blue-50 p-2 rounded border border-blue-200">
+                        <div className="text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 p-2 rounded border border-blue-200 dark:border-blue-800">
                           <div className="flex items-center gap-1 mb-1">
                             <CheckCircleIcon className="h-3 w-3" />
                             <strong>Season Active</strong>
@@ -477,7 +494,7 @@ export default function SeasonsManagement({ seasons, activeSeason }: Props) {
                       )}
                       
                       {season.status === 'completed' && (
-                        <div className="text-xs text-gray-600 bg-gray-50 p-2 rounded border border-gray-200">
+                        <div className="text-xs text-muted-foreground bg-muted/50 p-2 rounded border border-border">
                           <div className="flex items-center gap-1 mb-1">
                             <ClockIcon className="h-3 w-3" />
                             <strong>Season Completed</strong>
@@ -534,9 +551,9 @@ export default function SeasonsManagement({ seasons, activeSeason }: Props) {
         {seasons.length === 0 && (
           <Card className="text-center py-12">
             <CardContent>
-              <CalendarIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No Seasons Found</h3>
-              <p className="text-gray-600 mb-4">
+              <CalendarIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-foreground mb-2">No Seasons Found</h3>
+              <p className="text-muted-foreground mb-4">
                 Create your internship season to start managing deadlines and student archiving.
               </p>
             </CardContent>

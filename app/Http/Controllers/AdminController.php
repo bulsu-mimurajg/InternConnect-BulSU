@@ -946,17 +946,14 @@ class AdminController extends Controller
             'htes_data' => $htes->toArray(),
         ]);
 
-        // Check if there's an active student assessment deadline
-        $studentAssessmentDeadline = Deadline::getActiveForCategory('student_assessment_form');
+        // Get deadline status using the centralized service
+        $deadlineStatusService = new DeadlineStatusService();
+        $deadlineStatus = $deadlineStatusService->getDeadlineStatus();
 
         return Inertia::render('admin/hte-management', [
             'htes' => $htes,
             'showArchived' => false,
-            'hasActiveStudentAssessmentDeadline' => $studentAssessmentDeadline !== null,
-            'studentAssessmentDeadline' => $studentAssessmentDeadline ? [
-                'end_date' => $studentAssessmentDeadline->end_date->format('M d, Y g:i A'),
-                'title' => $studentAssessmentDeadline->title,
-            ] : null,
+            'deadlineStatus' => $deadlineStatus,
         ]);
     }
 
@@ -1004,11 +1001,14 @@ class AdminController extends Controller
                 ];
             });
 
+        // Get deadline status using the centralized service
+        $deadlineStatusService = new DeadlineStatusService();
+        $deadlineStatus = $deadlineStatusService->getDeadlineStatus();
+
         return Inertia::render('admin/hte-management', [
             'htes' => $htes,
             'showArchived' => true,
-            'hasActiveStudentAssessmentDeadline' => false,
-            'studentAssessmentDeadline' => null,
+            'deadlineStatus' => $deadlineStatus,
         ]);
     }
 

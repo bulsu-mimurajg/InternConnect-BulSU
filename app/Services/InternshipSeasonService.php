@@ -130,8 +130,10 @@ class InternshipSeasonService
                 ]);
             }
             
-            // THEN expire all active deadlines in the season
-            $expiredCount = $season->deadlines()->where('status', 'active')->update(['status' => 'expired']);
+            // THEN expire all deadlines in the season (active and inactive)
+            $expiredCount = $season->deadlines()
+                ->whereIn('status', ['active', 'inactive'])
+                ->update(['status' => 'expired']);
             
             // Mark season as completed
             $season->update(['status' => 'completed']);
@@ -265,7 +267,33 @@ class InternshipSeasonService
             'students as active_students_count' => function ($query) {
                 $query->where('is_active', true);
             }
-        ])->orderBy('created_at', 'desc')->get();
+        ])
+        ->with(['deadlines' => function($query) {
+            $query->select('id', 'category', 'status', 'internship_season_id');
+        }])
+        ->orderBy('created_at', 'desc')
+        ->get()
+        ->map(function($season) {
+            // Get deadline statuses for each category
+            $deadlineStatuses = [];
+            $requiredCategories = [
+                'hte_assessment_form',
+                'student_verification', 
+                'student_assessment_form',
+                'internship_placement',
+                'archive_students'
+            ];
+            
+            foreach ($requiredCategories as $category) {
+                $deadline = $season->deadlines->where('category', $category)->first();
+                $deadlineStatuses[$category] = $deadline ? $deadline->status : 'inactive';
+            }
+            
+            // Add deadline statuses to season data
+            $season->deadline_statuses = $deadlineStatuses;
+            
+            return $season;
+        });
     }
 
     /**
@@ -464,8 +492,10 @@ class InternshipSeasonService
             ->where('status', 'active')
             ->exists();
         
-        // Expire all active deadlines in the season
-        $expiredCount = $season->deadlines()->where('status', 'active')->update(['status' => 'expired']);
+        // Expire all deadlines in the season (active and inactive)
+        $expiredCount = $season->deadlines()
+            ->whereIn('status', ['active', 'inactive'])
+            ->update(['status' => 'expired']);
         
         // Mark season as completed
         $season->update(['status' => 'completed']);
