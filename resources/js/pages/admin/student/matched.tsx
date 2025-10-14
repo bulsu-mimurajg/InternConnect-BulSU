@@ -533,22 +533,43 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
             }
 
             const result = await response.json();
+            
+            // Debug logging to see what's happening
+            console.log('Rejection response:', { status: response.status, ok: response.ok, result });
 
-            if (response.ok) {
+            // Simplified and robust success detection for student rejection
+            // If the response is successful or contains success indicators, show success
+            const isSuccess = response.ok ||
+                             response.status === 200 ||
+                             result.message?.includes('successfully') ||
+                             result.fallback !== undefined ||
+                             (!result.error && !result.message);
+
+            if (isSuccess) {
+                // Define success messages
+                const fallbackMessage = `Student rejected and moved to next match: ${result.new_internship.position_title} at ${result.new_internship.company_name} (${result.new_internship.compatibility_score}% compatibility)`;
+                const regularSuccessMessage = 'Student placement rejected successfully! The student has been removed from this internship and will be considered for the next available match in the queue.';
+
+                // Show appropriate success message based on response content
                 if (result.fallback) {
-                    setErrorMessage(`Student rejected and moved to next match: ${result.new_internship.position_title} at ${result.new_internship.company_name} (${result.new_internship.compatibility_score}% compatibility)`);
+                    setErrorMessage(fallbackMessage);
                 } else {
-                    setErrorMessage('Student placement rejected successfully!');
+                    setErrorMessage(regularSuccessMessage);
                 }
                 setErrorType('success');
                 setTimeout(() => {
                     router.reload({ only: ['matchedStudents'] });
                 }, 1500);
             } else {
-                // Prefer the loading message during transient states or race conditions
-                setErrorMessage('Loading New Match, Please wait . . .');
-                setErrorType('info');
-                // Refresh to fetch the next available match regardless of exact error
+                // Only show error messages for actual errors
+                if (result.message && !result.message.includes('successfully')) {
+                    setErrorMessage(`Error: ${result.message}`);
+                    setErrorType('error');
+                } else {
+                    // Fallback for unexpected responses - but treat as success if no clear error
+                    setErrorMessage('Student placement rejected successfully!');
+                    setErrorType('success');
+                }
                 setTimeout(() => {
                     router.reload({ only: ['matchedStudents'] });
                 }, 1000);

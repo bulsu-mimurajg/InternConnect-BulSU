@@ -1198,14 +1198,17 @@ class StudentController extends Controller
         ]);
 
         try {
-            // Update the corresponding student_match record endorsement status to 'rejected'
-            $studentMatchUpdated = StudentMatch::where('student_id', $student->id)
+            // Check if the student match exists first
+            $studentMatch = StudentMatch::where('student_id', $student->id)
                 ->where('internship_id', $validated['internship_id'])
-                ->update(['endorsement_status' => 'rejected']);
+                ->first();
 
-            if (!$studentMatchUpdated) {
+            if (!$studentMatch) {
                 return response()->json(['error' => 'Student match not found'], 404);
             }
+
+            // Update the corresponding student_match record endorsement status to 'rejected'
+            $studentMatch->update(['endorsement_status' => 'rejected']);
 
             // Create endorsement record for the rejected match
             Endorsement::create([
