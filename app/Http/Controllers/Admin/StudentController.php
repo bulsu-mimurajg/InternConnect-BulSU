@@ -1210,14 +1210,8 @@ class StudentController extends Controller
             // Update the corresponding student_match record endorsement status to 'rejected'
             $studentMatch->update(['endorsement_status' => 'rejected']);
 
-            // Create endorsement record for the rejected match
-            Endorsement::create([
-                'student_id' => $student->id,
-                'internship_id' => $validated['internship_id'],
-                'status' => 'rejected',
-                'compatibility_score' => 0, // Set to 0 for rejected endorsements
-                'endorsement_date' => now(),
-            ]);
+            // Note: No endorsement record is created for rejected placements
+            // Rejection only updates the student_match status, not the endorsement table
 
             // Find the student's next highest compatibility match with available slots
             // Look for pending endorsement matches (not yet endorsed by admin)
