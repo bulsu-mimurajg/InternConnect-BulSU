@@ -2288,7 +2288,7 @@ class AdminController extends Controller
     {
         $request->validate([
             'title' => 'required|string|max:255',
-            'category' => 'required|in:student_verification,student_assessment_form,hte_assessment_form,internship_placement',
+            'category' => 'required|in:student_verification,student_assessment_form,hte_assessment_form,internship_placement,archive_students',
             'start_date' => 'required|date',
             'end_date' => 'required|date|after:start_date',
         ]);

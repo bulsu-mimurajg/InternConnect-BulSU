@@ -169,7 +169,7 @@ class CentralizedDeadlineNotificationService
      */
     private function getUsersForDeadline(Deadline $deadline): \Illuminate\Database\Eloquent\Collection
     {
-        $users = collect();
+        $users = User::whereRaw('1 = 0')->get(); // Empty Eloquent Collection
 
         // Get users based on deadline category with proper filtering
         switch ($deadline->category) {
@@ -226,6 +226,14 @@ class CentralizedDeadlineNotificationService
                         });
                     });
                 })
+                ->get();
+                break;
+            case 'archive_students':
+                // Archive students deadline - notify admins only
+                $users = User::whereHas('roles', function ($query) {
+                    $query->where('name', 'admin');
+                })
+                ->where('status', '!=', 'archived')
                 ->get();
                 break;
         }
