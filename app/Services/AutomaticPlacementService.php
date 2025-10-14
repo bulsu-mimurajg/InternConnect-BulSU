@@ -10,6 +10,7 @@ use App\Models\Deadline;
 use App\Models\Internship;
 use App\Services\NotificationService;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Database\Eloquent\Collection;
 
 class AutomaticPlacementService
 {
@@ -693,7 +694,7 @@ class AutomaticPlacementService
     /**
      * Calculate fresh compatibility scores for a student with all available internships
      */
-    private function calculateFreshCompatibilityScores(Student $student, Collection $internships): Collection
+    private function calculateFreshCompatibilityScores(Student $student, Collection $internships): \Illuminate\Support\Collection
     {
         $compatibilityScores = collect();
 
