@@ -1113,15 +1113,15 @@ class AdviserController extends Controller
 
         // Verify the adviser has access to this section and it's not archived
         $hasAccess = $adviserRecord->sections()
-            ->where('section_id', $sectionId)
-            ->where('status', 'active')
+            ->where('sections.section_id', $sectionId)
+            ->where('sections.status', 'active')
             ->exists();
 
         if (!$hasAccess) {
             // Check if the section exists but is archived
             $isArchived = $adviserRecord->sections()
-                ->where('section_id', $sectionId)
-                ->where('status', 'archived')
+                ->where('sections.section_id', $sectionId)
+                ->where('sections.status', 'archived')
                 ->exists();
 
             if ($isArchived) {

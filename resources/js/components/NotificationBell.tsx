@@ -211,7 +211,7 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
         } finally {
             setIsLoading(false);
         }
-    }, [lastLocalUpdate, showRead, filter, pagination]);
+    }, [filter, showRead, lastLocalUpdate, pagination]);
 
     const markAsRead = async (notificationId: number): Promise<boolean> => {
         try {
@@ -533,6 +533,48 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
         return message.length > 80;
     };
 
+    const getFilterButtons = useCallback((): FilterButton[] => {
+        // Helper function to check if user has a specific role
+        const hasRole = (roleName: string): boolean => {
+            return auth.user?.roles?.some((role: UserRole) => role.name === roleName) || false;
+        };
+
+        if (hasRole('student')) {
+            // Students only see: All, Placement, Deadline
+            return [
+                { key: 'all', label: 'All' },
+                { key: 'placement', label: 'Placement' },
+                { key: 'deadline', label: 'Deadline' }
+            ];
+        } else if (hasRole('hte')) {
+            // HTEs see: All, Endorsement, Deadline
+            return [
+                { key: 'all', label: 'All' },
+                { key: 'endorsement', label: 'Endorsement' },
+                { key: 'deadline', label: 'Deadline' }
+            ];
+        } else if (hasRole('adviser')) {
+            // Advisers see: All, Approval, Deadline
+            return [
+                { key: 'all', label: 'All' },
+                { key: 'approval', label: 'Approval' },
+                { key: 'deadline', label: 'Deadline' }
+            ];
+        } else if (hasRole('admin')) {
+            // Admins see: All, Endorsement, Approval, Deadline
+            return [
+                { key: 'all', label: 'All' },
+                { key: 'approval', label: 'Approval' },
+                { key: 'deadline', label: 'Deadline' }
+            ];
+        }
+
+        // Default fallback
+        return [
+            { key: 'all', label: 'All' }
+        ];
+    }, [auth.user?.roles]);
+
     const handleNotificationClick = async (notification: Notification) => {
         // Prevent multiple clicks during processing
         if (isProcessing) {
@@ -572,100 +614,100 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
             // Handle navigation based on notification type using Inertia.js
             try {
                 if (notification.type === 'hte_endorsement') {
-                // Navigate to HTE endorsement table
-                if (notification.data?.student_id) {
-                    // If we have student_id, navigate with highlighting
-                    const studentId = notification.data.student_id as number;
-                    router.get(`/hte/endorsement-table?highlightStudent=${studentId}&highlightDuration=1500`);
-                } else {
-                    // If no student_id, just navigate to the table
-                    router.get('/hte/endorsement-table');
-                }
-            } else if (notification.type === 'hte_deadline') {
-                // Navigate based on deadline category
-                if (notification.data?.category === 'student_placements_by_hte') {
-                    router.get('/hte/endorsement-table');
-                } else {
-                    router.get('/form');
-                }
-            } else if (notification.type === 'student_deadline' || notification.type === 'unified_deadline' || notification.type === 'deadline_released' || notification.type === 'deadline_expired') {
-                // Navigate based on deadline category and user role
-                if (notification.data?.category === 'student_verification' && hasRole('adviser')) {
-                    // Only student verification deadlines redirect advisers to verification page
-                    try {
-                        router.get('/student-verification');
-                    } catch (error) {
-                        console.error('Failed to redirect to student verification page:', error);
-                        // Fallback to dashboard
-                        router.get('/adviser/dashboard');
+                    // Navigate to HTE endorsement table
+                    if (notification.data?.student_id) {
+                        // If we have student_id, navigate with highlighting
+                        const studentId = notification.data.student_id as number;
+                        router.get(`/hte/endorsement-table?highlightStudent=${studentId}&highlightDuration=1500`);
+                    } else {
+                        // If no student_id, just navigate to the table
+                        router.get('/hte/endorsement-table');
                     }
-                } else if (notification.data?.category === 'student_placements') {
+                } else if (notification.type === 'hte_deadline') {
+                    // Navigate based on deadline category
+                    if (notification.data?.category === 'student_placements_by_hte') {
+                        router.get('/hte/endorsement-table');
+                    } else {
+                        router.get('/form');
+                    }
+                } else if (notification.type === 'student_deadline' || notification.type === 'unified_deadline' || notification.type === 'deadline_released' || notification.type === 'deadline_expired') {
+                    // Navigate based on deadline category and user role
+                    if (notification.data?.category === 'student_verification' && hasRole('adviser')) {
+                        // Only student verification deadlines redirect advisers to verification page
+                        try {
+                            router.get('/student-verification');
+                        } catch (error) {
+                            console.error('Failed to redirect to student verification page:', error);
+                            // Fallback to dashboard
+                            router.get('/adviser/dashboard');
+                        }
+                    } else if (notification.data?.category === 'student_placements') {
+                        // Navigate based on user role
+                        if (hasRole('admin')) {
+                            router.get('/student/placed');
+                        } else {
+                            router.get('/student/dashboard');
+                        }
+                    } else if (notification.data?.category === 'student_assessment_form') {
+                        // Navigate to assessment for students
+                        router.get('/assessment');
+                    } else if (notification.data?.category === 'hte_assessment_form') {
+                        // Navigate to form for HTE users
+                        router.get('/form');
+                    } else if (notification.data?.category === 'internship_placement') {
+                        // Navigate based on user role for internship placement
+                        if (hasRole('admin')) {
+                            router.get('/student/placed');
+                        } else if (hasRole('hte')) {
+                            router.get('/hte/endorsement-table');
+                        } else {
+                            router.get('/student/dashboard');
+                        }
+                    } else {
+                        // Default fallback for other deadline types
+                        if (hasRole('admin')) {
+                            router.get('/admin/dashboard');
+                        } else if (hasRole('adviser')) {
+                            router.get('/adviser/dashboard');
+                        } else if (hasRole('hte')) {
+                            router.get('/hte/dashboard');
+                        } else {
+                            router.get('/student/dashboard');
+                        }
+                    }
+                } else if (notification.type === 'student_placement' || notification.type === 'student_placement_status') {
                     // Navigate based on user role
                     if (hasRole('admin')) {
                         router.get('/student/placed');
                     } else {
                         router.get('/student/dashboard');
                     }
-                } else if (notification.data?.category === 'student_assessment_form') {
-                    // Navigate to assessment for students
-                    router.get('/assessment');
-                } else if (notification.data?.category === 'hte_assessment_form') {
-                    // Navigate to form for HTE users
-                    router.get('/form');
-                } else if (notification.data?.category === 'internship_placement') {
-                    // Navigate based on user role for internship placement
-                    if (hasRole('admin')) {
-                        router.get('/student/placed');
-                    } else if (hasRole('hte')) {
-                        router.get('/hte/endorsement-table');
+                } else if (notification.type === 'student_approval_request' || notification.type === 'student_status_change' || notification.type === 'student_registration_pending' || notification.type === 'new_student_registration' || notification.type === 'student_verification_pending' || notification.type === 'student_approved' || notification.type === 'student_approval_needed') {
+                    // Navigate based on user role
+                    if (hasRole('adviser')) {
+                        // Use redirect_url if available, otherwise default to student-verification
+                        if (notification.data?.redirect_url && typeof notification.data.redirect_url === 'string') {
+                            router.get(notification.data.redirect_url);
+                        } else {
+                            router.get('/student-verification');
+                        }
+                    } else if (hasRole('admin')) {
+                        router.get('/student/list');
                     } else {
                         router.get('/student/dashboard');
                     }
                 } else {
-                    // Default fallback for other deadline types
-                    if (hasRole('admin')) {
-                        router.get('/admin/dashboard');
-                    } else if (hasRole('adviser')) {
+                    // Default navigation based on user role
+                    if (hasRole('adviser')) {
                         router.get('/adviser/dashboard');
+                    } else if (hasRole('admin')) {
+                        router.get('/admin/dashboard');
                     } else if (hasRole('hte')) {
                         router.get('/hte/dashboard');
                     } else {
                         router.get('/student/dashboard');
                     }
                 }
-            } else if (notification.type === 'student_placement' || notification.type === 'student_placement_status') {
-                // Navigate based on user role
-                if (hasRole('admin')) {
-                    router.get('/student/placed');
-                } else {
-                    router.get('/student/dashboard');
-                }
-            } else if (notification.type === 'student_approval_request' || notification.type === 'student_status_change' || notification.type === 'student_registration_pending' || notification.type === 'new_student_registration' || notification.type === 'student_verification_pending' || notification.type === 'student_approved' || notification.type === 'student_approval_needed') {
-                // Navigate based on user role
-                if (hasRole('adviser')) {
-                    // Use redirect_url if available, otherwise default to student-verification
-                    if (notification.data?.redirect_url && typeof notification.data.redirect_url === 'string') {
-                        router.get(notification.data.redirect_url);
-                    } else {
-                        router.get('/student-verification');
-                    }
-                } else if (hasRole('admin')) {
-                    router.get('/student/list');
-                } else {
-                    router.get('/student/dashboard');
-                }
-            } else {
-                // Default navigation based on user role
-                if (hasRole('adviser')) {
-                    router.get('/adviser/dashboard');
-                } else if (hasRole('admin')) {
-                    router.get('/admin/dashboard');
-                } else if (hasRole('hte')) {
-                    router.get('/hte/dashboard');
-                } else {
-                    router.get('/student/dashboard');
-                }
-            }
             } catch (navigationError) {
                 console.error('Error during navigation:', navigationError);
                 // Fallback to dashboard if navigation fails
@@ -684,14 +726,14 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
         // Poll for new notifications every 30 seconds
         const interval = setInterval(() => fetchNotifications(1, filter, showRead), 30000);
         return () => clearInterval(interval);
-    }, [fetchNotifications, filter, showRead]);
+    }, [filter, showRead, fetchNotifications]);
 
     // Refresh notifications when the dropdown is opened
     useEffect(() => {
         if (isOpen) {
             fetchNotifications(1, filter, showRead);
         }
-    }, [isOpen, fetchNotifications, filter, showRead]);
+    }, [isOpen, filter, showRead, fetchNotifications]);
 
     // Reset filter to 'all' when component mounts to ensure it's valid for user's role
     useEffect(() => {
@@ -700,13 +742,6 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
             setFilter('all');
         }
     }, [filter, getFilterButtons]);
-
-    // Refetch notifications when filter or showRead changes
-    useEffect(() => {
-        if (isOpen) {
-            fetchNotifications(1, filter, showRead);
-        }
-    }, [filter, showRead, isOpen, fetchNotifications]);
 
     const formatTimeAgo = (dateString: string) => {
         const date = new Date(dateString);
@@ -751,48 +786,6 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                 return <BellIcon className={iconClass} />;
         }
     };
-
-    const getFilterButtons = useCallback((): FilterButton[] => {
-        // Helper function to check if user has a specific role
-        const hasRole = (roleName: string): boolean => {
-            return auth.user?.roles?.some((role: UserRole) => role.name === roleName) || false;
-        };
-
-        if (hasRole('student')) {
-            // Students only see: All, Placement, Deadline
-            return [
-                { key: 'all', label: 'All' },
-                { key: 'placement', label: 'Placement' },
-                { key: 'deadline', label: 'Deadline' }
-            ];
-        } else if (hasRole('hte')) {
-            // HTEs see: All, Endorsement, Deadline
-            return [
-                { key: 'all', label: 'All' },
-                { key: 'endorsement', label: 'Endorsement' },
-                { key: 'deadline', label: 'Deadline' }
-            ];
-        } else if (hasRole('adviser')) {
-            // Advisers see: All, Approval, Deadline
-            return [
-                { key: 'all', label: 'All' },
-                { key: 'approval', label: 'Approval' },
-                { key: 'deadline', label: 'Deadline' }
-            ];
-        } else if (hasRole('admin')) {
-            // Admins see: All, Endorsement, Approval, Deadline
-            return [
-                { key: 'all', label: 'All' },
-                { key: 'approval', label: 'Approval' },
-                { key: 'deadline', label: 'Deadline' }
-            ];
-        }
-
-        // Default fallback
-        return [
-            { key: 'all', label: 'All' }
-        ];
-    }, [auth.user?.roles]);
 
     return (
         <div className="relative">

@@ -189,6 +189,7 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
         has_conflicts: boolean;
         total_approved: number;
         total_conflicts: number;
+        total_unable: number; // NEW
         approved_students?: Array<{
             student_name: string;
             internship_title: string;
@@ -210,6 +211,15 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                 available_slots: number;
                 match_rank: number;
             };
+        }>;
+        unable_to_endorse?: Array<{ // NEW
+            student_name: string;
+            best_match: {
+                position_title: string;
+                company_name: string;
+                compatibility_score: number;
+            };
+            reason: string;
         }>;
     } | null>(null);
 
@@ -249,7 +259,6 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
         return 'bg-red-100 text-red-800 dark:bg-green-900 dark:text-red-200';
     };
 
-    // Removed unused getScoreLabel to fix linter error
 
     const getGradePoint = (score: number) => {
         if (score >= 96.50) return '1.00';
@@ -687,9 +696,13 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
 
             if (conflictResponse.ok) {
                 const conflictData = await conflictResponse.json();
+                console.log('Conflict check response:', conflictData); // Debug log
+                console.log('has_conflicts:', conflictData.has_conflicts); // Debug log
+                console.log('unable_to_endorse length:', conflictData.unable_to_endorse?.length); // Debug log
+                console.log('Should show modal:', conflictData.has_conflicts || (conflictData.unable_to_endorse && conflictData.unable_to_endorse.length > 0)); // Debug log
 
-                if (conflictData.has_conflicts) {
-                    // Show confirmation dialog
+                // Show confirmation dialog if there are any conflicts OR students unable to endorse
+                if (conflictData.has_conflicts || (conflictData.unable_to_endorse && conflictData.unable_to_endorse.length > 0)) {
                     setConflictData(conflictData);
                     setShowConflictDialog(true);
                     setIsLoading(false);
@@ -1835,10 +1848,10 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                                 </div>
                             </div>
                         </CardHeader>
-                        <CardContent className="p-6 overflow-y-auto max-h-[60vh]">
+                        <CardContent className="p-6 overflow-y-auto max-h-[80vh]">
 
                         <div className="mb-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                                 <Card className="border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-900/10">
                                     <CardContent className="p-4">
                                         <div className="flex items-center gap-2 mb-2">
@@ -1858,6 +1871,17 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                                         </div>
                                         <p className="text-sm text-yellow-700 dark:text-yellow-300">
                                             <strong>{conflictData.total_conflicts}</strong> students will be placed in fallback matches
+                                        </p>
+                                    </CardContent>
+                                </Card>
+                                <Card className="border-red-200 dark:border-red-800 bg-red-50/50 dark:bg-red-900/10">
+                                    <CardContent className="p-4">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <XCircleIcon className="w-5 h-5 text-red-600 dark:text-red-400" />
+                                            <CardTitle className="text-red-800 dark:text-red-200 text-base">Students Unable to Be Endorsed</CardTitle>
+                                        </div>
+                                        <p className="text-sm text-red-700 dark:text-red-300">
+                                            <strong>{conflictData.total_unable || 0}</strong> students cannot be endorsed
                                         </p>
                                     </CardContent>
                                 </Card>
@@ -1901,7 +1925,7 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                                 <div>
                                     <div className="flex items-center gap-2 mb-3">
                                         <AlertTriangleIcon className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />
-                                        <h4 className="font-semibold text-foreground">Students with Fallback Placements</h4>
+                                        <h4 className="font-semibold text-foreground">Students with Fallback Endorsements</h4>
                                     </div>
                                     <div className="space-y-3 max-h-60 overflow-y-auto">
                                         {conflictData.conflicts.map((conflict, index: number) => (
@@ -1937,6 +1961,36 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                                     </div>
                                 </div>
                             )}
+
+                            {/* Students unable to be endorsed */}
+                            {conflictData.unable_to_endorse && conflictData.unable_to_endorse.length > 0 && (
+                                <div className="mt-6">
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <XCircleIcon className="w-4 h-4 text-red-600 dark:text-red-400" />
+                                        <h4 className="font-semibold text-foreground">Students Unable to Be Endorsed</h4>
+                                    </div>
+                                    <div className="space-y-3 max-h-60 overflow-y-auto">
+                                        {conflictData.unable_to_endorse.map((student, index: number) => (
+                                            <Card key={index} className="border-red-200 dark:border-red-800 bg-red-50/50 dark:bg-red-900/10">
+                                                <CardContent className="p-4">
+                                                    <div className="font-medium text-foreground mb-2">{student.student_name}</div>
+                                                    <div className="space-y-2 text-sm">
+                                                        <div className="flex items-center gap-2">
+                                                            <XCircleIcon className="w-4 h-4 text-red-600 dark:text-red-400" />
+                                                            <span className="text-muted-foreground">Best match unavailable:</span>
+                                                            <span className="font-medium">{student.best_match.position_title}</span>
+                                                            <span className="text-muted-foreground">({student.best_match.company_name})</span>
+                                                        </div>
+                                                        <div className="text-xs text-red-700 dark:text-red-300 ml-6">
+                                                            {student.reason}
+                                                        </div>
+                                                    </div>
+                                                </CardContent>
+                                            </Card>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                         </CardContent>
                         <CardContent className="border-t bg-muted/30 p-6">
@@ -1962,7 +2016,7 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                                     }}
                                     className="min-w-[180px] bg-primary hover:bg-primary/90"
                                 >
-                                    Proceed with Placements
+                                    Proceed with Endorsements
                                 </Button>
                             </div>
                         </CardContent>

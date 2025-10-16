@@ -183,7 +183,7 @@ class DefenseFlowHteStudent extends Seeder
                 'position_title' => 'Full-Stack Development Intern',
                 'department' => 'Information Technology',
                 'placement_description' => 'Work on both frontend and backend development using modern frameworks like React, Laravel, and Node.js. You will participate in the complete software development lifecycle and work on real client projects.',
-                'slot_count' => 4,
+                'slot_count' => 1,
                 'is_active' => true,
             ],
             [
@@ -199,7 +199,7 @@ class DefenseFlowHteStudent extends Seeder
                 'position_title' => 'Software Development Intern',
                 'department' => 'Information Technology',
                 'placement_description' => 'Join our development team and work on real-world projects using modern technologies like React, Node.js, and Python. You will participate in code reviews, attend team meetings, and contribute to our product development process.',
-                'slot_count' => 3,
+                'slot_count' => 2,
                 'is_active' => true,
             ],
             [
@@ -207,7 +207,7 @@ class DefenseFlowHteStudent extends Seeder
                 'position_title' => 'Data Science Intern',
                 'department' => 'Information Technology',
                 'placement_description' => 'Work with our data science team to analyze large datasets, build predictive models, and create data visualizations. Experience with Python, SQL, and machine learning frameworks is preferred.',
-                'slot_count' => 3,
+                'slot_count' => 1,
                 'is_active' => true,
             ],
         ];
@@ -548,13 +548,13 @@ class DefenseFlowHteStudent extends Seeder
 
         // Get all subcategories
         $subcategories = \App\Models\SubCategory::with('category')->get();
-        
+
         // Get all internships
         $internships = \App\Models\Internship::with('subcategoryWeights.subcategory')->get();
-        
+
         // Get students who have submitted assessments
         $submittedStudents = \App\Models\Student::where('is_submit', true)->get();
-        
+
         if ($submittedStudents->isEmpty()) {
             $this->command->warn("No students with submitted assessments found. Skipping score generation.");
             return;
@@ -716,13 +716,13 @@ class DefenseFlowHteStudent extends Seeder
             // Assign a skill profile (cycle through profiles)
             $profileName = $profileNames[$index % count($profileNames)];
             $profile = $skillProfiles[$profileName];
-            
+
             $this->command->info("Generating scores for {$student->first_name} {$student->last_name} ({$profileName})");
 
             // Generate scores for each subcategory
             foreach ($subcategories as $subcategory) {
                 $subcategoryName = $subcategory->subcategory_name;
-                
+
                 // Get score range for this subcategory from the profile
                 if (isset($profile[$subcategoryName])) {
                     $range = $profile[$subcategoryName];
@@ -760,12 +760,12 @@ class DefenseFlowHteStudent extends Seeder
     {
         // Get student's scores
         $studentScores = $student->scores()->with('subcategory')->get()->keyBy('sub_category_id');
-        
+
         $compatibilityScores = collect();
 
         foreach ($internships as $internship) {
             $score = $this->calculateInternshipCompatibility($studentScores, $internship);
-            
+
             $compatibilityScores->push([
                 'internship' => $internship,
                 'compatibility_score' => $score,
@@ -812,17 +812,17 @@ class DefenseFlowHteStudent extends Seeder
         foreach ($weights as $weight) {
             $subcategoryId = $weight->subcategory_id;
             $weightValue = $weight->weight;
-            
+
             // Get student's score for this subcategory
             $studentScore = $studentScores->get($subcategoryId);
-            
+
             if ($studentScore) {
                 // Convert student score (1-5 scale) to percentage (0-100)
                 $scorePercentage = ($studentScore->score / 5) * 100;
-                
+
                 // Apply weight to the score
                 $weightedScore = $scorePercentage * ($weightValue / 100);
-                
+
                 $totalScore += $weightedScore;
                 $totalWeight += $weightValue;
             }
@@ -853,7 +853,7 @@ class DefenseFlowHteStudent extends Seeder
 
         // Get the season (either existing or newly created)
         $season = \App\Models\InternshipSeason::first();
-        
+
         if (!$season) {
             $this->command->warn("No internship season found. Skipping deadline creation.");
             return;
@@ -957,7 +957,7 @@ class DefenseFlowHteStudent extends Seeder
             $this->command->info("\nSeason '{$season->name}' is currently active.");
         }
     }
-    
+
     private function getOrCreateSeason(): InternshipSeason
     {
         // First, try to find an existing season
@@ -975,7 +975,7 @@ class DefenseFlowHteStudent extends Seeder
             'name' => 'AY 2024-2025 First Semester (Student Seeder)',
             'start_date' => now()->subMonths(1),
             'end_date' => now()->addMonths(2),
-            'status' => 'inactive', // Start as inactive
+            'status' => 'active', // Start as inactive
         ]);
 
         $this->command->info("Created default season: {$season->name}");

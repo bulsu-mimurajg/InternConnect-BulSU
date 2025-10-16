@@ -4,7 +4,7 @@ import { type NavItem, type NavGroup, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@radix-ui/react-collapsible';
 import { ChevronDownIcon } from 'lucide-react';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -36,32 +36,38 @@ export function NavMain({ items = [], groups = [], role }: { items?: NavItem[]; 
         }
     };
 
-    // Memoize items and groups to prevent infinite re-renders
-    const memoizedItems = useMemo(() => items, [items]);
-    const memoizedGroups = useMemo(() => groups, [groups]);
+    // Track if we've initialized sections to prevent infinite loops
+    const hasInitialized = useRef(false);
+    const lastUrl = useRef(currentUrl);
 
     // Initialize open sections based on current URL
     useEffect(() => {
-        const newOpenSections: Record<string, boolean> = {};
+        // Only run if URL has changed or we haven't initialized yet
+        if (!hasInitialized.current || lastUrl.current !== currentUrl) {
+            const newOpenSections: Record<string, boolean> = {};
 
-        // Handle single items array
-        memoizedItems.forEach((item) => {
-            if (item.subNav) {
-                newOpenSections[item.title] = currentUrl.startsWith(item.href);
-            }
-        });
-
-        // Handle grouped navigation
-        memoizedGroups.forEach((group) => {
-            group.items.forEach((item) => {
+            // Handle single items array
+            items.forEach((item) => {
                 if (item.subNav) {
                     newOpenSections[item.title] = currentUrl.startsWith(item.href);
                 }
             });
-        });
 
-        setOpenSections(newOpenSections);
-    }, [currentUrl, memoizedItems, memoizedGroups]);
+            // Handle grouped navigation
+            groups.forEach((group) => {
+                group.items.forEach((item) => {
+                    if (item.subNav) {
+                        newOpenSections[item.title] = currentUrl.startsWith(item.href);
+                    }
+                });
+            });
+
+            setOpenSections(newOpenSections);
+            hasInitialized.current = true;
+            lastUrl.current = currentUrl;
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [currentUrl]);
 
     // Toggle section open/close
     const toggleSection = (title: string, event: React.MouseEvent) => {
@@ -176,7 +182,7 @@ export function NavMain({ items = [], groups = [], role }: { items?: NavItem[]; 
                     <SidebarGroup key={groupIndex} className="px-2 py-0">
                         <SidebarGroupLabel>{group.title}</SidebarGroupLabel>
                         <SidebarMenu>
-                            {renderNavItems(memoizedGroups[groupIndex]?.items || [])}
+                            {renderNavItems(groups[groupIndex]?.items || [])}
                         </SidebarMenu>
                     </SidebarGroup>
                 ))}
@@ -189,7 +195,7 @@ export function NavMain({ items = [], groups = [], role }: { items?: NavItem[]; 
         <SidebarGroup className="px-2 py-0">
             <SidebarGroupLabel>{getRoleLabel(role)}</SidebarGroupLabel>
             <SidebarMenu>
-                {renderNavItems(memoizedItems)}
+                {renderNavItems(items)}
             </SidebarMenu>
         </SidebarGroup>
     );
