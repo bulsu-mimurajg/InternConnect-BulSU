@@ -1,102 +1,37 @@
 ---
-alwaysApply: true
-description: Project structure and architecture guidelines for Laravel + React/TypeScript application
+alwaysApply: false
 ---
+# InternConnectBSIT Project Structure
 
-# Project Structure & Architecture
+This is a Laravel 12 + React 19 + TypeScript + Inertia.js application for internship management.
 
-## **Technology Stack**
+## Core Architecture
 - **Backend**: Laravel 12 with PHP 8.2+
-- **Frontend**: React 19 + TypeScript + Inertia.js
-- **UI Framework**: shadcn/ui with Radix UI primitives
-- **Styling**: Tailwind CSS v4 with CSS variables
-- **Icons**: Lucide React
-- **Forms**: React Hook Form + Zod validation
+- **Frontend**: React 19 with TypeScript, Inertia.js for SPA experience
+- **Styling**: Tailwind CSS 4.0 with shadcn/ui
+- **Database**: MySQL with Eloquent ORM
+- **Authentication**: Laravel Fortify with 2FA support
+- **Permissions**: Spatie Laravel Permission package
 
-## **Project Structure**
+## Key Directories
+- `app/Http/Controllers/` - API controllers
+- `resources/js/` - Frontend React/TypeScript code
+- `resources/js/components/` - Reusable React components
+- `resources/js/components/ui/` - Radix UI component library
+- `resources/js/pages/` - Inertia.js page components
+- `resources/js/layouts/` - Layout components
+- `database/migrations/` - Database schema migrations
+- `routes/` - Laravel route definitions
 
-### **Backend (Laravel)**
-```
-app/
-├── Http/Controllers/     # API and web controllers
-├── Models/              # Eloquent models with relationships
-├── Services/            # Business logic services
-├── Notifications/       # Email notifications
-└── Providers/           # Service providers
+## Naming Conventions
+- **PHP**: PascalCase for classes, snake_case for methods/variables
+- **React Components**: PascalCase (e.g., `AppLayout.tsx`)
+- **Files**: kebab-case for components (e.g., `app-layout.tsx`)
+- **Database**: snake_case for tables/columns
+- **Routes**: kebab-case for URLs
 
-database/
-├── migrations/          # Database schema migrations
-├── seeders/            # Database seeders
-└── factories/          # Model factories for testing
-
-routes/
-├── web.php             # Web routes (Inertia)
-├── auth.php            # Authentication routes
-└── settings.php        # Settings routes
-```
-
-### **Frontend (React/TypeScript)**
-```
-resources/js/
-├── components/          # Reusable UI components
-│   ├── ui/             # shadcn/ui components
-│   ├── form/           # Form-specific components
-│   └── app-*.tsx       # App-level components
-├── pages/              # Page components (Inertia routes)
-│   ├── admin/          # Admin pages
-│   ├── student/        # Student pages
-│   └── hte/            # HTE pages
-├── layouts/            # Layout components
-├── types/              # TypeScript type definitions
-├── lib/                # Utility functions
-└── hooks/              # Custom React hooks
-```
-
-## **Key Architecture Principles**
-
-### **Inertia.js Integration**
-- Use `@inertiajs/react` for seamless Laravel-React integration
-- Pass data through Laravel controllers to React components
-- Use `router.get()`, `router.post()`, etc. for navigation
-- Leverage `usePage()` hook for accessing shared data
-
-### **Component Organization**
-- **UI Components**: Pure, reusable components in `components/ui/`
-- **Page Components**: Route-specific components in `pages/`
-- **Layout Components**: App structure components in `layouts/`
-- **Form Components**: Form-specific components in `components/form/`
-
-### **Type Safety**
-- Define interfaces for all data structures
-- Use Zod schemas for form validation
-- Leverage TypeScript strict mode for better type safety
-- Import types from Laravel models when possible
-
-## **File Naming Conventions**
-- **Components**: PascalCase (e.g., `StudentList.tsx`)
-- **Pages**: kebab-case matching routes (e.g., `student-list.tsx`)
-- **Utilities**: camelCase (e.g., `formatDate.ts`)
-- **Types**: PascalCase with descriptive names (e.g., `StudentData.ts`)
-
-## **Import Organization**
-```typescript
-// 1. React and external libraries
-import { useState } from 'react';
-import { Head, router } from '@inertiajs/react';
-
-// 2. Internal components and layouts
-import AdminLayout from '@/layouts/admin/layout';
-import { Button } from '@/components/ui/button';
-
-// 3. Icons
-import { UsersIcon, EditIcon } from 'lucide-react';
-
-// 4. Types and utilities
-import { type Student } from '@/types';
-```
-
-## **Environment Configuration**
-- Use `components.json` for shadcn/ui configuration
-- Configure TypeScript paths in `tsconfig.json`
-- Use Laravel's `.env` for environment variables
-- Leverage Vite for frontend build process
+## Entry Points
+- **Backend**: [artisan](mdc:artisan) - Laravel CLI
+- **Frontend**: [resources/js/app.tsx](mdc:resources/js/app.tsx) - React app entry
+- **Build**: [vite.config.ts](mdc:vite.config.ts) - Vite configuration
+- **Routes**: [routes/web.php](mdc:routes/web.php) - Main routes

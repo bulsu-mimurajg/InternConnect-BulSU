@@ -1,0 +1,362 @@
+---
+globs: *.tsx,*.ts
+---
+
+# React Mobile-First Development with shadcn/ui
+
+## shadcn/ui Component Usage
+
+### Always Use Existing Components
+- Import from `@/components/ui/` - Button, Input, Label, Checkbox, Dialog, Select, Card, etc.
+- Follow the established pattern from [resources/js/components/ui/button.tsx](mdc:resources/js/components/ui/button.tsx):
+  ```tsx
+  import { Button } from '@/components/ui/button';
+  import { Input } from '@/components/ui/input';
+  import { Label } from '@/components/ui/label';
+  ```
+
+### Adding New Components from shadcn/ui
+If a required component doesn't exist in `@/components/ui/`:
+
+1. **Check Documentation**: Visit [shadcn/ui components](https://ui.shadcn.com/docs/components) to see available components
+2. **Install Component**: Use the shadcn CLI to add the component:
+   ```bash
+   npx shadcn@latest add button
+   npx shadcn@latest add dialog
+   npx shadcn@latest add form
+   npx shadcn@latest add select
+   npx shadcn@latest add card
+   ```
+3. **Automatic Setup**: The component will be automatically added to `resources/js/components/ui/`
+4. **Configuration**: Component styling is managed through [components.json](mdc:components.json)
+
+#### Available shadcn/ui Components
+Common components you can add:
+- **Layout**: `card`, `sheet`, `dialog`, `drawer`, `sidebar`
+- **Forms**: `form`, `input`, `select`, `checkbox`, `radio-group`, `switch`, `textarea`
+- **Navigation**: `tabs`, `breadcrumb`, `pagination`, `navigation-menu`
+- **Data Display**: `table`, `badge`, `avatar`, `separator`, `skeleton`
+- **Feedback**: `alert`, `toast`, `progress`, `spinner`
+- **Overlays**: `popover`, `tooltip`, `dropdown-menu`, `context-menu`
+- **Media**: `aspect-ratio`, `image`
+
+#### Example Usage After Installation
+```tsx
+// After running: npx shadcn@latest add dialog
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+
+function MyComponent() {
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button>Open Dialog</Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Dialog Title</DialogTitle>
+        </DialogHeader>
+        {/* Dialog content */}
+      </DialogContent>
+    </Dialog>
+  );
+}
+```
+
+### Component Patterns
+- Use `cn()` utility from `@/lib/utils` for conditional classes
+- Use `class-variance-authority` for component variants
+- Include proper TypeScript interfaces with `React.ComponentProps` and `VariantProps`
+- Add `data-slot` attributes for component identification
+- Use `asChild` prop pattern for component composition
+
+### Example Component Structure
+```tsx
+interface ComponentProps extends React.ComponentProps<"div"> {
+  variant?: "default" | "secondary";
+  size?: "sm" | "md" | "lg";
+}
+
+function Component({ className, variant, size, ...props }: ComponentProps) {
+  return (
+    <div
+      data-slot="component"
+      className={cn(componentVariants({ variant, size, className }))}
+      {...props}
+    />
+  );
+}
+```
+
+## Mobile-First Design Principles
+
+### Responsive Breakpoints
+- **Mobile First**: Start with mobile layout (320px-640px)
+- **Breakpoints**: `sm:` (640px+), `md:` (768px+), `lg:` (1024px+), `xl:` (1280px+), `2xl:` (1536px+)
+- **Pattern**: Mobile styles first, then scale up: `base-class md:desktop-class lg:large-class`
+
+### Touch-Friendly Design
+- **Minimum Tap Targets**: 44px minimum for interactive elements
+- **Touch Spacing**: Adequate spacing between interactive elements
+- **Gesture Support**: Consider swipe, pinch, and other mobile gestures
+- **Thumb-Friendly**: Place primary actions within thumb reach
+
+### Mobile Navigation Patterns
+- **Mobile**: Use Sheet/Drawer components for navigation
+- **Desktop**: Use Sidebar components for navigation
+- **Pattern**: `md:hidden` for mobile-only elements, `hidden md:block` for desktop-only
+
+## Responsive Layout Patterns
+
+### Flexbox Patterns
+```tsx
+// Stack vertically on mobile, horizontal on desktop
+<div className="flex flex-col gap-4 md:flex-row md:gap-6">
+  <div className="flex-1">Content 1</div>
+  <div className="flex-1">Content 2</div>
+</div>
+
+// Mobile-first spacing
+<div className="space-y-4 md:space-y-6 lg:space-y-8">
+  <div>Item 1</div>
+  <div>Item 2</div>
+</div>
+```
+
+### Grid Layouts
+```tsx
+// Responsive grid: 1 column → 2 columns → 3 columns
+<div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+  <div>Card 1</div>
+  <div>Card 2</div>
+  <div>Card 3</div>
+</div>
+
+// Auto-fit grid for dynamic content
+<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-[repeat(auto-fit,minmax(300px,1fr))]">
+  <div>Dynamic Card</div>
+</div>
+```
+
+### Button Patterns
+```tsx
+// Full-width on mobile, auto-width on desktop
+<Button className="w-full md:w-auto">
+  Action Button
+</Button>
+
+// Responsive button sizing
+<Button size="sm" className="md:size-default lg:size-lg">
+  Responsive Button
+</Button>
+```
+
+### Visibility Patterns
+```tsx
+// Show/hide based on screen size
+<div className="md:hidden">Mobile Only Content</div>
+<div className="hidden md:block">Desktop Only Content</div>
+
+// Responsive text sizing
+<h1 className="text-2xl md:text-3xl lg:text-4xl">
+  Responsive Heading
+</h1>
+```
+
+## Form Design Patterns
+
+### Mobile-Optimized Forms
+Follow the pattern from [resources/js/pages/auth/login.tsx](mdc:resources/js/pages/auth/login.tsx):
+
+```tsx
+<Form className="flex flex-col gap-6">
+  {({ processing, errors }) => (
+    <>
+      <div className="grid gap-6">
+        <div className="grid gap-2">
+          <Label htmlFor="email">Email address</Label>
+          <Input
+            id="email"
+            type="email"
+            name="email"
+            required
+            autoFocus
+            tabIndex={1}
+            autoComplete="email"
+            placeholder="email@example.com"
+            className="w-full"
+          />
+          <InputError message={errors.email} />
+        </div>
+        
+        <Button
+          type="submit"
+          className="mt-4 w-full md:w-auto"
+          disabled={processing}
+        >
+          {processing && <LoaderCircle className="h-4 w-4 animate-spin" />}
+          Submit
+        </Button>
+      </div>
+    </>
+  )}
+</Form>
+```
+
+### Form Best Practices
+- **Full-width inputs** on mobile: `className="w-full"`
+- **Proper label associations**: Use `htmlFor` and `id` attributes
+- **Error handling**: Use `InputError` component for validation messages
+- **Loading states**: Show `LoaderCircle` icon during form submission
+- **Accessibility**: Proper `tabIndex` management and `autoComplete` attributes
+- **Inertia.js integration**: Use `Form` component for server-side validation
+
+## Component Structure Reference
+
+### Page Component Pattern
+```tsx
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { LoaderCircle } from 'lucide-react';
+import { Form, Head } from '@inertiajs/react';
+
+interface PageProps {
+  // Define props interface
+}
+
+export default function Page({ ...props }: PageProps) {
+  return (
+    <Layout title="Page Title" description="Page description">
+      <Head title="Page Title" />
+      
+      <div className="container mx-auto px-4 py-6 md:px-6 lg:px-8">
+        <div className="max-w-md mx-auto md:max-w-lg lg:max-w-xl">
+          {/* Mobile-first content */}
+        </div>
+      </div>
+    </Layout>
+  );
+}
+```
+
+### Layout Integration
+- Use layout components from `@/layouts/`
+- Follow patterns from [resources/js/layouts/auth-layout.tsx](mdc:resources/js/layouts/auth-layout.tsx)
+- Implement responsive containers: `container mx-auto px-4 md:px-6 lg:px-8`
+- Use responsive max-widths: `max-w-md md:max-w-lg lg:max-w-xl`
+
+## Theme Integration
+
+### CSS Variables Usage
+Use semantic color tokens from [resources/css/app.css](mdc:resources/css/app.css):
+
+```tsx
+// Use semantic colors
+<div className="bg-background text-foreground">
+  <Button className="bg-primary text-primary-foreground">
+    Primary Action
+  </Button>
+  <div className="bg-muted text-muted-foreground">
+    Muted Content
+  </div>
+</div>
+```
+
+### Dark Mode Support
+- Use `.dark` class for dark mode styles
+- Leverage CSS variables that automatically switch between light/dark
+- Test both light and dark themes on mobile devices
+
+### New York Style Configuration
+Follow the configuration from [components.json](mdc:components.json):
+- Use `neutral` base color
+- Enable CSS variables
+- Use `lucide-react` for icons
+- Apply New York style variant
+
+## Accessibility Guidelines
+
+### Mobile Accessibility
+- **Screen Reader Support**: Use proper ARIA labels and roles
+- **Keyboard Navigation**: Ensure all interactive elements are keyboard accessible
+- **Focus Management**: Visible focus indicators for touch and keyboard users
+- **Color Contrast**: Maintain WCAG AA contrast ratios
+- **Text Scaling**: Support system font size preferences
+
+### Touch Accessibility
+- **Touch Targets**: Minimum 44px touch targets
+- **Gesture Alternatives**: Provide alternative ways to access functionality
+- **Orientation Support**: Support both portrait and landscape orientations
+- **Zoom Support**: Ensure content remains usable when zoomed
+
+## Performance Considerations
+
+### Mobile Performance
+- **Bundle Size**: Keep JavaScript bundles small for mobile networks
+- **Lazy Loading**: Use React.lazy() for code splitting
+- **Image Optimization**: Use responsive images with proper srcset
+- **Touch Events**: Optimize touch event handling
+- **Memory Management**: Clean up event listeners and subscriptions
+
+### Responsive Images
+```tsx
+<img
+  src="/image-mobile.jpg"
+  srcSet="/image-mobile.jpg 640w, /image-desktop.jpg 1024w"
+  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+  alt="Responsive image"
+  className="w-full h-auto"
+/>
+```
+
+## Common Patterns
+
+### Mobile Navigation
+```tsx
+// Mobile drawer navigation
+<Sheet>
+  <SheetTrigger asChild>
+    <Button variant="ghost" size="icon" className="md:hidden">
+      <Menu className="h-5 w-5" />
+    </Button>
+  </SheetTrigger>
+  <SheetContent side="left">
+    <nav className="flex flex-col space-y-4">
+      {/* Navigation items */}
+    </nav>
+  </SheetContent>
+</Sheet>
+```
+
+### Responsive Cards
+```tsx
+<Card className="w-full">
+  <CardHeader className="pb-3 md:pb-4">
+    <CardTitle className="text-lg md:text-xl">Card Title</CardTitle>
+  </CardHeader>
+  <CardContent className="space-y-4">
+    <p className="text-sm md:text-base">Card content</p>
+    <Button className="w-full md:w-auto">Action</Button>
+  </CardContent>
+</Card>
+```
+
+### Responsive Tables
+```tsx
+<div className="overflow-x-auto">
+  <table className="w-full min-w-[600px]">
+    <thead>
+      <tr>
+        <th className="text-left p-2 md:p-4">Header 1</th>
+        <th className="text-left p-2 md:p-4">Header 2</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td className="p-2 md:p-4">Cell 1</td>
+        <td className="p-2 md:p-4">Cell 2</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+```
