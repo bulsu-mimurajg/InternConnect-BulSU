@@ -16,18 +16,12 @@ return new class extends Migration
             $table->string('name');
             $table->dateTime('start_date');
             $table->dateTime('end_date');
-            $table->enum('status', ['active', 'completed', 'archived'])->default('active');
+            $table->enum('status', ['active', 'inactive', 'completed', 'archived'])->default('inactive');
             $table->timestamps();
 
             // Indexes for performance
             $table->index('status');
             $table->index(['start_date', 'end_date']);
-        });
-
-        // Add unique constraint to ensure only one active season at a time
-        // This will be enforced at the application level since MySQL doesn't support partial unique indexes
-        Schema::table('internship_seasons', function (Blueprint $table) {
-            $table->unique(['status'], 'unique_active_season')->where('status', 'active');
         });
     }
 

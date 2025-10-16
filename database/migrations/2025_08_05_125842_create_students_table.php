@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\InternshipSeason;
 use App\Models\User;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
@@ -29,6 +30,12 @@ return new class extends Migration
 
             // Add foreign key constraint
             $table->foreign('section_id')->references('section_id')->on('sections')->onDelete('cascade');
+            $table->foreignIdFor(InternshipSeason::class)->nullable()
+                ->constrained()
+                ->onDelete('set null');
+
+            $table->index('internship_season_id');
+            $table->index('section_id');
         });
     }
 
