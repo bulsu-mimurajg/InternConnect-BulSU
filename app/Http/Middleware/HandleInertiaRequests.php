@@ -42,7 +42,7 @@ class HandleInertiaRequests extends Middleware
 
         // Ensure CSRF token is always fresh
         $csrfToken = csrf_token();
-        
+
         // Log CSRF token for debugging (remove in production)
         if (config('app.debug')) {
             Log::info('CSRF Token generated for request', [

@@ -14,12 +14,12 @@ export function NavMain({ items = [], groups = [], role }: { items?: NavItem[]; 
     const { state } = useSidebar();
     const isMobile = useIsMobile();
     const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
-    
+
     // Get current URL safely
     const currentUrl = page.url || window.location.pathname;
     const isCollapsed = state === 'collapsed';
     const shouldShowTooltip = isCollapsed && !isMobile;
-    
+
     // Get role-based group label
     const getRoleLabel = (role?: string) => {
         switch (role) {
@@ -31,13 +31,11 @@ export function NavMain({ items = [], groups = [], role }: { items?: NavItem[]; 
                 return 'Adviser';
             case 'student':
                 return 'Student';
-            case 'guest':
-                return 'Guest';
             default:
                 return 'Main Menu';
         }
     };
-    
+
     // Memoize items and groups to prevent infinite re-renders
     const memoizedItems = useMemo(() => items, [JSON.stringify(items)]);
     const memoizedGroups = useMemo(() => groups, [JSON.stringify(groups)]);
@@ -45,14 +43,14 @@ export function NavMain({ items = [], groups = [], role }: { items?: NavItem[]; 
     // Initialize open sections based on current URL
     useEffect(() => {
         const newOpenSections: Record<string, boolean> = {};
-        
+
         // Handle single items array
         memoizedItems.forEach((item) => {
             if (item.subNav) {
                 newOpenSections[item.title] = currentUrl.startsWith(item.href);
             }
         });
-        
+
         // Handle grouped navigation
         memoizedGroups.forEach((group) => {
             group.items.forEach((item) => {
@@ -61,10 +59,10 @@ export function NavMain({ items = [], groups = [], role }: { items?: NavItem[]; 
                 }
             });
         });
-        
+
         setOpenSections(newOpenSections);
     }, [currentUrl, memoizedItems, memoizedGroups]);
-    
+
     // Toggle section open/close
     const toggleSection = (title: string, event: React.MouseEvent) => {
         event.preventDefault();
@@ -74,7 +72,7 @@ export function NavMain({ items = [], groups = [], role }: { items?: NavItem[]; 
             [title]: !prev[title]
         }));
     };
-    
+
     // Helper function to render navigation items
     const renderNavItems = (navItems: NavItem[]) => {
         return navItems.map((item) => (
@@ -116,8 +114,8 @@ export function NavMain({ items = [], groups = [], role }: { items?: NavItem[]; 
                         </TooltipProvider>
                     ) : (
                         // When expanded, show normal collapsible menu
-                        <Collapsible 
-                            open={openSections[item.title]} 
+                        <Collapsible
+                            open={openSections[item.title]}
                             onOpenChange={(open) => setOpenSections(prev => ({ ...prev, [item.title]: open }))}
                         >
                             <CollapsibleTrigger asChild>
@@ -142,8 +140,8 @@ export function NavMain({ items = [], groups = [], role }: { items?: NavItem[]; 
                                     <SidebarMenu>
                                         {item.subNav.map((subItem) => (
                                             <SidebarMenuItem key={subItem.title}>
-                                                <SidebarMenuButton 
-                                                    asChild 
+                                                <SidebarMenuButton
+                                                    asChild
                                                     isActive={currentUrl === subItem.href}
                                                     className="h-8 text-sm font-normal hover:bg-sidebar-accent/50"
                                                 >
@@ -169,7 +167,7 @@ export function NavMain({ items = [], groups = [], role }: { items?: NavItem[]; 
             </SidebarMenuItem>
         ));
     };
-    
+
     // If we have groups, render them with separate group labels
     if (groups.length > 0) {
         return (
@@ -185,7 +183,7 @@ export function NavMain({ items = [], groups = [], role }: { items?: NavItem[]; 
             </>
         );
     }
-    
+
     // Otherwise, render single group with role-based label
     return (
         <SidebarGroup className="px-2 py-0">

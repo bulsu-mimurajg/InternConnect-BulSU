@@ -2,19 +2,24 @@ import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
-import { type NavItem, type NavGroup, type SharedData } from '@/types';
+import { type NavGroup, type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
 import {
-    InfoIcon,
-    PrinterIcon,
-    UsersIcon,
-    PlusIcon,
-    CalendarIcon,
-    Check,
-    ChartNoAxesColumnIcon,
     BriefcaseBusinessIcon,
+    CalendarIcon,
+    ChartNoAxesColumnIcon,
+    Check,
+    GavelIcon,
     GraduationCapIcon,
-    NotepadTextIcon, UserRoundIcon, MonitorCogIcon, GavelIcon, StepBackIcon, SquareLibraryIcon
+    InfoIcon,
+    MonitorCogIcon,
+    NotepadTextIcon,
+    PlusIcon,
+    PrinterIcon,
+    SquareLibraryIcon,
+    StepBackIcon,
+    UserRoundIcon,
+    UsersIcon,
 } from 'lucide-react';
 import AppLogo from './app-logo';
 
@@ -23,12 +28,12 @@ const roleBasedNav: Record<string, { main: NavItem[]; groups?: NavGroup[]; foote
         main: [],
         groups: [
             {
-                'title': 'Overview & Analytics',
-                'items': [
+                title: 'Overview & Analytics',
+                items: [
                     { title: 'Dashboard', href: '/admin/dashboard', icon: ChartNoAxesColumnIcon },
                     { title: 'Audit Logs', href: '/admin/logs', icon: MonitorCogIcon },
                     { title: 'Reports', href: '/reports', icon: PrinterIcon },
-                ]
+                ],
             },
             {
                 title: 'Student Management',
@@ -54,24 +59,22 @@ const roleBasedNav: Record<string, { main: NavItem[]; groups?: NavGroup[]; foote
                         href: '/form',
                         icon: NotepadTextIcon,
                         subNav: [
-                            { title: 'Additional Info Tab', href: '/forms/additional-info'},
-                            { title: 'Student Assessment', href: '/forms/assessment'},
+                            { title: 'Additional Info Tab', href: '/forms/additional-info' },
+                            { title: 'Student Assessment', href: '/forms/assessment' },
                         ],
                     },
-                ]
+                ],
             },
             {
                 title: 'Partner Management',
                 items: [
                     { title: 'HTE', href: '/hte', icon: BriefcaseBusinessIcon },
                     { title: 'Adviser', href: '/adviser', icon: GavelIcon },
-                ]
+                ],
             },
             {
                 title: 'Events',
-                items: [
-                    { title: 'Events', href: '/admin/events', icon: CalendarIcon },
-                ]
+                items: [{ title: 'Events', href: '/admin/events', icon: CalendarIcon }],
             },
         ],
         footer: [
@@ -87,27 +90,25 @@ const roleBasedNav: Record<string, { main: NavItem[]; groups?: NavGroup[]; foote
                 items: [
                     { title: 'Dashboard', href: '/hte/dashboard', icon: ChartNoAxesColumnIcon },
                     { title: 'Reports', href: '/reports', icon: PrinterIcon },
-                ]
+                ],
             },
             {
                 title: 'Internship Management',
                 items: [
                     { title: 'Assessment Form', href: '/form', icon: NotepadTextIcon },
                     { title: 'Add Internship', href: '/hte/add-internship', icon: PlusIcon },
-                ]
+                ],
             },
             {
                 title: 'Student Management',
                 items: [
                     { title: 'Endorsements', href: '/hte/endorsement-table', icon: Check },
                     { title: 'Placed Students', href: '/hte/placed-students', icon: UsersIcon },
-                ]
+                ],
             },
             {
                 title: 'Profile',
-                items: [
-                    { title: 'Profile', href: '/hte/profile', icon: UserRoundIcon },
-                ]
+                items: [{ title: 'Profile', href: '/hte/profile', icon: UserRoundIcon }],
             },
         ],
         footer: [
@@ -138,20 +139,14 @@ const roleBasedNav: Record<string, { main: NavItem[]; groups?: NavGroup[]; foote
             { title: 'Contact', href: '/contact', icon: StepBackIcon },
         ],
     },
-    guest: {
-        main: [],
-        footer: [],
-    },
 };
 
 export function AppSidebar() {
     const { auth } = usePage<SharedData>().props;
 
-    const role = auth.role ?? 'guest';
-    const baseNav = roleBasedNav[role] ?? roleBasedNav['guest'];
-
+    const role = auth.role;
     // Use the base navigation without dynamic changes
-    const nav = baseNav;
+    const nav = roleBasedNav[role];
 
     return (
         <Sidebar collapsible="icon" variant="inset">
