@@ -18,6 +18,14 @@ test('registration screen can be rendered', function () {
 test('new users can register', function () {
 //    $this->withoutExceptionHandling();
 
+    // Create an active internship season
+    InternshipSeason::create([
+        'name' => 'Test Season 2024',
+        'start_date' => now()->subDays(30),
+        'end_date' => now()->addDays(30),
+        'status' => 'active'
+    ]);
+
     // Create a section for the test
     $section = Section::create([
         'section_name' => 'BSIT-1A',
@@ -25,10 +33,15 @@ test('new users can register', function () {
     ]);
 
     $response = $this->post('/register', [
+        'first_name' => 'John',
+        'last_name' => 'Doe',
+        'middle_name' => 'M',
         'username' => '2022100123',
         'email' => 'test@example.com',
         'password' => '@Pass123',
         'password_confirmation' => '@Pass123',
+        'contact_number' => '09123456789',
+        'specialization' => 'BA',
         'section_id' => $section->section_id,
     ]);
 
@@ -74,11 +87,24 @@ test('new users can register', function () {
 //});
 
 test('registration requires valid section_id', function () {
+    // Create an active internship season
+    InternshipSeason::create([
+        'name' => 'Test Season 2024',
+        'start_date' => now()->subDays(30),
+        'end_date' => now()->addDays(30),
+        'status' => 'active'
+    ]);
+
     $response = $this->post('/register', [
+        'first_name' => 'John',
+        'last_name' => 'Doe',
+        'middle_name' => 'M',
         'username' => '2022100123',
         'email' => 'test@example.com',
         'password' => '@Pass123',
         'password_confirmation' => '@Pass123',
+        'contact_number' => '09123456789',
+        'specialization' => 'BA',
         'section_id' => 999, // Non-existent section
     ]);
 
@@ -102,8 +128,9 @@ test('registration screen shows closed message when no active season', function 
     $response->assertStatus(200);
     $response->assertInertia(fn ($page) => 
         $page->component('auth/register')
-            ->has('hasActiveSeason', false)
-            ->has('message')
+            ->where('hasActiveSeason', false)
+            ->where('activeSeason', null)
+            ->where('message', 'Registration is currently closed. No active internship season is available.')
     );
 });
 
@@ -149,10 +176,15 @@ test('registration works when active season exists', function () {
     ]);
 
     $response = $this->post('/register', [
+        'first_name' => 'John',
+        'last_name' => 'Doe',
+        'middle_name' => 'M',
         'username' => '2022100123',
         'email' => 'test@example.com',
         'password' => '@Pass123',
         'password_confirmation' => '@Pass123',
+        'contact_number' => '09123456789',
+        'specialization' => 'BA',
         'section_id' => $section->section_id,
     ]);
 
@@ -174,8 +206,8 @@ test('registration screen shows active season info when season exists', function
     $response->assertStatus(200);
     $response->assertInertia(fn ($page) => 
         $page->component('auth/register')
-            ->has('hasActiveSeason', true)
-            ->has('activeSeason')
+            ->where('hasActiveSeason', true)
             ->where('activeSeason.name', $season->name)
+            ->where('message', null)
     );
 });

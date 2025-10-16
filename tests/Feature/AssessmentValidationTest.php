@@ -21,6 +21,24 @@ class AssessmentValidationTest extends TestCase
         // Seed roles and permissions
         $this->seed(RolePermissionSeeder::class);
         
+        // Create an active internship season
+        $season = \App\Models\InternshipSeason::create([
+            'name' => 'Test Season 2024',
+            'start_date' => now()->subDays(30),
+            'end_date' => now()->addDays(30),
+            'status' => 'active'
+        ]);
+        
+        // Create an active deadline for student assessment form
+        \App\Models\Deadline::create([
+            'title' => 'Student Assessment Form Deadline',
+            'category' => 'student_assessment_form',
+            'start_date' => now()->subDays(1),
+            'end_date' => now()->addDays(30),
+            'status' => 'active',
+            'internship_season_id' => $season->id
+        ]);
+        
         // Create a user and student
         $user = User::factory()->create();
         $user->assignRole('student');
@@ -137,6 +155,24 @@ class AssessmentValidationTest extends TestCase
     {
         // Seed roles and permissions
         $this->seed(RolePermissionSeeder::class);
+        
+        // Create an active internship season
+        $season = \App\Models\InternshipSeason::create([
+            'name' => 'Test Season 2024',
+            'start_date' => now()->subDays(30),
+            'end_date' => now()->addDays(30),
+            'status' => 'active'
+        ]);
+        
+        // Create an active deadline for student assessment form
+        \App\Models\Deadline::create([
+            'title' => 'Student Assessment Form Deadline',
+            'category' => 'student_assessment_form',
+            'start_date' => now()->subDays(1),
+            'end_date' => now()->addDays(30),
+            'status' => 'active',
+            'internship_season_id' => $season->id
+        ]);
         
         // Create a user and student
         $user = User::factory()->create();

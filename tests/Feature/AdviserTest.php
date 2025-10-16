@@ -62,21 +62,39 @@ test('adviser can view students page', function () {
     $adviser = User::factory()->create();
     $adviser->assignRole('adviser');
     
-    // Assign adviser to section
-    Adviser::create([
+    // Create adviser record
+    $adviserRecord = Adviser::create([
         'user_id' => $adviser->id,
-        'section_id' => $section->section_id,
         'adviser_fname' => 'Test',
         'adviser_lname' => 'Adviser',
         'is_active' => true,
     ]);
+    
+    // Assign adviser to section using pivot table
+    $adviserRecord->sections()->attach($section->section_id);
 
     // Create students in same section
     $students = User::factory()->student()->count(2)->create();
     foreach ($students as $student) {
+        $student->update(['status' => 'verified']);
         AcademeAccount::create([
             'user_id' => $student->id,
             'section_id' => $section->section_id,
+        ]);
+        
+        // Create Student record
+        Student::create([
+            'user_id' => $student->id,
+            'student_number' => $student->username,
+            'first_name' => 'Test',
+            'last_name' => 'Student',
+            'middle_name' => '',
+            'phone' => '',
+            'section_id' => $section->section_id,
+            'specialization' => '',
+            'address' => '',
+            'birth_date' => now()->format('Y-m-d'),
+            'is_submit' => false,
         ]);
     }
 
@@ -101,18 +119,21 @@ test('adviser can view application page', function () {
     $adviser = User::factory()->create();
     $adviser->assignRole('adviser');
     
-    // Assign adviser to section
-    Adviser::create([
+    // Create adviser record
+    $adviserRecord = Adviser::create([
         'user_id' => $adviser->id,
-        'section_id' => $section->section_id,
         'adviser_fname' => 'Test',
         'adviser_lname' => 'Adviser',
         'is_active' => true,
     ]);
+    
+    // Assign adviser to section using pivot table
+    $adviserRecord->sections()->attach($section->section_id);
 
     // Create students in same section
     $students = User::factory()->student()->count(3)->create();
     foreach ($students as $student) {
+        $student->update(['status' => 'unverified']);
         AcademeAccount::create([
             'user_id' => $student->id,
             'section_id' => $section->section_id,
@@ -279,12 +300,12 @@ test('adviser can remove student access', function () {
     $response->assertRedirect();
     $response->assertSessionHas('success');
     
-    // Check that students no longer have student role and status is unverified
+    // Check that students have status set to unverified (but keep role and student record)
     foreach ($students as $student) {
         $student->refresh();
-        $this->assertFalse($student->hasRole('student'));
+        $this->assertTrue($student->hasRole('student'));
         $this->assertEquals('unverified', $student->status);
-        $this->assertDatabaseMissing('students', ['user_id' => $student->id]);
+        $this->assertDatabaseHas('students', ['user_id' => $student->id]);
     }
 });
 
@@ -417,14 +438,30 @@ test('adviser can undo remove access action', function () {
         'is_active' => true,
     ]);
 
-    // Create students without student role and unverified status
-    $students = User::factory()->count(2)->create(['status' => 'unverified']);
+    // Create students with student role and unverified status (simulating after remove access)
+    $students = User::factory()->student()->count(2)->create(['status' => 'unverified']);
     $studentIds = [];
     foreach ($students as $student) {
         AcademeAccount::create([
             'user_id' => $student->id,
             'section_id' => $section->section_id,
         ]);
+        
+        // Create student record (since remove access doesn't delete it)
+        Student::create([
+            'user_id' => $student->id,
+            'student_number' => $student->username,
+            'first_name' => 'Test',
+            'last_name' => 'Student',
+            'middle_name' => '',
+            'phone' => '',
+            'section_id' => $section->section_id,
+            'specialization' => '',
+            'address' => '',
+            'birth_date' => now()->format('Y-m-d'),
+            'is_submit' => false,
+        ]);
+        
         $studentIds[] = $student->id;
     }
 
