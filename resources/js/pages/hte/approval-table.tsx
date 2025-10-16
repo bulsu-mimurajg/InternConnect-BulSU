@@ -73,7 +73,7 @@ export default function ApprovalTable({ internships, selectedInternshipId, stude
             } else {
                 toast.error(data.error || 'Failed to approve student');
             }
-        } catch (error) {
+        } catch {
             toast.error('An error occurred while approving the student');
         } finally {
             setLoading(prev => ({ ...prev, [student.id]: false }));
@@ -106,7 +106,7 @@ export default function ApprovalTable({ internships, selectedInternshipId, stude
             } else {
                 toast.error(data.error || 'Failed to reject student');
             }
-        } catch (error) {
+        } catch {
             toast.error('An error occurred while rejecting the student');
         } finally {
             setLoading(prev => ({ ...prev, [student.id]: false }));

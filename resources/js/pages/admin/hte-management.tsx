@@ -88,7 +88,12 @@ interface Props {
         restrictions: Array<{
             type: string;
             message: string;
-            deadline: any;
+            deadline: {
+                id: number;
+                title: string;
+                category: string;
+                end_date: string;
+            };
             affected_functionality: string[];
         }>;
     };

@@ -457,7 +457,7 @@ export default function Criteria({
                                     try {
                                         const parsed = JSON.parse(e.target.value);
                                         field.onChange(parsed);
-                                    } catch (error) {
+                                    } catch {
                                         // Handle parsing error silently
                                     }
                                 }}
@@ -664,7 +664,6 @@ export default function Criteria({
                                         {category.subCategories.map((subcategory) => {
                                             const isQuestionsExpanded = expandedQuestions.has(subcategory.id);
                                             const subcategoryWeight = subcategoryWeights[subcategory.id] || 0;
-                                            const questionCount = subcategory.questions ? subcategory.questions.length : 0;
 
                                             const isUnset = (subcategoryWeight === 0 || subcategoryWeight === undefined || subcategoryWeight === null) && !lockedSubcategories.has(subcategory.id);
 

@@ -52,7 +52,6 @@ function SelectContent({
 }: React.ComponentProps<typeof SelectPrimitive.Content>) {
   // Aggressive prevention of all Radix body modifications
   React.useEffect(() => {
-    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth
     const originalBodyStyles = {
       overflow: document.body.style.overflow,
       overflowY: document.body.style.overflowY,

@@ -17,10 +17,6 @@ import {
     ClockIcon,
     SearchIcon,
     FilterIcon,
-    Building2,
-    Briefcase,
-    GraduationCap,
-    Star,
     AlertCircle
 } from 'lucide-react';
 
@@ -79,7 +75,6 @@ export default function PlacedStudents({
     section_options = [], 
     internship_options = [], 
     filters,
-    hteId,
     showSubmissionPrompt
 }: Props) {
     const [localFilters, setLocalFilters] = useState({

@@ -114,7 +114,7 @@ export default function Summary() {
         };
 
         fetchSections();
-    }, []);
+    }, [additionalInfos]);
 
     const renderPersonalInfo = (section: PersonalSection) => (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

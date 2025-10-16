@@ -15,9 +15,6 @@ import {
     TrendingUpIcon,
     BriefcaseIcon,
     AlertCircle,
-    BarChart3Icon,
-    UserCheckIcon,
-    GlobeIcon
 } from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [

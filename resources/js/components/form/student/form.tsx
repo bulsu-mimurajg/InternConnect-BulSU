@@ -7,11 +7,11 @@ import LanguageProficiency from '@/components/form/student/language-proficiency'
 import { Button } from '@/components/ui/button';
 import { Form } from '@/components/ui/form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Path, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { router, usePage } from '@inertiajs/react';
-import { FormFieldsProvider, useFormFields } from '@/contexts/FormFieldsContext';
+import { FormFieldsProvider } from '@/contexts/FormFieldsContext';
 
 interface AdditionalInfo {
     id: number;
@@ -67,28 +67,28 @@ export default function StudentForm() {
         { id: 'Step 5', name: 'Submission' },
     ], [additionalInfoFields, dynamicFields]);
     // Create dynamic validation schema
-    const createFormSchema = () => {
+    const createFormSchema = useCallback(() => {
 
         // Add additional info fields to validation schema
-        const additionalInfoSchema: Record<string, any> = {};
+        const additionalInfoSchema: Record<string, z.ZodTypeAny> = {};
         additionalInfoFields.forEach(field => {
             additionalInfoSchema[field] = z.string().optional().refine(val => val && val.trim() !== '', 'Question is required.');
         });
 
         // Add dynamic fields for language proficiency
-        const languageSchema: Record<string, any> = {};
+        const languageSchema: Record<string, z.ZodTypeAny> = {};
         dynamicFields.languageProficiency.forEach(field => {
             languageSchema[field] = z.string().min(1, 'Please select a rating.');
         });
 
         // Add dynamic fields for technical skills
-        const technicalSchema: Record<string, any> = {};
+        const technicalSchema: Record<string, z.ZodTypeAny> = {};
         dynamicFields.technicalSkills.forEach(field => {
             technicalSchema[field] = z.string().min(1, 'Please select a rating.');
         });
 
         // Add dynamic fields for soft skills
-        const softSchema: Record<string, any> = {};
+        const softSchema: Record<string, z.ZodTypeAny> = {};
         dynamicFields.softSkills.forEach(field => {
             softSchema[field] = z.string().min(1, 'Please select a rating.');
         });
@@ -107,12 +107,12 @@ export default function StudentForm() {
         }
 
         return z.object(schemaFields);
-    };
+    }, [additionalInfoFields, dynamicFields]);
 
-    const FormSchema = useMemo(() => createFormSchema(), [dynamicFields, additionalInfoFields]);
+    const FormSchema = useMemo(() => createFormSchema(), [createFormSchema]);
 
     // Create default values object
-    const createDefaultValues = () => {
+    const createDefaultValues = useCallback(() => {
         const defaultValues: Record<string, string> = {};
         
         // Initialize additional info fields
@@ -136,9 +136,9 @@ export default function StudentForm() {
         });
         
         return defaultValues;
-    };
+    }, [additionalInfoFields, dynamicFields]);
 
-    const defaultValues = useMemo(() => createDefaultValues(), [dynamicFields, additionalInfoFields]);
+    const defaultValues = useMemo(() => createDefaultValues(), [createDefaultValues]);
 
     const form = useForm<z.infer<typeof FormSchema>>({
         resolver: zodResolver(FormSchema),
@@ -162,7 +162,7 @@ export default function StudentForm() {
         if (Object.keys(newFields).length > 0) {
             // Use setValue to add new fields without resetting existing ones
             Object.entries(newFields).forEach(([key, value]) => {
-                form.setValue(key as any, value);
+                form.setValue(key as Path<z.infer<typeof FormSchema>>, value);
             });
         }
     }, [dynamicFields, defaultValues, form]);
@@ -193,8 +193,8 @@ export default function StudentForm() {
             delete cleanValues.dummy;
         }
         
-        router.post('/assessment', cleanValues as Record<string, any>, {
-            onSuccess: (page) => {
+        router.post('/assessment', cleanValues as Record<string, string>, {
+            onSuccess: () => {
                 setIsSubmitting(false);
             },
             onError: (errors) => {

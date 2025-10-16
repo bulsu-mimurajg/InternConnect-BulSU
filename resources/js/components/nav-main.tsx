@@ -37,8 +37,8 @@ export function NavMain({ items = [], groups = [], role }: { items?: NavItem[]; 
     };
 
     // Memoize items and groups to prevent infinite re-renders
-    const memoizedItems = useMemo(() => items, [JSON.stringify(items)]);
-    const memoizedGroups = useMemo(() => groups, [JSON.stringify(groups)]);
+    const memoizedItems = useMemo(() => items, [items]);
+    const memoizedGroups = useMemo(() => groups, [groups]);
 
     // Initialize open sections based on current URL
     useEffect(() => {

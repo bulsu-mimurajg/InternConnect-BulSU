@@ -3,7 +3,6 @@ import AppLayout from '@/layouts/app-layout';
 import ReportGenerator from '@/components/reports/ReportGenerator';
 import { type BreadcrumbItem } from '@/types';
 import { useState } from 'react';
-import { router } from '@inertiajs/react';
 
 interface Section {
     section_id: number;

@@ -21,7 +21,6 @@ import { useState, useMemo, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { SubmissionPrompt } from '@/components/hte/submission-prompt';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -161,6 +160,13 @@ export default function HTEProfilePage() {
         }
     }, [hte?.internships, selectedInternshipId, internshipIdFromUrl]);
 
+    // Auto-select first internship when filtered internships change
+    useEffect(() => {
+        if (filteredInternships.length > 0 && !selectedInternshipId) {
+            setSelectedInternshipId(filteredInternships[0].id.toString());
+        }
+    }, [filteredInternships, selectedInternshipId]);
+
     // Add defensive programming to handle missing data
     if (!hte) {
         return (
@@ -207,13 +213,6 @@ export default function HTEProfilePage() {
         setSelectedStatus(value);
         setSelectedInternshipId(''); // Reset internship selection
     };
-
-    // Auto-select first internship when filtered internships change
-    useEffect(() => {
-        if (filteredInternships.length > 0 && !selectedInternshipId) {
-            setSelectedInternshipId(filteredInternships[0].id.toString());
-        }
-    }, [filteredInternships, selectedInternshipId]);
 
     // Handle internship status toggle
     const handleToggleStatus = (internshipId: number) => {

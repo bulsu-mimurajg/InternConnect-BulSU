@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { RadarChart } from '@/components/charts/radar-chart';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/react';
@@ -87,12 +86,6 @@ export default function Profile({ student, categories, additional_info = [], has
     const languageCategory = categories.find(cat => cat.name === 'Language Proficiency');
     const technicalCategory = categories.find(cat => cat.name === 'Technical Skill');
     const softCategory = categories.find(cat => cat.name === 'Soft Skill');
-
-    const getScoreColor = (score: number) => {
-        if (score >= 4) return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
-        if (score >= 3) return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
-        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
-    };
 
     const renderBasicInformation = () => (
         <div className="space-y-6">

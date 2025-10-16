@@ -1,4 +1,3 @@
-import { Button } from '@/components/ui/button';
 import { useFormContext } from 'react-hook-form';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -14,11 +13,10 @@ interface Category {
 }
 
 type Props = {
-    isSubmitting: boolean;
     categories?: Category[];
 };
 
-export default function ReviewAndSubmit({ isSubmitting, categories = [] }: Props) {
+export default function ReviewAndSubmit({ categories = [] }: Props) {
     const { watch } = useFormContext();
     const formData = watch();
 

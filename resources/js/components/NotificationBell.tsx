@@ -1,9 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { Pagination } from '@/components/ui/pagination';
-import { usePagination } from '@/hooks/usePagination';
 import {
     BellIcon,
     CheckIcon,
@@ -117,7 +115,7 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
         }
 
         // Try to get from window object (Laravel sometimes puts it there)
-        const windowToken = (window as any).Laravel?.csrfToken;
+        const windowToken = (window as { Laravel?: { csrfToken?: string } }).Laravel?.csrfToken;
         if (windowToken) {
             return windowToken;
         }
@@ -132,7 +130,7 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
         return '';
     };
 
-    const fetchNotifications = async (page = pagination.current_page, filterToUse = filter, showReadToUse = showRead) => {
+    const fetchNotifications = useCallback(async (page = pagination.current_page, filterToUse = filter, showReadToUse = showRead) => {
         setIsLoading(true);
         try {
             const params = new URLSearchParams({
@@ -213,7 +211,7 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [lastLocalUpdate, showRead, filter, pagination]);
 
     const markAsRead = async (notificationId: number): Promise<boolean> => {
         try {
@@ -686,14 +684,14 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
         // Poll for new notifications every 30 seconds
         const interval = setInterval(() => fetchNotifications(1, filter, showRead), 30000);
         return () => clearInterval(interval);
-    }, []);
+    }, [fetchNotifications, filter, showRead]);
 
     // Refresh notifications when the dropdown is opened
     useEffect(() => {
         if (isOpen) {
             fetchNotifications(1, filter, showRead);
         }
-    }, [isOpen]);
+    }, [isOpen, fetchNotifications, filter, showRead]);
 
     // Reset filter to 'all' when component mounts to ensure it's valid for user's role
     useEffect(() => {
@@ -701,14 +699,14 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
         if (!validFilters.includes(filter)) {
             setFilter('all');
         }
-    }, []);
+    }, [filter, getFilterButtons]);
 
     // Refetch notifications when filter or showRead changes
     useEffect(() => {
         if (isOpen) {
             fetchNotifications(1, filter, showRead);
         }
-    }, [filter, showRead]);
+    }, [filter, showRead, isOpen, fetchNotifications]);
 
     const formatTimeAgo = (dateString: string) => {
         const date = new Date(dateString);
@@ -754,7 +752,7 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
         }
     };
 
-    const getFilterButtons = (): FilterButton[] => {
+    const getFilterButtons = useCallback((): FilterButton[] => {
         // Helper function to check if user has a specific role
         const hasRole = (roleName: string): boolean => {
             return auth.user?.roles?.some((role: UserRole) => role.name === roleName) || false;
@@ -794,7 +792,7 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
         return [
             { key: 'all', label: 'All' }
         ];
-    };
+    }, [auth.user?.roles]);
 
     return (
         <div className="relative">

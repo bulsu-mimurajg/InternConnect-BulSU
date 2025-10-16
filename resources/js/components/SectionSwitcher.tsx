@@ -1,8 +1,6 @@
-import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { router } from '@inertiajs/react';
 import { useState } from 'react';
-import { ChevronDownIcon } from 'lucide-react';
 
 interface Section {
     section_id: number;

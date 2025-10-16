@@ -8,8 +8,8 @@ import AppLayout from '@/layouts/app-layout';
 import SectionSwitcher from '@/components/SectionSwitcher';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router } from '@inertiajs/react';
-import { useState, useEffect } from 'react';
-import { CheckIcon, XIcon, UsersIcon, UserCheckIcon, RotateCcwIcon, UserXIcon, ClockIcon } from 'lucide-react';
+import { useState } from 'react';
+import { CheckIcon, UsersIcon, UserCheckIcon, RotateCcwIcon, UserXIcon, ClockIcon } from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -67,7 +67,7 @@ interface Props {
     deadlineInfo: DeadlineInfo | null;
 }
 
-export default function Application({ pendingStudents, verifiedStudents, rejectedStudents, adviserSection, adviserSections, currentSectionId, hasArchivedSections = false, archivedSectionNames = [], deadlineActive, deadlineInfo }: Props) {
+export default function Application({ pendingStudents, verifiedStudents, rejectedStudents, adviserSection, adviserSections, currentSectionId, hasArchivedSections = false, archivedSectionNames = [], deadlineActive }: Props) {
     const [selectedStudents, setSelectedStudents] = useState<number[]>([]);
     const [selectedVerifiedStudents, setSelectedVerifiedStudents] = useState<number[]>([]);
     const [selectedRejectedStudents, setSelectedRejectedStudents] = useState<number[]>([]);
@@ -221,10 +221,6 @@ export default function Application({ pendingStudents, verifiedStudents, rejecte
         setLastAction(null);
     };
 
-    const closeUndoDialog = () => {
-        setShowUndoDialog(false);
-        setLastAction(null);
-    };
 
     if (!adviserSection) {
         return (
@@ -578,7 +574,7 @@ export default function Application({ pendingStudents, verifiedStudents, rejecte
                                                     </p>
                                                 )}
                                                 <p className="text-xs text-red-600">
-                                                    Rejected: {(student as any).rejected_at || 'Unknown'}
+                                                    Rejected: {(student as Student & { rejected_at?: string }).rejected_at || 'Unknown'}
                                                 </p>
                                             </div>
                                         </div>

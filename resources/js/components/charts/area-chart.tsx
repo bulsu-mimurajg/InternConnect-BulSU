@@ -1,7 +1,11 @@
 import { AreaChart as RechartsAreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
+interface ChartData {
+  [key: string]: string | number;
+}
+
 interface AreaChartProps {
-  data: any[];
+  data: ChartData[];
   dataKey: string;
   xAxisKey: string;
   color?: string;
@@ -17,13 +21,12 @@ export function AreaChart({
   dataKey, 
   xAxisKey, 
   color = '#3b82f6', 
-  height = 300,
   showGrid = true,
   showTooltip = true,
   title,
   description
 }: AreaChartProps) {
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: Array<{ name: string; value: number }>; label?: string }) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-card border border-border p-4 rounded-xl shadow-lg backdrop-blur-sm text-center">

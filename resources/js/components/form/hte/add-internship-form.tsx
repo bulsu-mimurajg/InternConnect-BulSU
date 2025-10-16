@@ -206,25 +206,6 @@ export default function AddInternshipForm() {
         });
     };
 
-    // Get tooltip message for disabled next button
-    const getNextButtonTooltip = () => {
-        if (currentStep === 1 && !areAllCategoriesValid()) {
-            return "Incomplete weights for some category";
-        }
-        return "";
-    };
-
-    // Check if next button should be disabled
-    const isNextButtonDisabled = () => {
-        if (currentStep === steps.length - 1) {
-            return true;
-        }
-        if (currentStep === 1 && !areAllCategoriesValid()) {
-            return true;
-        }
-        return false;
-    };
-
 
     return (
         <>

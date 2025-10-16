@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { BatchActions, BatchActionPresets } from '@/components/ui/batch-actions';
-import { CheckCircle, XCircle, User, GraduationCap, Star, Building2, Briefcase, Target, AlertTriangle, Info, AlertCircle, FilterIcon } from 'lucide-react';
+import { CheckCircle, XCircle, User, GraduationCap, AlertCircle, FilterIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { Pagination } from '@/components/ui/pagination';
 import { usePagination } from '@/hooks/usePagination';
@@ -49,7 +49,7 @@ interface Props {
     csrf_token?: string;
 }
 
-export default function EndorsementTable({ endorsements = [], internships = [], hteId, showSubmissionPrompt, csrf_token }: Props) {
+export default function EndorsementTable({ endorsements = [], internships = [], showSubmissionPrompt, csrf_token }: Props) {
     const [selectedInternship, setSelectedInternship] = useState<string>('all');
     const [loading, setLoading] = useState<Record<number, boolean>>({});
     const [selectedEndorsements, setSelectedEndorsements] = useState<Set<number>>(new Set());

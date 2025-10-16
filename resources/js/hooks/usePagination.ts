@@ -4,7 +4,7 @@ interface UsePaginationProps<T> {
   data: T[];
   itemsPerPage?: number;
   initialPage?: number;
-  resetTrigger?: any; // Trigger to reset pagination (e.g., when filters change)
+  resetTrigger?: unknown; // Trigger to reset pagination (e.g., when filters change)
 }
 
 interface UsePaginationReturn<T> {

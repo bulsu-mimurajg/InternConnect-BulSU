@@ -78,10 +78,6 @@ export default function StudentList({ students, unverifiedUsers = [], archivedSt
         assessment: filters.assessment || 'all',
     });
 
-    // Use section options from backend
-    const availableSections = section_options.length > 0 
-        ? section_options.map(s => s.name)
-        : [];
     const handleEdit = (studentId: number | string) => {
         router.get(`/student/${studentId}/edit`);
     };

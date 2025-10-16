@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Head, useForm, usePage, router } from '@inertiajs/react';
+import { Head, useForm, usePage } from '@inertiajs/react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Pagination } from '@/components/ui/pagination';
 import { usePagination } from '@/hooks/usePagination';
 import { getRowNumber } from '@/lib/pagination-utils';
-import { FileTextIcon, PlusIcon, EditIcon, ArchiveIcon, RotateCcwIcon, SearchIcon, FilterIcon, ArrowUpDownIcon, ChevronDown, ChevronUp, Archive, Eye } from 'lucide-react';
+import { FileTextIcon, PlusIcon, EditIcon, ArchiveIcon, RotateCcwIcon, SearchIcon, FilterIcon, ArrowUpDownIcon, Archive, Eye } from 'lucide-react';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type Question, type Category, type SubCategory } from '@/types';
 
@@ -56,7 +56,12 @@ interface FormsPageProps {
         restrictions: Array<{
             type: string;
             message: string;
-            deadline: any;
+            deadline: {
+                id: number;
+                title: string;
+                category: string;
+                end_date: string;
+            };
             affected_functionality: string[];
         }>;
     };

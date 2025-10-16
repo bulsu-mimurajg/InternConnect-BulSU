@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Head, router } from '@inertiajs/react';
 import AdminLayout from '@/layouts/admin/layout';
-import Heading from '@/components/heading';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,21 +11,10 @@ import { Pagination } from '@/components/ui/pagination';
 import { usePagination } from '@/hooks/usePagination';
 import { getRowNumber } from '@/lib/pagination-utils';
 import { 
-    UserIcon, 
-    CheckCircleIcon,
-    XCircleIcon,
-    ClockIcon,
     SearchIcon,
     FilterIcon,
-    Building2,
-    Briefcase,
-    GraduationCap,
-    Star,
-    AlertCircle,
-    CheckCircle2,
     UsersIcon,
     TargetIcon,
-    InfoIcon,
     ArrowUpDownIcon,
 } from 'lucide-react';
 import type { BreadcrumbItem } from '@/types';
@@ -179,18 +167,6 @@ export default function StudentEndorsed({
             case 'pending':
             default:
                 return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
-        }
-    };
-
-    const getPlacementStatusIcon = (status: string) => {
-        switch (status) {
-            case 'approved':
-                return <CheckCircle2 className="h-4 w-4" />;
-            case 'rejected':
-                return <XCircleIcon className="h-4 w-4" />;
-            case 'pending':
-            default:
-                return <ClockIcon className="h-4 w-4" />;
         }
     };
 

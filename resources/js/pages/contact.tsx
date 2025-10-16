@@ -1,7 +1,7 @@
 import { type SharedData } from '@/types';
 import { Head, Link, usePage } from '@inertiajs/react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Mail, MapPin, Clock, Users, Building2 } from 'lucide-react';
+import { Mail, Users, Building2 } from 'lucide-react';
 import AppLogoIcon from '@/components/app-logo-icon';
 
 export default function Contact() {

@@ -72,13 +72,13 @@ interface Props {
         restrictions: Array<{
             type: string;
             message: string;
-            deadline: any;
+            deadline: unknown;
             affected_functionality: string[];
         }>;
     };
 }
 
-export default function AdditionalInfoManagement({ additionalInfos, filters, deadlineStatus }: Props) {
+export default function AdditionalInfoManagement({ additionalInfos, deadlineStatus }: Props) {
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [selectedAdditionalInfo, setSelectedAdditionalInfo] = useState<AdditionalInfo | null>(null);

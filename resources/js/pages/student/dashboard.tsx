@@ -9,7 +9,6 @@ import {
     StudentInternshipOpportunities
 } from '@/components/dashboard';
 import { 
-    Target,
     AlertCircle,
     Building2,
     Briefcase,

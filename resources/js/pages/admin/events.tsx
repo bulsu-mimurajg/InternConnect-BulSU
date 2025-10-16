@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DateTimePicker } from '@/components/ui/date-time-picker';
-import { CalendarIcon, PlusIcon, EditIcon, TrashIcon, CheckCircleIcon, UsersIcon, BarChartIcon } from 'lucide-react';
+import { CalendarIcon, PlusIcon, EditIcon, TrashIcon, CheckCircleIcon, UsersIcon } from 'lucide-react';
 import { ClockIcon } from 'lucide-react';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
@@ -78,7 +78,7 @@ interface EventsPageProps {
 export default function EventsPage({ allDeadlines, activeDeadlines, expiredDeadlines, categoryOptions, nextCategory, sequenceInfo, activeSeason, seasons }: EventsPageProps) {
     const [showAddDialog, setShowAddDialog] = useState(false);
     const [editingDeadline, setEditingDeadline] = useState<Deadline | null>(null);
-    const [showArchived, setShowArchived] = useState(false);
+    const [showArchived] = useState(false);
     const [showExtendDialog, setShowExtendDialog] = useState(false);
     const [extendingDeadline, setExtendingDeadline] = useState<Deadline | null>(null);
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -87,9 +87,9 @@ export default function EventsPage({ allDeadlines, activeDeadlines, expiredDeadl
     const [manualErrors, setManualErrors] = useState<{ [key: string]: string }>({});
     const [currentSequenceInfo, setCurrentSequenceInfo] = useState(sequenceInfo);
     const [currentNextCategory, setCurrentNextCategory] = useState(nextCategory);
-    const { flash } = usePage().props as any;
+    const { flash } = usePage().props as { flash?: { success?: string; error?: string } };
 
-    const { data, setData, post, put, delete: destroy, processing, errors, reset } = useForm({
+    const { data, setData, delete: destroy, processing, errors, reset } = useForm({
         title: '',
         category: '',
         start_date: null as Date | null,
@@ -97,7 +97,7 @@ export default function EventsPage({ allDeadlines, activeDeadlines, expiredDeadl
         season_id: seasons.length > 0 ? seasons[0].id : '',
     });
 
-    const { patch, processing: extending, errors: extendErrors, reset: resetExtend } = useForm({});
+    const { patch, processing: extending, reset: resetExtend } = useForm({});
 
     // Get current deadlines based on filter - now using allDeadlines
     const currentDeadlines = showArchived ? expiredDeadlines : allDeadlines;
@@ -152,7 +152,7 @@ export default function EventsPage({ allDeadlines, activeDeadlines, expiredDeadl
                         });
                     }
                 },
-                onError: (errors: any) => console.error('Update errors:', errors),
+                onError: (errors: Record<string, string>) => console.error('Update errors:', errors),
             });
         } else {
             router.post('/admin/deadlines', submitData, {
@@ -171,7 +171,7 @@ export default function EventsPage({ allDeadlines, activeDeadlines, expiredDeadl
                         });
                     }
                 },
-                onError: (errors: any) => {
+                onError: (errors: Record<string, string>) => {
                     console.error('Creation errors:', errors);
                     setManualErrors(errors);
                 },
@@ -319,10 +319,6 @@ export default function EventsPage({ allDeadlines, activeDeadlines, expiredDeadl
         return categoryMap[category] || category;
     };
 
-    const getNextCategoryToCreate = () => {
-        if (!nextCategory) return null;
-        return nextCategory;
-    };
 
     const getAvailableCategories = () => {
         return categoryOptions.filter(option => {
@@ -1001,7 +997,6 @@ export default function EventsPage({ allDeadlines, activeDeadlines, expiredDeadl
                                             </SelectTrigger>
                                             <SelectContent>
                                                 {getAvailableCategories().map((option) => {
-                                                    const info = currentSequenceInfo[option.value];
                                                     const isRecommended = currentNextCategory?.value === option.value;
                                                     return (
                                                         <SelectItem key={option.value} value={option.value}>

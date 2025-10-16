@@ -18,7 +18,7 @@ interface Activity {
     causer_role: string;
     subject_type: string | null;
     subject_id: number | null;
-    properties: Record<string, any>;
+    properties: Record<string, unknown>;
     created_at: string;
     created_at_human: string;
 }
@@ -29,7 +29,11 @@ interface ActivitiesData {
     last_page: number;
     per_page: number;
     total: number;
-    links: any[];
+    links: Array<{
+        url: string | null;
+        label: string;
+        active: boolean;
+    }>;
 }
 
 interface LogsProps {
@@ -149,7 +153,7 @@ export default function Logs({ activities, filters }: LogsProps) {
         return value !== '';
     });
 
-    const formatPropertyValue = (value: any): string => {
+    const formatPropertyValue = (value: unknown): string => {
         if (value === null || value === undefined) return 'N/A';
         if (typeof value === 'boolean') return value ? 'Yes' : 'No';
         if (Array.isArray(value)) {
@@ -173,7 +177,7 @@ export default function Logs({ activities, filters }: LogsProps) {
                         hour12: true
                     });
                 }
-            } catch (e) {
+            } catch {
                 // If date parsing fails, return original value
             }
         }
@@ -181,11 +185,11 @@ export default function Logs({ activities, filters }: LogsProps) {
         return stringValue;
     };
 
-    const renderPropertyDetails = (properties: Record<string, any>) => {
+    const renderPropertyDetails = (properties: Record<string, unknown>) => {
         const entries = Object.entries(properties);
         if (entries.length === 0) return null;
 
-        const hasChanges = properties.changes && Object.keys(properties.changes).length > 0;
+        const hasChanges = properties.changes && typeof properties.changes === 'object' && properties.changes !== null && Object.keys(properties.changes).length > 0;
 
         return (
             <div className="p-4 bg-muted/30 border-t">
@@ -195,7 +199,7 @@ export default function Logs({ activities, filters }: LogsProps) {
                 
                 {hasChanges ? (
                     <div className="space-y-3">
-                        {Object.entries(properties.changes).map(([field, change]: [string, any]) => (
+                        {Object.entries(properties.changes as Record<string, unknown>).map(([field, change]: [string, unknown]) => (
                             <Card key={field} className="p-3">
                                 <div className="text-sm font-medium mb-2">
                                     {field.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
@@ -204,19 +208,19 @@ export default function Logs({ activities, filters }: LogsProps) {
                                     <div>
                                         <div className="text-xs font-medium text-destructive mb-1">Before</div>
                                         <div className="text-sm break-words p-2 bg-destructive/10 rounded border">
-                                            {formatPropertyValue(change.old)}
+                                            {formatPropertyValue((change as { old: unknown }).old)}
                                         </div>
                                     </div>
                                     <div>
                                         <div className="text-xs font-medium text-green-600 mb-1">After</div>
                                         <div className="text-sm break-words p-2 bg-green-50 dark:bg-green-900/20 rounded border">
-                                            {formatPropertyValue(change.new)}
+                                            {formatPropertyValue((change as { new: unknown }).new)}
                                         </div>
                                     </div>
                                 </div>
                             </Card>
                         ))}
-                        {properties.password_changed && (
+                        {Boolean(properties.password_changed) && (
                             <Card className="p-3 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700">
                                 <div className="text-sm text-blue-700 dark:text-blue-300">
                                     Password was also changed

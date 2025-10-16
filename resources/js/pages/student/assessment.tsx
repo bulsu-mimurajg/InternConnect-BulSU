@@ -1,10 +1,9 @@
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link } from '@inertiajs/react';
+import { Head } from '@inertiajs/react';
 import StudentForm from '@/components/form/student/form';
 import FormSubmitted from '@/components/form/student/form-submitted';
 import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { AlertCircle } from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -14,20 +13,12 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-interface DeadlineInfo {
-    id: number;
-    title: string;
-    category: string;
-    end_date: string;
-}
-
 type props = {
     hasSubmitted: boolean;
     deadlineActive: boolean;
-    deadlineInfo: DeadlineInfo | null;
 }
 
-export default function Assessment({ hasSubmitted, deadlineActive, deadlineInfo }: props) {
+export default function Assessment({ hasSubmitted, deadlineActive }: props) {
 
     // Show deadline warning if student assessment period is NOT active (deadline expired or no deadline)
     if (!deadlineActive) {

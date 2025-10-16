@@ -1,7 +1,6 @@
 import { type SharedData } from '@/types';
 import { Head, Link, usePage } from '@inertiajs/react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Users, Building2, Target } from 'lucide-react';
 import AppLogoIcon from '@/components/app-logo-icon';
 

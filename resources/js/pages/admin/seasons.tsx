@@ -6,12 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { CalendarIcon, PlusIcon, CheckCircleIcon, ClockIcon, UsersIcon, CalendarDaysIcon, ArrowLeftIcon, ArchiveIcon } from 'lucide-react';
 import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import AdminLayout from '@/layouts/admin/layout';
 
 interface InternshipSeason {
@@ -43,9 +39,30 @@ interface Props {
   seasons: InternshipSeason[];
   activeSeason: InternshipSeason | null;
   activeSeasonDeadlines?: {
-    all: any[];
-    active: any[];
-    expired: any[];
+    all: Array<{
+      id: number;
+      title: string;
+      category: string;
+      start_date: string;
+      end_date: string;
+      status: string;
+    }>;
+    active: Array<{
+      id: number;
+      title: string;
+      category: string;
+      start_date: string;
+      end_date: string;
+      status: string;
+    }>;
+    expired: Array<{
+      id: number;
+      title: string;
+      category: string;
+      start_date: string;
+      end_date: string;
+      status: string;
+    }>;
   } | null;
 }
 

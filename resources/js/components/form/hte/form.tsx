@@ -69,7 +69,6 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
     const [categoriesLoading, setCategoriesLoading] = useState(true);
     const [dataFetched, setDataFetched] = useState(false);
     const [showValidationErrors, setShowValidationErrors] = useState(false);
-    const [weightChangeTrigger, setWeightChangeTrigger] = useState(0);
     const [lockedSubcategories, setLockedSubcategories] = useState<Set<number>>(new Set());
 
     const steps = [
@@ -141,7 +140,7 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
             
             setDataFetched(true);
             setCategoriesLoading(false);
-        } catch (error) {
+        } catch {
             setCategoriesLoading(false);
         }
     }, [dataFetched, form]);
@@ -161,11 +160,11 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
         setIsSubmitting(true);
         
         router.post('/hte/submit', values, {
-            onSuccess: (page) => {
+            onSuccess: () => {
                 setIsSubmitted(true);
                 setIsSubmitting(false);
             },
-            onError: (errors) => {
+            onError: () => {
                 setIsSubmitting(false);
                 // Error handling is now done through visual feedback
             }
@@ -228,7 +227,7 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
         
         console.log('All categories at 100%:', result);
         return result;
-    }, [currentStep, categories, form, weightChangeTrigger]);
+    }, [currentStep, categories, form]);
 
     // Clear validation errors when weights become valid
     React.useEffect(() => {

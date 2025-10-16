@@ -23,7 +23,7 @@ interface Props {
     isFormSubmitted: boolean;
 }
 
-export default function HTEFormPage({ deadlineActive, deadlineInfo, isFormSubmitted }: Props) {
+export default function HTEFormPage({ deadlineActive, isFormSubmitted }: Props) {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="HTE Form" />
