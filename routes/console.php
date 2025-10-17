@@ -2,7 +2,15 @@
 
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schedule;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
+
+// Schedule deadline notification checks every hour
+Schedule::command('deadlines:check-notifications')->hourly();
+Schedule::command('student-deadlines:check-notifications')->hourly();
+
+// Update deadline statuses every minute
+Schedule::command('deadlines:update-statuses')->everyMinute();

@@ -1,41 +1,137 @@
-// Components
+import React, { useState } from 'react';
 import { Head, useForm } from '@inertiajs/react';
-import { LoaderCircle } from 'lucide-react';
-import { FormEventHandler } from 'react';
-
-import TextLink from '@/components/text-link';
 import { Button } from '@/components/ui/button';
-import AuthLayout from '@/layouts/auth-layout';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { CheckCircle, Mail, AlertCircle } from 'lucide-react';
 
-export default function VerifyEmail({ status }: { status?: string }) {
-    const { post, processing } = useForm({});
+interface VerifyEmailProps {
+    token: string;
+    email: string;
+}
 
-    const submit: FormEventHandler = (e) => {
-        e.preventDefault();
+export default function VerifyEmail({ token, email }: VerifyEmailProps) {
+    const [isVerifying, setIsVerifying] = useState(false);
+    const [isVerified, setIsVerified] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
-        post(route('verification.send'));
+    const { post, processing } = useForm({
+        token: token,
+    });
+
+    const handleVerification = async () => {
+        setIsVerifying(true);
+        setError(null);
+
+        try {
+            await post(route('verify-account.verify'), {
+                onSuccess: () => {
+                    setIsVerified(true);
+                },
+                onError: (errors) => {
+                    setError(errors.verification || 'Verification failed. Please try again.');
+                },
+                onFinish: () => {
+                    setIsVerifying(false);
+                }
+            });
+        } catch {
+            setError('An unexpected error occurred. Please try again.');
+            setIsVerifying(false);
+        }
     };
 
-    return (
-        <AuthLayout title="Verify email" description="Please verify your email address by clicking on the link we just emailed to you.">
-            <Head title="Email verification" />
-
-            {status === 'verification-link-sent' && (
-                <div className="mb-4 text-center text-sm font-medium text-green-600">
-                    A new verification link has been sent to the email address you provided during registration.
+    if (isVerified) {
+        return (
+            <>
+                <Head title="Email Verified" />
+                <div className="min-h-screen flex items-center justify-center bg-background p-4">
+                    <Card className="w-full max-w-md">
+                        <CardHeader className="text-center space-y-4">
+                            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100">
+                                <CheckCircle className="h-6 w-6 text-green-600" />
+                            </div>
+                            <div className="space-y-2">
+                                <CardTitle className="text-xl font-semibold">
+                                    Email Verified
+                                </CardTitle>
+                                <CardDescription>
+                                    Your account is pending adviser approval
+                                </CardDescription>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <Alert>
+                                <Mail className="h-4 w-4" />
+                                <AlertDescription className="text-sm">
+                                    You'll receive an email notification once approved. You can then log in to access the system.
+                                </AlertDescription>
+                            </Alert>
+                            <Button 
+                                onClick={() => window.location.href = route('login')}
+                                className="w-full"
+                            >
+                                Go to Login
+                            </Button>
+                        </CardContent>
+                    </Card>
                 </div>
-            )}
+            </>
+        );
+    }
 
-            <form onSubmit={submit} className="space-y-6 text-center">
-                <Button disabled={processing} variant="secondary">
-                    {processing && <LoaderCircle className="h-4 w-4 animate-spin" />}
-                    Resend verification email
-                </Button>
+    return (
+        <>
+            <Head title="Verify Email" />
+            <div className="min-h-screen flex items-center justify-center bg-background p-4">
+                <Card className="w-full max-w-md">
+                    <CardHeader className="text-center space-y-4">
+                        <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-primary/10">
+                            <Mail className="h-6 w-6 text-primary" />
+                        </div>
+                        <div className="space-y-2">
+                            <CardTitle className="text-xl font-semibold">
+                                Verify Your Email
+                            </CardTitle>
+                            <CardDescription>
+                                Complete your registration by verifying your email address
+                            </CardDescription>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="text-center space-y-2">
+                            <p className="text-sm text-muted-foreground">
+                                Verification link sent to:
+                            </p>
+                            <p className="font-medium text-foreground">{email}</p>
+                        </div>
 
-                <TextLink href={route('logout')} method="post" className="mx-auto block text-sm">
-                    Log out
-                </TextLink>
-            </form>
-        </AuthLayout>
+                        {error && (
+                            <Alert variant="destructive">
+                                <AlertCircle className="h-4 w-4" />
+                                <AlertDescription className="text-sm">{error}</AlertDescription>
+                            </Alert>
+                        )}
+
+                        <Button 
+                            onClick={handleVerification}
+                            disabled={isVerifying || processing}
+                            className="w-full"
+                        >
+                            {isVerifying || processing ? 'Verifying...' : 'Verify Email'}
+                        </Button>
+
+                        <div className="text-center">
+                            <p className="text-xs text-muted-foreground">
+                                Didn't receive the email? Check your spam folder or{' '}
+                                <a href={route('register')} className="text-primary hover:text-primary/80 underline">
+                                    try registering again
+                                </a>
+                            </p>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+        </>
     );
 }

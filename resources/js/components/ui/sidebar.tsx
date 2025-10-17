@@ -168,12 +168,15 @@ function Sidebar({
       <div
         data-slot="sidebar"
         className={cn(
-          "bg-sidebar text-sidebar-foreground flex h-full w-(--sidebar-width) flex-col",
+          "bg-sidebar text-sidebar-foreground flex h-full w-(--sidebar-width) flex-col relative overflow-hidden",
           className
         )}
         {...props}
       >
-        {children}
+        {/* Content */}
+        <div className="flex h-full w-full flex-col">
+          {children}
+        </div>
       </div>
     )
   }
@@ -197,7 +200,9 @@ function Sidebar({
           }
           side={side}
         >
-          <div className="flex h-full w-full flex-col">{children}</div>
+          <div className="flex h-full w-full flex-col">
+            {children}
+          </div>
         </SheetContent>
       </Sheet>
     )

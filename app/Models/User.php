@@ -5,9 +5,11 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
+use App\Notifications\CustomResetPasswordNotification;
 
 class User extends Authenticatable
 {
@@ -23,6 +25,11 @@ class User extends Authenticatable
         'username',
         'email',
         'password',
+        'email_verified_at',
+        'status',
+        'first_name',
+        'middle_name',
+        'last_name',
     ];
 
     /**
@@ -51,5 +58,38 @@ class User extends Authenticatable
     public function student(): HasOne|User
     {
         return $this->hasOne(Student::class);
+    }
+
+    public function academeAccounts(): HasMany
+    {
+        return $this->hasMany(AcademeAccount::class);
+    }
+
+    public function studentAcademeAccounts(): HasMany
+    {
+        return $this->hasMany(AcademeAccount::class)->whereHas('user.roles', function($q) {
+            $q->where('name', 'student');
+        });
+    }
+
+    public function hte(): HasOne
+    {
+        return $this->hasOne(HTE::class, 'user_id');
+    }
+
+    public function adviser(): HasOne
+    {
+        return $this->hasOne(Adviser::class);
+    }
+
+    /**
+     * Send the password reset notification.
+     *
+     * @param  string  $token
+     * @return void
+     */
+    public function sendPasswordResetNotification($token)
+    {
+        $this->notify(new CustomResetPasswordNotification($token));
     }
 }

@@ -7,17 +7,18 @@ use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
-class RolePermissionSeeder extends Seeder
+class  RolePermissionSeeder extends Seeder
 {
     /**
      * Run the database seeds.
      */
     public function run(): void
     {
-        Role::create(['name' => 'student']);
-        Role::create(['name' => 'hte']);
-        Role::create(['name' => 'admin']);
-        Role::create(['name' => 'guest']);
+        // Create roles if they don't exist
+        Role::firstOrCreate(['name' => 'student']);
+        Role::firstOrCreate(['name' => 'hte']);
+        Role::firstOrCreate(['name' => 'admin']);
+        Role::firstOrCreate(['name' => 'adviser']);
 
         $permissions = [
             'manage users',           // C1: SIP Coordinator manages accounts
@@ -35,10 +36,12 @@ class RolePermissionSeeder extends Seeder
             'edit student profile',   // S3: Student edits profile
             'apply internships',      // S4: Student browses/applies internships
             'complete assessments',   // S5: Student completes assessments
+            'view student applications', // A1: Adviser views student applications
         ];
 
+        // Create permissions if they don't exist
         foreach ($permissions as $permission) {
-            Permission::create(['name' => $permission]);
+            Permission::firstOrCreate(['name' => $permission]);
         }
 
         Role::findByName('admin')->givePermissionTo([
@@ -56,6 +59,12 @@ class RolePermissionSeeder extends Seeder
             'edit company profile',
             'post internships',
             'set assessment criteria',
+            'reset password',
+        ]);
+
+        Role::findByName('adviser')->givePermissionTo([
+            'login',
+            'view student applications',
             'reset password',
         ]);
 

@@ -1,6 +1,5 @@
 <?php
 
-use App\Models\SubCategory;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -13,14 +12,15 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('questions', function (Blueprint $table) {
-            $table->id();
-            $table->string('label')->nullable();
-            $table->text('question');
-            $table->string('placeholder')->nullable();
-            $table->string('question type')->nullable();
-            $table->boolean('is_active')->default(true);
-            $table->string('access');
-            $table->foreignIdFor(SubCategory::class);
+            $table->id(); // Standard auto-incrementing primary key
+            $table->text('question'); // TEXT NOT NULL
+            $table->boolean('is_active')->default(true); // Default TRUE
+            
+            // Foreign key referencing sub_categories.id
+            $table->foreignId('subcategory_id')
+                  ->constrained('sub_categories')
+                  ->cascadeOnDelete();
+
             $table->timestamps();
         });
     }

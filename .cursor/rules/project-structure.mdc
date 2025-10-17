@@ -1,0 +1,37 @@
+---
+alwaysApply: false
+---
+# InternConnectBSIT Project Structure
+
+This is a Laravel 12 + React 19 + TypeScript + Inertia.js application for internship management.
+
+## Core Architecture
+- **Backend**: Laravel 12 with PHP 8.2+
+- **Frontend**: React 19 with TypeScript, Inertia.js for SPA experience
+- **Styling**: Tailwind CSS 4.0 with shadcn/ui
+- **Database**: MySQL with Eloquent ORM
+- **Authentication**: Laravel Fortify with 2FA support
+- **Permissions**: Spatie Laravel Permission package
+
+## Key Directories
+- `app/Http/Controllers/` - API controllers
+- `resources/js/` - Frontend React/TypeScript code
+- `resources/js/components/` - Reusable React components
+- `resources/js/components/ui/` - Radix UI component library
+- `resources/js/pages/` - Inertia.js page components
+- `resources/js/layouts/` - Layout components
+- `database/migrations/` - Database schema migrations
+- `routes/` - Laravel route definitions
+
+## Naming Conventions
+- **PHP**: PascalCase for classes, snake_case for methods/variables
+- **React Components**: PascalCase (e.g., `AppLayout.tsx`)
+- **Files**: kebab-case for components (e.g., `app-layout.tsx`)
+- **Database**: snake_case for tables/columns
+- **Routes**: kebab-case for URLs
+
+## Entry Points
+- **Backend**: [artisan](mdc:artisan) - Laravel CLI
+- **Frontend**: [resources/js/app.tsx](mdc:resources/js/app.tsx) - React app entry
+- **Build**: [vite.config.ts](mdc:vite.config.ts) - Vite configuration
+- **Routes**: [routes/web.php](mdc:routes/web.php) - Main routes

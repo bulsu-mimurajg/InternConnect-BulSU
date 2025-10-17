@@ -12,8 +12,12 @@ class Category extends Model
 
     protected $table = 'categories';
 
-    public function subCategory(): HasMany
+    protected $fillable = [
+        'category_name',
+    ];
+
+    public function subCategories(): HasMany
     {
-        return $this->hasMany(SubCategory::class);
+        return $this->hasMany(SubCategory::class, 'category_id');
     }
 }

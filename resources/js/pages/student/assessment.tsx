@@ -1,7 +1,10 @@
 import AppLayout from '@/layouts/app-layout';
-import { type BreadcrumbItem, subcategory } from '@/types';
-import { Head, usePage } from '@inertiajs/react';
+import { type BreadcrumbItem } from '@/types';
+import { Head } from '@inertiajs/react';
 import StudentForm from '@/components/form/student/form';
+import FormSubmitted from '@/components/form/student/form-submitted';
+import { Card, CardContent } from '@/components/ui/card';
+import { AlertCircle } from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -10,15 +13,41 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-export default function Assessment() {
+type props = {
+    hasSubmitted: boolean;
+    deadlineActive: boolean;
+}
 
-    const { subcategories } = usePage<{ subcategories: subcategory[] }>().props;
+export default function Assessment({ hasSubmitted, deadlineActive }: props) {
+
+    // Show deadline warning if student assessment period is NOT active (deadline expired or no deadline)
+    if (!deadlineActive) {
+        return (
+            <AppLayout breadcrumbs={breadcrumbs}>
+                <Head title="Assessment" />
+                <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
+                    <Card>
+                        <CardContent className="p-6">
+                            <div className="text-center">
+                                <AlertCircle className="mx-auto h-12 w-12 text-red-500 mb-4" />
+                                <h2 className="text-xl font-semibold mb-2">Assessment Period Not Active</h2>
+                                <p className="text-muted-foreground mb-4">
+                                    No current deadline or deadline has expired. You cannot take the assessment at this time.
+                                    <br />Please contact the administrator for more information.
+                                </p>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            </AppLayout>
+        );
+    }
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Assessment" />
             <div className="flex h-full flex-1 flex-col gap-4 overflow-y-hidden rounded-xl p-4">
-                <StudentForm subcategories={subcategories} />
+                {hasSubmitted ? <FormSubmitted/> : <StudentForm />}
             </div>
         </AppLayout>
     );

@@ -27,7 +27,7 @@ class LoginRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'email' => ['required', 'string', 'email'],
+            'username' => ['required', 'string'],
             'password' => ['required', 'string'],
         ];
     }
@@ -41,11 +41,42 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
-        if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
-            RateLimiter::hit($this->throttleKey());
+        // First, find the user by username to check status before attempting authentication
+        $user = \App\Models\User::where('username', $this->username)->first();
+        
+        if ($user) {
+            // Check user status before authentication to prevent login events for invalid users
+            if ($user->status !== 'verified') {
+                RateLimiter::hit($this->throttleKey(), 3600);
+
+                $message = $user->status === 'archived'
+                    ? 'Kindly contact the administrator for further assistance.'
+                    : 'Your account is not yet verified. Please contact your adviser.';
+
+                throw ValidationException::withMessages([
+                    'username' => $message,
+                ]);
+            }
+
+            // Check if student's section is archived before authentication
+            if ($user->hasRole('student')) {
+                $academeAccount = $user->academeAccounts()->with('section')->first();
+                if ($academeAccount && $academeAccount->section && $academeAccount->section->status === 'archived') {
+                    RateLimiter::hit($this->throttleKey(), 3600);
+
+                    throw ValidationException::withMessages([
+                        'username' => 'Unable to login, section is archived. Please contact your administrator.',
+                    ]);
+                }
+            }
+        }
+
+        // Now attempt authentication with credentials
+        if (! Auth::attempt($this->only('username', 'password'), $this->boolean('remember'))) {
+            RateLimiter::hit($this->throttleKey(), 3600);
 
             throw ValidationException::withMessages([
-                'email' => __('auth.failed'),
+                'username' => __('auth.failed'),
             ]);
         }
 
@@ -59,7 +90,7 @@ class LoginRequest extends FormRequest
      */
     public function ensureIsNotRateLimited(): void
     {
-        if (! RateLimiter::tooManyAttempts($this->throttleKey(), 5)) {
+        if (! RateLimiter::tooManyAttempts($this->throttleKey(), 5, 3600)) {
             return;
         }
 
@@ -68,7 +99,7 @@ class LoginRequest extends FormRequest
         $seconds = RateLimiter::availableIn($this->throttleKey());
 
         throw ValidationException::withMessages([
-            'email' => __('auth.throttle', [
+            'username' => __('auth.throttle', [
                 'seconds' => $seconds,
                 'minutes' => ceil($seconds / 60),
             ]),
@@ -80,6 +111,6 @@ class LoginRequest extends FormRequest
      */
     public function throttleKey(): string
     {
-        return Str::transliterate(Str::lower($this->string('email')).'|'.$this->ip());
+        return Str::transliterate(Str::lower($this->string('username')).'|'.$this->ip());
     }
 }

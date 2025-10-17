@@ -24,12 +24,17 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
+            'role_redirect' => \App\Http\Middleware\EnsureUserHasRoleRedirect::class,
             'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
             'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
+            'deadline_restrictions' => \App\Http\Middleware\CheckDeadlineRestrictions::class,
+            'adviser_section_access' => \App\Http\Middleware\CheckAdviserSectionAccess::class,
+            'active_season' => \App\Http\Middleware\CheckActiveInternshipSeason::class,
         ]);
     })
     ->withProviders([
         \Spatie\Permission\PermissionServiceProvider::class,
+        \App\Providers\EventServiceProvider::class,
     ])
     ->withExceptions(function (Exceptions $exceptions) {
         //

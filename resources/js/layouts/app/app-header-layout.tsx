@@ -8,7 +8,7 @@ export default function AppHeaderLayout({ children, breadcrumbs }: PropsWithChil
     return (
         <AppShell>
             <AppHeader breadcrumbs={breadcrumbs} />
-            <AppContent>{children}</AppContent>
+            <AppContent className="overflow-y-auto">{children}</AppContent>
         </AppShell>
     );
 }
