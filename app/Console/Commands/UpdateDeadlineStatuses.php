@@ -97,31 +97,25 @@ class UpdateDeadlineStatuses extends Command
      */
     private function triggerAutomaticPlacement(): void
     {
-        $this->info('Starting 3-tier automatic placement process...');
-        
-        // Tier 1: Place endorsed students (highest priority)
-        $this->info('Tier 1: Processing endorsed students...');
+        $this->info('Starting 3-tier automatic placement...');
         $placementService = app(\App\Services\AutomaticPlacementService::class);
+        
+        // Tier 1: Endorsed students (no forceRun - uses timing check)
+        $this->info('Tier 1: Processing endorsed students...');
         $tier1Results = $placementService->processEndorsedStudentsPlacements();
-        $this->line("  Placed: {$tier1Results['placed_count']} students");
+        $this->line("  Placed: {$tier1Results['placed_count']}");
         
-        // Tier 2: Auto-endorse and place matched students
-        $this->info('Tier 2: Processing matched students (auto-endorsement)...');
-        $endorsementService = app(\App\Services\AutomaticEndorsementService::class);
-        $tier2EndorseResults = $endorsementService->processMatchedStudentsEndorsement();
-        $this->line("  Endorsed: {$tier2EndorseResults['endorsed_count']} students");
+        // Tier 2: Matched students (no forceRun - uses timing check)
+        $this->info('Tier 2: Processing matched students...');
+        $tier2Results = $placementService->processMatchedStudentsPlacements();
+        $this->line("  Placed: {$tier2Results['matched_placed_count']}");
         
-        // Place the newly endorsed students
-        $tier2PlaceResults = $placementService->processEndorsedStudentsPlacements();
-        $this->line("  Placed: {$tier2PlaceResults['placed_count']} students");
-        
-        // Tier 3: Emergency placement for remaining students
-        $this->info('Tier 3: Processing emergency placements...');
+        // Tier 3: Emergency placement (no forceRun - uses timing check)
+        $this->info('Tier 3: Emergency placements...');
         $tier3Results = $placementService->processEmergencyPlacements();
-        $this->line("  Emergency placed: {$tier3Results['emergency_placed_count']} students");
+        $this->line("  Placed: {$tier3Results['emergency_placed_count']}");
         
-        // Summary
-        $totalPlaced = $tier1Results['placed_count'] + $tier2PlaceResults['placed_count'] + $tier3Results['emergency_placed_count'];
-        $this->info("Automatic placement completed. Total students placed: {$totalPlaced}");
+        $total = $tier1Results['placed_count'] + $tier2Results['matched_placed_count'] + $tier3Results['emergency_placed_count'];
+        $this->info("Total placed: {$total}");
     }
 }

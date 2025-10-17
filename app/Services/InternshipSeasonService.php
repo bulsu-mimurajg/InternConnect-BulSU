@@ -332,26 +332,30 @@ class InternshipSeasonService
      */
     private function triggerAutomaticPlacementForSeason(InternshipSeason $season): void
     {
-        // Tier 1: Place endorsed students
         $placementService = app(\App\Services\AutomaticPlacementService::class);
-        $tier1Results = $placementService->processEndorsedStudentsPlacements();
         
-        // Tier 2: Auto-endorse and place matched students
-        $endorsementService = app(\App\Services\AutomaticEndorsementService::class);
-        $tier2EndorseResults = $endorsementService->processMatchedStudentsEndorsement();
-        $tier2PlaceResults = $placementService->processEndorsedStudentsPlacements();
-        
-        // Tier 3: Emergency placement
-        $tier3Results = $placementService->processEmergencyPlacements();
-        
-        $totalPlaced = $tier1Results['placed_count'] + $tier2PlaceResults['placed_count'] + $tier3Results['emergency_placed_count'];
-        
+        // Tier 1: Place endorsed students (with force flag)
+        Log::info('Season deactivation - Starting Tier 1: Endorsed students placement');
+        $tier1Results = $placementService->processEndorsedStudentsPlacements(true);
+        Log::info('Season deactivation - Tier 1 complete', ['placed' => $tier1Results['placed_count']]);
+
+        // Tier 2: Auto-endorse and place matched students (with force flag)
+        Log::info('Season deactivation - Starting Tier 2: Priority-based matched students placement');
+        $tier2PlaceResults = $placementService->processMatchedStudentsPlacements(true);
+        Log::info('Season deactivation - Tier 2 complete', ['placed' => $tier2PlaceResults['matched_placed_count']]);
+
+        // Tier 3: Emergency placement (with force flag)
+        Log::info('Season deactivation - Starting Tier 3: Emergency placement');
+        $tier3Results = $placementService->processEmergencyPlacements(true);
+        Log::info('Season deactivation - Tier 3 complete', ['placed' => $tier3Results['emergency_placed_count']]);
+
+        $totalPlaced = $tier1Results['placed_count'] + $tier2PlaceResults['matched_placed_count'] + $tier3Results['emergency_placed_count'];
+
         Log::info('Automatic placement completed for season deactivation', [
             'season_id' => $season->id,
             'tier1_placed' => $tier1Results['placed_count'],
-            'tier2_endorsed' => $tier2EndorseResults['endorsed_count'],
-            'tier2_placed' => $tier2PlaceResults['placed_count'],
-            'tier3_emergency' => $tier3Results['emergency_placed_count'],
+            'tier2_placed' => $tier2PlaceResults['matched_placed_count'],
+            'tier3_placed' => $tier3Results['emergency_placed_count'],
             'total_placed' => $totalPlaced,
         ]);
     }
@@ -483,16 +487,20 @@ class InternshipSeasonService
      */
     private function autoDeactivateSeason(InternshipSeason $season): void
     {
-        // Get count of active deadlines before expiring them
+        // Get counts BEFORE expiring
         $activeDeadlinesCount = $season->deadlines()->where('status', 'active')->count();
-        
-        // Check if internship placement deadline is active
         $hasActivePlacementDeadline = $season->deadlines()
             ->where('category', 'internship_placement')
             ->where('status', 'active')
             ->exists();
         
-        // Expire all deadlines in the season (active and inactive)
+        // IMPORTANT: Trigger placement BEFORE expiring deadlines
+        if ($hasActivePlacementDeadline) {
+            Log::info('Triggering automatic placement BEFORE expiring deadlines');
+            $this->triggerAutomaticPlacementForSeason($season);
+        }
+        
+        // THEN expire all deadlines
         $expiredCount = $season->deadlines()
             ->whereIn('status', ['active', 'inactive'])
             ->update(['status' => 'expired']);
@@ -500,19 +508,11 @@ class InternshipSeasonService
         // Mark season as completed
         $season->update(['status' => 'completed']);
         
-        Log::info('Automatically deactivated internship season and expired deadlines', [
+        Log::info('Auto-deactivated season', [
             'season_id' => $season->id,
-            'season_name' => $season->name,
             'active_deadlines_count' => $activeDeadlinesCount,
             'expired_deadlines_count' => $expiredCount,
-            'had_active_placement_deadline' => $hasActivePlacementDeadline,
         ]);
-        
-        // Trigger automatic placement if internship placement deadline was active
-        if ($hasActivePlacementDeadline) {
-            Log::info('Triggering automatic placement due to auto season deactivation');
-            $this->triggerAutomaticPlacementForSeason($season);
-        }
     }
 
 }

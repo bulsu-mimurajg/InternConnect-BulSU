@@ -75,8 +75,8 @@ class AutomaticEndorsementService
                     $endorsed = false;
                     foreach ($matches as $candidateMatch) {
                         // Check available slots for the candidate internship
-                        $availableSlots = $candidateMatch->internship->slot_count -
-                            $candidateMatch->internship->studentPlacements()->where('status', 'approved')->count();
+                        $placementService = app(\App\Services\AutomaticPlacementService::class);
+                        $availableSlots = $placementService->calculateAvailableSlots($candidateMatch->internship);
 
                         if ($availableSlots > 0) {
                             // Endorse the student to this available internship
@@ -193,21 +193,8 @@ class AutomaticEndorsementService
                     foreach ($matches as $candidateMatch) {
                         // Check available slots more accurately
                         $internship = $candidateMatch->internship;
-                        
-                        // Count both approved placements AND pending endorsements
-                        $approvedPlacements = StudentPlacement::where('internship_id', $internship->id)
-                            ->where('status', 'approved')
-                            ->count();
-                        
-                        $pendingEndorsements = Endorsement::where('internship_id', $internship->id)
-                            ->where('status', 'endorsed')
-                            ->whereHas('student', function($q) {
-                                $q->where('is_placed', false);
-                            })
-                            ->count();
-                        
-                        $totalCommitted = $approvedPlacements + $pendingEndorsements;
-                        $availableSlots = $internship->slot_count - $totalCommitted;
+                        $placementService = app(\App\Services\AutomaticPlacementService::class);
+                        $availableSlots = $placementService->calculateAvailableSlots($internship);
 
                         if ($availableSlots > 0) {
                             // Endorse the student to this internship

@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { BatchActions, BatchActionPresets } from '@/components/ui/batch-actions';
-import { CheckCircle, XCircle, User, GraduationCap, AlertCircle, FilterIcon } from 'lucide-react';
+import { CheckCircle, XCircle, User, GraduationCap, AlertCircle, FilterIcon, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Pagination } from '@/components/ui/pagination';
 import { usePagination } from '@/hooks/usePagination';
@@ -74,7 +74,7 @@ export default function EndorsementTable({ endorsements = [], internships = [], 
                     'Accept': 'application/json',
                 },
             });
-            
+
             if (response.ok) {
                 const data = await response.json();
                 // Update the meta tag with new token
@@ -131,15 +131,15 @@ export default function EndorsementTable({ endorsements = [], internships = [], 
     }, [endorsements]);
 
     // Filter endorsements based on selected internship
-    const filteredEndorsements = selectedInternship === 'all' 
-        ? endorsements 
+    const filteredEndorsements = selectedInternship === 'all'
+        ? endorsements
         : endorsements.filter(endorsement => endorsement.internship.id.toString() === selectedInternship);
 
     // Sort endorsements by compatibility score (highest first)
     const sortedEndorsements = [...filteredEndorsements].sort((a, b) => b.compatibility_score - a.compatibility_score);
 
     // Create a stable reset trigger for pagination
-    const resetTrigger = useMemo(() => 
+    const resetTrigger = useMemo(() =>
         selectedInternship,
         [selectedInternship]
     );
@@ -182,7 +182,7 @@ export default function EndorsementTable({ endorsements = [], internships = [], 
 
     const handleApprove = async (endorsementId: number) => {
         setLoading(prev => ({ ...prev, [endorsementId]: true }));
-        
+
         try {
             router.post(`/hte/approve-endorsement/${endorsementId}`, {}, {
                 onSuccess: () => {
@@ -207,7 +207,7 @@ export default function EndorsementTable({ endorsements = [], internships = [], 
 
     const handleReject = async (endorsementId: number) => {
         setLoading(prev => ({ ...prev, [endorsementId]: true }));
-        
+
         try {
             router.post(`/hte/reject-endorsement/${endorsementId}`, {}, {
                 onSuccess: () => {
@@ -254,7 +254,7 @@ export default function EndorsementTable({ endorsements = [], internships = [], 
         if (selectedEndorsements.size === 0) return;
 
         const csrfToken = getFreshCsrfToken();
-        
+
         // Check if CSRF token exists (basic auth check)
         if (!csrfToken) {
             setErrorMessage('Authentication error: CSRF token not found. Please refresh the page and try again.');
@@ -282,7 +282,7 @@ export default function EndorsementTable({ endorsements = [], internships = [], 
             // Handle CSRF token mismatch
             if (response.status === 419) {
                 const newCsrfToken = await refreshCsrfToken();
-                
+
                 // Retry the request with fresh token
                 const retryResponse = await fetch('/hte/batch-approve-endorsements', {
                     method: 'POST',
@@ -295,7 +295,7 @@ export default function EndorsementTable({ endorsements = [], internships = [], 
                         endorsement_ids: Array.from(selectedEndorsements)
                     }),
                 });
-                
+
                 if (retryResponse.ok) {
                     const result = await retryResponse.json();
                     setErrorMessage(result.message || 'Batch approval completed successfully!');
@@ -335,7 +335,7 @@ export default function EndorsementTable({ endorsements = [], internships = [], 
         if (selectedEndorsements.size === 0) return;
 
         const csrfToken = getFreshCsrfToken();
-        
+
         // Check if CSRF token exists (basic auth check)
         if (!csrfToken) {
             setErrorMessage('Authentication error: CSRF token not found. Please refresh the page and try again.');
@@ -363,7 +363,7 @@ export default function EndorsementTable({ endorsements = [], internships = [], 
             // Handle CSRF token mismatch
             if (response.status === 419) {
                 const newCsrfToken = await refreshCsrfToken();
-                
+
                 // Retry the request with fresh token
                 const retryResponse = await fetch('/hte/batch-reject-endorsements', {
                     method: 'POST',
@@ -376,7 +376,7 @@ export default function EndorsementTable({ endorsements = [], internships = [], 
                         endorsement_ids: Array.from(selectedEndorsements)
                     }),
                 });
-                
+
                 if (retryResponse.ok) {
                     const result = await retryResponse.json();
                     setErrorMessage(result.message || 'Batch rejection completed successfully!');
@@ -506,8 +506,8 @@ export default function EndorsementTable({ endorsements = [], internships = [], 
                         </p>
                     </div>
                     <div className="flex gap-2">
-                        <Button 
-                            variant="outline" 
+                        <Button
+                            variant="outline"
                             size="default"
                             onClick={() => setShowFilters(!showFilters)}
                         >
@@ -591,7 +591,7 @@ export default function EndorsementTable({ endorsements = [], internships = [], 
                                 <User className="mx-auto h-12 w-12 text-gray-400" />
                                 <h3 className="mt-2 text-sm font-medium text-gray-900">No endorsed students</h3>
                                 <p className="mt-1 text-sm text-gray-500">
-                                    {selectedInternship === 'all' 
+                                    {selectedInternship === 'all'
                                         ? 'No students have been endorsed for your internships yet.'
                                         : 'No students have been endorsed for the selected internship position.'
                                     }
@@ -603,11 +603,11 @@ export default function EndorsementTable({ endorsements = [], internships = [], 
                                 <div className="block lg:hidden space-y-3 md:space-y-4">
 
                                     {endorsementPagination.paginatedData.map((endorsement) => (
-                                        <Card 
-                                            key={endorsement.id} 
+                                        <Card
+                                            key={endorsement.id}
                                             className={`p-4 md:p-6 transition-all duration-200 hover:shadow-md ${
-                                                highlightedStudentId === endorsement.student.id 
-                                                    ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/20' 
+                                                highlightedStudentId === endorsement.student.id
+                                                    ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/20'
                                                     : ''
                                             }`}
                                         >
@@ -792,7 +792,7 @@ export default function EndorsementTable({ endorsements = [], internships = [], 
                                 </div>
                             </>
                         )}
-                        
+
                         {/* Pagination */}
                         {sortedEndorsements.length > 0 && (
                             <Pagination

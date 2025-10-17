@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -75,12 +75,39 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
     const [expandedNotifications, setExpandedNotifications] = useState<Set<number>>(new Set());
     const [pagination, setPagination] = useState({
         current_page: 1,
-        per_page: 10,
+        per_page: 5,
         total: 0,
         last_page: 1,
         from: 0,
         to: 0,
     });
+    
+    // Ref to track if we've fetched notifications for the current open session
+    const hasFetchedForOpenSession = useRef(false);
+    
+    // Refs to store current values for polling
+    const currentFilter = useRef(filter);
+    const currentShowRead = useRef(showRead);
+    const currentIsOpen = useRef(isOpen);
+    const lastLocalUpdateRef = useRef<{[key: number]: number}>({});
+    
+    // Update refs when values change
+    useEffect(() => {
+        currentFilter.current = filter;
+    }, [filter]);
+    
+    useEffect(() => {
+        currentShowRead.current = showRead;
+    }, [showRead]);
+    
+    useEffect(() => {
+        currentIsOpen.current = isOpen;
+    }, [isOpen]);
+    
+    // Update lastLocalUpdate ref when state changes
+    useEffect(() => {
+        lastLocalUpdateRef.current = lastLocalUpdate;
+    }, [lastLocalUpdate]);
 
 
     // Helper function to refresh CSRF token from server
@@ -130,12 +157,12 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
         return '';
     };
 
-    const fetchNotifications = useCallback(async (page = pagination.current_page, filterToUse = filter, showReadToUse = showRead) => {
+    const fetchNotifications = useCallback(async (page = 1, filterToUse = 'all', showReadToUse = true) => {
         setIsLoading(true);
         try {
             const params = new URLSearchParams({
                 page: page.toString(),
-                per_page: pagination.per_page.toString(),
+                per_page: '5', // Changed from 10 to 5
                 filter: filterToUse,
                 show_read: showReadToUse.toString(),
             });
@@ -166,7 +193,7 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
             // Preserve local changes by merging with server data
             setNotifications(prev => {
                 const merged = serverNotifications.map((serverNotif: Notification) => {
-                    const localTimestamp = lastLocalUpdate[serverNotif.id];
+                    const localTimestamp = lastLocalUpdateRef.current[serverNotif.id];
                     const serverTimestamp = new Date(serverNotif.updated_at).getTime();
 
                     // If we have a local update that's more recent, preserve the local state
@@ -184,12 +211,20 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
             setUnreadCount(data.unreadCount || 0);
 
             // Validate pagination data from server
-            const serverPagination = data.pagination || pagination;
+            const defaultPagination = {
+                current_page: 1,
+                per_page: 5,
+                total: 0,
+                last_page: 1,
+                from: 0,
+                to: 0,
+            };
+            const serverPagination = data.pagination || defaultPagination;
             const validatedPagination = {
                 ...serverPagination,
                 current_page: Math.max(1, Math.min(serverPagination.current_page || 1, serverPagination.last_page || 1)),
                 last_page: Math.max(1, serverPagination.last_page || 1),
-                per_page: Math.max(1, serverPagination.per_page || 10),
+                per_page: Math.max(1, serverPagination.per_page || 5),
                 total: Math.max(0, serverPagination.total || 0),
             };
 
@@ -202,7 +237,7 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
             setUnreadCount(0);
             setPagination({
                 current_page: 1,
-                per_page: pagination.per_page,
+                per_page: 5, // Changed from 10 to 5
                 total: 0,
                 last_page: 1,
                 from: 0,
@@ -211,7 +246,7 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
         } finally {
             setIsLoading(false);
         }
-    }, [filter, showRead, lastLocalUpdate, pagination]);
+    }, []); // No dependencies - function is stable
 
     const markAsRead = async (notificationId: number): Promise<boolean> => {
         try {
@@ -451,11 +486,19 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
         fetchNotifications(page, filter, showRead);
     };
 
+    // Debounce timer ref for filter changes
+    const filterDebounceTimer = useRef<NodeJS.Timeout | null>(null);
+
     // Handle filter changes with debouncing
     const handleFilterChange = (newFilter: 'all' | 'endorsement' | 'deadline' | 'placement' | 'approval') => {
         // Prevent multiple filter changes
         if (isFiltering || newFilter === filter) {
             return;
+        }
+
+        // Clear existing timer
+        if (filterDebounceTimer.current) {
+            clearTimeout(filterDebounceTimer.current);
         }
 
         setIsFiltering(true);
@@ -467,17 +510,22 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
         setIsLoading(true);
 
         // Debounce the API call to prevent jittering
-        setTimeout(() => {
+        filterDebounceTimer.current = setTimeout(() => {
             fetchNotifications(1, newFilter, showRead).finally(() => {
                 setIsFiltering(false);
             });
-        }, 150);
+        }, 300); // Increased debounce time to 300ms
     };
 
     // Handle show read toggle with debouncing
     const handleShowReadToggle = () => {
         if (isFiltering) {
             return;
+        }
+
+        // Clear existing timer
+        if (filterDebounceTimer.current) {
+            clearTimeout(filterDebounceTimer.current);
         }
 
         setIsFiltering(true);
@@ -496,11 +544,11 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
         setIsLoading(true);
 
         // Debounce the API call to prevent jittering
-        setTimeout(() => {
+        filterDebounceTimer.current = setTimeout(() => {
             fetchNotifications(1, filter, newShowRead).finally(() => {
                 setIsFiltering(false);
             });
-        }, 150);
+        }, 300); // Increased debounce time to 300ms
     };
 
     const getFilteredNotifications = () => {
@@ -536,7 +584,15 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
     const getFilterButtons = useCallback((): FilterButton[] => {
         // Helper function to check if user has a specific role
         const hasRole = (roleName: string): boolean => {
-            return auth.user?.roles?.some((role: UserRole) => role.name === roleName) || false;
+            // Check the roles array first
+            if (auth.user?.roles?.some((role: UserRole) => role.name === roleName)) {
+                return true;
+            }
+            // Fallback to the single role field
+            if (auth.role === roleName) {
+                return true;
+            }
+            return false;
         };
 
         if (hasRole('student')) {
@@ -573,7 +629,7 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
         return [
             { key: 'all', label: 'All' }
         ];
-    }, [auth.user?.roles]);
+    }, [auth.user?.roles, auth.role]);
 
     const handleNotificationClick = async (notification: Notification) => {
         // Prevent multiple clicks during processing
@@ -586,7 +642,15 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
         try {
             // Helper function to check if user has a specific role
             const hasRole = (roleName: string): boolean => {
-                return auth.user?.roles?.some((role: UserRole) => role.name === roleName) || false;
+                // Check the roles array first
+                if (auth.user?.roles?.some((role: UserRole) => role.name === roleName)) {
+                    return true;
+                }
+                // Fallback to the single role field
+                if (auth.role === roleName) {
+                    return true;
+                }
+                return false;
             };
 
             // Mark as read when clicked (regardless of current status) and wait for completion
@@ -613,6 +677,8 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
 
             // Handle navigation based on notification type using Inertia.js
             try {
+                console.log('Notification click - Type:', notification.type, 'Data:', notification.data, 'User roles:', auth.user?.roles);
+                
                 if (notification.type === 'hte_endorsement') {
                     // Navigate to HTE endorsement table
                     if (notification.data?.student_id) {
@@ -632,9 +698,12 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                     }
                 } else if (notification.type === 'student_deadline' || notification.type === 'unified_deadline' || notification.type === 'deadline_released' || notification.type === 'deadline_expired') {
                     // Navigate based on deadline category and user role
+                    console.log('Deadline notification - category:', notification.data?.category, 'hasRole(adviser):', hasRole('adviser'));
+                    
                     if (notification.data?.category === 'student_verification' && hasRole('adviser')) {
                         // Only student verification deadlines redirect advisers to verification page
                         try {
+                            console.log('Navigating adviser to /student-verification for deadline');
                             router.get('/student-verification');
                         } catch (error) {
                             console.error('Failed to redirect to student verification page:', error);
@@ -684,16 +753,22 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                     }
                 } else if (notification.type === 'student_approval_request' || notification.type === 'student_status_change' || notification.type === 'student_registration_pending' || notification.type === 'new_student_registration' || notification.type === 'student_verification_pending' || notification.type === 'student_approved' || notification.type === 'student_approval_needed') {
                     // Navigate based on user role
+                    console.log('Adviser notification - hasRole(adviser):', hasRole('adviser'), 'redirect_url:', notification.data?.redirect_url);
+                    
                     if (hasRole('adviser')) {
                         // Use redirect_url if available, otherwise default to student-verification
                         if (notification.data?.redirect_url && typeof notification.data.redirect_url === 'string') {
+                            console.log('Navigating to redirect_url:', notification.data.redirect_url);
                             router.get(notification.data.redirect_url);
                         } else {
+                            console.log('Navigating to /student-verification');
                             router.get('/student-verification');
                         }
                     } else if (hasRole('admin')) {
+                        console.log('Navigating to /student/list (admin)');
                         router.get('/student/list');
                     } else {
+                        console.log('Navigating to /student/dashboard (other role)');
                         router.get('/student/dashboard');
                     }
                 } else {
@@ -710,6 +785,12 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                 }
             } catch (navigationError) {
                 console.error('Error during navigation:', navigationError);
+                console.error('Navigation error details:', {
+                    message: navigationError instanceof Error ? navigationError.message : String(navigationError),
+                    stack: navigationError instanceof Error ? navigationError.stack : undefined,
+                    notificationType: notification.type,
+                    userRoles: auth.user?.roles
+                });
                 // Fallback to dashboard if navigation fails
                 router.get('/dashboard');
             }
@@ -720,28 +801,72 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
         }
     };
 
+    // Initial load and polling
     useEffect(() => {
-        fetchNotifications(1, filter, showRead);
+        fetchNotifications(1, currentFilter.current, currentShowRead.current);
 
-        // Poll for new notifications every 30 seconds
-        const interval = setInterval(() => fetchNotifications(1, filter, showRead), 30000);
+        // Poll for new notifications every 1 minute (reduced from 30 seconds)
+        const interval = setInterval(() => {
+            // Only poll if dropdown is closed to avoid unnecessary requests
+            if (!currentIsOpen.current) {
+                fetchNotifications(1, currentFilter.current, currentShowRead.current);
+            }
+        }, 60000); // 1 minute
+        
         return () => clearInterval(interval);
-    }, [filter, showRead, fetchNotifications]);
+    }, [fetchNotifications]); // Include fetchNotifications dependency
 
-    // Refresh notifications when the dropdown is opened
+    // Refresh notifications when the dropdown is opened (only once per open)
     useEffect(() => {
-        if (isOpen) {
-            fetchNotifications(1, filter, showRead);
+        if (isOpen && !hasFetchedForOpenSession.current) {
+            fetchNotifications(1, currentFilter.current, currentShowRead.current);
+            hasFetchedForOpenSession.current = true;
+        } else if (!isOpen) {
+            // Reset the flag when dropdown is closed
+            hasFetchedForOpenSession.current = false;
         }
-    }, [isOpen, filter, showRead, fetchNotifications]);
+    }, [isOpen, fetchNotifications]); // Include fetchNotifications dependency
 
     // Reset filter to 'all' when component mounts to ensure it's valid for user's role
     useEffect(() => {
-        const validFilters = getFilterButtons().map(btn => btn.key);
+        // Helper function to check if user has a specific role
+        const hasRole = (roleName: string): boolean => {
+            // Check the roles array first
+            if (auth.user?.roles?.some((role: UserRole) => role.name === roleName)) {
+                return true;
+            }
+            // Fallback to the single role field
+            if (auth.role === roleName) {
+                return true;
+            }
+            return false;
+        };
+
+        let validFilters: string[] = ['all'];
+        
+        if (hasRole('student')) {
+            validFilters = ['all', 'placement', 'deadline'];
+        } else if (hasRole('hte')) {
+            validFilters = ['all', 'endorsement', 'deadline'];
+        } else if (hasRole('adviser')) {
+            validFilters = ['all', 'approval', 'deadline'];
+        } else if (hasRole('admin')) {
+            validFilters = ['all', 'approval', 'deadline'];
+        }
+
         if (!validFilters.includes(filter)) {
             setFilter('all');
         }
-    }, [filter, getFilterButtons]);
+    }, [filter, auth.user?.roles, auth.role]); // Include auth.role dependency
+
+    // Cleanup debounce timer on unmount
+    useEffect(() => {
+        return () => {
+            if (filterDebounceTimer.current) {
+                clearTimeout(filterDebounceTimer.current);
+            }
+        };
+    }, []);
 
     const formatTimeAgo = (dateString: string) => {
         const date = new Date(dateString);
@@ -794,9 +919,7 @@ export default function NotificationBell({ initialCount = 0 }: NotificationBellP
                 size="sm"
                 onClick={() => {
                     setIsOpen(!isOpen);
-                    if (!isOpen) {
-                        fetchNotifications(1, filter, showRead);
-                    }
+                    // Don't fetch here - let the useEffect handle it
                 }}
                 className="relative"
             >

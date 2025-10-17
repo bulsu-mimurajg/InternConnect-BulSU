@@ -524,7 +524,7 @@ export default function EventsPage({ allDeadlines, activeDeadlines, expiredDeadl
                                 <div className="text-sm text-blue-700 dark:text-blue-300 space-y-2">
                                     <div className="flex items-start gap-2">
                                         <span className="font-semibold min-w-[140px]">Tier 1 (T-30 min):</span>
-                                        <span>Place already-endorsed students according to compatibility rankings and available slots</span>
+                                        <span>Place already-endorsed students according to corresponding internships with available slots</span>
                                     </div>
                                     <div className="flex items-start gap-2">
                                         <span className="font-semibold min-w-[140px]">Tier 2 (T-20 min):</span>
@@ -532,7 +532,8 @@ export default function EventsPage({ allDeadlines, activeDeadlines, expiredDeadl
                                     </div>
                                     <div className="flex items-start gap-2">
                                         <span className="font-semibold min-w-[140px]">Tier 3 (T-10 min):</span>
-                                        <span>Emergency placement for students with no remaining fallback options and those rejected by HTE into any available internship slots</span>
+                                        <span>Emergency placement for remaining students
+                                            rejected by HTE and no remaining fallback options into internship with available slots by compatibility</span>
                                     </div>
                                 </div>
                             </div>
