@@ -20,6 +20,8 @@ return new class extends Migration
             $table->rememberToken();
 //            $table->enum('role', ['student', 'hte', 'admin'])->default('student');
             $table->enum('status', ['verified', 'archived', 'unverified'])->default('unverified');
+            $table->boolean('must_change_password')->default(false);
+            $table->timestamp('password_changed_at')->nullable();
             $table->timestamps();
         });
 

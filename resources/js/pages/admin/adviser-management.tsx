@@ -24,6 +24,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Plus, Edit, Archive, Eye, ArchiveRestore, Filter, ArrowUpDown, Search, GavelIcon } from 'lucide-react';
 import { type BreadcrumbItem } from '@/types';
+import { useOTP } from '@/lib/otp-utils';
+import { OTPGenerator } from '@/components/ui/otp-generator';
 
 interface Adviser {
     id: number;
@@ -72,10 +74,60 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
     const [selectedAdviser, setSelectedAdviser] = useState<Adviser | null>(null);
     const [showArchivedAdvisers, setShowArchivedAdvisers] = useState(showArchived);
     const [showFilters, setShowFilters] = useState(false);
+    const [emailValidation, setEmailValidation] = useState({
+        create: { isValid: true, message: '' },
+        edit: { isValid: true, message: '' }
+    });
+    const { otp, showOTP, generateNewOTP, copyOTP, resetOTP } = useOTP();
     const [localFilters, setLocalFilters] = useState({
         search: filters.search || '',
         section: filters.section || 'all',
     });
+
+    // Handle OTP generation
+    const handleGenerateOTP = () => {
+        const newOTP = generateNewOTP();
+        createForm.setData('password', newOTP);
+        createForm.setData('password_confirmation', newOTP);
+        return newOTP;
+    };
+
+    // Copy OTP to clipboard
+    const handleCopyOTP = async () => {
+        try {
+            await copyOTP();
+            // You could add a toast notification here
+        } catch (err) {
+            console.error('Failed to copy OTP:', err);
+        }
+    };
+    const validateEmail = (email: string): { isValid: boolean; message: string } => {
+        if (!email.trim()) {
+            return { isValid: false, message: 'Email is required' };
+        }
+        
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return { isValid: false, message: 'Please enter a valid email address' };
+        }
+        
+        return { isValid: true, message: '' };
+    };
+
+    // Handle email change with validation
+    const handleEmailChange = (email: string, formType: 'create' | 'edit') => {
+        const validation = validateEmail(email);
+        setEmailValidation(prev => ({
+            ...prev,
+            [formType]: validation
+        }));
+        
+        if (formType === 'create') {
+            createForm.setData('email', email);
+        } else {
+            editForm.setData('email', email);
+        }
+    };
 
     const createForm = useForm({
         email: '',
@@ -85,6 +137,7 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
         adviser_fname: '',
         adviser_lname: '',
         section_ids: [] as number[],
+        use_otp: true, // Flag to indicate OTP usage
     });
 
     const editForm = useForm({
@@ -99,13 +152,35 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
 
     const handleCreateSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        
+        // Validate email before submission
+        const emailValidation = validateEmail(createForm.data.email);
+        if (!emailValidation.isValid) {
+            setEmailValidation(prev => ({
+                ...prev,
+                create: emailValidation
+            }));
+            return;
+        }
 
+        // Ensure OTP is generated and set in form data
+        const currentOTP = otp || handleGenerateOTP();
+        
+        // Update form data and submit
+        createForm.setData('password', currentOTP);
+        createForm.setData('password_confirmation', currentOTP);
+        
         createForm.post(route('admin.adviser.store'), {
             onSuccess: () => {
                 setIsCreateDialogOpen(false);
                 createForm.reset();
+                setEmailValidation(prev => ({
+                    ...prev,
+                    create: { isValid: true, message: '' }
+                }));
+                resetOTP();
             },
-            onError: (errors) => {
+            onError: (errors: any) => {
                 // Handle validation errors
                 console.error('Adviser creation failed:', errors);
             },
@@ -114,12 +189,27 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
 
     const handleEditSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        
+        // Validate email before submission
+        const emailValidation = validateEmail(editForm.data.email);
+        if (!emailValidation.isValid) {
+            setEmailValidation(prev => ({
+                ...prev,
+                edit: emailValidation
+            }));
+            return;
+        }
+        
         if (selectedAdviser) {
             editForm.put(route('admin.adviser.update', selectedAdviser.id), {
                 onSuccess: () => {
                     setIsEditDialogOpen(false);
                     setSelectedAdviser(null);
                     editForm.reset();
+                    setEmailValidation(prev => ({
+                        ...prev,
+                        edit: { isValid: true, message: '' }
+                    }));
                 },
             });
         }
@@ -175,15 +265,24 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
     };
 
     const handleSectionToggle = (sectionId: number, formType: 'create' | 'edit') => {
-        const form = formType === 'create' ? createForm : editForm;
-        const currentSectionIds = form.data.section_ids;
+        const currentSectionIds = formType === 'create' ? createForm.data.section_ids : editForm.data.section_ids;
 
         if (currentSectionIds.includes(sectionId)) {
             // Remove section
-            form.setData('section_ids', currentSectionIds.filter(id => id !== sectionId));
+            const newSectionIds = currentSectionIds.filter(id => id !== sectionId);
+            if (formType === 'create') {
+                createForm.setData('section_ids', newSectionIds);
+            } else {
+                editForm.setData('section_ids', newSectionIds);
+            }
         } else {
             // Add section
-            form.setData('section_ids', [...currentSectionIds, sectionId]);
+            const newSectionIds = [...currentSectionIds, sectionId];
+            if (formType === 'create') {
+                createForm.setData('section_ids', newSectionIds);
+            } else {
+                editForm.setData('section_ids', newSectionIds);
+            }
         }
     };
 
@@ -314,12 +413,14 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
                                                             id="email"
                                                             type="email"
                                                             value={createForm.data.email}
-                                                            onChange={(e) => createForm.setData('email', e.target.value)}
-                                                            className={createForm.errors.email ? 'border-red-500' : ''}
+                                                            onChange={(e) => handleEmailChange(e.target.value, 'create')}
+                                                            className={`${createForm.errors.email || !emailValidation.create.isValid ? 'border-red-500' : ''}`}
                                                             required
                                                         />
-                                                        {createForm.errors.email && (
-                                                            <p className="text-red-500 text-xs mt-1">{createForm.errors.email}</p>
+                                                        {(createForm.errors.email || !emailValidation.create.isValid) && (
+                                                            <p className="text-red-500 text-xs mt-1">
+                                                                {createForm.errors.email || emailValidation.create.message}
+                                                            </p>
                                                         )}
                                                     </div>
                                                 </div>
@@ -340,39 +441,21 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
                                                         )}
                                                     </div>
                                                 </div>
-                                                <div className="grid grid-cols-4 items-center gap-4">
-                                                    <Label htmlFor="password" className="text-right">
+                                                <div className="grid grid-cols-4 items-start gap-4">
+                                                    <Label className="text-right pt-2">
                                                         Password
                                                     </Label>
                                                     <div className="col-span-3">
-                                                        <Input
-                                                            id="password"
-                                                            type="password"
-                                                            value={createForm.data.password}
-                                                            onChange={(e) => createForm.setData('password', e.target.value)}
-                                                            className={createForm.errors.password ? 'border-red-500' : ''}
-                                                            required
+                                                        <OTPGenerator
+                                                            otp={otp}
+                                                            showOTP={showOTP}
+                                                            onGenerateOTP={handleGenerateOTP}
+                                                            onCopyOTP={handleCopyOTP}
+                                                            label=""
+                                                            description="This password will be sent to the adviser's email. They must change it on first login."
                                                         />
                                                         {createForm.errors.password && (
                                                             <p className="text-red-500 text-xs mt-1">{createForm.errors.password}</p>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                                <div className="grid grid-cols-4 items-center gap-4">
-                                                    <Label htmlFor="password_confirmation" className="text-right">
-                                                        Confirm Password
-                                                    </Label>
-                                                    <div className="col-span-3">
-                                                        <Input
-                                                            id="password_confirmation"
-                                                            type="password"
-                                                            value={createForm.data.password_confirmation}
-                                                            onChange={(e) => createForm.setData('password_confirmation', e.target.value)}
-                                                            className={createForm.errors.password_confirmation ? 'border-red-500' : ''}
-                                                            required
-                                                        />
-                                                        {createForm.errors.password_confirmation && (
-                                                            <p className="text-red-500 text-xs mt-1">{createForm.errors.password_confirmation}</p>
                                                         )}
                                                     </div>
                                                 </div>
@@ -442,7 +525,7 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
                                                 </div>
                                             </div>
                                             <DialogFooter>
-                                                <Button type="submit" disabled={createForm.processing}>
+                                                <Button type="submit" disabled={createForm.processing || !emailValidation.create.isValid || !otp}>
                                                     {createForm.processing ? 'Creating...' : 'Create Adviser'}
                                                 </Button>
                                             </DialogFooter>
@@ -679,10 +762,15 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
                                         id="edit-email"
                                         type="email"
                                         value={editForm.data.email}
-                                        onChange={(e) => editForm.setData('email', e.target.value)}
-                                        className="col-span-3"
+                                        onChange={(e) => handleEmailChange(e.target.value, 'edit')}
+                                        className={`col-span-3 ${editForm.errors.email || !emailValidation.edit.isValid ? 'border-red-500' : ''}`}
                                         required
                                     />
+                                    {(editForm.errors.email || !emailValidation.edit.isValid) && (
+                                        <p className="text-red-500 text-xs mt-1 col-span-3 col-start-2">
+                                            {editForm.errors.email || emailValidation.edit.message}
+                                        </p>
+                                    )}
                                 </div>
                                 <div className="grid grid-cols-4 items-center gap-4">
                                     <Label htmlFor="edit-username" className="text-right">
@@ -705,19 +793,6 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
                                         type="password"
                                         value={editForm.data.password}
                                         onChange={(e) => editForm.setData('password', e.target.value)}
-                                        className="col-span-3"
-                                        placeholder="Leave blank to keep current password"
-                                    />
-                                </div>
-                                <div className="grid grid-cols-4 items-center gap-4">
-                                    <Label htmlFor="edit-password-confirmation" className="text-right">
-                                        Confirm Password
-                                    </Label>
-                                    <Input
-                                        id="edit-password-confirmation"
-                                        type="password"
-                                        value={editForm.data.password_confirmation}
-                                        onChange={(e) => editForm.setData('password_confirmation', e.target.value)}
                                         className="col-span-3"
                                         placeholder="Leave blank to keep current password"
                                     />
@@ -778,7 +853,7 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
                                 </div>
                             </div>
                             <DialogFooter>
-                                <Button type="submit" disabled={editForm.processing}>
+                                <Button type="submit" disabled={editForm.processing || !emailValidation.edit.isValid}>
                                     {editForm.processing ? 'Updating...' : 'Update Adviser'}
                                 </Button>
                             </DialogFooter>

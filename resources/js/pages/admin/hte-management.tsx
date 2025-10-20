@@ -23,6 +23,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Plus, Edit, Archive, Eye, ArchiveRestore, Filter, ChevronRight, ChevronDown, ArrowUpDown, Search, BriefcaseBusinessIcon, Building2Icon, UserIcon, MailIcon, PhoneIcon, MapPinIcon, CalendarIcon, BriefcaseIcon } from 'lucide-react';
 import { type BreadcrumbItem } from '@/types';
+import { useOTP } from '@/lib/otp-utils';
+import { OTPGenerator } from '@/components/ui/otp-generator';
 
 interface Internship {
     id: number;
@@ -118,16 +120,69 @@ export default function HTEManagement({ htes, showArchived = false, filters = {}
     const [hteToArchive, setHteToArchive] = useState<HTE | null>(null);
     const [isUnarchiveModalOpen, setIsUnarchiveModalOpen] = useState(false);
     const [hteToUnarchive, setHteToUnarchive] = useState<HTE | null>(null);
+    const [emailValidation, setEmailValidation] = useState({
+        create: { isValid: true, message: '' },
+        edit: { isValid: true, message: '' }
+    });
+    const { otp, showOTP, generateNewOTP, copyOTP, resetOTP } = useOTP();
     const [localFilters, setLocalFilters] = useState({
         search: filters.search || '',
         submission: filters.submission || 'all',
     });
+
+    // Email validation function
+    const validateEmail = (email: string): { isValid: boolean; message: string } => {
+        if (!email.trim()) {
+            return { isValid: false, message: 'Email is required' };
+        }
+        
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return { isValid: false, message: 'Please enter a valid email address' };
+        }
+        
+        return { isValid: true, message: '' };
+    };
+
+    // Handle email change with validation
+    const handleEmailChange = (email: string, formType: 'create' | 'edit') => {
+        const validation = validateEmail(email);
+        setEmailValidation(prev => ({
+            ...prev,
+            [formType]: validation
+        }));
+        
+        if (formType === 'create') {
+            createForm.setData('email', email);
+        } else {
+            editForm.setData('email', email);
+        }
+    };
+
+    // Handle OTP generation
+    const handleGenerateOTP = () => {
+        const newOTP = generateNewOTP();
+        createForm.setData('password', newOTP);
+        createForm.setData('password_confirmation', newOTP);
+        return newOTP;
+    };
+
+    // Copy OTP to clipboard
+    const handleCopyOTP = async () => {
+        try {
+            await copyOTP();
+            // You could add a toast notification here
+        } catch (err) {
+            console.error('Failed to copy OTP:', err);
+        }
+    };
 
     const createForm = useForm({
         email: '',
         username: '',
         password: '',
         password_confirmation: '',
+        use_otp: true, // Flag to indicate OTP usage
     });
 
     const editForm = useForm({
@@ -147,12 +202,34 @@ export default function HTEManagement({ htes, showArchived = false, filters = {}
     const handleCreateSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         
+        // Validate email before submission
+        const emailValidation = validateEmail(createForm.data.email);
+        if (!emailValidation.isValid) {
+            setEmailValidation(prev => ({
+                ...prev,
+                create: emailValidation
+            }));
+            return;
+        }
+
+        // Ensure OTP is generated and set in form data
+        const currentOTP = otp || handleGenerateOTP();
+        
+        // Update form data and submit
+        createForm.setData('password', currentOTP);
+        createForm.setData('password_confirmation', currentOTP);
+        
         createForm.post(route('admin.hte.store'), {
             onSuccess: () => {
                 setIsCreateDialogOpen(false);
                 createForm.reset();
+                setEmailValidation(prev => ({
+                    ...prev,
+                    create: { isValid: true, message: '' }
+                }));
+                resetOTP();
             },
-            onError: (errors) => {
+            onError: (errors: any) => {
                 // Handle validation errors
                 console.error('HTE creation failed:', errors);
             },
@@ -161,12 +238,27 @@ export default function HTEManagement({ htes, showArchived = false, filters = {}
 
     const handleEditSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        
+        // Validate email before submission
+        const emailValidation = validateEmail(editForm.data.email);
+        if (!emailValidation.isValid) {
+            setEmailValidation(prev => ({
+                ...prev,
+                edit: emailValidation
+            }));
+            return;
+        }
+        
         if (selectedHTE) {
             editForm.put(route('admin.hte.update', selectedHTE.id), {
                 onSuccess: () => {
                     setIsEditDialogOpen(false);
                     setSelectedHTE(null);
                     editForm.reset();
+                    setEmailValidation(prev => ({
+                        ...prev,
+                        edit: { isValid: true, message: '' }
+                    }));
                 },
             });
         }
@@ -572,12 +664,14 @@ export default function HTEManagement({ htes, showArchived = false, filters = {}
                                                         id="email"
                                                         type="email"
                                                         value={createForm.data.email}
-                                                        onChange={(e) => createForm.setData('email', e.target.value)}
-                                                        className={createForm.errors.email ? 'border-red-500' : ''}
+                                                        onChange={(e) => handleEmailChange(e.target.value, 'create')}
+                                                        className={`${createForm.errors.email || !emailValidation.create.isValid ? 'border-red-500' : ''}`}
                                                         required
                                                     />
-                                                    {createForm.errors.email && (
-                                                        <p className="text-red-500 text-xs mt-1">{createForm.errors.email}</p>
+                                                    {(createForm.errors.email || !emailValidation.create.isValid) && (
+                                                        <p className="text-red-500 text-xs mt-1">
+                                                            {createForm.errors.email || emailValidation.create.message}
+                                                        </p>
                                                     )}
                                                 </div>
                                             </div>
@@ -598,45 +692,27 @@ export default function HTEManagement({ htes, showArchived = false, filters = {}
                                                     )}
                                                 </div>
                                             </div>
-                                            <div className="grid grid-cols-4 items-center gap-4">
-                                                <Label htmlFor="password" className="text-right">
+                                            <div className="grid grid-cols-4 items-start gap-4">
+                                                <Label className="text-right pt-2">
                                                     Password
                                                 </Label>
                                                 <div className="col-span-3">
-                                                    <Input
-                                                        id="password"
-                                                        type="password"
-                                                        value={createForm.data.password}
-                                                        onChange={(e) => createForm.setData('password', e.target.value)}
-                                                        className={createForm.errors.password ? 'border-red-500' : ''}
-                                                        required
+                                                    <OTPGenerator
+                                                        otp={otp}
+                                                        showOTP={showOTP}
+                                                        onGenerateOTP={handleGenerateOTP}
+                                                        onCopyOTP={handleCopyOTP}
+                                                        label=""
+                                                        description="This password will be sent to the HTE's email. They must change it on first login."
                                                     />
                                                     {createForm.errors.password && (
                                                         <p className="text-red-500 text-xs mt-1">{createForm.errors.password}</p>
                                                     )}
                                                 </div>
                                             </div>
-                                            <div className="grid grid-cols-4 items-center gap-4">
-                                                <Label htmlFor="password_confirmation" className="text-right">
-                                                    Confirm Password
-                                                </Label>
-                                                <div className="col-span-3">
-                                                    <Input
-                                                        id="password_confirmation"
-                                                        type="password"
-                                                        value={createForm.data.password_confirmation}
-                                                        onChange={(e) => createForm.setData('password_confirmation', e.target.value)}
-                                                        className={createForm.errors.password_confirmation ? 'border-red-500' : ''}
-                                                        required
-                                                    />
-                                                    {createForm.errors.password_confirmation && (
-                                                        <p className="text-red-500 text-xs mt-1">{createForm.errors.password_confirmation}</p>
-                                                    )}
-                                                </div>
-                                            </div>
                                         </div>
                                         <DialogFooter>
-                                            <Button type="submit" disabled={createForm.processing}>
+                                            <Button type="submit" disabled={createForm.processing || !emailValidation.create.isValid || !otp}>
                                                 {createForm.processing ? 'Creating...' : 'Create HTE'}
                                             </Button>
                                         </DialogFooter>
@@ -929,10 +1005,15 @@ export default function HTEManagement({ htes, showArchived = false, filters = {}
                                         id="edit-email"
                                         type="email"
                                         value={editForm.data.email}
-                                        onChange={(e) => editForm.setData('email', e.target.value)}
-                                        className="col-span-3"
+                                        onChange={(e) => handleEmailChange(e.target.value, 'edit')}
+                                        className={`col-span-3 ${editForm.errors.email || !emailValidation.edit.isValid ? 'border-red-500' : ''}`}
                                         required
                                     />
+                                    {(editForm.errors.email || !emailValidation.edit.isValid) && (
+                                        <p className="text-red-500 text-xs mt-1 col-span-3 col-start-2">
+                                            {editForm.errors.email || emailValidation.edit.message}
+                                        </p>
+                                    )}
                                 </div>
                                 <div className="grid grid-cols-4 items-center gap-4">
                                     <Label htmlFor="edit-username" className="text-right">
@@ -1052,7 +1133,7 @@ export default function HTEManagement({ htes, showArchived = false, filters = {}
                                 </div>
                             </div>
                             <DialogFooter>
-                                <Button type="submit" disabled={editForm.processing}>
+                                <Button type="submit" disabled={editForm.processing || !emailValidation.edit.isValid}>
                                     {editForm.processing ? 'Updating...' : 'Update HTE'}
                                 </Button>
                             </DialogFooter>

@@ -1060,6 +1060,7 @@ class AdminController extends Controller
                 'password' => Hash::make($request->password),
                 'status' => 'verified',
                 'email_verified_at' => now(),
+                'must_change_password' => true, // Require password change on first login
             ]);
 
             Log::info('User created successfully', [
@@ -1404,6 +1405,7 @@ class AdminController extends Controller
                 'username' => $request->username,
                 'password' => Hash::make($request->password),
                 'status' => 'verified',
+                'must_change_password' => true, // Require password change on first login
             ]);
 
             // Assign adviser role

@@ -30,6 +30,8 @@ class User extends Authenticatable
         'first_name',
         'middle_name',
         'last_name',
+        'must_change_password',
+        'password_changed_at',
     ];
 
     /**
@@ -52,6 +54,8 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'must_change_password' => 'boolean',
+            'password_changed_at' => 'datetime',
         ];
     }
 
@@ -91,5 +95,32 @@ class User extends Authenticatable
     public function sendPasswordResetNotification($token)
     {
         $this->notify(new CustomResetPasswordNotification($token));
+    }
+
+    /**
+     * Check if user must change password on next login
+     */
+    public function mustChangePassword(): bool
+    {
+        return $this->must_change_password;
+    }
+
+    /**
+     * Mark that user must change password
+     */
+    public function requirePasswordChange(): void
+    {
+        $this->update(['must_change_password' => true]);
+    }
+
+    /**
+     * Mark password as changed
+     */
+    public function markPasswordChanged(): void
+    {
+        $this->update([
+            'must_change_password' => false,
+            'password_changed_at' => now(),
+        ]);
     }
 }

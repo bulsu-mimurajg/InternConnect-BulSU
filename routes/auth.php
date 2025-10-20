@@ -45,6 +45,12 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::middleware('auth')->group(function () {
+    Route::get('change-password', [App\Http\Controllers\Auth\ChangePasswordController::class, 'show'])
+        ->name('password.change');
+    
+    Route::post('change-password', [App\Http\Controllers\Auth\ChangePasswordController::class, 'store'])
+        ->name('password.change.store');
+
     Route::get('verify-email', EmailVerificationPromptController::class)
         ->name('verification.notice');
 
