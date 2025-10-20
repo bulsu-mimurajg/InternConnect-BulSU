@@ -18,16 +18,11 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, MoreHorizontal, Edit, Archive, Eye, ArchiveRestore, Filter, ArrowUpDown, Search, GavelIcon } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Plus, Edit, Archive, Eye, ArchiveRestore, Filter, ArrowUpDown, Search, GavelIcon } from 'lucide-react';
 import { type BreadcrumbItem } from '@/types';
 
 interface Adviser {
@@ -60,7 +55,6 @@ interface Props {
     showArchived?: boolean;
     filters?: {
         search?: string;
-        status?: string;
         section?: string;
     };
 }
@@ -80,7 +74,6 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
     const [showFilters, setShowFilters] = useState(false);
     const [localFilters, setLocalFilters] = useState({
         search: filters.search || '',
-        status: filters.status || 'all',
         section: filters.section || 'all',
     });
 
@@ -194,7 +187,7 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
         }
     };
 
-    const handleFilterChange = (filterType: 'search' | 'status' | 'section', value: string) => {
+    const handleFilterChange = (filterType: 'search' | 'section', value: string) => {
         const newFilters = { ...localFilters, [filterType]: value };
         setLocalFilters(newFilters);
 
@@ -202,9 +195,6 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
         const params = new URLSearchParams();
         if (newFilters.search) {
             params.append('search', newFilters.search);
-        }
-        if (newFilters.status && newFilters.status !== 'all') {
-            params.append('status', newFilters.status);
         }
         if (newFilters.section && newFilters.section !== 'all') {
             params.append('section', newFilters.section);
@@ -218,7 +208,7 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
     };
 
     const clearFilters = () => {
-        setLocalFilters({ search: '', status: 'all', section: 'all' });
+        setLocalFilters({ search: '', section: 'all' });
         const routeName = showArchivedAdvisers ? 'admin.adviser.archived' : 'admin.adviser';
         router.get(route(routeName), {}, {
             preserveState: true,
@@ -230,16 +220,15 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
         const matchesSearch = adviser.username.toLowerCase().includes(localFilters.search.toLowerCase()) ||
                             adviser.email.toLowerCase().includes(localFilters.search.toLowerCase()) ||
                             adviser.full_name.toLowerCase().includes(localFilters.search.toLowerCase());
-        const matchesStatus = localFilters.status === 'all' || adviser.status === localFilters.status;
         const matchesSection = localFilters.section === 'all' || 
                               adviser.sections.some(s => s.section_name === localFilters.section);
-        return matchesSearch && matchesStatus && matchesSection;
+        return matchesSearch && matchesSection;
     });
 
     // Create a stable reset trigger for pagination
     const resetTrigger = useMemo(() => 
-        `${localFilters.search}-${localFilters.status}-${localFilters.section}`,
-        [localFilters.search, localFilters.status, localFilters.section]
+        `${localFilters.search}-${localFilters.section}`,
+        [localFilters.search, localFilters.section]
     );
 
     // Pagination hook with auto-reset on filter changes
@@ -472,11 +461,11 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
                                 Filters & Search
                             </CardTitle>
                             <CardDescription>
-                                Filter advisers by status, section, or search by username, email, or name
+                                Filter advisers by section or search by username, email, or name
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 {/* Search Filter */}
                                 <div className="space-y-2">
                                     <Label htmlFor="search-filter">Search</Label>
@@ -490,25 +479,6 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
                                             className="pl-10"
                                         />
                                     </div>
-                                </div>
-
-                                {/* Status Filter */}
-                                <div className="space-y-2">
-                                    <Label htmlFor="status-filter">Status</Label>
-                                    <Select
-                                        value={localFilters.status}
-                                        onValueChange={(value) => handleFilterChange('status', value)}
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="All Status" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="all">All Status</SelectItem>
-                                            <SelectItem value="verified">Verified</SelectItem>
-                                            <SelectItem value="unverified">Unverified</SelectItem>
-                                            <SelectItem value="archived">Archived</SelectItem>
-                                        </SelectContent>
-                                    </Select>
                                 </div>
 
                                 {/* Section Filter */}
@@ -597,7 +567,6 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
                                             <th className="text-left py-3 px-4 font-semibold text-sm">Email</th>
                                             <th className="text-left py-3 px-4 font-semibold text-sm">Name</th>
                                             <th className="text-left py-3 px-4 font-semibold text-sm">Sections</th>
-                                            <th className="text-left py-3 px-4 font-semibold text-sm">Status</th>
                                             <th className="text-left py-3 px-4 font-semibold text-sm">Created</th>
                                             <th className="text-right py-3 px-4 font-semibold text-sm">Actions</th>
                                         </tr>
@@ -614,41 +583,60 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
                                                 <td className="py-3 px-4 text-sm text-muted-foreground">{adviser.email}</td>
                                                 <td className="py-3 px-4">{adviser.full_name}</td>
                                                 <td className="py-3 px-4 text-sm text-muted-foreground">{adviser.section_names}</td>
-                                                <td className="py-3 px-4">{getStatusBadge(adviser.status)}</td>
                                                 <td className="py-3 px-4 text-sm text-muted-foreground">
                                                     {new Date(adviser.created_at).toLocaleDateString()}
                                                 </td>
                                                 <td className="py-3 px-4 text-right">
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                                                <MoreHorizontal className="h-4 w-4" />
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="end">
-                                                            <DropdownMenuItem onClick={() => handleEdit(adviser)}>
-                                                                <Edit className="mr-2 h-4 w-4" />
-                                                                Edit
-                                                            </DropdownMenuItem>
-                                                            {adviser.status === 'archived' ? (
-                                                                <DropdownMenuItem
-                                                                    onClick={() => handleUnarchive(adviser)}
-                                                                    className="text-green-600 focus:text-green-600"
+                                                    <div className="flex items-center gap-2 justify-end">
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    onClick={() => handleEdit(adviser)}
+                                                                    className="h-8 w-8 p-0"
                                                                 >
-                                                                    <ArchiveRestore className="mr-2 h-4 w-4" />
-                                                                    Unarchive
-                                                                </DropdownMenuItem>
-                                                            ) : (
-                                                                <DropdownMenuItem
-                                                                    onClick={() => handleArchive(adviser)}
-                                                                    className="text-destructive focus:text-destructive"
-                                                                >
-                                                                    <Archive className="mr-2 h-4 w-4" />
-                                                                    Archive
-                                                                </DropdownMenuItem>
-                                                            )}
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
+                                                                    <Edit className="h-4 w-4" />
+                                                                </Button>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent>
+                                                                <p>Edit Adviser Account</p>
+                                                            </TooltipContent>
+                                                        </Tooltip>
+                                                        {adviser.status === 'archived' ? (
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="sm"
+                                                                        onClick={() => handleUnarchive(adviser)}
+                                                                        className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-100"
+                                                                    >
+                                                                        <ArchiveRestore className="h-4 w-4" />
+                                                                    </Button>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>
+                                                                    <p>Restore Adviser Account</p>
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                        ) : (
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="sm"
+                                                                        onClick={() => handleArchive(adviser)}
+                                                                        className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                                                    >
+                                                                        <Archive className="h-4 w-4" />
+                                                                    </Button>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>
+                                                                    <p>Archive Adviser Account</p>
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                        )}
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))}

@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Plus, Edit, Archive, Eye, ArchiveRestore, Filter, ChevronRight, ChevronDown, ArrowUpDown, Search, BriefcaseBusinessIcon, Building2Icon, UserIcon, MailIcon, PhoneIcon, MapPinIcon, CalendarIcon, BriefcaseIcon } from 'lucide-react';
 import { type BreadcrumbItem } from '@/types';
 
@@ -59,7 +60,6 @@ interface Props {
     showArchived?: boolean;
     filters?: {
         search?: string;
-        status?: string;
         submission?: string;
     };
     deadlineStatus?: {
@@ -120,7 +120,6 @@ export default function HTEManagement({ htes, showArchived = false, filters = {}
     const [hteToUnarchive, setHteToUnarchive] = useState<HTE | null>(null);
     const [localFilters, setLocalFilters] = useState({
         search: filters.search || '',
-        status: filters.status || 'all',
         submission: filters.submission || 'all',
     });
 
@@ -283,7 +282,7 @@ export default function HTEManagement({ htes, showArchived = false, filters = {}
         router.visit(route(routeName));
     };
 
-    const handleFilterChange = (filterType: 'search' | 'status' | 'submission', value: string) => {
+    const handleFilterChange = (filterType: 'search' | 'submission', value: string) => {
         const newFilters = { ...localFilters, [filterType]: value };
         setLocalFilters(newFilters);
 
@@ -291,9 +290,6 @@ export default function HTEManagement({ htes, showArchived = false, filters = {}
         const params = new URLSearchParams();
         if (newFilters.search) {
             params.append('search', newFilters.search);
-        }
-        if (newFilters.status && newFilters.status !== 'all') {
-            params.append('status', newFilters.status);
         }
         if (newFilters.submission && newFilters.submission !== 'all') {
             params.append('submission', newFilters.submission);
@@ -307,7 +303,7 @@ export default function HTEManagement({ htes, showArchived = false, filters = {}
     };
 
     const clearFilters = () => {
-        setLocalFilters({ search: '', status: 'all', submission: 'all' });
+        setLocalFilters({ search: '', submission: 'all' });
         const routeName = showArchivedHTEs ? 'admin.hte.archived' : 'admin.hte';
         router.get(route(routeName), {}, {
             preserveState: true,
@@ -340,17 +336,16 @@ export default function HTEManagement({ htes, showArchived = false, filters = {}
                             (fullName && fullName.toLowerCase().includes(localFilters.search.toLowerCase())) ||
                             (hte.cperson_fname && hte.cperson_fname.toLowerCase().includes(localFilters.search.toLowerCase())) ||
                             (hte.cperson_lname && hte.cperson_lname.toLowerCase().includes(localFilters.search.toLowerCase()));
-        const matchesStatus = localFilters.status === 'all' || hte.status === localFilters.status;
         const matchesSubmission = localFilters.submission === 'all' || 
                                 (localFilters.submission === 'submitted' && hte.is_submit) ||
                                 (localFilters.submission === 'not_submitted' && !hte.is_submit);
-        return matchesSearch && matchesStatus && matchesSubmission;
+        return matchesSearch && matchesSubmission;
     });
 
     // Create a stable reset trigger for pagination
     const resetTrigger = useMemo(() => 
-        `${localFilters.search}-${localFilters.status}-${localFilters.submission}-${showArchivedHTEs}`,
-        [localFilters.search, localFilters.status, localFilters.submission, showArchivedHTEs]
+        `${localFilters.search}-${localFilters.submission}-${showArchivedHTEs}`,
+        [localFilters.search, localFilters.submission, showArchivedHTEs]
     );
 
     // Pagination hook with auto-reset on filter changes
@@ -660,11 +655,11 @@ export default function HTEManagement({ htes, showArchived = false, filters = {}
                                 Filters & Search
                             </CardTitle>
                             <CardDescription>
-                                Filter HTEs by status, submission status, or search by username, email, company name, or contact person
+                                Filter HTEs by submission status or search by username, email, company name, or contact person
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 {/* Search Filter */}
                                 <div className="space-y-2">
                                     <Label htmlFor="search-filter">Search</Label>
@@ -678,25 +673,6 @@ export default function HTEManagement({ htes, showArchived = false, filters = {}
                                             className="pl-10"
                                         />
                                     </div>
-                                </div>
-
-                                {/* Status Filter */}
-                                <div className="space-y-2">
-                                    <Label htmlFor="status-filter">Status</Label>
-                                    <Select
-                                        value={localFilters.status}
-                                        onValueChange={(value) => handleFilterChange('status', value)}
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="All Status" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="all">All Status</SelectItem>
-                                            <SelectItem value="verified">Verified</SelectItem>
-                                            <SelectItem value="unverified">Unverified</SelectItem>
-                                            <SelectItem value="archived">Archived</SelectItem>
-                                        </SelectContent>
-                                    </Select>
                                 </div>
 
                                 {/* Submission Filter */}
@@ -783,7 +759,6 @@ export default function HTEManagement({ htes, showArchived = false, filters = {}
                                             <th className="text-center py-3 px-4 font-semibold text-sm w-16">#</th>
                                             <th className="text-left py-3 px-4 font-semibold text-sm">Username</th>
                                             <th className="text-left py-3 px-4 font-semibold text-sm">Email</th>
-                                            <th className="text-left py-3 px-4 font-semibold text-sm">Status</th>
                                             <th className="text-left py-3 px-4 font-semibold text-sm">Company</th>
                                             <th className="text-left py-3 px-4 font-semibold text-sm">Contact Person</th>
                                             <th className="text-left py-3 px-4 font-semibold text-sm">Form Status</th>
@@ -823,7 +798,6 @@ export default function HTEManagement({ htes, showArchived = false, filters = {}
                                                             </div>
                                                         </td>
                                                         <td className="py-3 px-4 text-sm text-muted-foreground">{hte.email}</td>
-                                                        <td className="py-3 px-4">{getStatusBadge(hte.status)}</td>
                                                         <td className="py-3 px-4 text-sm text-muted-foreground">
                                                             {hte.company_name || 'Not provided'}
                                                         </td>
@@ -844,50 +818,71 @@ export default function HTEManagement({ htes, showArchived = false, filters = {}
                                                         </td>
                                                         <td className="py-3 px-4 text-right">
                                                             <div className="flex items-center gap-2 justify-end">
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="sm"
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        handleEdit(hte);
-                                                                    }}
-                                                                    className="h-8 w-8 p-0"
-                                                                >
-                                                                    <Edit className="h-4 w-4" />
-                                                                </Button>
+                                                                <Tooltip>
+                                                                    <TooltipTrigger asChild>
+                                                                        <Button
+                                                                            variant="ghost"
+                                                                            size="sm"
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                handleEdit(hte);
+                                                                            }}
+                                                                            className="h-8 w-8 p-0"
+                                                                        >
+                                                                            <Edit className="h-4 w-4" />
+                                                                        </Button>
+                                                                    </TooltipTrigger>
+                                                                    <TooltipContent>
+                                                                        <p>Edit HTE Account</p>
+                                                                    </TooltipContent>
+                                                                </Tooltip>
                                                                 {hte.status === 'archived' ? (
-                                                                    <Button
-                                                                        variant="ghost"
-                                                                        size="sm"
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            handleUnarchive(hte);
-                                                                        }}
-                                                                        disabled={isHTEArchivingRestricted}
-                                                                        className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-100"
-                                                                    >
-                                                                        <ArchiveRestore className="h-4 w-4" />
-                                                                    </Button>
+                                                                    <Tooltip>
+                                                                        <TooltipTrigger asChild>
+                                                                            <Button
+                                                                                variant="ghost"
+                                                                                size="sm"
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    handleUnarchive(hte);
+                                                                                }}
+                                                                                disabled={isHTEArchivingRestricted}
+                                                                                className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-100"
+                                                                            >
+                                                                                <ArchiveRestore className="h-4 w-4" />
+                                                                            </Button>
+                                                                        </TooltipTrigger>
+                                                                        <TooltipContent>
+                                                                            <p>Restore HTE Account</p>
+                                                                        </TooltipContent>
+                                                                    </Tooltip>
                                                                 ) : (
-                                                                    <Button
-                                                                        variant="ghost"
-                                                                        size="sm"
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            handleArchive(hte);
-                                                                        }}
-                                                                        disabled={isHTEArchivingRestricted}
-                                                                        className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                                                    >
-                                                                        <Archive className="h-4 w-4" />
-                                                                    </Button>
+                                                                    <Tooltip>
+                                                                        <TooltipTrigger asChild>
+                                                                            <Button
+                                                                                variant="ghost"
+                                                                                size="sm"
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    handleArchive(hte);
+                                                                                }}
+                                                                                disabled={isHTEArchivingRestricted}
+                                                                                className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                                                            >
+                                                                                <Archive className="h-4 w-4" />
+                                                                            </Button>
+                                                                        </TooltipTrigger>
+                                                                        <TooltipContent>
+                                                                            <p>Archive HTE Account</p>
+                                                                        </TooltipContent>
+                                                                    </Tooltip>
                                                                 )}
                                                             </div>
                                                         </td>
                                                     </tr>
                                                     {isExpanded && hasDetails && (
                                                         <tr>
-                                                            <td colSpan={9} className="p-0">
+                                                            <td colSpan={8} className="p-0">
                                                                 {renderHTEDetails(hte)}
                                                             </td>
                                                         </tr>
