@@ -4,6 +4,14 @@ globs: *.tsx,*.ts
 
 # React Mobile-First Development with shadcn/ui
 
+## TypeScript Usage Policy
+
+- Do not use `any` (and avoid `unknown` where possible); prefer precise, explicit types.
+- Define component props with interfaces/types; extend from `React.ComponentProps<...>` when appropriate.
+- Prefer discriminated unions, generics, and utility types over casts; avoid `as` except when narrowing external data.
+- Do not use `React.FC`; explicitly type `children?: React.ReactNode` on props when needed.
+- All examples should demonstrate proper typing without `any`.
+
 ## shadcn/ui Component Usage
 
 ### Always Use Existing Components
@@ -74,9 +82,10 @@ function MyComponent() {
 interface ComponentProps extends React.ComponentProps<"div"> {
   variant?: "default" | "secondary";
   size?: "sm" | "md" | "lg";
+  children?: React.ReactNode;
 }
 
-function Component({ className, variant, size, ...props }: ComponentProps) {
+function Component({ className, variant = "default", size = "md", ...props }: ComponentProps) {
   return (
     <div
       data-slot="component"
@@ -221,7 +230,7 @@ import { LoaderCircle } from 'lucide-react';
 import { Form, Head } from '@inertiajs/react';
 
 interface PageProps {
-  // Define props interface
+  // Define props interface explicitly; avoid `any`
 }
 
 export default function Page({ ...props }: PageProps) {
