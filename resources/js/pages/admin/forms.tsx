@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Pagination } from '@/components/ui/pagination';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { usePagination } from '@/hooks/usePagination';
 import { getRowNumber } from '@/lib/pagination-utils';
 import { FileTextIcon, PlusIcon, EditIcon, ArchiveIcon, RotateCcwIcon, SearchIcon, FilterIcon, ArrowUpDownIcon, Archive, Eye } from 'lucide-react';
@@ -568,8 +569,7 @@ export default function FormsPage({ questions, categories, subcategories, filter
                                                 </td>
                                                 <td className="p-3">
                                                     <div>
-                                                        <div className="font-medium mb-1">Question #{question.id}</div>
-                                                        <p className="text-sm text-muted-foreground">
+                                                        <p className="text-sm">
                                                             {question.question}
                                                         </p>
                                                     </div>
@@ -587,34 +587,55 @@ export default function FormsPage({ questions, categories, subcategories, filter
                                                     <div className="flex items-center justify-end gap-2">
                                                         {question.is_active ? (
                                                             <>
-                                                                <Button
-                                                                    variant="outline"
-                                                                    size="sm"
-                                                                    onClick={() => handleEdit(question)}
-                                                                    disabled={isFormsManagementRestricted}
-                                                                >
-                                                                    <EditIcon className="h-4 w-4" />
-                                                                </Button>
-                                                                <Button
-                                                                    variant="outline"
-                                                                    size="sm"
-                                                                    onClick={() => handleArchive(question.id)}
-                                                                    className="text-orange-600 hover:text-orange-700"
-                                                                    disabled={isFormsManagementRestricted}
-                                                                >
-                                                                    <ArchiveIcon className="h-4 w-4" />
-                                                                </Button>
+                                                                <Tooltip>
+                                                                    <TooltipTrigger asChild>
+                                                                        <Button
+                                                                            variant="outline"
+                                                                            size="sm"
+                                                                            onClick={() => handleEdit(question)}
+                                                                            disabled={isFormsManagementRestricted}
+                                                                        >
+                                                                            <EditIcon className="h-4 w-4" />
+                                                                        </Button>
+                                                                    </TooltipTrigger>
+                                                                    <TooltipContent>
+                                                                        <p>Edit Question</p>
+                                                                    </TooltipContent>
+                                                                </Tooltip>
+                                                                <Tooltip>
+                                                                    <TooltipTrigger asChild>
+                                                                        <Button
+                                                                            variant="outline"
+                                                                            size="sm"
+                                                                            onClick={() => handleArchive(question.id)}
+                                                                            className="text-orange-600 hover:text-orange-700"
+                                                                            disabled={isFormsManagementRestricted}
+                                                                        >
+                                                                            <ArchiveIcon className="h-4 w-4" />
+                                                                        </Button>
+                                                                    </TooltipTrigger>
+                                                                    <TooltipContent>
+                                                                        <p>Archive Question</p>
+                                                                    </TooltipContent>
+                                                                </Tooltip>
                                                             </>
                                                         ) : (
-                                                            <Button
-                                                                variant="outline"
-                                                                size="sm"
-                                                                onClick={() => handleRestore(question.id)}
-                                                                className="text-green-600 hover:text-green-700"
-                                                                disabled={isFormsManagementRestricted}
-                                                            >
-                                                                <RotateCcwIcon className="h-4 w-4" />
-                                                            </Button>
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <Button
+                                                                        variant="outline"
+                                                                        size="sm"
+                                                                        onClick={() => handleRestore(question.id)}
+                                                                        className="text-green-600 hover:text-green-700"
+                                                                        disabled={isFormsManagementRestricted}
+                                                                    >
+                                                                        <RotateCcwIcon className="h-4 w-4" />
+                                                                    </Button>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>
+                                                                    <p>Restore Question</p>
+                                                                </TooltipContent>
+                                                            </Tooltip>
                                                         )}
                                                     </div>
                                                 </td>
