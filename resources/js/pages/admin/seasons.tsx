@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Head, router } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CalendarIcon, PlusIcon, CheckCircleIcon, ClockIcon, UsersIcon, CalendarDaysIcon, ArrowLeftIcon, ArchiveIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import AdminLayout from '@/layouts/admin/layout';
@@ -67,6 +68,7 @@ interface Props {
 }
 
 export default function SeasonsManagement({ seasons, activeSeason, activeSeasonDeadlines }: Props) {
+  const { errors } = usePage().props as { errors?: Record<string, string> };
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [deactivateDialog, setDeactivateDialog] = useState<{
@@ -79,6 +81,16 @@ export default function SeasonsManagement({ seasons, activeSeason, activeSeasonD
     start_date: '',
     end_date: '',
   });
+
+  // Generate academic year options
+  const getAcademicYearOptions = () => {
+    const currentYear = new Date().getFullYear();
+    return [
+      { value: `Academic Year (${currentYear - 1}-${currentYear})`, label: 'Previous Year' },
+      { value: `Academic Year (${currentYear}-${currentYear + 1})`, label: 'Current Year' },
+      { value: `Academic Year (${currentYear + 1}-${currentYear + 2})`, label: 'Next Year' },
+    ];
+  };
 
   const handleCreateSeason = (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,13 +107,13 @@ export default function SeasonsManagement({ seasons, activeSeason, activeSeasonD
 
   const handleActivateSeason = (season: InternshipSeason) => {
     if (activeSeason) {
-      alert(`Season "${activeSeason.name}" is currently active. Please deactivate it first.`);
+      alert(`Academic Year "${activeSeason.name}" is currently active. Please deactivate it first.`);
       return;
     }
     
     // Check if all 5 categories exist
     if (season.deadlines_count < 5) {
-      alert('All 5 deadline categories must be created before activating this season.');
+      alert('All 5 deadline categories must be created before activating this academic year.');
       return;
     }
     
@@ -158,7 +170,7 @@ export default function SeasonsManagement({ seasons, activeSeason, activeSeasonD
 
   return (
     <AdminLayout>
-      <Head title="Internship Seasons" />
+      <Head title="Academic Years" />
       
       <div className="p-4 md:p-6 space-y-6">
         {/* Back Button */}
@@ -177,8 +189,8 @@ export default function SeasonsManagement({ seasons, activeSeason, activeSeasonD
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Internship Seasons</h1>
-            <p className="text-muted-foreground">Manage internship seasons and student archiving.</p>
+            <h1 className="text-2xl font-bold text-foreground">Academic Years</h1>
+            <p className="text-muted-foreground">Manage academic years and student archiving.</p>
           </div>
           
           <div className="flex items-center gap-2">
@@ -186,27 +198,44 @@ export default function SeasonsManagement({ seasons, activeSeason, activeSeasonD
               <DialogTrigger asChild>
                 <Button className="flex items-center gap-2">
                   <PlusIcon className="h-4 w-4" />
-                  Create Season
+                  Create Academic Year
                 </Button>
               </DialogTrigger>
             <DialogContent className="sm:max-w-md">
               <DialogHeader>
-                <DialogTitle>Create New Internship Season</DialogTitle>
+                <DialogTitle>Create New Academic Year</DialogTitle>
                 <DialogDescription>
-                  Create a new internship season to organize deadlines and manage student archiving.
+                  Create a new academic year to organize deadlines and manage student archiving.
                 </DialogDescription>
               </DialogHeader>
               
               <form onSubmit={handleCreateSeason} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Season Name</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="e.g., AY 2024-2025 First Semester"
+                  <Label htmlFor="name">Academic Year</Label>
+                  <Select 
+                    value={formData.name} 
+                    onValueChange={(value) => setFormData({ ...formData, name: value })}
                     required
-                  />
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select an academic year" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {getAcademicYearOptions().map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          <div className="flex items-center gap-2">
+                            <span>{option.value}</span>
+                            <span className="text-xs text-muted-foreground">{option.label}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors?.name && (
+                    <div className="text-sm text-destructive mt-1">
+                      {errors.name}
+                    </div>
+                  )}
                 </div>
                 
                 <div className="space-y-2">
@@ -240,7 +269,7 @@ export default function SeasonsManagement({ seasons, activeSeason, activeSeasonD
                     Cancel
                   </Button>
                   <Button type="submit" disabled={isLoading}>
-                    {isLoading ? 'Creating...' : 'Create Season'}
+                    {isLoading ? 'Creating...' : 'Create Academic Year'}
                   </Button>
                 </div>
               </form>
@@ -258,21 +287,17 @@ export default function SeasonsManagement({ seasons, activeSeason, activeSeasonD
         }}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>Deactivate Season</DialogTitle>
-              <DialogDescription>
-                This will mark the season as completed and expire all active deadlines. 
-                This action cannot be undone.
-              </DialogDescription>
+                <DialogTitle>Deactivate Academic Year</DialogTitle>
             </DialogHeader>
             
             <div className="space-y-4">
               <div className="bg-red-50 border border-red-200 rounded-md p-4">
                 <p className="text-sm text-red-800 font-medium">
-                  Warning: This action is permanent
+                  Warning: This action is permanent!
                 </p>
                 <ul className="text-sm text-red-700 mt-2 space-y-1 list-disc list-inside">
                   <li>All active deadlines will be expired</li>
-                  <li>Season will be marked as completed</li>
+                  <li>Academic Year will be marked as completed</li>
                   <li>This cannot be undone</li>
                 </ul>
               </div>
@@ -306,7 +331,7 @@ export default function SeasonsManagement({ seasons, activeSeason, activeSeasonD
                   onClick={confirmDeactivate}
                   disabled={confirmationText !== 'I understand'}
                 >
-                  Deactivate Season
+                  Deactivate Academic Year
                 </Button>
               </div>
             </div>
@@ -323,7 +348,7 @@ export default function SeasonsManagement({ seasons, activeSeason, activeSeasonD
                     <CheckCircleIcon className="h-5 w-5 text-green-600 dark:text-green-400" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-green-900 dark:text-green-100">Current Active Season</h3>
+                    <h3 className="font-semibold text-green-900 dark:text-green-100">Current Active Academic Year</h3>
                     <p className="text-sm text-green-700 dark:text-green-300">{activeSeason.name}</p>
                   </div>
                 </div>
@@ -382,7 +407,7 @@ export default function SeasonsManagement({ seasons, activeSeason, activeSeasonD
           </Card>
         )}
 
-        {/* Seasons List */}
+        {/* Academic Years List */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {seasons.map((season) => (
             <Card key={season.id} className="relative flex flex-col h-full">
@@ -458,7 +483,7 @@ export default function SeasonsManagement({ seasons, activeSeason, activeSeasonD
                             <strong>Activation Pending</strong>
                           </div>
                           <div className="mb-2">
-                            {5 - season.deadlines_count} more deadline{5 - season.deadlines_count !== 1 ? 's' : ''} required to activate this season.
+                            {5 - season.deadlines_count} more deadline{5 - season.deadlines_count !== 1 ? 's' : ''} required to activate this academic year.
                           </div>
                           <div>
                             <Button
@@ -480,7 +505,7 @@ export default function SeasonsManagement({ seasons, activeSeason, activeSeasonD
                             <strong>Ready for Activation</strong>
                           </div>
                           <div>
-                            All deadline categories created. This season can now be activated.
+                            All deadline categories created. This academic year can now be activated.
                           </div>
                         </div>
                       )}
@@ -542,7 +567,7 @@ export default function SeasonsManagement({ seasons, activeSeason, activeSeasonD
                         <div className="text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 p-2 rounded border border-blue-200 dark:border-blue-800">
                           <div className="flex items-center gap-1 mb-1">
                             <CheckCircleIcon className="h-3 w-3" />
-                            <strong>Season Active</strong>
+                            <strong>Academic Year Active</strong>
                           </div>
                           <div>
                             Deadlines are currently active and students can submit their requirements.
@@ -554,10 +579,10 @@ export default function SeasonsManagement({ seasons, activeSeason, activeSeasonD
                         <div className="text-xs text-muted-foreground bg-muted/50 p-2 rounded border border-border">
                           <div className="flex items-center gap-1 mb-1">
                             <ClockIcon className="h-3 w-3" />
-                            <strong>Season Completed</strong>
+                            <strong>Academic Year Completed</strong>
                           </div>
                           <div>
-                            All deadlines have been processed and the season is now completed.
+                            All deadlines have been processed and the academic year is now completed.
                           </div>
                         </div>
                       )}
@@ -595,7 +620,7 @@ export default function SeasonsManagement({ seasons, activeSeason, activeSeasonD
                       size="sm"
                       variant="destructive"
                       onClick={() => {
-                        if (confirm('Are you sure you want to archive all students in this season? This action cannot be undone.')) {
+                        if (confirm('Are you sure you want to archive all students in this academic year? This action cannot be undone.')) {
                           router.post(`/admin/seasons/${season.id}/archive-students`);
                         }
                       }}
@@ -612,7 +637,7 @@ export default function SeasonsManagement({ seasons, activeSeason, activeSeasonD
                     onClick={() => router.get(`/admin/seasons/${season.id}/stats`)}
                     className="w-full"
                   >
-                    View Stats
+                    View Statistics
                   </Button>
                 </div>
               </CardContent>
@@ -625,9 +650,9 @@ export default function SeasonsManagement({ seasons, activeSeason, activeSeasonD
           <Card className="text-center py-12">
             <CardContent>
               <CalendarIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-foreground mb-2">No Seasons Found</h3>
+              <h3 className="text-lg font-medium text-foreground mb-2">No Academic Years Found</h3>
               <p className="text-muted-foreground mb-4">
-                Create your internship season to start managing deadlines and student archiving.
+                Create your academic year to start managing deadlines and student archiving.
               </p>
             </CardContent>
           </Card>

@@ -67,7 +67,7 @@ class InternshipSeasonController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
+            'name' => 'required|string|max:255|unique:internship_seasons,name',
             'start_date' => 'required|date',
             'end_date' => 'required|date|after:start_date',
         ]);
@@ -109,7 +109,7 @@ class InternshipSeasonController extends Controller
     public function update(Request $request, InternshipSeason $season): RedirectResponse
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
+            'name' => 'required|string|max:255|unique:internship_seasons,name,' . $season->id,
             'start_date' => 'required|date',
             'end_date' => 'required|date|after:start_date',
         ]);

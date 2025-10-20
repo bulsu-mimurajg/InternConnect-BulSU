@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('internship_seasons', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
+            $table->string('name')->unique();
             $table->dateTime('start_date');
             $table->dateTime('end_date');
             $table->enum('status', ['active', 'inactive', 'completed', 'archived'])->default('inactive');

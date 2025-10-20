@@ -367,7 +367,7 @@ export default function EventsPage({ allDeadlines, activeDeadlines, expiredDeadl
                                             <CheckCircleIcon className="h-5 w-5 text-green-600 dark:text-green-400" />
                                         </div>
                                         <div>
-                                            <h3 className="font-semibold text-green-900 dark:text-green-100">Current Active Season</h3>
+                                            <h3 className="font-semibold text-green-900 dark:text-green-100">Current Active Academic Year</h3>
                                             <p className="text-sm text-green-700 dark:text-green-300">{activeSeason.name}</p>
                                         </div>
                                     </div>
@@ -434,20 +434,20 @@ export default function EventsPage({ allDeadlines, activeDeadlines, expiredDeadl
                                         <ClockIcon className="h-5 w-5 text-amber-600 dark:text-amber-400" />
                                     </div>
                                     <div>
-                                        <h3 className="font-semibold text-amber-900 dark:text-amber-100">No Active Season</h3>
-                                        <p className="text-sm text-amber-700 dark:text-amber-300">Create deadlines for any available season</p>
+                                        <h3 className="font-semibold text-amber-900 dark:text-amber-100">No Active Academic Year</h3>
+                                        <p className="text-sm text-amber-700 dark:text-amber-300">Create deadlines for any available academic year</p>
                                     </div>
                                 </div>
                             </CardHeader>
                             <CardContent className="pt-0">
                                 <div className="space-y-3">
-                                    <p className="text-sm text-amber-700 dark:text-amber-300">
-                                        You can still create deadlines for any season by selecting it in the form below.
-                                    </p>
-                                    <div className="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-lg border border-amber-200 dark:border-amber-800">
-                                        <p className="text-sm text-amber-800 dark:text-amber-200">
-                                            <strong>Tip:</strong> To activate a season, go to Manage Seasons and ensure all 5 deadline categories are created.
+                                        <p className="text-sm text-amber-700 dark:text-amber-300">
+                                            You can still create deadlines for any academic year by selecting it in the form below.
                                         </p>
+                                    <div className="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-lg border border-amber-200 dark:border-amber-800">
+                                            <p className="text-sm text-amber-800 dark:text-amber-200">
+                                                <strong>Tip:</strong> To activate an academic year, go to Manage Academic Years and ensure all 5 deadline categories are created.
+                                            </p>
                                     </div>
                                 </div>
                             </CardContent>
@@ -461,7 +461,7 @@ export default function EventsPage({ allDeadlines, activeDeadlines, expiredDeadl
                                 <Button
                                     onClick={() => setShowAddDialog(true)}
                                     className="flex items-center gap-2 h-9"
-                                    title={seasons.length === 0 ? "Create an internship season first" : ""}
+                                    title={seasons.length === 0 ? "Create an academic year first" : ""}
                                 >
                                     <PlusIcon className="h-4 w-4" />
                                     Add Deadline
@@ -471,7 +471,7 @@ export default function EventsPage({ allDeadlines, activeDeadlines, expiredDeadl
                                 className="flex items-center gap-2 h-9"
                             >
                                 <CalendarIcon className="h-4 w-4" />
-                                Manage Seasons
+                                Manage Academic Years
                             </Button>
                         </div>
                     </div>
@@ -514,7 +514,7 @@ export default function EventsPage({ allDeadlines, activeDeadlines, expiredDeadl
                     <CardHeader className="pb-4 space-y-2">
                         <CardTitle className="flex items-center gap-2 text-xl font-semibold text-foreground">
                             <CalendarIcon className="h-5 w-5" />
-                            {showArchived ? 'Expired Deadlines' : 'All Deadlines for Active Season'}
+                            {showArchived ? 'Expired Deadlines' : 'All Deadlines for Active Academic Year'}
                             <Badge variant="secondary" className="ml-2 bg-muted text-muted-foreground">
                                 {currentDeadlines.length}
                             </Badge>
@@ -522,7 +522,7 @@ export default function EventsPage({ allDeadlines, activeDeadlines, expiredDeadl
                         <CardDescription className="text-sm text-muted-foreground">
                             {showArchived
                                 ? 'Manage expired application deadlines'
-                                : 'Manage all deadlines for the current active season regardless of status'
+                                : 'Manage all deadlines for the current active academic year regardless of status'
                             }
                         </CardDescription>
                     </CardHeader>
@@ -895,13 +895,13 @@ export default function EventsPage({ allDeadlines, activeDeadlines, expiredDeadl
 
                                     <div className="space-y-3">
                                         <Label htmlFor="add_season" className="text-sm font-medium text-foreground">
-                                            Internship Season
+                                            Academic Year
                                         </Label>
                                         <Select value={data.season_id.toString()} onValueChange={(value) => {
                                             setData('season_id', parseInt(value));
                                         }}>
                                             <SelectTrigger className="h-10">
-                                                <SelectValue placeholder="Select a season" />
+                                                <SelectValue placeholder="Select an academic year" />
                                             </SelectTrigger>
                                             <SelectContent>
                                                 {seasons.map((season) => (
