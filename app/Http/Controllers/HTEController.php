@@ -1725,9 +1725,9 @@ class HTEController extends Controller
         $pdf = Pdf::loadHTML($html);
         $pdf->setPaper('A4', 'portrait');
 
-        // Return PDF download
+        // Stream PDF inline
         $filename = $this->generateFilename($hte, $reportType, 'pdf');
-        return $pdf->download($filename);
+        return $pdf->stream($filename, ['Attachment' => false]);
     }
 
     /**
@@ -1804,9 +1804,9 @@ class HTEController extends Controller
         $pdf = Pdf::loadHTML($html);
         $pdf->setPaper('A4', 'portrait');
 
-        // Return PDF download
+        // Stream PDF inline
         $filename = $this->generateFilename($hte, $reportType, 'pdf', $internship);
-        return $pdf->download($filename);
+        return $pdf->stream($filename, ['Attachment' => false]);
     }
 
     /**

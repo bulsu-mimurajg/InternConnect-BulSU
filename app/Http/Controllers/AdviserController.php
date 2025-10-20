@@ -1252,8 +1252,8 @@ class AdviserController extends Controller
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html);
         $pdf->setPaper('A4', 'portrait');
 
-        // Return PDF download
-        return $pdf->download("{$reportType}-report-" . now()->format('Y-m-d') . '.pdf');
+        // Stream PDF inline
+        return $pdf->stream("{$reportType}-report-" . now()->format('Y-m-d') . '.pdf', ['Attachment' => false]);
     }
 
     /**

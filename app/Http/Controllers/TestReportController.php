@@ -81,7 +81,7 @@ class TestReportController extends Controller
 
             $filename = "test_{$reportType}_" . now()->format('Y-m-d_H-i-s') . '.pdf';
             
-            return $pdf->download($filename);
+            return $pdf->stream($filename, ['Attachment' => false]);
 
         } catch (\Exception $e) {
             Log::error('Test PDF generation failed', [

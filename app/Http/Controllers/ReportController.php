@@ -79,7 +79,7 @@ class ReportController extends Controller
         // Generate filename
         $filename = $this->generateFilename($reportType, $params, 'pdf');
 
-        return $pdf->download($filename);
+        return $pdf->stream($filename, ['Attachment' => false]);
     }
 
     /**

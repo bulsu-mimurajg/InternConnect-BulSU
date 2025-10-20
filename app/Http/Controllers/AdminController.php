@@ -419,8 +419,8 @@ class AdminController extends Controller
         $pdf = Pdf::loadHTML($html);
         $pdf->setPaper('A4', 'portrait');
 
-        // Return PDF download
-        return $pdf->download("{$reportType}-report-{$section->section_name}-" . now()->format('Y-m-d') . '.pdf');
+        // Stream PDF inline
+        return $pdf->stream("{$reportType}-report-{$section->section_name}-" . now()->format('Y-m-d') . '.pdf', ['Attachment' => false]);
     }
 
     /**
@@ -478,8 +478,8 @@ class AdminController extends Controller
         $pdf = Pdf::loadHTML($html);
         $pdf->setPaper('A4', 'portrait');
 
-        // Return PDF download
-        return $pdf->download("{$reportType}-report-" . now()->format('Y-m-d') . '.pdf');
+        // Stream PDF inline
+        return $pdf->stream("{$reportType}-report-" . now()->format('Y-m-d') . '.pdf', ['Attachment' => false]);
     }
 
     /**
@@ -837,8 +837,8 @@ class AdminController extends Controller
         // Clean up temporary chart files
         $chartGenerator->cleanupTempFiles($chartImages);
 
-        // Return PDF download
-        return $pdf->download('comprehensive-report-' . now()->format('Y-m-d') . '.pdf');
+        // Stream PDF inline
+        return $pdf->stream('comprehensive-report-' . now()->format('Y-m-d') . '.pdf', ['Attachment' => false]);
     }
 
     /**
