@@ -102,7 +102,7 @@ class User extends Authenticatable
      */
     public function mustChangePassword(): bool
     {
-        return $this->must_change_password;
+        return (bool) $this->must_change_password;
     }
 
     /**
