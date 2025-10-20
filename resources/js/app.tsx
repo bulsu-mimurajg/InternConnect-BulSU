@@ -1,3 +1,4 @@
+import 'react-phone-input-2/lib/style.css';
 import '../css/app.css';
 
 import { createInertiaApp } from '@inertiajs/react';

@@ -1,5 +1,6 @@
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import PhoneInput from 'react-phone-input-2';
 import { useFormContext } from 'react-hook-form';
 
 const basicInfoSections = [
@@ -72,11 +73,48 @@ export default function BasicInformation() {
                                                         className="border-input file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground flex w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive"
                                                     />
                                                 ) : (
-                                                    <Input 
-                                                        type={field.type}
-                                                        placeholder={field.placeholder} 
-                                                        {...formField} 
+                                                    field.name === 'phone' ? (
+                                                    <PhoneInput
+                                                        country={"ph"}
+                                                        preferredCountries={["ph"]}
+                                                        enableSearch
+                                                        autoFormat
+                                                        masks={{ ph: '... ... ....' }}
+                                                        prefix="+"
+                                                        countryCodeEditable={false}
+                                                        enableLongNumbers={false}
+                                                        inputProps={{ id: 'hte-phone', name: 'phone' }}
+                                                        containerClass="w-full"
+                                                        containerStyle={{ width: '100%' }}
+                                                        buttonClass="h-9"
+                                                        buttonStyle={{ height: '36px' }}
+                                                        dropdownClass="text-sm"
+                                                        dropdownStyle={{ fontSize: '0.875rem' }}
+                                                        inputClass="border-input file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive"
+                                                        inputStyle={{
+                                                            background: 'transparent',
+                                                            height: '36px',
+                                                            width: '100%',
+                                                            boxShadow: 'none',
+                                                            outline: 'none',
+                                                        }}
+                                                        value={formField.value || ''}
+                                                        onChange={(value) => {
+                                                            // Accept library-formatted string; validation will normalize
+                                                            formField.onChange(value);
+                                                        }}
+                                                        onBlur={formField.onBlur}
+                                                        disableCountryCode={false}
+                                                        disableDropdown={false}
+                                                        specialLabel=""
                                                     />
+                                                    ) : (
+                                                        <Input 
+                                                            type={field.type}
+                                                            placeholder={field.placeholder} 
+                                                            {...formField} 
+                                                        />
+                                                    )
                                                 )}
                                             </FormControl>
                                             <div className="min-h-[20px]">

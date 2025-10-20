@@ -76,6 +76,41 @@
     }
 }
 
+@layer components {
+    /* Align react-phone-input-2 with shadcn/ui Input styles */
+    .react-tel-input {
+        @apply w-full;
+    }
+
+    .react-tel-input .form-control {
+        @apply border-input placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none md:text-sm !important;
+        @apply focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] !important;
+        @apply aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive !important;
+    }
+
+    /* Country button/dropdown */
+    .react-tel-input .flag-dropdown {
+        @apply border border-input bg-transparent rounded-l-md !important;
+    }
+
+    .react-tel-input .selected-flag {
+        @apply h-9 px-2 rounded-l-md !important;
+    }
+
+    .react-tel-input .country-list {
+        @apply bg-background border border-border rounded-md text-foreground shadow-md !important;
+    }
+
+    .react-tel-input .country-list .country {
+        @apply text-sm;
+    }
+
+    .react-tel-input .country-list .country:hover,
+    .react-tel-input .country-list .highlight {
+        @apply bg-muted;
+    }
+}
+
 :root {
     --background: oklch(1 0 0);
     --foreground: oklch(0.145 0 0);

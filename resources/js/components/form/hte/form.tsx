@@ -17,7 +17,14 @@ const FormSchema = z.object({
     companyName: z.string().min(1, 'Company name is required'),
     contactPerson: z.string().min(1, 'Contact person is required'),
     email: z.string().email('Valid email is required'),
-    phone: z.string().min(1, 'Phone number is required'),
+    // Prefer E.164 with +countrycode; length 6-15 digits as per ITU E.164
+    phone: z
+        .string()
+        .min(1, 'Phone number is required')
+        .transform((val) => val.replace(/\D/g, ''))
+        .refine((digits) => digits.length >= 6 && digits.length <= 15, {
+            message: 'Include country code, e.g., +639171234567',
+        }),
     address: z.string().min(1, 'Address is required'),
     
     // Internship Offered
@@ -70,6 +77,7 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
     const [dataFetched, setDataFetched] = useState(false);
     const [showValidationErrors, setShowValidationErrors] = useState(false);
     const [lockedSubcategories, setLockedSubcategories] = useState<Set<number>>(new Set());
+    const [weightChangeTrigger, setWeightChangeTrigger] = useState(0);
 
     const steps = [
         { id: 'Step 1', name: 'Basic Information' },
@@ -158,8 +166,11 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
 
     function onSubmit(values: FormData) {
         setIsSubmitting(true);
+        // Normalize phone to E.164 with + prefix before submit
+        const normalizedDigits = (values.phone || '').replace(/\D/g, '');
+        const payload = { ...values, phone: `+${normalizedDigits}` };
         
-        router.post('/hte/submit', values, {
+        router.post('/hte/submit', payload, {
             onSuccess: () => {
                 setIsSubmitted(true);
                 setIsSubmitting(false);
@@ -462,7 +473,7 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
                                 )}
                                 {currentStep === 3 && (
                                     <>
-                                        <ReviewAndSubmit isSubmitting={isSubmitting} categories={categories} />
+                                        <ReviewAndSubmit categories={categories} />
                                         <div className="flex justify-between items-center mt-6">
                                             <div className="text-sm text-muted-foreground">
                                                 Review your information and submit the form
