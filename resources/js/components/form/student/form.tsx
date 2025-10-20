@@ -256,11 +256,24 @@ export default function StudentForm() {
         }
     };
 
+    // Memoize setter functions to prevent infinite loops
+    const setLanguageProficiencyFields = useCallback((fields: string[]) => {
+        setDynamicFields(prev => ({ ...prev, languageProficiency: fields }));
+    }, []);
+
+    const setTechnicalSkillFields = useCallback((fields: string[]) => {
+        setDynamicFields(prev => ({ ...prev, technicalSkills: fields }));
+    }, []);
+
+    const setSoftSkillFields = useCallback((fields: string[]) => {
+        setDynamicFields(prev => ({ ...prev, softSkills: fields }));
+    }, []);
+
     return (
         <FormFieldsProvider
-            setLanguageProficiencyFields={(fields) => setDynamicFields(prev => ({ ...prev, languageProficiency: fields }))}
-            setTechnicalSkillFields={(fields) => setDynamicFields(prev => ({ ...prev, technicalSkills: fields }))}
-            setSoftSkillFields={(fields) => setDynamicFields(prev => ({ ...prev, softSkills: fields }))}
+            setLanguageProficiencyFields={setLanguageProficiencyFields}
+            setTechnicalSkillFields={setTechnicalSkillFields}
+            setSoftSkillFields={setSoftSkillFields}
             onNavigateToStep={navigateToStep}
         >
             <div className="flex justify-center">

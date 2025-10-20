@@ -58,7 +58,7 @@ export default function LanguageProficiency() {
         };
 
         fetchLanguageProficiency();
-    }, [setLanguageProficiencyFields]);
+    }, [setLanguageProficiencyFields]); // Now safe to include - memoized with useCallback
 
     if (loading) {
         return (

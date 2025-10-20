@@ -25,6 +25,7 @@ import { Plus, Edit, Archive, Eye, ArchiveRestore, Filter, ChevronRight, Chevron
 import { type BreadcrumbItem } from '@/types';
 import { useOTP } from '@/lib/otp-utils';
 import { OTPGenerator } from '@/components/ui/otp-generator';
+import { type HTEFormErrors, type EmailValidationState } from '@/types/form-errors';
 
 interface Internship {
     id: number;
@@ -120,7 +121,7 @@ export default function HTEManagement({ htes, showArchived = false, filters = {}
     const [hteToArchive, setHteToArchive] = useState<HTE | null>(null);
     const [isUnarchiveModalOpen, setIsUnarchiveModalOpen] = useState(false);
     const [hteToUnarchive, setHteToUnarchive] = useState<HTE | null>(null);
-    const [emailValidation, setEmailValidation] = useState({
+    const [emailValidation, setEmailValidation] = useState<EmailValidationState>({
         create: { isValid: true, message: '' },
         edit: { isValid: true, message: '' }
     });
@@ -229,7 +230,7 @@ export default function HTEManagement({ htes, showArchived = false, filters = {}
                 }));
                 resetOTP();
             },
-            onError: (errors: any) => {
+            onError: (errors: HTEFormErrors) => {
                 // Handle validation errors
                 console.error('HTE creation failed:', errors);
             },
@@ -323,7 +324,7 @@ export default function HTEManagement({ htes, showArchived = false, filters = {}
                     // Refresh the page to update the list
                     router.reload({ only: ['htes'] });
                 },
-                onError: (errors) => {
+                onError: (errors: Record<string, string>) => {
                     console.error('Archive error:', errors);
                     setIsArchiveModalOpen(false);
                     setHteToArchive(null);
@@ -353,7 +354,7 @@ export default function HTEManagement({ htes, showArchived = false, filters = {}
                     // Refresh the page to update the list
                     router.reload({ only: ['htes'] });
                 },
-                onError: (errors) => {
+                onError: (errors: Record<string, string>) => {
                     console.error('Unarchive error:', errors);
                     setIsUnarchiveModalOpen(false);
                     setHteToUnarchive(null);
@@ -446,20 +447,7 @@ export default function HTEManagement({ htes, showArchived = false, filters = {}
         itemsPerPage: 10,
         resetTrigger: resetTrigger,
     });
-
-    const getStatusBadge = (status: string) => {
-        switch (status) {
-            case 'verified':
-                return <Badge variant="default">Verified</Badge>;
-            case 'archived':
-                return <Badge variant="secondary">Archived</Badge>;
-            case 'unverified':
-                return <Badge variant="outline">Unverified</Badge>;
-            default:
-                return <Badge variant="outline">{status}</Badge>;
-        }
-    };
-
+    
     const renderHTEDetails = (hte: HTE) => {
         return (
             <div className="p-4 bg-muted/30 border-t">

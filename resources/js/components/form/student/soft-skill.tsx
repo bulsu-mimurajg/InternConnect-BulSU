@@ -58,7 +58,7 @@ export default function SoftSkill() {
         };
 
         fetchSoftSkills();
-    }, [setSoftSkillFields]);
+    }, [setSoftSkillFields]); // Now safe to include - memoized with useCallback
 
     if (loading) {
         return (

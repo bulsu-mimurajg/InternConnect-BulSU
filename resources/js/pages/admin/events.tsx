@@ -89,7 +89,7 @@ export default function EventsPage({ allDeadlines, activeDeadlines, expiredDeadl
     const [currentNextCategory, setCurrentNextCategory] = useState(nextCategory);
     const { flash } = usePage().props as { flash?: { success?: string; error?: string } };
 
-    const { data, setData, delete: destroy, processing, errors, reset } = useForm({
+    const { data, setData, processing, errors, reset } = useForm({
         title: '',
         category: '',
         start_date: null as Date | null,

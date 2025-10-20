@@ -18,7 +18,6 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -26,6 +25,7 @@ import { Plus, Edit, Archive, Eye, ArchiveRestore, Filter, ArrowUpDown, Search, 
 import { type BreadcrumbItem } from '@/types';
 import { useOTP } from '@/lib/otp-utils';
 import { OTPGenerator } from '@/components/ui/otp-generator';
+import { type AdviserFormErrors, type EmailValidationState } from '@/types/form-errors';
 
 interface Adviser {
     id: number;
@@ -74,7 +74,7 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
     const [selectedAdviser, setSelectedAdviser] = useState<Adviser | null>(null);
     const [showArchivedAdvisers, setShowArchivedAdvisers] = useState(showArchived);
     const [showFilters, setShowFilters] = useState(false);
-    const [emailValidation, setEmailValidation] = useState({
+    const [emailValidation, setEmailValidation] = useState<EmailValidationState>({
         create: { isValid: true, message: '' },
         edit: { isValid: true, message: '' }
     });
@@ -180,7 +180,7 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
                 }));
                 resetOTP();
             },
-            onError: (errors: any) => {
+            onError: (errors: AdviserFormErrors) => {
                 // Handle validation errors
                 console.error('Adviser creation failed:', errors);
             },
@@ -236,7 +236,7 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
                 onSuccess: () => {
                     // Optionally show success message or refresh data
                 },
-                onError: (errors) => {
+                onError: (errors: Record<string, string>) => {
                     console.error('Archive error:', errors);
                 }
             });
@@ -250,7 +250,7 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
                 onSuccess: () => {
                     // Optionally show success message or refresh data
                 },
-                onError: (errors) => {
+                onError: (errors: Record<string, string>) => {
                     console.error('Unarchive error:', errors);
                 }
             });
@@ -336,19 +336,6 @@ export default function AdviserManagement({ advisers, sections, showArchived = f
         itemsPerPage: 10,
         resetTrigger: resetTrigger,
     });
-
-    const getStatusBadge = (status: string) => {
-        switch (status) {
-            case 'verified':
-                return <Badge variant="default">Verified</Badge>;
-            case 'archived':
-                return <Badge variant="secondary">Archived</Badge>;
-            case 'unverified':
-                return <Badge variant="outline">Unverified</Badge>;
-            default:
-                return <Badge variant="outline">{status}</Badge>;
-        }
-    };
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>

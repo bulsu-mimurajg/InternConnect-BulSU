@@ -58,7 +58,7 @@ export default function TechnicalSkill() {
         };
 
         fetchTechnicalSkills();
-    }, [setTechnicalSkillFields]);
+    }, [setTechnicalSkillFields]); // Now safe to include - memoized with useCallback
 
     if (loading) {
         return (
