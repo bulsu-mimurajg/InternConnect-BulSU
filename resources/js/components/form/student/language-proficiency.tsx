@@ -93,11 +93,11 @@ export default function LanguageProficiency() {
                     For each programming language and technology below, evaluate your proficiency level using the following scale:
                 </h1>
                 <ul className="text-sm">
-                    <li>5 - Expert (Can teach others, lead projects)</li>
-                    <li>4 - Advanced (Can work independently on complex projects)</li>
-                    <li>3 - Intermediate (Can work on standard projects with some guidance)</li>
-                    <li>2 - Beginner (Basic understanding, needs guidance)</li>
-                    <li>1 - Novice (Limited exposure, learning phase)</li>
+                    <li>5 - Advanced</li>
+                    <li>4 - Expert</li>
+                    <li>3 - Intermediate</li>
+                    <li>2 - Beginner</li>
+                    <li>1 - Novice</li>
                 </ul>
             </div>
 

@@ -10,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { BatchActions, BatchActionPresets } from '@/components/ui/batch-actions';
 import { Pagination } from '@/components/ui/pagination';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { usePagination } from '@/hooks/usePagination';
 import { getRowNumber } from '@/lib/pagination-utils';
 import StudentDetailsModal from '@/components/student-details-modal';
@@ -223,6 +225,15 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
         }>;
     } | null>(null);
 
+    // Single action confirmation dialogs
+    const [showSingleApproveDialog, setShowSingleApproveDialog] = useState(false);
+    const [showSingleRejectDialog, setShowSingleRejectDialog] = useState(false);
+    const [selectedStudentForAction, setSelectedStudentForAction] = useState<MatchedStudent | null>(null);
+
+    // Batch action confirmation dialogs
+    const [showBatchApproveDialog, setShowBatchApproveDialog] = useState(false);
+    const [showBatchRejectDialog, setShowBatchRejectDialog] = useState(false);
+
 
     // Update local filters when props change
     useEffect(() => {
@@ -339,6 +350,11 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const handleSingleApproveClick = (student: MatchedStudent) => {
+        setSelectedStudentForAction(student);
+        setShowSingleApproveDialog(true);
     };
 
     const handleSingleApprove = async (student: MatchedStudent) => {
@@ -463,6 +479,11 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const handleSingleRejectClick = (student: MatchedStudent) => {
+        setSelectedStudentForAction(student);
+        setShowSingleRejectDialog(true);
     };
 
     const handleSingleReject = async (student: MatchedStudent) => {
@@ -662,6 +683,11 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
         }
     };
 
+    const handleBatchApproveClick = () => {
+        if (selectedStudents.size === 0) return;
+        setShowBatchApproveDialog(true);
+    };
+
     const handleBatchApprove = async () => {
         if (selectedStudents.size === 0) return;
 
@@ -833,6 +859,11 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const handleBatchRejectClick = () => {
+        if (selectedStudents.size === 0) return;
+        setShowBatchRejectDialog(true);
     };
 
     const handleBatchReject = async () => {
@@ -1273,13 +1304,13 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                                 {
                                     ...BatchActionPresets.endorse.approve,
                                     label: `Endorse All (${selectedStudents.size})`,
-                                    onClick: handleBatchApprove,
+                                    onClick: handleBatchApproveClick,
                                     disabled: isLoading
                                 },
                                 {
                                     ...BatchActionPresets.endorse.reject,
                                     label: `Reject All (${selectedStudents.size})`,
-                                    onClick: handleBatchReject,
+                                    onClick: handleBatchRejectClick,
                                     disabled: isLoading
                                 }
                             ]}
@@ -1379,36 +1410,57 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
 
                                                     {/* Actions */}
                                                     <div className="flex gap-2 pt-2">
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            onClick={() => handleViewDetails(student)}
-                                                            disabled={isLoading}
-                                                            className="flex-1"
-                                                        >
-                                                            <EyeIcon className="h-4 w-4 mr-1" />
-                                                            View
-                                                        </Button>
-                                                        <Button
-                                                            variant="default"
-                                                            size="sm"
-                                                            onClick={() => handleSingleApprove(student)}
-                                                            disabled={isLoading}
-                                                            className="bg-green-600 hover:bg-green-700 flex-1"
-                                                        >
-                                                            <CheckCircleIcon className="h-4 w-4 mr-1" />
-                                                            Endorse
-                                                        </Button>
-                                                        <Button
-                                                            variant="destructive"
-                                                            size="sm"
-                                                            onClick={() => handleSingleReject(student)}
-                                                            disabled={isLoading}
-                                                            className="flex-1"
-                                                        >
-                                                            <XCircleIcon className="h-4 w-4 mr-1" />
-                                                            Reject
-                                                        </Button>
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                                <Button
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    onClick={() => handleViewDetails(student)}
+                                                                    disabled={isLoading}
+                                                                    className="flex-1"
+                                                                >
+                                                                    <EyeIcon className="h-4 w-4 mr-1" />
+                                                                    View
+                                                                </Button>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent>
+                                                                <p>View student details</p>
+                                                            </TooltipContent>
+                                                        </Tooltip>
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                                <Button
+                                                                    variant="default"
+                                                                    size="sm"
+                                                                    onClick={() => handleSingleApproveClick(student)}
+                                                                    disabled={isLoading}
+                                                                    className="bg-green-600 hover:bg-green-700 flex-1"
+                                                                >
+                                                                    <CheckCircleIcon className="h-4 w-4 mr-1" />
+                                                                    Endorse
+                                                                </Button>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent>
+                                                                <p>Endorse this student for the internship</p>
+                                                            </TooltipContent>
+                                                        </Tooltip>
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                                <Button
+                                                                    variant="destructive"
+                                                                    size="sm"
+                                                                    onClick={() => handleSingleRejectClick(student)}
+                                                                    disabled={isLoading}
+                                                                    className="flex-1"
+                                                                >
+                                                                    <XCircleIcon className="h-4 w-4 mr-1" />
+                                                                    Reject
+                                                                </Button>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent>
+                                                                <p>Reject this student and move to next match</p>
+                                                            </TooltipContent>
+                                                        </Tooltip>
                                                     </div>
                                                 </div>
                                             </Card>
@@ -1510,40 +1562,60 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                                                     </td>
                                                             <td className="p-2 text-right">
                                                                 <div className="flex items-center justify-end gap-1">
-                                                            <Button
-                                                                variant="outline"
-                                                                size="sm"
-                                                                onClick={() => handleViewDetails(student)}
-                                                                disabled={isLoading}
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <Button
+                                                                        variant="outline"
+                                                                        size="sm"
+                                                                        onClick={() => handleViewDetails(student)}
+                                                                        disabled={isLoading}
                                                                         className="h-8 px-2"
-                                                            >
+                                                                    >
                                                                         <EyeIcon className="h-3 w-3" />
-                                                            </Button>
+                                                                    </Button>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>
+                                                                    <p>View student details</p>
+                                                                </TooltipContent>
+                                                            </Tooltip>
 
-                                                            <Button
-                                                                variant="default"
-                                                                size="sm"
-                                                                onClick={() => handleSingleApprove(student)}
-                                                                disabled={isLoading || (student.best_match?.internship?.available_slots !== undefined && student.best_match.internship.available_slots === 0)}
-                                                                className={`h-8 px-2 ${
-                                                                    student.best_match?.internship?.available_slots === 0
-                                                                        ? 'bg-gray-400 hover:bg-gray-400 cursor-not-allowed'
-                                                                        : 'bg-green-600 hover:bg-green-700'
-                                                                }`}
-                                                                title={student.best_match?.internship?.available_slots === 0 ? 'No slots available for this internship' : 'Endorse student for this internship'}
-                                                            >
-                                                                <CheckCircleIcon className="h-3 w-3" />
-                                                            </Button>
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <Button
+                                                                        variant="default"
+                                                                        size="sm"
+                                                                        onClick={() => handleSingleApproveClick(student)}
+                                                                        disabled={isLoading || (student.best_match?.internship?.available_slots !== undefined && student.best_match.internship.available_slots === 0)}
+                                                                        className={`h-8 px-2 ${
+                                                                            student.best_match?.internship?.available_slots === 0
+                                                                                ? 'bg-gray-400 hover:bg-gray-400 cursor-not-allowed'
+                                                                                : 'bg-green-600 hover:bg-green-700'
+                                                                        }`}
+                                                                    >
+                                                                        <CheckCircleIcon className="h-3 w-3" />
+                                                                    </Button>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>
+                                                                    <p>{student.best_match?.internship?.available_slots === 0 ? 'No slots available for this internship' : 'Endorse student'}</p>
+                                                                </TooltipContent>
+                                                            </Tooltip>
 
-                                                            <Button
-                                                                variant="destructive"
-                                                                size="sm"
-                                                                onClick={() => handleSingleReject(student)}
-                                                                disabled={isLoading}
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <Button
+                                                                        variant="destructive"
+                                                                        size="sm"
+                                                                        onClick={() => handleSingleRejectClick(student)}
+                                                                        disabled={isLoading}
                                                                         className="h-8 px-2"
-                                                            >
+                                                                    >
                                                                         <XCircleIcon className="h-3 w-3" />
-                                                            </Button>
+                                                                    </Button>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>
+                                                                    <p>Reject student</p>
+                                                                </TooltipContent>
+                                                            </Tooltip>
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -2024,6 +2096,173 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                 </div>
             )}
 
+            {/* Single Action Confirmation Dialogs */}
+            <Dialog open={showSingleApproveDialog} onOpenChange={setShowSingleApproveDialog}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Confirm Student Endorsement</DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to endorse this student for their internship match?
+                        </DialogDescription>
+                    </DialogHeader>
+                    {selectedStudentForAction && (
+                        <div className="space-y-4">
+                            <div className="bg-muted/50 rounded-lg p-4">
+                                <div className="font-medium">
+                                    {selectedStudentForAction.last_name}, {selectedStudentForAction.first_name}
+                                </div>
+                                <div className="text-sm text-muted-foreground">
+                                    {selectedStudentForAction.student_number} • {selectedStudentForAction.section}
+                                </div>
+                                <div className="mt-2">
+                                    <div className="font-medium text-sm">
+                                        {selectedStudentForAction.best_match?.internship?.position_title || 'Unknown Position'}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">
+                                        {selectedStudentForAction.best_match?.internship?.hte?.company_name || 'Unknown Company'}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">
+                                        Compatibility: {Math.round(selectedStudentForAction.best_match?.compatibility_score || 0)}%
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setShowSingleApproveDialog(false)}>
+                            Cancel
+                        </Button>
+                        <Button 
+                            onClick={() => {
+                                setShowSingleApproveDialog(false);
+                                if (selectedStudentForAction) {
+                                    handleSingleApprove(selectedStudentForAction);
+                                }
+                            }}
+                            className="bg-green-600 hover:bg-green-700"
+                        >
+                            Confirm Endorsement
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={showSingleRejectDialog} onOpenChange={setShowSingleRejectDialog}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Confirm Student Rejection</DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to reject this student? They will be moved to their next available match.
+                        </DialogDescription>
+                    </DialogHeader>
+                    {selectedStudentForAction && (
+                        <div className="space-y-4">
+                            <div className="bg-muted/50 rounded-lg p-4">
+                                <div className="font-medium">
+                                    {selectedStudentForAction.last_name}, {selectedStudentForAction.first_name}
+                                </div>
+                                <div className="text-sm text-muted-foreground">
+                                    {selectedStudentForAction.student_number} • {selectedStudentForAction.section}
+                                </div>
+                                <div className="mt-2">
+                                    <div className="font-medium text-sm">
+                                        {selectedStudentForAction.best_match?.internship?.position_title || 'Unknown Position'}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">
+                                        {selectedStudentForAction.best_match?.internship?.hte?.company_name || 'Unknown Company'}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">
+                                        Compatibility: {Math.round(selectedStudentForAction.best_match?.compatibility_score || 0)}%
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setShowSingleRejectDialog(false)}>
+                            Cancel
+                        </Button>
+                        <Button 
+                            variant="destructive"
+                            onClick={() => {
+                                setShowSingleRejectDialog(false);
+                                if (selectedStudentForAction) {
+                                    handleSingleReject(selectedStudentForAction);
+                                }
+                            }}
+                        >
+                            Confirm Rejection
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Batch Action Confirmation Dialogs */}
+            <Dialog open={showBatchApproveDialog} onOpenChange={setShowBatchApproveDialog}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Confirm Batch Endorsement</DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to endorse {selectedStudents.size} selected student{selectedStudents.size !== 1 ? 's' : ''}?
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        <div className="bg-muted/50 rounded-lg p-4">
+                            <div className="text-sm text-muted-foreground">
+                                This action will endorse all selected students for their internship matches. 
+                                The system will check for slot conflicts and may place some students in fallback matches if needed.
+                            </div>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setShowBatchApproveDialog(false)}>
+                            Cancel
+                        </Button>
+                        <Button 
+                            onClick={() => {
+                                setShowBatchApproveDialog(false);
+                                handleBatchApprove();
+                            }}
+                            className="bg-green-600 hover:bg-green-700"
+                        >
+                            Confirm Batch Endorsement
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={showBatchRejectDialog} onOpenChange={setShowBatchRejectDialog}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Confirm Batch Rejection</DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to reject {selectedStudents.size} selected student{selectedStudents.size !== 1 ? 's' : ''}?
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        <div className="bg-muted/50 rounded-lg p-4">
+                            <div className="text-sm text-muted-foreground">
+                                This action will reject all selected students from their current matches. 
+                                They will be moved to their next available matches in the queue.
+                            </div>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setShowBatchRejectDialog(false)}>
+                            Cancel
+                        </Button>
+                        <Button 
+                            variant="destructive"
+                            onClick={() => {
+                                setShowBatchRejectDialog(false);
+                                handleBatchReject();
+                            }}
+                        >
+                            Confirm Batch Rejection
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
         </>
     );

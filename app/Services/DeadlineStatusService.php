@@ -175,18 +175,31 @@ class DeadlineStatusService
         $restrictions = [];
 
         if ($studentAssessmentDeadline) {
-            $restrictions[] = [
-                'type' => 'student_assessment',
-                'message' => 'HTE management functions are restricted',
-                'deadline' => $this->formatDeadlineInfo($studentAssessmentDeadline),
-                'affected_functionality' => ['section_archive', 'section_restore', 'forms_management', 'additional_info_management', 'hte_archive', 'hte_restore', 'hte_management'],
+            // Create separate restrictions for different functionalities
+            $studentAssessmentRestrictions = [
+                'section_archive' => 'Section archiving is disabled during student assessment deadline period.',
+                'section_restore' => 'Section restoration is disabled during student assessment deadline period.',
+                'forms_management' => 'Forms management is disabled during student assessment deadline period.',
+                'additional_info_management' => 'Additional info management is disabled during student assessment deadline period.',
+                'hte_archive' => 'HTE archiving is disabled during student assessment deadline period.',
+                'hte_restore' => 'HTE restoration is disabled during student assessment deadline period.',
+                'hte_management' => 'HTE management functions are restricted during student assessment deadline period.',
             ];
+
+            foreach ($studentAssessmentRestrictions as $functionality => $message) {
+                $restrictions[] = [
+                    'type' => 'student_assessment',
+                    'message' => $message,
+                    'deadline' => $this->formatDeadlineInfo($studentAssessmentDeadline),
+                    'affected_functionality' => [$functionality],
+                ];
+            }
         }
 
         if ($internshipPlacementDeadline) {
             $restrictions[] = [
                 'type' => 'internship_placement',
-                'message' => 'Internship placement deadline is active',
+                'message' => 'Admin management functions are restricted during internship placement deadline period.',
                 'deadline' => $this->formatDeadlineInfo($internshipPlacementDeadline),
                 'affected_functionality' => ['admin_management'],
             ];

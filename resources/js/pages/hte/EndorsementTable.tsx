@@ -12,6 +12,8 @@ import { toast } from 'sonner';
 import { Pagination } from '@/components/ui/pagination';
 import { usePagination } from '@/hooks/usePagination';
 import { getRowNumber } from '@/lib/pagination-utils';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface Student {
     id: number;
@@ -59,6 +61,15 @@ export default function EndorsementTable({ endorsements = [], internships = [], 
     const [errorType, setErrorType] = useState<string | null>(null);
     const [showFilters, setShowFilters] = useState(false);
     const { flash } = usePage<{ flash: { success?: string; error?: string } }>().props;
+
+    // Single action confirmation dialogs
+    const [showSingleApproveDialog, setShowSingleApproveDialog] = useState(false);
+    const [showSingleRejectDialog, setShowSingleRejectDialog] = useState(false);
+    const [selectedEndorsementForAction, setSelectedEndorsementForAction] = useState<Endorsement | null>(null);
+
+    // Batch action confirmation dialogs
+    const [showBatchApproveDialog, setShowBatchApproveDialog] = useState(false);
+    const [showBatchRejectDialog, setShowBatchRejectDialog] = useState(false);
 
     // CSRF Token Management
     const getFreshCsrfToken = () => {
@@ -180,6 +191,11 @@ export default function EndorsementTable({ endorsements = [], internships = [], 
         return '5.00';
     };
 
+    const handleApproveClick = (endorsement: Endorsement) => {
+        setSelectedEndorsementForAction(endorsement);
+        setShowSingleApproveDialog(true);
+    };
+
     const handleApprove = async (endorsementId: number) => {
         setLoading(prev => ({ ...prev, [endorsementId]: true }));
 
@@ -203,6 +219,11 @@ export default function EndorsementTable({ endorsements = [], internships = [], 
             toast.error('An error occurred while approving the endorsement');
             setLoading(prev => ({ ...prev, [endorsementId]: false }));
         }
+    };
+
+    const handleRejectClick = (endorsement: Endorsement) => {
+        setSelectedEndorsementForAction(endorsement);
+        setShowSingleRejectDialog(true);
     };
 
     const handleReject = async (endorsementId: number) => {
@@ -248,6 +269,11 @@ export default function EndorsementTable({ endorsements = [], internships = [], 
         } else {
             setSelectedEndorsements(new Set());
         }
+    };
+
+    const handleBatchApproveClick = () => {
+        if (selectedEndorsements.size === 0) return;
+        setShowBatchApproveDialog(true);
     };
 
     const handleBatchApprove = async () => {
@@ -329,6 +355,11 @@ export default function EndorsementTable({ endorsements = [], internships = [], 
         } finally {
             setBatchLoading(false);
         }
+    };
+
+    const handleBatchRejectClick = () => {
+        if (selectedEndorsements.size === 0) return;
+        setShowBatchRejectDialog(true);
     };
 
     const handleBatchReject = async () => {
@@ -562,13 +593,13 @@ export default function EndorsementTable({ endorsements = [], internships = [], 
                             {
                                 ...BatchActionPresets.endorse.approve,
                                 label: `Approve All (${selectedEndorsements.size})`,
-                                onClick: handleBatchApprove,
+                                onClick: handleBatchApproveClick,
                                 disabled: batchLoading
                             },
                             {
                                 ...BatchActionPresets.endorse.reject,
                                 label: `Reject All (${selectedEndorsements.size})`,
-                                onClick: handleBatchReject,
+                                onClick: handleBatchRejectClick,
                                 disabled: batchLoading
                             }
                         ]}
@@ -673,26 +704,40 @@ export default function EndorsementTable({ endorsements = [], internships = [], 
                                                     </span>
                                                 </div>
                                                 <div className="flex gap-2">
-                                                    <Button
-                                                        size="default"
-                                                        variant="default"
-                                                        onClick={() => handleApprove(endorsement.id)}
-                                                        disabled={loading[endorsement.id] || batchLoading}
-                                                        className="bg-green-600 hover:bg-green-700 text-white flex-1 sm:flex-none min-w-[80px]"
-                                                    >
-                                                        <CheckCircle className="h-4 w-4 mr-2" />
-                                                        Approve
-                                                    </Button>
-                                                    <Button
-                                                        size="default"
-                                                        variant="destructive"
-                                                        onClick={() => handleReject(endorsement.id)}
-                                                        disabled={loading[endorsement.id] || batchLoading}
-                                                        className="flex-1 sm:flex-none min-w-[80px]"
-                                                    >
-                                                        <XCircle className="h-4 w-4 mr-2" />
-                                                        Reject
-                                                    </Button>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <Button
+                                                                size="default"
+                                                                variant="default"
+                                                                onClick={() => handleApproveClick(endorsement)}
+                                                                disabled={loading[endorsement.id] || batchLoading}
+                                                                className="bg-green-600 hover:bg-green-700 text-white flex-1 sm:flex-none min-w-[80px]"
+                                                            >
+                                                                <CheckCircle className="h-4 w-4 mr-2" />
+                                                                Approve
+                                                            </Button>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent>
+                                                            <p>Approve this student for the internship</p>
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <Button
+                                                                size="default"
+                                                                variant="destructive"
+                                                                onClick={() => handleRejectClick(endorsement)}
+                                                                disabled={loading[endorsement.id] || batchLoading}
+                                                                className="flex-1 sm:flex-none min-w-[80px]"
+                                                            >
+                                                                <XCircle className="h-4 w-4 mr-2" />
+                                                                Reject
+                                                            </Button>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent>
+                                                            <p>Reject this student from the internship</p>
+                                                        </TooltipContent>
+                                                    </Tooltip>
                                                 </div>
                                             </div>
                                         </Card>
@@ -763,26 +808,38 @@ export default function EndorsementTable({ endorsements = [], internships = [], 
                                                 </td>
                                                 <td className="py-3 px-2">
                                                     <div className="flex items-center gap-1">
-                                                        <Button
-                                                            size="sm"
-                                                            variant="default"
-                                                            onClick={() => handleApprove(endorsement.id)}
-                                                            disabled={loading[endorsement.id] || batchLoading}
-                                                            className="bg-green-600 hover:bg-green-700 text-white text-xs px-1 py-1 h-6 w-6"
-                                                            title="Approve"
-                                                        >
-                                                            <CheckCircle className="h-3 w-3" />
-                                                        </Button>
-                                                        <Button
-                                                            size="sm"
-                                                            variant="destructive"
-                                                            onClick={() => handleReject(endorsement.id)}
-                                                            disabled={loading[endorsement.id] || batchLoading}
-                                                            className="text-xs px-1 py-1 h-6 w-6"
-                                                            title="Reject"
-                                                        >
-                                                            <XCircle className="h-3 w-3" />
-                                                        </Button>
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="default"
+                                                                    onClick={() => handleApproveClick(endorsement)}
+                                                                    disabled={loading[endorsement.id] || batchLoading}
+                                                                    className="bg-green-600 hover:bg-green-700 text-white text-xs px-1 py-1 h-6 w-6"
+                                                                >
+                                                                    <CheckCircle className="h-3 w-3" />
+                                                                </Button>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent>
+                                                                <p>Approve student</p>
+                                                            </TooltipContent>
+                                                        </Tooltip>
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="destructive"
+                                                                    onClick={() => handleRejectClick(endorsement)}
+                                                                    disabled={loading[endorsement.id] || batchLoading}
+                                                                    className="text-xs px-1 py-1 h-6 w-6"
+                                                                >
+                                                                    <XCircle className="h-3 w-3" />
+                                                                </Button>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent>
+                                                                <p>Reject student</p>
+                                                            </TooltipContent>
+                                                        </Tooltip>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -807,6 +864,184 @@ export default function EndorsementTable({ endorsements = [], internships = [], 
                     </CardContent>
                 </Card>
             </div>
+
+            {/* Single Action Confirmation Dialogs */}
+            <Dialog open={showSingleApproveDialog} onOpenChange={setShowSingleApproveDialog}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Confirm Student Approval</DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to approve this student for the internship?
+                        </DialogDescription>
+                    </DialogHeader>
+                    {selectedEndorsementForAction && (
+                        <div className="space-y-4">
+                            <div className="bg-muted/50 rounded-lg p-4">
+                                <div className="font-medium">
+                                    {selectedEndorsementForAction.student.first_name} {selectedEndorsementForAction.student.middle_name} {selectedEndorsementForAction.student.last_name}
+                                </div>
+                                <div className="text-sm text-muted-foreground">
+                                    {selectedEndorsementForAction.student.student_number}
+                                </div>
+                                {selectedEndorsementForAction.student.specialization && (
+                                    <div className="text-xs text-muted-foreground">
+                                        {selectedEndorsementForAction.student.specialization}
+                                    </div>
+                                )}
+                                <div className="mt-2">
+                                    <div className="font-medium text-sm">
+                                        {selectedEndorsementForAction.internship.position}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">
+                                        {selectedEndorsementForAction.internship.company_name}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">
+                                        Compatibility: {Math.round(selectedEndorsementForAction.compatibility_score)}%
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setShowSingleApproveDialog(false)}>
+                            Cancel
+                        </Button>
+                        <Button 
+                            onClick={() => {
+                                setShowSingleApproveDialog(false);
+                                if (selectedEndorsementForAction) {
+                                    handleApprove(selectedEndorsementForAction.id);
+                                }
+                            }}
+                            className="bg-green-600 hover:bg-green-700"
+                        >
+                            Confirm Approval
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={showSingleRejectDialog} onOpenChange={setShowSingleRejectDialog}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Confirm Student Rejection</DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to reject this student? They will be removed from this internship.
+                        </DialogDescription>
+                    </DialogHeader>
+                    {selectedEndorsementForAction && (
+                        <div className="space-y-4">
+                            <div className="bg-muted/50 rounded-lg p-4">
+                                <div className="font-medium">
+                                    {selectedEndorsementForAction.student.first_name} {selectedEndorsementForAction.student.middle_name} {selectedEndorsementForAction.student.last_name}
+                                </div>
+                                <div className="text-sm text-muted-foreground">
+                                    {selectedEndorsementForAction.student.student_number}
+                                </div>
+                                {selectedEndorsementForAction.student.specialization && (
+                                    <div className="text-xs text-muted-foreground">
+                                        {selectedEndorsementForAction.student.specialization}
+                                    </div>
+                                )}
+                                <div className="mt-2">
+                                    <div className="font-medium text-sm">
+                                        {selectedEndorsementForAction.internship.position}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">
+                                        {selectedEndorsementForAction.internship.company_name}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">
+                                        Compatibility: {Math.round(selectedEndorsementForAction.compatibility_score)}%
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setShowSingleRejectDialog(false)}>
+                            Cancel
+                        </Button>
+                        <Button 
+                            variant="destructive"
+                            onClick={() => {
+                                setShowSingleRejectDialog(false);
+                                if (selectedEndorsementForAction) {
+                                    handleReject(selectedEndorsementForAction.id);
+                                }
+                            }}
+                        >
+                            Confirm Rejection
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Batch Action Confirmation Dialogs */}
+            <Dialog open={showBatchApproveDialog} onOpenChange={setShowBatchApproveDialog}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Confirm Batch Approval</DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to approve {selectedEndorsements.size} selected student{selectedEndorsements.size !== 1 ? 's' : ''}?
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        <div className="bg-muted/50 rounded-lg p-4">
+                            <div className="text-sm text-muted-foreground">
+                                This action will approve all selected students for their internship positions. 
+                                Approved students will be placed in your internships.
+                            </div>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setShowBatchApproveDialog(false)}>
+                            Cancel
+                        </Button>
+                        <Button 
+                            onClick={() => {
+                                setShowBatchApproveDialog(false);
+                                handleBatchApprove();
+                            }}
+                            className="bg-green-600 hover:bg-green-700"
+                        >
+                            Confirm Batch Approval
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={showBatchRejectDialog} onOpenChange={setShowBatchRejectDialog}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Confirm Batch Rejection</DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to reject {selectedEndorsements.size} selected student{selectedEndorsements.size !== 1 ? 's' : ''}?
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        <div className="bg-muted/50 rounded-lg p-4">
+                            <div className="text-sm text-muted-foreground">
+                                This action will reject all selected students from their internship positions. 
+                                They will be removed from your internships.
+                            </div>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setShowBatchRejectDialog(false)}>
+                            Cancel
+                        </Button>
+                        <Button 
+                            variant="destructive"
+                            onClick={() => {
+                                setShowBatchRejectDialog(false);
+                                handleBatchReject();
+                            }}
+                        >
+                            Confirm Batch Rejection
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </AppLayout>
     );
 }

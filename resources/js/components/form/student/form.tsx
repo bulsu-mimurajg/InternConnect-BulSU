@@ -39,7 +39,7 @@ export default function StudentForm() {
     });
 
     // Create additional info field names
-    const additionalInfoFields = additionalInfos.map(info => 
+    const additionalInfoFields = additionalInfos.map(info =>
         info.info_name.toLowerCase().replace(/[ -]/g, '_')
     );
 
@@ -114,27 +114,27 @@ export default function StudentForm() {
     // Create default values object
     const createDefaultValues = useCallback(() => {
         const defaultValues: Record<string, string> = {};
-        
+
         // Initialize additional info fields
         additionalInfoFields.forEach(field => {
             defaultValues[field] = '';
         });
-        
+
         // Initialize language proficiency fields
         dynamicFields.languageProficiency.forEach(field => {
             defaultValues[field] = '';
         });
-        
+
         // Initialize technical skills fields
         dynamicFields.technicalSkills.forEach(field => {
             defaultValues[field] = '';
         });
-        
+
         // Initialize soft skills fields
         dynamicFields.softSkills.forEach(field => {
             defaultValues[field] = '';
         });
-        
+
         return defaultValues;
     }, [additionalInfoFields, dynamicFields]);
 
@@ -149,7 +149,7 @@ export default function StudentForm() {
     // Update form default values when dynamic fields change
     useEffect(() => {
         const currentValues = form.getValues();
-        
+
         // Only add new fields that don't exist yet, preserve all existing values
         const newFields: Record<string, string> = {};
         Object.keys(defaultValues).forEach(key => {
@@ -157,7 +157,7 @@ export default function StudentForm() {
                 newFields[key] = defaultValues[key];
             }
         });
-        
+
         // Only update if there are new fields to add
         if (Object.keys(newFields).length > 0) {
             // Use setValue to add new fields without resetting existing ones
@@ -179,20 +179,20 @@ export default function StudentForm() {
             const value = allValues[field];
             return !value || (typeof value === 'string' && value.trim() === '');
         });
-        
+
         if (missingFields.length > 0) {
             alert(`Please complete the following fields: ${missingFields.join(', ')}`);
             return;
         }
-        
+
         setIsSubmitting(true);
-        
+
         // Remove dummy field if it exists
         const cleanValues = { ...values };
         if (cleanValues.dummy !== undefined) {
             delete cleanValues.dummy;
         }
-        
+
         router.post('/assessment', cleanValues as Record<string, string>, {
             onSuccess: () => {
                 setIsSubmitting(false);
@@ -227,11 +227,11 @@ export default function StudentForm() {
             // Find unanswered fields in current step and highlight the first one
             const unansweredFields: string[] = [];
             const formValues = form.getValues();
-            
+
             fields?.forEach((fieldName) => {
                 const formValue = formValues[fieldName as keyof typeof formValues];
-                if (!formValue || 
-                    (typeof formValue === 'string' && 
+                if (!formValue ||
+                    (typeof formValue === 'string' &&
                      formValue.trim() === '')) {
                     unansweredFields.push(fieldName);
                 }
@@ -245,9 +245,8 @@ export default function StudentForm() {
                     if (element) {
                         element.classList.add('animate-pulse-unanswered');
                         element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        element.focus(); // Actually focus the element
-                        
-                        // Remove animation class after 1 pulse (1s)
+                        element.focus();
+
                         setTimeout(() => {
                             element.classList.remove('animate-pulse-unanswered');
                         }, 1000);
@@ -270,6 +269,9 @@ export default function StudentForm() {
             <div className="relative min-h-[100vh] flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 md:min-h-min dark:border-sidebar-border">
                 <div className="flex flex-col h-full">
                     <div className="flex-1 p-4 overflow-y-auto">
+                        <div className="mb-4 rounded-md border border-border bg-muted/50 p-3 text-sm text-muted-foreground">
+                            Answer honestly — your responses reflect your competency. Inaccurate answers may reduce the quality of matches and recommendations the system can provide.
+                        </div>
                         <Form {...form}>
                             <form onSubmit={form.handleSubmit(onSubmit)}>
                                 {currentStep === 0 && <PersonalInfo />}
@@ -308,7 +310,7 @@ export default function StudentForm() {
                                 <Button onClick={prev} variant="outline">
                                     Previous
                                 </Button>
-                                <Button 
+                                <Button
                                     type="button"
                                     disabled={isSubmitting}
                                     onClick={async (e) => {
