@@ -7,8 +7,10 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { DateTimePicker } from '@/components/ui/date-time-picker';
-import { CalendarIcon, PlusIcon, EditIcon, TrashIcon, CheckCircleIcon, UsersIcon } from 'lucide-react';
+import { CalendarIcon, PlusIcon, EditIcon, CheckCircleIcon, UsersIcon } from 'lucide-react';
 import { ClockIcon } from 'lucide-react';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
@@ -81,8 +83,6 @@ export default function EventsPage({ allDeadlines, activeDeadlines, expiredDeadl
     const [showArchived] = useState(false);
     const [showExtendDialog, setShowExtendDialog] = useState(false);
     const [extendingDeadline, setExtendingDeadline] = useState<Deadline | null>(null);
-    const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-    const [deletingDeadline, setDeletingDeadline] = useState<Deadline | null>(null);
     const [showEditDialog, setShowEditDialog] = useState(false);
     const [manualErrors, setManualErrors] = useState<{ [key: string]: string }>({});
     const [currentSequenceInfo, setCurrentSequenceInfo] = useState(sequenceInfo);
@@ -217,39 +217,6 @@ export default function EventsPage({ allDeadlines, activeDeadlines, expiredDeadl
         }
     };
 
-    const handleDelete = (deadline: Deadline) => {
-        setDeletingDeadline(deadline);
-        setShowDeleteDialog(true);
-    };
-
-    const handleDeleteConfirm = () => {
-        if (deletingDeadline) {
-            destroy(`/admin/deadlines/${deletingDeadline.id}`, {
-                onSuccess: () => {
-                    setShowDeleteDialog(false);
-                    setDeletingDeadline(null);
-                    
-                    // Refresh sequence info for the selected season
-                    if (data.season_id && typeof data.season_id === 'number') {
-                        getSequenceInfoForSeason(data.season_id).then((seasonInfo) => {
-                            if (seasonInfo) {
-                                setCurrentSequenceInfo(seasonInfo.sequenceInfo);
-                                setCurrentNextCategory(seasonInfo.nextCategory);
-                            }
-                        });
-                    }
-                },
-                onError: (errors) => {
-                    console.error('Delete errors:', errors);
-                },
-            });
-        }
-    };
-
-    const handleDeleteCancel = () => {
-        setShowDeleteDialog(false);
-        setDeletingDeadline(null);
-    };
 
     const handleAddCancel = () => {
         reset();
@@ -580,80 +547,85 @@ export default function EventsPage({ allDeadlines, activeDeadlines, expiredDeadl
                                 </div>
                             </div>
                         ) : (
-                            <div className="space-y-4">
-                                {currentDeadlines.map((deadline) => (
-                                    <Card
-                                        key={deadline.id}
-                                        className="border-border hover:shadow-md transition-all duration-200"
-                                    >
-                                        <CardContent className="p-4 md:p-6">
-                                            <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-                                                <div className="flex-1 space-y-3">
-                                                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                                                        <h3 className="font-semibold text-foreground text-base">
+                            <div className="overflow-x-auto">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead className="w-[200px]">Title</TableHead>
+                                            <TableHead className="w-[150px]">Category</TableHead>
+                                            <TableHead className="w-[120px]">Status</TableHead>
+                                            <TableHead className="w-[180px]">Start Date</TableHead>
+                                            <TableHead className="w-[180px]">End Date</TableHead>
+                                            <TableHead className="w-[200px] text-right">Actions</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {currentDeadlines.map((deadline) => (
+                                            <TableRow key={deadline.id} className="hover:bg-muted/50">
+                                                <TableCell className="font-medium">
+                                                    <div className="space-y-1">
+                                                        <div className="font-semibold text-foreground">
                                                             {deadline.title}
-                                                        </h3>
-                                                        <div className="flex items-center gap-2">
-                                                            {getStatusBadge(deadline)}
-                                                            <Badge variant="outline" className="text-xs">
-                                                                {deadline.category_display}
-                                                            </Badge>
+                                                        </div>
+                                                        <div className="text-xs text-muted-foreground">
+                                                            Created: {new Date(deadline.created_at).toLocaleDateString()}
                                                         </div>
                                                     </div>
-
-                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="font-medium text-muted-foreground">Start:</span>
-                                                            <span className="text-foreground">{formatDateTime(deadline.start_date)}</span>
-                                                        </div>
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="font-medium text-muted-foreground">End:</span>
-                                                            <span className="text-foreground">{formatDateTime(deadline.end_date)}</span>
-                                                        </div>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Badge variant="outline" className="text-xs">
+                                                        {deadline.category_display}
+                                                    </Badge>
+                                                </TableCell>
+                                                <TableCell>
+                                                    {getStatusBadge(deadline)}
+                                                </TableCell>
+                                                <TableCell className="text-sm">
+                                                    {formatDateTime(deadline.start_date)}
+                                                </TableCell>
+                                                <TableCell className="text-sm">
+                                                    {formatDateTime(deadline.end_date)}
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    <div className="flex items-center justify-end gap-2">
+                                                        {!deadline.is_expired && (
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <Button
+                                                                        variant="outline"
+                                                                        size="sm"
+                                                                        onClick={() => handleExtend(deadline)}
+                                                                        className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                                                    >
+                                                                        <ClockIcon className="h-4 w-4" />
+                                                                    </Button>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>
+                                                                    <p>Extend deadline by 1 month</p>
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                        )}
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                                <Button
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    onClick={() => handleEdit(deadline)}
+                                                                    className="h-8 w-8 p-0"
+                                                                >
+                                                                    <EditIcon className="h-4 w-4" />
+                                                                </Button>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent>
+                                                                <p>Edit deadline details</p>
+                                                            </TooltipContent>
+                                                        </Tooltip>
                                                     </div>
-
-                                                    <div className="text-xs text-muted-foreground pt-2 border-t border-border">
-                                                        <span>Created: {deadline.created_at}</span>
-                                                        <span className="mx-2">•</span>
-                                                        <span>Updated: {deadline.updated_at}</span>
-                                                    </div>
-                                                </div>
-
-                                                <div className="flex flex-row md:flex-col gap-2 md:gap-3">
-                                                    {!deadline.is_expired && (
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            onClick={() => handleExtend(deadline)}
-                                                            className="flex items-center gap-2 h-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                                        >
-                                                            <ClockIcon className="h-4 w-4" />
-                                                            <span className="hidden sm:inline">Extend</span>
-                                                        </Button>
-                                                    )}
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        onClick={() => handleEdit(deadline)}
-                                                        className="flex items-center gap-2 h-8"
-                                                    >
-                                                        <EditIcon className="h-4 w-4" />
-                                                        <span className="hidden sm:inline">Edit</span>
-                                                    </Button>
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        onClick={() => handleDelete(deadline)}
-                                                        className="flex items-center gap-2 h-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                                    >
-                                                        <TrashIcon className="h-4 w-4" />
-                                                        <span className="hidden sm:inline">Delete</span>
-                                                    </Button>
-                                                </div>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                ))}
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
                             </div>
                         )}
                     </CardContent>
@@ -800,39 +772,6 @@ export default function EventsPage({ allDeadlines, activeDeadlines, expiredDeadl
                                     </Button>
                                 </div>
                             </form>
-                        </div>
-                    </DialogContent>
-                </Dialog>
-
-                {/* Delete Confirmation Dialog */}
-                <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-                    <DialogContent className="sm:max-w-md">
-                        <DialogHeader className="space-y-2">
-                            <DialogTitle className="flex items-center gap-2 text-lg font-semibold text-foreground">
-                                <TrashIcon className="h-5 w-5 text-destructive" />
-                                Delete Deadline
-                            </DialogTitle>
-                            <DialogDescription className="text-sm text-muted-foreground">
-                                Delete "{deletingDeadline?.title}"? This action cannot be undone.
-                            </DialogDescription>
-                        </DialogHeader>
-                        <div className="flex flex-col sm:flex-row gap-3 pt-4">
-                            <Button
-                                variant="destructive"
-                                onClick={handleDeleteConfirm}
-                                disabled={processing}
-                                className="flex-1 sm:flex-none h-9"
-                            >
-                                {processing ? 'Deleting...' : 'Delete'}
-                            </Button>
-                            <Button
-                                type="button"
-                                variant="outline"
-                                onClick={handleDeleteCancel}
-                                className="flex-1 sm:flex-none h-9"
-                            >
-                                Cancel
-                            </Button>
                         </div>
                     </DialogContent>
                 </Dialog>

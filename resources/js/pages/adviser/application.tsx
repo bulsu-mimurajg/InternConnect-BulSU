@@ -4,6 +4,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { BatchActions, BatchActionPresets } from '@/components/ui/batch-actions';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Pagination } from '@/components/ui/pagination';
 import AppLayout from '@/layouts/app-layout';
 import SectionSwitcher from '@/components/SectionSwitcher';
 import { type BreadcrumbItem } from '@/types';
@@ -73,15 +75,37 @@ export default function Application({ pendingStudents, verifiedStudents, rejecte
     const [selectedRejectedStudents, setSelectedRejectedStudents] = useState<number[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
     const [showUndoDialog, setShowUndoDialog] = useState(false);
+    const [pendingPage, setPendingPage] = useState(1);
+    const [verifiedPage, setVerifiedPage] = useState(1);
+    const [rejectedPage, setRejectedPage] = useState(1);
     const [lastAction, setLastAction] = useState<{
         type: 'approve' | 'reject' | 'remove' | 'restore';
         studentIds: number[];
         count: number;
     } | null>(null);
 
+    // Pagination constants
+    const ITEMS_PER_PAGE = 5;
+
+    // Pagination logic
+    const getPaginatedStudents = (students: Student[], page: number) => {
+        const startIndex = (page - 1) * ITEMS_PER_PAGE;
+        const endIndex = startIndex + ITEMS_PER_PAGE;
+        return students.slice(startIndex, endIndex);
+    };
+
+    const getTotalPages = (students: Student[]) => {
+        return Math.ceil(students.length / ITEMS_PER_PAGE);
+    };
+
+    // Paginated data
+    const paginatedPendingStudents = getPaginatedStudents(pendingStudents, pendingPage);
+    const paginatedVerifiedStudents = getPaginatedStudents(verifiedStudents, verifiedPage);
+    const paginatedRejectedStudents = getPaginatedStudents(rejectedStudents, rejectedPage);
+
     const handleSelectAll = (checked: boolean) => {
         if (checked) {
-            setSelectedStudents(pendingStudents.map(student => student.id));
+            setSelectedStudents(paginatedPendingStudents.map(student => student.id));
         } else {
             setSelectedStudents([]);
         }
@@ -112,7 +136,7 @@ export default function Application({ pendingStudents, verifiedStudents, rejecte
     const handleSelectAllVerified = (checked: boolean) => {
         if (checked) {
             // Only select students who haven't submitted their assessment
-            const unsubmittedStudents = verifiedStudents.filter(student => !student.student?.is_submit);
+            const unsubmittedStudents = paginatedVerifiedStudents.filter(student => !student.student?.is_submit);
             setSelectedVerifiedStudents(unsubmittedStudents.map(student => student.id));
         } else {
             setSelectedVerifiedStudents([]);
@@ -129,7 +153,7 @@ export default function Application({ pendingStudents, verifiedStudents, rejecte
 
     const handleSelectAllRejected = (checked: boolean) => {
         if (checked) {
-            setSelectedRejectedStudents(rejectedStudents.map(student => student.id));
+            setSelectedRejectedStudents(paginatedRejectedStudents.map(student => student.id));
         } else {
             setSelectedRejectedStudents([]);
         }
@@ -308,15 +332,6 @@ export default function Application({ pendingStudents, verifiedStudents, rejecte
                                     Students waiting for approval
                                 </CardDescription>
                             </div>
-                            {pendingStudents.length > 0 && (
-                                <div className="flex items-center gap-2">
-                                    <Checkbox
-                                        checked={selectedStudents.length === pendingStudents.length}
-                                        onCheckedChange={handleSelectAll}
-                                    />
-                                    <span className="text-sm text-muted-foreground">Select All</span>
-                                </div>
-                            )}
                         </div>
                     </CardHeader>
                     <CardContent>
@@ -326,45 +341,75 @@ export default function Application({ pendingStudents, verifiedStudents, rejecte
                             </div>
                         ) : (
                             <div className="space-y-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {pendingStudents.map((student) => (
-                                    <div
-                                        key={student.id}
-                                        className="flex items-center space-x-3 p-3 border rounded-lg"
-                                    >
-                                        <Checkbox
-                                            checked={selectedStudents.includes(student.id)}
-                                            onCheckedChange={(checked) =>
-                                                handleSelectStudent(student.id, checked as boolean)
-                                            }
-                                        />
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center justify-between mb-2">
-                                                <p className="text-sm font-medium truncate">
-                                                    {student.username} {(() => {
-                                                        // Use student data if available, otherwise use registration data
-                                                        const firstName = student.student?.first_name || student.registration_data?.first_name;
-                                                        const lastName = student.student?.last_name || student.registration_data?.last_name;
-                                                        
-                                                        if (firstName && lastName) {
-                                                            return `| ${firstName} ${lastName}`;
-                                                        }
-                                                        return '| New Student';
-                                                    })()}
-                                                </p>
-                                            </div>
-                                            <p className="text-xs text-muted-foreground truncate mb-2">
-                                                {student.email}
-                                            </p>
-                                            {currentSectionId === null && student.academe_accounts && student.academe_accounts.length > 0 && (
-                                                <p className="text-xs text-blue-600 truncate mb-2">
-                                                    {student.academe_accounts[0].section.section_name}
-                                                </p>
-                                            )}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
+                                <div className="overflow-x-auto">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead className="w-[50px]">
+                                                    <Checkbox
+                                                        checked={selectedStudents.length === paginatedPendingStudents.length && paginatedPendingStudents.length > 0}
+                                                        onCheckedChange={handleSelectAll}
+                                                    />
+                                                </TableHead>
+                                                <TableHead className="w-[200px]">Student</TableHead>
+                                                <TableHead className="w-[250px]">Email</TableHead>
+                                                <TableHead className="w-[100px]">Status</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {paginatedPendingStudents.map((student) => (
+                                                <TableRow key={student.id} className="hover:bg-muted/50">
+                                                    <TableCell>
+                                                        <Checkbox
+                                                            checked={selectedStudents.includes(student.id)}
+                                                            onCheckedChange={(checked) =>
+                                                                handleSelectStudent(student.id, checked as boolean)
+                                                            }
+                                                        />
+                                                    </TableCell>
+                                                    <TableCell className="font-medium">
+                                                        <div className="space-y-1">
+                                                            <div className="font-semibold text-foreground">
+                                                                {student.username}
+                                                            </div>
+                                                            <div className="text-sm text-muted-foreground">
+                                                                {(() => {
+                                                                    const firstName = student.student?.first_name || student.registration_data?.first_name;
+                                                                    const lastName = student.student?.last_name || student.registration_data?.last_name;
+                                                                    
+                                                                    if (firstName && lastName) {
+                                                                        return `${firstName} ${lastName}`;
+                                                                    }
+                                                                    return 'New Student';
+                                                                })()}
+                                                            </div>
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell className="text-sm">
+                                                        {student.email}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Badge variant="outline" className="text-xs">
+                                                            Pending
+                                                        </Badge>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+
+                                {getTotalPages(pendingStudents) > 1 && (
+                                    <Pagination
+                                        currentPage={pendingPage}
+                                        totalPages={getTotalPages(pendingStudents)}
+                                        onPageChange={setPendingPage}
+                                        showSummary={true}
+                                        totalItems={pendingStudents.length}
+                                        itemsPerPage={ITEMS_PER_PAGE}
+                                        className="mt-4"
+                                    />
+                                )}
 
                                 {selectedStudents.length > 0 && (
                                     <BatchActions
@@ -372,7 +417,7 @@ export default function Application({ pendingStudents, verifiedStudents, rejecte
                                         selectedLabel="student"
                                         description={deadlineActive 
                                             ? "You can approve or reject multiple students at once. Approved students will be verified for internship placement."
-                                            : "Student verification deadline has expired. You cannot approve students at this time."
+                                            : "Student verification deadline has expired. You cannot approve or reject students at this time."
                                         }
                                         actions={[
                                             {
@@ -385,7 +430,7 @@ export default function Application({ pendingStudents, verifiedStudents, rejecte
                                                 ...BatchActionPresets.verify.reject,
                                                 label: `Reject Selected (${selectedStudents.length})`,
                                                 onClick: handleReject,
-                                                disabled: isProcessing
+                                                disabled: isProcessing || !deadlineActive
                                             }
                                         ]}
                                         onClearSelection={() => setSelectedStudents([])}
@@ -410,15 +455,6 @@ export default function Application({ pendingStudents, verifiedStudents, rejecte
                                     Students who have been approved and can access the system
                                 </CardDescription>
                             </div>
-                            {verifiedStudents.length > 0 && (
-                                <div className="flex items-center gap-2">
-                                    <Checkbox
-                                        checked={selectedVerifiedStudents.length === verifiedStudents.filter(student => !student.student?.is_submit).length && verifiedStudents.filter(student => !student.student?.is_submit).length > 0}
-                                        onCheckedChange={handleSelectAllVerified}
-                                    />
-                                    <span className="text-sm text-muted-foreground">Select All</span>
-                                </div>
-                            )}
                         </div>
                     </CardHeader>
                     <CardContent>
@@ -435,58 +471,86 @@ export default function Application({ pendingStudents, verifiedStudents, rejecte
                                         </p>
                                     </div>
                                 )}
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {verifiedStudents.map((student) => {
-                                    const hasSubmitted = student.student?.is_submit;
-                                    return (
-                                        <div
-                                            key={student.id}
-                                            className={`flex items-center space-x-3 p-3 border rounded-lg ${hasSubmitted ? 'opacity-60' : ''}`}
-                                        >
-                                            <Checkbox
-                                                checked={selectedVerifiedStudents.includes(student.id)}
-                                                onCheckedChange={(checked) =>
-                                                    handleSelectVerifiedStudent(student.id, checked as boolean)
-                                                }
-                                                disabled={hasSubmitted}
-                                            />
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center justify-between mb-2">
-                                                    <p className="text-sm font-medium truncate">
-                                                        {student.username}
-                                                    </p>
-                                                    <div className="flex items-center gap-2">
-                                                        <Badge variant="secondary" className="text-xs">
-                                                            Verified
-                                                        </Badge>
-                                                    </div>
-                                                </div>
-                                                <p className="text-xs text-muted-foreground truncate mb-2">
-                                                    {student.email}
-                                                </p>
-                                                {currentSectionId === null && student.academe_accounts && student.academe_accounts.length > 0 && (
-                                                    <p className="text-xs text-blue-600 truncate mb-2">
-                                                        {student.academe_accounts[0].section.section_name}
-                                                    </p>
-                                                )}
-                                                {student.student && (
-                                                    <div className="space-y-1">
-                                                        <p className="text-xs">
-                                                            <span className="font-medium">Name:</span> {student.student.first_name} {student.student.last_name}
-                                                        </p>
-                                                        <p className="text-xs">
-                                                            <span className="font-medium">Assessment:</span> {student.student.is_submit ? 'Completed' : 'Pending'}
-                                                        </p>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
+                                <div className="overflow-x-auto">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead className="w-[50px]">
+                                                    <Checkbox
+                                                        checked={selectedVerifiedStudents.length === paginatedVerifiedStudents.filter(student => !student.student?.is_submit).length && paginatedVerifiedStudents.filter(student => !student.student?.is_submit).length > 0}
+                                                        onCheckedChange={handleSelectAllVerified}
+                                                    />
+                                                </TableHead>
+                                                <TableHead className="w-[200px]">Student</TableHead>
+                                                <TableHead className="w-[250px]">Email</TableHead>
+                                                <TableHead className="w-[120px]">Assessment</TableHead>
+                                                <TableHead className="w-[100px]">Status</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {paginatedVerifiedStudents.map((student) => {
+                                                const hasSubmitted = student.student?.is_submit;
+                                                return (
+                                                    <TableRow key={student.id} className={`hover:bg-muted/50 ${hasSubmitted ? 'opacity-60' : ''}`}>
+                                                        <TableCell>
+                                                            <Checkbox
+                                                                checked={selectedVerifiedStudents.includes(student.id)}
+                                                                onCheckedChange={(checked) =>
+                                                                    handleSelectVerifiedStudent(student.id, checked as boolean)
+                                                                }
+                                                                disabled={hasSubmitted}
+                                                            />
+                                                        </TableCell>
+                                                        <TableCell className="font-medium">
+                                                            <div className="space-y-1">
+                                                                <div className="font-semibold text-foreground">
+                                                                    {student.username}
+                                                                </div>
+                                                                {student.student && (
+                                                                    <div className="text-sm text-muted-foreground">
+                                                                        {student.student.first_name} {student.student.last_name}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell className="text-sm">
+                                                            {student.email}
+                                                        </TableCell>
+                                                        <TableCell className="text-sm">
+                                                            {student.student ? (
+                                                                <Badge variant={student.student.is_submit ? "default" : "secondary"} className="text-xs">
+                                                                    {student.student.is_submit ? 'Completed' : 'Pending'}
+                                                                </Badge>
+                                                            ) : (
+                                                                <span className="text-muted-foreground">-</span>
+                                                            )}
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Badge variant="secondary" className="text-xs">
+                                                                Verified
+                                                            </Badge>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                );
+                                            })}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+
+                                {getTotalPages(verifiedStudents) > 1 && (
+                                    <Pagination
+                                        currentPage={verifiedPage}
+                                        totalPages={getTotalPages(verifiedStudents)}
+                                        onPageChange={setVerifiedPage}
+                                        showSummary={true}
+                                        totalItems={verifiedStudents.length}
+                                        itemsPerPage={ITEMS_PER_PAGE}
+                                        className="mt-4"
+                                    />
+                                )}
 
                                 {selectedVerifiedStudents.length > 0 && (
-                                    <div className="flex items-center gap-2 pt-4 border-t">
+                                    <div className="flex items-center justify-end gap-2 pt-4 border-t">
                                         <Button
                                             onClick={handleRemoveAccess}
                                             disabled={isProcessing}
@@ -516,15 +580,6 @@ export default function Application({ pendingStudents, verifiedStudents, rejecte
                                     Students who have been rejected and can be restored to pending status
                                 </CardDescription>
                             </div>
-                            {rejectedStudents.length > 0 && (
-                                <div className="flex items-center gap-2">
-                                    <Checkbox
-                                        checked={selectedRejectedStudents.length === rejectedStudents.length}
-                                        onCheckedChange={handleSelectAllRejected}
-                                    />
-                                    <span className="text-sm text-muted-foreground">Select All</span>
-                                </div>
-                            )}
                         </div>
                     </CardHeader>
                     <CardContent>
@@ -534,52 +589,79 @@ export default function Application({ pendingStudents, verifiedStudents, rejecte
                             </div>
                         ) : (
                             <div className="space-y-4">
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                    {rejectedStudents.map((student) => (
-                                        <div
-                                            key={student.id}
-                                            className="flex items-center space-x-3 p-3 border rounded-lg bg-red-50"
-                                        >
-                                            <Checkbox
-                                                checked={selectedRejectedStudents.includes(student.id)}
-                                                onCheckedChange={(checked) =>
-                                                    handleSelectRejectedStudent(student.id, checked as boolean)
-                                                }
-                                            />
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center justify-between mb-2">
-                                                    <p className="text-sm font-medium truncate">
-                                                        {student.username} {(() => {
-                                                            const firstName = student.registration_data?.first_name;
-                                                            const lastName = student.registration_data?.last_name;
-                                                            
-                                                            if (firstName && lastName) {
-                                                                return `| ${firstName} ${lastName}`;
+                                <div className="overflow-x-auto">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead className="w-[50px]">
+                                                    <Checkbox
+                                                        checked={selectedRejectedStudents.length === paginatedRejectedStudents.length && paginatedRejectedStudents.length > 0}
+                                                        onCheckedChange={handleSelectAllRejected}
+                                                    />
+                                                </TableHead>
+                                                <TableHead className="w-[200px]">Student</TableHead>
+                                                <TableHead className="w-[250px]">Email</TableHead>
+                                                <TableHead className="w-[150px]">Rejected Date</TableHead>
+                                                <TableHead className="w-[100px]">Status</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {paginatedRejectedStudents.map((student) => (
+                                                <TableRow key={student.id} className="hover:bg-muted/50 bg-red-50/50">
+                                                    <TableCell>
+                                                        <Checkbox
+                                                            checked={selectedRejectedStudents.includes(student.id)}
+                                                            onCheckedChange={(checked) =>
+                                                                handleSelectRejectedStudent(student.id, checked as boolean)
                                                             }
-                                                            return '| Rejected Student';
-                                                        })()}
-                                                    </p>
-                                                    <div className="flex items-center gap-2">
+                                                        />
+                                                    </TableCell>
+                                                    <TableCell className="font-medium">
+                                                        <div className="space-y-1">
+                                                            <div className="font-semibold text-foreground">
+                                                                {student.username}
+                                                            </div>
+                                                            <div className="text-sm text-muted-foreground">
+                                                                {(() => {
+                                                                    const firstName = student.registration_data?.first_name;
+                                                                    const lastName = student.registration_data?.last_name;
+                                                                    
+                                                                    if (firstName && lastName) {
+                                                                        return `${firstName} ${lastName}`;
+                                                                    }
+                                                                    return 'Rejected Student';
+                                                                })()}
+                                                            </div>
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell className="text-sm">
+                                                        {student.email}
+                                                    </TableCell>
+                                                    <TableCell className="text-sm text-red-600">
+                                                        {(student as Student & { rejected_at?: string }).rejected_at || 'Unknown'}
+                                                    </TableCell>
+                                                    <TableCell>
                                                         <Badge variant="destructive" className="text-xs">
                                                             Rejected
                                                         </Badge>
-                                                    </div>
-                                                </div>
-                                                <p className="text-xs text-muted-foreground truncate mb-2">
-                                                    {student.email}
-                                                </p>
-                                                {currentSectionId === null && student.academe_accounts && student.academe_accounts.length > 0 && (
-                                                    <p className="text-xs text-blue-600 truncate mb-2">
-                                                        {student.academe_accounts[0].section.section_name}
-                                                    </p>
-                                                )}
-                                                <p className="text-xs text-red-600">
-                                                    Rejected: {(student as Student & { rejected_at?: string }).rejected_at || 'Unknown'}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    ))}
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
                                 </div>
+
+                                {getTotalPages(rejectedStudents) > 1 && (
+                                    <Pagination
+                                        currentPage={rejectedPage}
+                                        totalPages={getTotalPages(rejectedStudents)}
+                                        onPageChange={setRejectedPage}
+                                        showSummary={true}
+                                        totalItems={rejectedStudents.length}
+                                        itemsPerPage={ITEMS_PER_PAGE}
+                                        className="mt-4"
+                                    />
+                                )}
 
                                 {selectedRejectedStudents.length > 0 && (
                                     <div className="flex items-center gap-2 pt-4 border-t">
