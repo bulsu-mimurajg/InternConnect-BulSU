@@ -319,6 +319,35 @@ export default function Application({ pendingStudents, verifiedStudents, rejecte
                     </CardHeader>
                 </Card>
 
+                {/* Contextual Action Bar - positioned between section container and pending students container */}
+                {selectedStudents.length > 0 && (
+                    <BatchActions
+                        selectedCount={selectedStudents.length}
+                        selectedLabel="student"
+                        description={deadlineActive 
+                            ? "You can approve or reject multiple students at once. Approved students will be verified for internship placement."
+                            : "Student verification deadline has expired. You cannot approve or reject students at this time."
+                        }
+                        isVerificationDisabled={!deadlineActive}
+                        actions={[
+                            {
+                                ...BatchActionPresets.verify.approve,
+                                label: `Approve Selected (${selectedStudents.length})`,
+                                onClick: handleApprove,
+                                disabled: isProcessing || !deadlineActive
+                            },
+                            {
+                                ...BatchActionPresets.verify.reject,
+                                label: `Reject Selected (${selectedStudents.length})`,
+                                onClick: handleReject,
+                                disabled: isProcessing || !deadlineActive
+                            }
+                        ]}
+                        onClearSelection={() => setSelectedStudents([])}
+                        isLoading={isProcessing}
+                    />
+                )}
+
                 {/* Pending Students */}
                 <Card>
                     <CardHeader>
@@ -408,33 +437,6 @@ export default function Application({ pendingStudents, verifiedStudents, rejecte
                                         totalItems={pendingStudents.length}
                                         itemsPerPage={ITEMS_PER_PAGE}
                                         className="mt-4"
-                                    />
-                                )}
-
-                                {selectedStudents.length > 0 && (
-                                    <BatchActions
-                                        selectedCount={selectedStudents.length}
-                                        selectedLabel="student"
-                                        description={deadlineActive 
-                                            ? "You can approve or reject multiple students at once. Approved students will be verified for internship placement."
-                                            : "Student verification deadline has expired. You cannot approve or reject students at this time."
-                                        }
-                                        actions={[
-                                            {
-                                                ...BatchActionPresets.verify.approve,
-                                                label: `Approve Selected (${selectedStudents.length})`,
-                                                onClick: handleApprove,
-                                                disabled: isProcessing || !deadlineActive
-                                            },
-                                            {
-                                                ...BatchActionPresets.verify.reject,
-                                                label: `Reject Selected (${selectedStudents.length})`,
-                                                onClick: handleReject,
-                                                disabled: isProcessing || !deadlineActive
-                                            }
-                                        ]}
-                                        onClearSelection={() => setSelectedStudents([])}
-                                        isLoading={isProcessing}
                                     />
                                 )}
                             </div>

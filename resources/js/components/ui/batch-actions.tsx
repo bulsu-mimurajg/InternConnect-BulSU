@@ -2,6 +2,7 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { CheckCircle, XCircle, Target, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -22,6 +23,7 @@ interface BatchActionsProps {
   isLoading?: boolean;
   description?: string;
   className?: string;
+  isVerificationDisabled?: boolean; // New prop to indicate if verification is disabled
 }
 
 export function BatchActions({
@@ -31,7 +33,8 @@ export function BatchActions({
   onClearSelection,
   isLoading = false,
   description,
-  className
+  className,
+  isVerificationDisabled = false
 }: BatchActionsProps) {
   if (selectedCount === 0) return null;
 
@@ -67,40 +70,84 @@ export function BatchActions({
           </div>
 
           {/* Actions Section */}
-          <div className="flex flex-col sm:flex-row gap-2 lg:ml-4">
-            {actions.map((action, index) => {
-              const IconComponent = action.icon;
-              return (
-                <Button
-                  key={index}
-                  variant={action.variant || 'default'}
-                  onClick={action.onClick}
-                  disabled={action.disabled || isLoading}
-                  className={cn(
-                    "text-sm font-medium transition-all duration-200",
-                    "hover:scale-105 active:scale-95",
-                    action.className
-                  )}
-                >
-                  {isLoading ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <IconComponent className="h-4 w-4 mr-2" />
-                  )}
-                  {action.label}
-                </Button>
-              );
-            })}
-            
-            <Button
-              variant="outline"
-              onClick={onClearSelection}
-              disabled={isLoading}
-              className="text-sm hover:bg-muted"
-            >
-              Clear Selection
-            </Button>
-          </div>
+          {isVerificationDisabled ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex flex-col sm:flex-row gap-2 lg:ml-4">
+                  {actions.map((action, index) => {
+                    const IconComponent = action.icon;
+                    return (
+                      <Button
+                        key={index}
+                        variant={action.variant || 'default'}
+                        onClick={action.onClick}
+                        disabled={action.disabled || isLoading}
+                        className={cn(
+                          "text-sm font-medium transition-all duration-200",
+                          "hover:scale-105 active:scale-95",
+                          action.className
+                        )}
+                      >
+                        {isLoading ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <IconComponent className="h-4 w-4 mr-2" />
+                        )}
+                        {action.label}
+                      </Button>
+                    );
+                  })}
+                  
+                  <Button
+                    variant="outline"
+                    onClick={onClearSelection}
+                    disabled={isLoading}
+                    className="text-sm hover:bg-muted"
+                  >
+                    Clear Selection
+                  </Button>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>No ongoing Student Verification. Contact admin for errors.</p>
+              </TooltipContent>
+            </Tooltip>
+          ) : (
+            <div className="flex flex-col sm:flex-row gap-2 lg:ml-4">
+              {actions.map((action, index) => {
+                const IconComponent = action.icon;
+                return (
+                  <Button
+                    key={index}
+                    variant={action.variant || 'default'}
+                    onClick={action.onClick}
+                    disabled={action.disabled || isLoading}
+                    className={cn(
+                      "text-sm font-medium transition-all duration-200",
+                      "hover:scale-105 active:scale-95",
+                      action.className
+                    )}
+                  >
+                    {isLoading ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <IconComponent className="h-4 w-4 mr-2" />
+                    )}
+                    {action.label}
+                  </Button>
+                );
+              })}
+              
+              <Button
+                variant="outline"
+                onClick={onClearSelection}
+                disabled={isLoading}
+                className="text-sm hover:bg-muted"
+              >
+                Clear Selection
+              </Button>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

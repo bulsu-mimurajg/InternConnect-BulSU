@@ -86,7 +86,6 @@ export default function SeasonsManagement({ seasons, activeSeason, activeSeasonD
   const getAcademicYearOptions = () => {
     const currentYear = new Date().getFullYear();
     return [
-      { value: `Academic Year (${currentYear - 1}-${currentYear})`, label: 'Previous Year' },
       { value: `Academic Year (${currentYear}-${currentYear + 1})`, label: 'Current Year' },
       { value: `Academic Year (${currentYear + 1}-${currentYear + 2})`, label: 'Next Year' },
     ];
