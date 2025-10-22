@@ -324,6 +324,7 @@ export default function Application({ pendingStudents, verifiedStudents, rejecte
                     <BatchActions
                         selectedCount={selectedStudents.length}
                         selectedLabel="student"
+                        title="Actions"
                         description={deadlineActive 
                             ? "You can approve or reject multiple students at once. Approved students will be verified for internship placement."
                             : "Student verification deadline has expired. You cannot approve or reject students at this time."

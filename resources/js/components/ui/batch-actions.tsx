@@ -24,6 +24,7 @@ interface BatchActionsProps {
   description?: string;
   className?: string;
   isVerificationDisabled?: boolean; // New prop to indicate if verification is disabled
+  title?: string; // Custom title override
 }
 
 export function BatchActions({
@@ -34,7 +35,8 @@ export function BatchActions({
   isLoading = false,
   description,
   className,
-  isVerificationDisabled = false
+  isVerificationDisabled = false,
+  title
 }: BatchActionsProps) {
   if (selectedCount === 0) return null;
 
@@ -55,7 +57,7 @@ export function BatchActions({
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
                 <h3 className="font-semibold text-foreground">
-                  Batch Actions
+                  {title || 'Batch Actions'}
                 </h3>
                 <Badge variant="secondary" className="text-xs">
                   {selectedCount} {selectedLabel}{selectedCount !== 1 ? 's' : ''} selected
