@@ -15,10 +15,11 @@ class CustomResetPasswordNotification extends ResetPasswordNotification
     public function toMail($notifiable): MailMessage
     {
         $resetUrl = $this->resetUrl($notifiable);
-        $userName = $notifiable->name ?? $notifiable->username ?? 'User';
         
         // Use the custom EmailService to send the password reset email
         $emailService = new EmailService();
+        
+        $userName = $notifiable->name ?? $notifiable->username ?? 'User';
         
         $subject = "Password Reset Request - BULSU InternConnect";
         
@@ -34,22 +35,8 @@ class CustomResetPasswordNotification extends ResetPasswordNotification
             // Log the error but don't fail the notification
             Log::error('Failed to send password reset email: ' . $e->getMessage());
         }
-        
-        // Return a MailMessage to prevent the "view on null" error
-        // This won't be used since we're sending via EmailService above
-        return (new MailMessage)
-            ->subject($subject)
-            ->line('Password reset email sent successfully.');
-    }
 
-    /**
-     * Override the resetUrl method to use proper URL generation
-     */
-    protected function resetUrl($notifiable): string
-    {
-        return route('password.reset', [
-            'token' => $this->token,
-            'email' => $notifiable->email,
-        ]);
+        // Return empty MailMessage to prevent Laravel from sending duplicate email
+        return new MailMessage();
     }
 }

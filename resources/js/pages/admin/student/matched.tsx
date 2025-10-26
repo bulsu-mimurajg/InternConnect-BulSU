@@ -142,6 +142,9 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
     const isReloadingDataRef = React.useRef(false);
     const rejectingRef = React.useRef(false);
 
+    // Computed state to disable all actions while loading or reloading data
+    const areActionsDisabled = isLoading || isReloadingDataRef.current || rejectingRef.current;
+
     // Determine if the "Students Without Matches" card should be shown
     const showStudentsWithoutMatchesCard = (statistics?.students_without_matches || 0) > 0;
 
@@ -1305,17 +1308,17 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                                     ...BatchActionPresets.endorse.approve,
                                     label: `Endorse All (${selectedStudents.size})`,
                                     onClick: handleBatchApproveClick,
-                                    disabled: isLoading
+                                    disabled: areActionsDisabled
                                 },
                                 {
                                     ...BatchActionPresets.endorse.reject,
                                     label: `Reject All (${selectedStudents.size})`,
                                     onClick: handleBatchRejectClick,
-                                    disabled: isLoading
+                                    disabled: areActionsDisabled
                                 }
                             ]}
                             onClearSelection={() => setSelectedStudents(new Set())}
-                            isLoading={isLoading}
+                            isLoading={areActionsDisabled}
                         />
                     )}
 
@@ -1416,7 +1419,7 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                                                                     variant="outline"
                                                                     size="sm"
                                                                     onClick={() => handleViewDetails(student)}
-                                                                    disabled={isLoading}
+                                                                    disabled={areActionsDisabled}
                                                                     className="flex-1"
                                                                 >
                                                                     <EyeIcon className="h-4 w-4 mr-1" />
@@ -1433,7 +1436,7 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                                                                     variant="default"
                                                                     size="sm"
                                                                     onClick={() => handleSingleApproveClick(student)}
-                                                                    disabled={isLoading}
+                                                                    disabled={areActionsDisabled}
                                                                     className="bg-green-600 hover:bg-green-700 flex-1"
                                                                 >
                                                                     <CheckCircleIcon className="h-4 w-4 mr-1" />
@@ -1450,7 +1453,7 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                                                                     variant="destructive"
                                                                     size="sm"
                                                                     onClick={() => handleSingleRejectClick(student)}
-                                                                    disabled={isLoading}
+                                                                    disabled={areActionsDisabled}
                                                                     className="flex-1"
                                                                 >
                                                                     <XCircleIcon className="h-4 w-4 mr-1" />
@@ -1568,7 +1571,7 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                                                                         variant="outline"
                                                                         size="sm"
                                                                         onClick={() => handleViewDetails(student)}
-                                                                        disabled={isLoading}
+                                                                        disabled={areActionsDisabled}
                                                                         className="h-8 px-2"
                                                                     >
                                                                         <EyeIcon className="h-3 w-3" />
@@ -1585,7 +1588,7 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                                                                         variant="default"
                                                                         size="sm"
                                                                         onClick={() => handleSingleApproveClick(student)}
-                                                                        disabled={isLoading || (student.best_match?.internship?.available_slots !== undefined && student.best_match.internship.available_slots === 0)}
+                                                                        disabled={areActionsDisabled || (student.best_match?.internship?.available_slots !== undefined && student.best_match.internship.available_slots === 0)}
                                                                         className={`h-8 px-2 ${
                                                                             student.best_match?.internship?.available_slots === 0
                                                                                 ? 'bg-gray-400 hover:bg-gray-400 cursor-not-allowed'
@@ -1606,7 +1609,7 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                                                                         variant="destructive"
                                                                         size="sm"
                                                                         onClick={() => handleSingleRejectClick(student)}
-                                                                        disabled={isLoading}
+                                                                        disabled={areActionsDisabled}
                                                                         className="h-8 px-2"
                                                                     >
                                                                         <XCircleIcon className="h-3 w-3" />
@@ -2132,7 +2135,7 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                         <Button variant="outline" onClick={() => setShowSingleApproveDialog(false)}>
                             Cancel
                         </Button>
-                        <Button 
+                        <Button
                             onClick={() => {
                                 setShowSingleApproveDialog(false);
                                 if (selectedStudentForAction) {
@@ -2182,7 +2185,7 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                         <Button variant="outline" onClick={() => setShowSingleRejectDialog(false)}>
                             Cancel
                         </Button>
-                        <Button 
+                        <Button
                             variant="destructive"
                             onClick={() => {
                                 setShowSingleRejectDialog(false);
@@ -2209,7 +2212,7 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                     <div className="space-y-4">
                         <div className="bg-muted/50 rounded-lg p-4">
                             <div className="text-sm text-muted-foreground">
-                                This action will endorse all selected students for their internship matches. 
+                                This action will endorse all selected students for their internship matches.
                                 The system will check for slot conflicts and may place some students in fallback matches if needed.
                             </div>
                         </div>
@@ -2218,7 +2221,7 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                         <Button variant="outline" onClick={() => setShowBatchApproveDialog(false)}>
                             Cancel
                         </Button>
-                        <Button 
+                        <Button
                             onClick={() => {
                                 setShowBatchApproveDialog(false);
                                 handleBatchApprove();
@@ -2242,7 +2245,7 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                     <div className="space-y-4">
                         <div className="bg-muted/50 rounded-lg p-4">
                             <div className="text-sm text-muted-foreground">
-                                This action will reject all selected students from their current matches. 
+                                This action will reject all selected students from their current matches.
                                 They will be moved to their next available matches in the queue.
                             </div>
                         </div>
@@ -2251,7 +2254,7 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
                         <Button variant="outline" onClick={() => setShowBatchRejectDialog(false)}>
                             Cancel
                         </Button>
-                        <Button 
+                        <Button
                             variant="destructive"
                             onClick={() => {
                                 setShowBatchRejectDialog(false);

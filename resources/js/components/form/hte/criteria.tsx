@@ -1,11 +1,10 @@
-import { FormControl, FormField, FormItem, FormLabel } from '@/components/ui/form';
+import { FormControl, FormField, FormItem } from '@/components/ui/form';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Label } from '@/components/ui/label';
 import { useFormContext } from 'react-hook-form';
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import { ChevronDownIcon } from '@radix-ui/react-icons';
 import { usePage } from '@inertiajs/react';
 import { type SharedData } from '@/types';
@@ -55,13 +54,43 @@ export default function Criteria({
     setExpandedCategories,
     setExpandedSubcategories,
 }: CriteriaProps) {
-    const { control, watch, setValue } = useFormContext();
+    console.log('🔴 [Criteria Component] RENDERED - Categories:', categories.length);
+
+    const { control, watch, setValue, getValues } = useFormContext();
     const { auth } = usePage<SharedData>().props;
 
-    // Watch the assessment responses
-    const assessmentResponses: Record<string, number> = useMemo(() => {
-        return watch('assessmentResponses') || {};
-    }, [watch]);
+    console.log('🔴 [Criteria Component] Form context available:', {
+        hasWatch: !!watch,
+        hasSetValue: !!setValue,
+        hasGetValues: !!getValues
+    });
+
+    // Track assessment responses with state that updates on form changes
+    const [assessmentResponses, setAssessmentResponses] = useState<Record<string, number>>(() => {
+        // Initialize state with current form values
+        const initial = getValues('assessmentResponses') || {};
+        console.log('🔴 [Criteria Component] Initial state from form:', initial);
+        return initial;
+    });
+
+    // Subscribe to form changes using watch - only subscribe once
+    useEffect(() => {
+        console.log('🟢 [Criteria] SUBSCRIBING to form changes');
+        const subscription = watch((formValues) => {
+            const responses = formValues.assessmentResponses || {};
+            console.log('🟡 [Criteria] Form changed! New responses:', responses);
+            console.log('🟡 [Criteria] Total keys in responses:', Object.keys(responses).length);
+            setAssessmentResponses(responses);
+        });
+
+        console.log('🟢 [Criteria] Current form value on mount:', getValues('assessmentResponses'));
+
+        return () => {
+            console.log('🔴 [Criteria] UNSUBSCRIBING from form changes');
+            subscription.unsubscribe();
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const toggleCategory = useCallback(
         (categoryId: number) => {
@@ -119,6 +148,10 @@ export default function Criteria({
 
     // Calculate overall progress
     const overallProgress = useMemo(() => {
+        console.log('📊 [Progress] Calculating overall progress...');
+        console.log('📊 [Progress] Current assessmentResponses:', assessmentResponses);
+        console.log('📊 [Progress] Keys in assessmentResponses:', Object.keys(assessmentResponses).length);
+
         let totalQuestions = 0;
         let answeredQuestions = 0;
 
@@ -133,12 +166,16 @@ export default function Criteria({
             });
         });
 
-        return {
+        const progress = {
             total: totalQuestions,
             answered: answeredQuestions,
             percentage: totalQuestions > 0 ? Math.round((answeredQuestions / totalQuestions) * 100) : 0,
             isComplete: totalQuestions > 0 && answeredQuestions === totalQuestions,
         };
+
+        console.log('📊 [Progress] RESULT:', progress);
+
+        return progress;
     }, [categories, assessmentResponses]);
 
     // Expand all categories
@@ -154,6 +191,65 @@ export default function Criteria({
         setExpandedCategories(new Set());
         setExpandedSubcategories(new Set());
     }, [setExpandedCategories, setExpandedSubcategories]);
+
+    // Find and scroll to first unanswered question
+    const scrollToFirstUnanswered = useCallback(() => {
+        console.log('🔍 [Scroll] Looking for first unanswered question...');
+
+        for (const category of categories) {
+            for (const subcategory of category.subCategories) {
+                for (const question of subcategory.questions) {
+                    if (!assessmentResponses[`question_${question.id}`]) {
+                        console.log('🔍 [Scroll] Found unanswered question:', question.id);
+
+                        // Expand the category and subcategory
+                        setExpandedCategories(prev => new Set([...prev, category.id]));
+                        setExpandedSubcategories(prev => new Set([...prev, subcategory.id]));
+
+                        // Wait for DOM to update, then scroll
+                        setTimeout(() => {
+                            const questionElement = document.getElementById(`question_${question.id}`);
+                            if (questionElement) {
+                                console.log('🔍 [Scroll] Scrolling to question element');
+                                questionElement.scrollIntoView({
+                                    behavior: 'smooth',
+                                    block: 'center'
+                                });
+
+                                // Add shake and highlight animation
+                                questionElement.classList.add('animate-shake', 'highlight-question');
+
+                                // Remove animation classes after animation completes
+                                setTimeout(() => {
+                                    questionElement.classList.remove('animate-shake');
+                                    setTimeout(() => {
+                                        questionElement.classList.remove('highlight-question');
+                                    }, 2000);
+                                }, 600);
+                            }
+                        }, 300);
+
+                        return true; // Found unanswered question
+                    }
+                }
+            }
+        }
+
+        console.log('🔍 [Scroll] All questions answered!');
+        return false; // All questions answered
+    }, [categories, assessmentResponses, setExpandedCategories, setExpandedSubcategories]);
+
+    // Expose scrollToFirstUnanswered to parent via ref or callback
+    useEffect(() => {
+        // Store function in window for parent to call
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (window as any).scrollToFirstUnansweredQuestion = scrollToFirstUnanswered;
+
+        return () => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            delete (window as any).scrollToFirstUnansweredQuestion;
+        };
+    }, [scrollToFirstUnanswered]);
 
     if (loading) {
         return (
@@ -362,21 +458,44 @@ export default function Criteria({
                                                         <CardContent className="space-y-6 pt-0">
                                                             {subcategory.questions.map((question, qIndex) => {
                                                                 const currentValue = assessmentResponses[`question_${question.id}`];
-                                                                
+
                                                                 return (
-                                                                    <div key={question.id} className="space-y-3 border-b pb-4 last:border-b-0">
+                                                                    <div
+                                                                        key={question.id}
+                                                                        id={`question_${question.id}`}
+                                                                        className="space-y-3 border-b pb-4 last:border-b-0 transition-all duration-300"
+                                                                    >
                                                                         <div className="text-sm font-medium text-foreground">
-                                                                            {qIndex + 1}. {question.question}
+                                                                            <span className="question-number inline-block transition-all duration-300">
+                                                                                {qIndex + 1}.
+                                                                            </span> {question.question}
                                                                         </div>
                                                                         <RadioGroup
                                                                             value={currentValue?.toString()}
                                                                             onValueChange={(value) => {
+                                                                                console.log('🔵 [RadioGroup] CLICKED! Question ID:', question.id, 'Value:', value);
+
                                                                                 const numValue = parseInt(value);
-                                                                                const currentResponses = watch('assessmentResponses') || {};
-                                                                                setValue('assessmentResponses', {
+                                                                                const currentResponses = getValues('assessmentResponses') || {};
+
+                                                                                console.log('🔵 [RadioGroup] Current responses before update:', currentResponses);
+                                                                                console.log('🔵 [RadioGroup] Keys count:', Object.keys(currentResponses).length);
+
+                                                                                const newResponses = {
                                                                                     ...currentResponses,
                                                                                     [`question_${question.id}`]: numValue
-                                                                                }, { shouldValidate: true });
+                                                                                };
+
+                                                                                console.log('🔵 [RadioGroup] New responses to set:', newResponses);
+                                                                                console.log('🔵 [RadioGroup] New keys count:', Object.keys(newResponses).length);
+
+                                                                                setValue('assessmentResponses', newResponses, {
+                                                                                    shouldValidate: true,
+                                                                                    shouldDirty: true,
+                                                                                    shouldTouch: true
+                                                                                });
+
+                                                                                console.log('🔵 [RadioGroup] After setValue, checking form:', getValues('assessmentResponses'));
                                                                             }}
                                                                             className="flex flex-col sm:flex-row sm:flex-wrap gap-3"
                                                                         >

@@ -78,6 +78,38 @@ export default function AddInternshipForm() {
     const [expandedSubcategories, setExpandedSubcategories] = useState<Set<number>>(new Set());
     const [expandedQuestions, setExpandedQuestions] = useState<Set<number>>(new Set());
     const [lockedSubcategories, setLockedSubcategories] = useState<Set<number>>(new Set());
+    const [initialExpansionDone, setInitialExpansionDone] = useState(false);
+
+    // Auto-expand Technical Skill and Soft Skill categories when data is loaded
+    useEffect(() => {
+        if (!initialExpansionDone && typedCategories && typedCategories.length > 0) {
+            const technicalSkillCategory = typedCategories.find(cat =>
+                cat.category_name.toLowerCase().includes('technical skill')
+            );
+            const softSkillCategory = typedCategories.find(cat =>
+                cat.category_name.toLowerCase().includes('soft skill')
+            );
+
+            const categoryIdsToExpand: number[] = [];
+            const subcategoryIdsToExpand: number[] = [];
+
+            if (technicalSkillCategory) {
+                categoryIdsToExpand.push(technicalSkillCategory.id);
+                subcategoryIdsToExpand.push(...technicalSkillCategory.subCategories.map(sub => sub.id));
+            }
+
+            if (softSkillCategory) {
+                categoryIdsToExpand.push(softSkillCategory.id);
+                subcategoryIdsToExpand.push(...softSkillCategory.subCategories.map(sub => sub.id));
+            }
+
+            if (categoryIdsToExpand.length > 0) {
+                setExpandedCategories(new Set(categoryIdsToExpand));
+                setExpandedSubcategories(new Set(subcategoryIdsToExpand));
+                setInitialExpansionDone(true);
+            }
+        }
+    }, [typedCategories, initialExpansionDone]);
 
     const steps = [
         { id: 'Step 1', name: 'Internship Information' },
@@ -119,14 +151,18 @@ export default function AddInternshipForm() {
         setIsSubmitting(true);
 
         // Debug: Log the form data being sent
-        console.log('Add Internship Form Submission - Form Data:', values);
-        console.log('Subcategory Weights:', values.subcategoryWeights);
+        console.log('🚀 [Add Internship] Form Submission - Full Data:', values);
+        console.log('📊 [Add Internship] Subcategory Weights:', values.subcategoryWeights);
+        console.log('📊 [Add Internship] Weights Count:', Object.keys(values.subcategoryWeights || {}).length);
+        console.log('📊 [Add Internship] Weights Total:', Object.values(values.subcategoryWeights || {}).reduce((a, b) => a + b, 0));
 
         router.post('/hte/add-internship', values, {
             onSuccess: () => {
+                console.log('✅ [Add Internship] Submission successful!');
                 setIsSubmitting(false);
             },
-            onError: () => {
+            onError: (errors) => {
+                console.error('❌ [Add Internship] Submission failed:', errors);
                 setIsSubmitting(false);
             }
         });
@@ -442,8 +478,8 @@ export default function AddInternshipForm() {
                                                 </TooltipProvider>
                                             </div>
                                         ) : currentStep === steps.length - 1 ? (
-                                            <Button 
-                                                type="button" 
+                                            <Button
+                                                type="button"
                                                 disabled={isSubmitting}
                                                 onClick={() => {
                                                     // Manually trigger form submission

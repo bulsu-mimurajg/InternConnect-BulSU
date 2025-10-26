@@ -26,13 +26,16 @@ const FormSchema = z.object({
             message: 'Include country code, e.g., +639171234567',
         }),
     address: z.string().min(1, 'Address is required'),
-    
+
     // Internship Offered
     position: z.string().min(1, 'Position is required'),
     department: z.string().min(1, 'Department is required'),
     numberOfInterns: z.string().min(1, 'Number of interns is required'),
     // duration removed
-    
+
+    // Subcategory Weights (percentage allocation for each subcategory)
+    subcategoryWeights: z.record(z.string(), z.number().min(0).max(100)),
+
     // Assessment Responses (Likert scale 1-5)
     assessmentResponses: z.record(z.string(), z.number().min(1).max(5)),
 });
@@ -67,13 +70,14 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
     const { flash } = usePage<{ flash: { success?: string; error?: string; warning?: string } }>().props;
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    
+
     // Lift categories data and state to parent component
     const [categories, setCategories] = useState<Category[]>([]);
     const [expandedCategories, setExpandedCategories] = useState<Set<number>>(new Set());
     const [expandedSubcategories, setExpandedSubcategories] = useState<Set<number>>(new Set());
     const [categoriesLoading, setCategoriesLoading] = useState(true);
     const [dataFetched, setDataFetched] = useState(false);
+    const [initialExpansionDone, setInitialExpansionDone] = useState(false);
 
     const steps = [
         { id: 'Step 1', name: 'Basic Information' },
@@ -94,6 +98,7 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
             position: '',
             department: '',
             numberOfInterns: '',
+            subcategoryWeights: {},
             assessmentResponses: {},
         },
     });
@@ -101,7 +106,7 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
     // Fetch categories data once when component mounts
     const fetchCategories = useCallback(async () => {
         if (dataFetched) return;
-        
+
         try {
             const response = await fetch('/hte/categories', {
                 method: 'GET',
@@ -118,7 +123,7 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
             }
 
             const data = await response.json();
-            
+
             setCategories(data);
             setDataFetched(true);
             setCategoriesLoading(false);
@@ -130,6 +135,56 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
     useEffect(() => {
         fetchCategories();
     }, [fetchCategories]);
+
+    // Auto-expand Technical Skill and Soft Skill categories when data is loaded
+    useEffect(() => {
+        if (!initialExpansionDone && categories.length > 0) {
+            const technicalSkillCategory = categories.find(cat =>
+                cat.category_name.toLowerCase().includes('technical skill')
+            );
+            const softSkillCategory = categories.find(cat =>
+                cat.category_name.toLowerCase().includes('soft skill')
+            );
+
+            const categoryIdsToExpand: number[] = [];
+            const subcategoryIdsToExpand: number[] = [];
+
+            if (technicalSkillCategory) {
+                categoryIdsToExpand.push(technicalSkillCategory.id);
+                subcategoryIdsToExpand.push(...technicalSkillCategory.subCategories.map(sub => sub.id));
+            }
+
+            if (softSkillCategory) {
+                categoryIdsToExpand.push(softSkillCategory.id);
+                subcategoryIdsToExpand.push(...softSkillCategory.subCategories.map(sub => sub.id));
+            }
+
+            if (categoryIdsToExpand.length > 0) {
+                setExpandedCategories(new Set(categoryIdsToExpand));
+                setExpandedSubcategories(new Set(subcategoryIdsToExpand));
+                setInitialExpansionDone(true);
+            }
+        }
+    }, [categories, initialExpansionDone]);
+
+    // Initialize subcategory weights with equal distribution
+    useEffect(() => {
+        if (categories.length > 0) {
+            const totalSubcategories = categories.reduce((sum, cat) => sum + cat.subCategories.length, 0);
+            const equalWeight = totalSubcategories > 0 ? Math.floor(100 / totalSubcategories) : 0;
+
+            const weights: Record<string, number> = {};
+            categories.forEach(category => {
+                category.subCategories.forEach(subcat => {
+                    weights[subcat.id.toString()] = equalWeight;
+                });
+            });
+
+            // Set the initial weights
+            form.setValue('subcategoryWeights', weights);
+            console.log('📊 [Weight Init] Initialized subcategory weights:', weights);
+        }
+    }, [categories, form]);
 
     // Check for success message on mount and form submission prop
     useEffect(() => {
@@ -143,7 +198,14 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
         // Normalize phone to E.164 with + prefix before submit
         const normalizedDigits = (values.phone || '').replace(/\D/g, '');
         const payload = { ...values, phone: `+${normalizedDigits}` };
-        
+
+        console.log('📤 [Form Submit] Submitting data:', {
+            subcategoryWeights: payload.subcategoryWeights,
+            subcategoryWeightsCount: Object.keys(payload.subcategoryWeights || {}).length,
+            assessmentResponses: payload.assessmentResponses,
+            assessmentResponsesCount: Object.keys(payload.assessmentResponses || {}).length
+        });
+
         router.post('/hte/submit', payload, {
             onSuccess: () => {
                 setIsSubmitted(true);
@@ -158,29 +220,39 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
 
     const [currentStep, setCurrentStep] = useState(0);
 
+    // Watch assessment responses for validation
+    const assessmentResponses = form.watch('assessmentResponses') || {};
+
     // Check if all questions have been answered
     const areAllQuestionsAnswered = useMemo(() => {
         if (currentStep !== 2 || categories.length === 0) return true;
-        
-        const responses = form.watch('assessmentResponses') || {};
+
         let totalQuestions = 0;
         let answeredQuestions = 0;
-        
+
         categories.forEach((category) => {
             category.subCategories.forEach((subcat) => {
                 subcat.questions.forEach((question) => {
                     totalQuestions++;
-                    if (responses[`question_${question.id}`]) {
+                    if (assessmentResponses[`question_${question.id}`]) {
                         answeredQuestions++;
                     }
                 });
             });
         });
-        
-        console.log('Assessment validation:', { totalQuestions, answeredQuestions, responses });
-        
-        return totalQuestions > 0 && answeredQuestions === totalQuestions;
-    }, [currentStep, categories, form]);
+
+        const isComplete = totalQuestions > 0 && answeredQuestions === totalQuestions;
+
+        console.log('🎯 [Validation] Assessment validation:', {
+            totalQuestions,
+            answeredQuestions,
+            percentage: totalQuestions > 0 ? Math.round((answeredQuestions / totalQuestions) * 100) : 0,
+            isComplete,
+            canProceed: isComplete ? 'YES ✅' : 'NO ❌'
+        });
+
+        return isComplete;
+    }, [currentStep, categories, assessmentResponses]);
 
     const prev = () => {
         if (currentStep > 0) {
@@ -190,7 +262,7 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
 
     const next = async () => {
         let fieldsToValidate: Path<FormData>[] = [];
-        
+
         switch (currentStep) {
             case 0: // Basic Information
                 fieldsToValidate = ['companyName', 'contactPerson', 'email', 'phone', 'address'];
@@ -201,6 +273,18 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
             case 2: // Criteria
                 // Check if all questions are answered
                 if (!areAllQuestionsAnswered) {
+                    // Scroll to first unanswered question
+                    console.log('⚠️ [Next Button] Not all questions answered, scrolling to first unanswered...');
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    const scrollFunction = (window as any).scrollToFirstUnansweredQuestion;
+                    if (scrollFunction) {
+                        const found = scrollFunction();
+                        if (found) {
+                            console.log('⚠️ [Next Button] Scrolled to unanswered question');
+                            return; // Don't proceed to next step
+                        }
+                    }
+                    console.log('⚠️ [Next Button] Could not find scroll function or unanswered question');
                     return; // Prevent progression if not all questions answered
                 }
                 break;
@@ -237,7 +321,7 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
                                     Thank you for submitting your HTE form. Your internship opportunity has been recorded and will be available for student matching.
                                 </p>
                                 <div className="pt-4">
-                                    <Button 
+                                    <Button
                                         onClick={() => router.visit('/hte/profile')}
                                         className="bg-blue-600 hover:bg-blue-700"
                                     >
@@ -257,7 +341,7 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
             <div className="flex justify-center">
                 <FormStepCounter steps={steps} currentStep={currentStep} />
             </div>
-            
+
             {/* Warning Message */}
             {flash?.warning && (
                 <div className="mb-4 rounded-md bg-yellow-50 border border-yellow-200 p-4">
@@ -275,7 +359,7 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
                     </div>
                 </div>
             )}
-            
+
             <div className="relative min-h-[100vh] flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 md:min-h-min dark:border-sidebar-border">
                 <div className="flex flex-col h-full">
                     <div className="flex-1 p-4 overflow-y-auto">
@@ -284,7 +368,7 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
                                 {currentStep === 0 && <BasicInformation />}
                                 {currentStep === 1 && <InternshipOffered />}
                                 {currentStep === 2 && (
-                                    <Criteria 
+                                    <Criteria
                                         categories={categories}
                                         loading={categoriesLoading}
                                         expandedCategories={expandedCategories}
@@ -304,8 +388,8 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
                                                 <Button onClick={prev} variant="outline">
                                                     Previous
                                                 </Button>
-                                                <Button 
-                                                    type="submit" 
+                                                <Button
+                                                    type="submit"
                                                     disabled={isSubmitting}
                                                 >
                                                     {isSubmitting ? 'Submitting...' : 'Submit'}
@@ -321,8 +405,8 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
                         <div className="text-sm text-gray-600">
                             {currentStep < steps.length - 1 && (
                                 <span>
-                                    {currentStep === 2 && !areAllQuestionsAnswered 
-                                        ? "Please answer all questions before proceeding" 
+                                    {currentStep === 2 && !areAllQuestionsAnswered
+                                        ? "Please answer all questions before proceeding"
                                         : "Please complete all required fields before proceeding"
                                     }
                                 </span>
@@ -333,12 +417,12 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
                                 <Button onClick={prev} disabled={currentStep === 0} variant="outline">
                                     Previous
                                 </Button>
-                                <Button 
-                                    onClick={next} 
-                                    disabled={currentStep === steps.length - 1 || (currentStep === 2 && !areAllQuestionsAnswered)}
-                                    className={currentStep === 2 && !areAllQuestionsAnswered ? "opacity-50" : ""}
+                                <Button
+                                    onClick={next}
+                                    disabled={currentStep === steps.length - 1}
+                                    className={currentStep === 2 && !areAllQuestionsAnswered ? "bg-orange-500 hover:bg-orange-600" : ""}
                                 >
-                                    Next
+                                    {currentStep === 2 && !areAllQuestionsAnswered ? 'Find Unanswered' : 'Next'}
                                 </Button>
                             </div>
                         )}

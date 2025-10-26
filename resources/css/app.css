@@ -193,7 +193,7 @@
         overflow: visible;
         overflow-y: visible;
         padding-right: 0px;
-        
+
         /* Prevent width/position changes that cause shifting */
         position: static;
         width: auto;
@@ -226,6 +226,42 @@
     }
 
     /* Custom shake animation for unanswered questions */
+    @keyframes shake {
+        0%, 100% {
+            transform: translateX(0);
+        }
+        10%, 30%, 50%, 70%, 90% {
+            transform: translateX(-5px);
+        }
+        20%, 40%, 60%, 80% {
+            transform: translateX(5px);
+        }
+    }
+
+    .animate-shake {
+        animation: shake 0.6s ease-in-out;
+    }
+
+    .animate-shake .question-number {
+        color: rgb(239, 68, 68);
+        font-weight: 700;
+        transform: scale(1.2);
+    }
+
+    .highlight-question {
+        background-color: rgba(254, 226, 226, 0.8);
+        border-left: 4px solid rgb(239, 68, 68);
+        padding-left: 12px;
+        margin-left: -12px;
+        transition: all 0.3s ease;
+        border-radius: 8px;
+    }
+
+    .dark .highlight-question {
+        background-color: rgba(127, 29, 29, 0.3);
+        border-left-color: rgb(239, 68, 68);
+    }
+
     @keyframes shake-highlight {
         0% {
             transform: translateX(0);

@@ -201,13 +201,57 @@ class HTEController extends Controller
                 'weights_successfully_created' => $weightsCreated
             ]);
 
+            // Store HTE assessment responses (delete existing ones first if updating)
+            if ($existingInternship) {
+                // Delete existing assessment responses when updating
+                \App\Models\HTEAssessmentResponse::where('hte_id', $hte->id)
+                    ->where('internship_id', $internship->id)
+                    ->delete();
+                Log::info('Deleted existing assessment responses for internship:', ['internship_id' => $internship->id]);
+            }
+
+            $responsesCreated = 0;
+            if ($request->assessmentResponses && is_array($request->assessmentResponses)) {
+                foreach ($request->assessmentResponses as $questionKey => $response) {
+                    // Extract question ID from key format "question_123"
+                    if (preg_match('/^question_(\d+)$/', $questionKey, $matches)) {
+                        $questionId = (int) $matches[1];
+
+                        try {
+                            \App\Models\HTEAssessmentResponse::create([
+                                'hte_id' => $hte->id,
+                                'internship_id' => $internship->id,
+                                'question_id' => $questionId,
+                                'response' => (int) $response,
+                            ]);
+                            $responsesCreated++;
+                        } catch (\Exception $e) {
+                            Log::error('Failed to create assessment response:', [
+                                'question_id' => $questionId,
+                                'response' => $response,
+                                'error' => $e->getMessage()
+                            ]);
+                        }
+                    }
+                }
+
+                Log::info('HTE Assessment Responses Summary:', [
+                    'total_responses_processed' => count($request->assessmentResponses),
+                    'responses_successfully_created' => $responsesCreated,
+                    'hte_id' => $hte->id,
+                    'internship_id' => $internship->id
+                ]);
+            } else {
+                Log::warning('No assessment responses provided in request');
+            }
+
             // Recalculate student matches for new/updated internship
             try {
                 $matchingService = new \App\Services\MatchingService();
                 $students = \App\Models\Student::where('is_active', true)
                     ->where('is_submit', true)
                     ->get();
-                
+
                 $recalculatedCount = 0;
                 foreach ($students as $student) {
                     try {
@@ -221,7 +265,7 @@ class HTEController extends Controller
                         ]);
                     }
                 }
-                
+
                 Log::info('Recalculated student matches after internship creation/update', [
                     'internship_id' => $internship->id,
                     'recalculated_count' => $recalculatedCount,
@@ -535,6 +579,14 @@ class HTEController extends Controller
      */
     public function storeInternship(Request $request): RedirectResponse
     {
+        // Log incoming request data
+        Log::info('📊 [Store Internship] Request received:', [
+            'all_data' => $request->all(),
+            'subcategoryWeights' => $request->subcategoryWeights,
+            'weights_count' => is_array($request->subcategoryWeights) ? count($request->subcategoryWeights) : 0,
+            'weights_total' => is_array($request->subcategoryWeights) ? array_sum($request->subcategoryWeights) : 0
+        ]);
+
         $user = Auth::user();
         $hte = $user->hte;
 
@@ -575,13 +627,39 @@ class HTEController extends Controller
             ]);
 
             // Store subcategory weights
+            Log::info('💾 [Store Internship] About to save weights:', [
+                'internship_id' => $internship->id,
+                'weights' => $request->subcategoryWeights
+            ]);
+
+            $weightsCreated = 0;
             foreach ($request->subcategoryWeights as $subcategoryId => $weight) {
-                SubcategoryWeight::create([
-                    'internship_id' => $internship->id,
-                    'subcategory_id' => $subcategoryId,
-                    'weight' => (int) $weight,
-                ]);
+                try {
+                    $subcategoryWeight = SubcategoryWeight::create([
+                        'internship_id' => $internship->id,
+                        'subcategory_id' => $subcategoryId,
+                        'weight' => (int) $weight,
+                    ]);
+                    $weightsCreated++;
+
+                    Log::info('✅ [Store Internship] Weight saved:', [
+                        'id' => $subcategoryWeight->id,
+                        'subcategory_id' => $subcategoryId,
+                        'weight' => $weight
+                    ]);
+                } catch (\Exception $e) {
+                    Log::error('❌ [Store Internship] Failed to save weight:', [
+                        'subcategory_id' => $subcategoryId,
+                        'weight' => $weight,
+                        'error' => $e->getMessage()
+                    ]);
+                }
             }
+
+            Log::info('📊 [Store Internship] Weights summary:', [
+                'total_weights' => count($request->subcategoryWeights),
+                'weights_created' => $weightsCreated
+            ]);
 
             // Recalculate student matches for new internship
             try {
@@ -589,7 +667,7 @@ class HTEController extends Controller
                 $students = \App\Models\Student::where('is_active', true)
                     ->where('is_submit', true)
                     ->get();
-                
+
                 $recalculatedCount = 0;
                 foreach ($students as $student) {
                     try {
@@ -603,7 +681,7 @@ class HTEController extends Controller
                         ]);
                     }
                 }
-                
+
                 Log::info('Recalculated student matches after internship creation', [
                     'internship_id' => $internship->id,
                     'recalculated_count' => $recalculatedCount,
@@ -1311,7 +1389,7 @@ class HTEController extends Controller
 
             // Automatically endorse student to their next best match
             $fallbackResult = $this->autoEndorseToNextBestMatch($endorsement->student_id, $endorsement->internship_id);
-            
+
             if ($fallbackResult) {
                 Log::info('Student rejected by HTE, automatically endorsed to next best match:', [
                     'student_id' => $endorsement->student_id,
@@ -1319,7 +1397,7 @@ class HTEController extends Controller
                     'hte_id' => $hte->id,
                     'fallback_successful' => true,
                 ]);
-                
+
                 return redirect()->back()->with('success', 'Student rejected successfully and automatically endorsed to next best match.');
             } else {
                 Log::warning('Student rejected by HTE, but no fallback match found:', [
@@ -1328,7 +1406,7 @@ class HTEController extends Controller
                     'hte_id' => $hte->id,
                     'fallback_successful' => false,
                 ]);
-                
+
                 return redirect()->back()->with('warning', 'Student rejected successfully, but no alternative match was found.');
             }
 
@@ -1505,7 +1583,7 @@ class HTEController extends Controller
 
                 // Automatically endorse student to their next best match
                 $fallbackResult = $this->autoEndorseToNextBestMatch($endorsement->student_id, $endorsement->internship_id);
-                
+
                 if ($fallbackResult) {
                     $successCount++;
                 } else {

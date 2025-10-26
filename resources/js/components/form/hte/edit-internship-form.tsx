@@ -60,6 +60,38 @@ export default function EditInternshipForm({ categories, internship, existingWei
     const [expandedCategories, setExpandedCategories] = useState<Set<number>>(new Set());
     const [expandedSubcategories, setExpandedSubcategories] = useState<Set<number>>(new Set());
     const [expandedQuestions, setExpandedQuestions] = useState<Set<number>>(new Set());
+    const [initialExpansionDone, setInitialExpansionDone] = useState(false);
+
+    // Auto-expand Technical Skill and Soft Skill categories when data is loaded
+    useEffect(() => {
+        if (!initialExpansionDone && categories && categories.length > 0) {
+            const technicalSkillCategory = categories.find(cat =>
+                cat.category_name.toLowerCase().includes('technical skill')
+            );
+            const softSkillCategory = categories.find(cat =>
+                cat.category_name.toLowerCase().includes('soft skill')
+            );
+
+            const categoryIdsToExpand: number[] = [];
+            const subcategoryIdsToExpand: number[] = [];
+
+            if (technicalSkillCategory) {
+                categoryIdsToExpand.push(technicalSkillCategory.id);
+                subcategoryIdsToExpand.push(...technicalSkillCategory.subCategories.map(sub => sub.id));
+            }
+
+            if (softSkillCategory) {
+                categoryIdsToExpand.push(softSkillCategory.id);
+                subcategoryIdsToExpand.push(...softSkillCategory.subCategories.map(sub => sub.id));
+            }
+
+            if (categoryIdsToExpand.length > 0) {
+                setExpandedCategories(new Set(categoryIdsToExpand));
+                setExpandedSubcategories(new Set(subcategoryIdsToExpand));
+                setInitialExpansionDone(true);
+            }
+        }
+    }, [categories, initialExpansionDone]);
 
     const steps = [
         { id: 'Step 1', name: 'Internship Information' },
@@ -339,8 +371,8 @@ export default function EditInternshipForm({ categories, internship, existingWei
                                                 </TooltipProvider>
                                             </div>
                                         ) : currentStep === 2 ? (
-                                            <Button 
-                                                type="button" 
+                                            <Button
+                                                type="button"
                                                 disabled={isSubmitting}
                                                 onClick={() => {
                                                     // Manually trigger form submission
