@@ -93,6 +93,22 @@ class Student extends Model
     }
 
     /**
+     * Get all quiz attempts for this student
+     */
+    public function quizAttempts(): HasMany
+    {
+        return $this->hasMany(QuizAttempt::class);
+    }
+
+    /**
+     * Get submitted quiz attempts for this student
+     */
+    public function submittedQuizAttempts(): HasMany
+    {
+        return $this->hasMany(QuizAttempt::class)->whereNotNull('submitted_at');
+    }
+
+    /**
      * Scope for active students
      */
     public function scopeActive($query)

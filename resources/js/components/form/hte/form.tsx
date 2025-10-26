@@ -33,8 +33,8 @@ const FormSchema = z.object({
     numberOfInterns: z.string().min(1, 'Number of interns is required'),
     // duration removed
     
-    // Weights
-    subcategoryWeights: z.record(z.string(), z.number().min(0).max(100)),
+    // Assessment Responses (Likert scale 1-5)
+    assessmentResponses: z.record(z.string(), z.number().min(1).max(5)),
 });
 
 type FormData = z.infer<typeof FormSchema>;
@@ -72,12 +72,8 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
     const [categories, setCategories] = useState<Category[]>([]);
     const [expandedCategories, setExpandedCategories] = useState<Set<number>>(new Set());
     const [expandedSubcategories, setExpandedSubcategories] = useState<Set<number>>(new Set());
-    const [expandedQuestions, setExpandedQuestions] = useState<Set<number>>(new Set());
     const [categoriesLoading, setCategoriesLoading] = useState(true);
     const [dataFetched, setDataFetched] = useState(false);
-    const [showValidationErrors, setShowValidationErrors] = useState(false);
-    const [lockedSubcategories, setLockedSubcategories] = useState<Set<number>>(new Set());
-    const [weightChangeTrigger, setWeightChangeTrigger] = useState(0);
 
     const steps = [
         { id: 'Step 1', name: 'Basic Information' },
@@ -98,7 +94,7 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
             position: '',
             department: '',
             numberOfInterns: '',
-            subcategoryWeights: {},
+            assessmentResponses: {},
         },
     });
 
@@ -123,35 +119,13 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
 
             const data = await response.json();
             
-            // Filter out categories without subcategories
-            const processedData = data.filter((category: { subCategories: Array<unknown> }) => {
-                const hasSubCategories = category.subCategories && category.subCategories.length > 0;
-                return hasSubCategories;
-            });
-            
-            setCategories(processedData);
-            
-            // Initialize equal weights for all subcategories
-            processedData.forEach((category: Category) => {
-                if (category.subCategories && category.subCategories.length > 0) {
-                    const subcategoryCount = category.subCategories.length;
-                    const baseWeight = Math.floor(100 / subcategoryCount);
-                    const remainder = 100 % subcategoryCount;
-                    
-                    // Distribute weights evenly, with remainder distributed to first subcategories
-                    category.subCategories.forEach((subcat: SubCategory, index: number) => {
-                        const weight = index < remainder ? baseWeight + 1 : baseWeight;
-                        form.setValue(`subcategoryWeights.${subcat.id}`, weight);
-                    });
-                }
-            });
-            
+            setCategories(data);
             setDataFetched(true);
             setCategoriesLoading(false);
         } catch {
             setCategoriesLoading(false);
         }
-    }, [dataFetched, form]);
+    }, [dataFetched]);
 
     useEffect(() => {
         fetchCategories();
@@ -184,77 +158,29 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
 
     const [currentStep, setCurrentStep] = useState(0);
 
-    // Check if all categories have valid weights (total 100% and no unset weights for unlocked subcategories)
-    const areAllWeightsValid = useMemo(() => {
+    // Check if all questions have been answered
+    const areAllQuestionsAnswered = useMemo(() => {
         if (currentStep !== 2 || categories.length === 0) return true;
         
-        const weights = form.watch('subcategoryWeights') || {};
+        const responses = form.watch('assessmentResponses') || {};
+        let totalQuestions = 0;
+        let answeredQuestions = 0;
         
-        return categories.every((category) => {
-            if (!category.subCategories || category.subCategories.length === 0) return true;
-            
-            const categoryWeights = category.subCategories.map((subcat) => {
-                const weight = weights[subcat.id];
-                // Check if weight exists and is a valid number > 0
-                return (weight !== undefined && weight !== null && !isNaN(Number(weight)) && Number(weight) > 0) ? Number(weight) : 0;
+        categories.forEach((category) => {
+            category.subCategories.forEach((subcat) => {
+                subcat.questions.forEach((question) => {
+                    totalQuestions++;
+                    if (responses[`question_${question.id}`]) {
+                        answeredQuestions++;
+                    }
+                });
             });
-            const totalWeight = categoryWeights.reduce((sum, weight) => sum + weight, 0);
-            
-            // Check if total is 100% AND no unlocked weights are unset (0)
-            const hasUnsetUnlockedWeights = category.subCategories.some((subcat, index) => {
-                const weight = categoryWeights[index];
-                return !lockedSubcategories.has(subcat.id) && weight === 0;
-            });
-            
-            return totalWeight === 100 && !hasUnsetUnlockedWeights;
-        });
-    }, [currentStep, categories, form, lockedSubcategories]);
-
-    // Check if all categories total 100% (allows navigation even with unset weights)
-    const areAllCategoriesAt100Percent = useMemo(() => {
-        if (currentStep !== 2 || categories.length === 0) return true;
-        
-        const weights = form.watch('subcategoryWeights') || {};
-        const formValues = form.getValues('subcategoryWeights') || {};
-        
-        // Use form values as fallback if watch doesn't have latest data
-        const currentWeights = Object.keys(formValues).length > 0 ? formValues : weights;
-        
-        // Debug logging
-        console.log('Validation check - weights:', currentWeights);
-        
-        const result = categories.every((category) => {
-            if (!category.subCategories || category.subCategories.length === 0) return true;
-            
-            const categoryWeights = category.subCategories.map((subcat) => {
-                const weight = currentWeights[subcat.id];
-                return (weight !== undefined && weight !== null && !isNaN(Number(weight))) ? Number(weight) : 0;
-            });
-            const totalWeight = categoryWeights.reduce((sum, weight) => sum + weight, 0);
-            
-            console.log(`Category ${category.category_name}: ${totalWeight}%`);
-            return totalWeight === 100;
         });
         
-        console.log('All categories at 100%:', result);
-        return result;
+        console.log('Assessment validation:', { totalQuestions, answeredQuestions, responses });
+        
+        return totalQuestions > 0 && answeredQuestions === totalQuestions;
     }, [currentStep, categories, form]);
-
-    // Clear validation errors when weights become valid
-    React.useEffect(() => {
-        if (areAllWeightsValid && showValidationErrors) {
-            setShowValidationErrors(false);
-        }
-    }, [areAllWeightsValid, showValidationErrors]);
-
-    // Force validation update when weights change
-    React.useEffect(() => {
-        if (currentStep === 2) {
-            // Trigger a re-render to update validation
-            const weights = form.watch('subcategoryWeights') || {};
-            console.log('Weights changed, triggering validation update:', weights);
-        }
-    }, [form, currentStep]);
 
     const prev = () => {
         if (currentStep > 0) {
@@ -262,21 +188,8 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
         }
     };
 
-    const toggleSubcategoryLock = useCallback((subcategoryId: number) => {
-        setLockedSubcategories((prev) => {
-            const newLocked = new Set(prev);
-            if (newLocked.has(subcategoryId)) {
-                newLocked.delete(subcategoryId);
-            } else {
-                newLocked.add(subcategoryId);
-            }
-            return newLocked;
-        });
-    }, []);
-
     const next = async () => {
         let fieldsToValidate: Path<FormData>[] = [];
-        let shouldPreventProgression = false;
         
         switch (currentStep) {
             case 0: // Basic Information
@@ -285,97 +198,12 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
             case 1: // Internship Offered
                 fieldsToValidate = ['position', 'department', 'numberOfInterns'];
                 break;
-            case 2: { // Criteria
-                fieldsToValidate = ['subcategoryWeights'];
-                
-                // Check if each category totals exactly 100%
-                const weights = form.watch('subcategoryWeights') || {};
-                const categoriesWithInvalidTotals: Array<{name: string, total: number, missing: number}> = [];
-                const categoriesWithUnsetWeights: Array<{name: string, unsetSubcategories: Array<{id: number, name: string}>}> = [];
-                
-                categories.forEach((category) => {
-                    if (category.subCategories && category.subCategories.length > 0) {
-                        const categoryWeights = category.subCategories.map((subcat) => {
-                            const weight = weights[subcat.id];
-                            return (weight !== undefined && weight !== null && !isNaN(Number(weight))) ? Number(weight) : 0;
-                        });
-                        const totalWeight = categoryWeights.reduce((sum, weight) => sum + weight, 0);
-                        
-                        // STRICT VALIDATION: Total must be exactly 100%
-                        if (totalWeight !== 100) {
-                            categoriesWithInvalidTotals.push({
-                                name: category.category_name,
-                                total: totalWeight,
-                                missing: 100 - totalWeight
-                            });
-                        }
-                        
-                        // Check for unset unlocked subcategories (only if total is not 100%)
-                        if (totalWeight !== 100) {
-                            const unsetSubcategories = category.subCategories.filter((subcat, index) => {
-                                const weight = categoryWeights[index];
-                                return !lockedSubcategories.has(subcat.id) && (weight === 0 || weight === undefined || weight === null);
-                            });
-                            
-                            if (unsetSubcategories.length > 0) {
-                                categoriesWithUnsetWeights.push({
-                                    name: category.category_name,
-                                    unsetSubcategories: unsetSubcategories.map(subcat => ({
-                                        id: subcat.id,
-                                        name: subcat.subcategory_name
-                                    }))
-                                });
-                            }
-                        }
-                    }
-                });
-
-                // If totals are not exactly 100%, show validation errors and prevent progression
-                if (categoriesWithInvalidTotals.length > 0) {
-                    setShowValidationErrors(true);
-                    shouldPreventProgression = true;
-                    
-                    // Show specific validation message
-                    const invalidCategoriesList = categoriesWithInvalidTotals.map(cat => 
-                        `${cat.name} (${cat.total}% - needs ${Math.abs(cat.missing)}% more)`
-                    ).join(', ');
-                    
-                    console.warn('Validation failed:', invalidCategoriesList);
-                    
-                    const firstInvalidCategory = categoriesWithInvalidTotals[0];
-                    setTimeout(() => {
-                        const categoryCard = document.getElementById(`category-card-${firstInvalidCategory.name.toLowerCase().replace(/\s+/g, '-')}`);
-                        if (categoryCard) {
-                            categoryCard.scrollIntoView({ 
-                                behavior: 'smooth', 
-                                block: 'center' 
-                            });
-                        }
-                    }, 100);
-                }
-                
-                // If totals are exactly 100% but there are still unset subcategories, focus on the first unset one
-                if (!shouldPreventProgression && categoriesWithUnsetWeights.length > 0) {
-                    const firstCategoryWithUnset = categoriesWithUnsetWeights[0];
-                    const firstUnsetSubcategory = firstCategoryWithUnset.unsetSubcategories[0];
-                    
-                    setTimeout(() => {
-                        const inputElement = document.getElementById(`weight-${firstUnsetSubcategory.id}`) as HTMLInputElement;
-                        if (inputElement) {
-                            inputElement.focus();
-                            inputElement.select();
-                        }
-                    }, 100);
-                    
-                    shouldPreventProgression = true;
+            case 2: // Criteria
+                // Check if all questions are answered
+                if (!areAllQuestionsAnswered) {
+                    return; // Prevent progression if not all questions answered
                 }
                 break;
-            }
-        }
-
-        // If validation should prevent progression, don't proceed
-        if (shouldPreventProgression) {
-            return;
         }
 
         if (fieldsToValidate.length > 0) {
@@ -461,14 +289,8 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
                                         loading={categoriesLoading}
                                         expandedCategories={expandedCategories}
                                         expandedSubcategories={expandedSubcategories}
-                                        expandedQuestions={expandedQuestions}
                                         setExpandedCategories={setExpandedCategories}
                                         setExpandedSubcategories={setExpandedSubcategories}
-                                        setExpandedQuestions={setExpandedQuestions}
-                                        highlightInvalidCategories={showValidationErrors}
-                                        lockedSubcategories={lockedSubcategories}
-                                        onToggleSubcategoryLock={toggleSubcategoryLock}
-                                        onWeightChange={() => setWeightChangeTrigger(prev => prev + 1)}
                                     />
                                 )}
                                 {currentStep === 3 && (
@@ -499,10 +321,8 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
                         <div className="text-sm text-gray-600">
                             {currentStep < steps.length - 1 && (
                                 <span>
-                                    {currentStep === 2 && !areAllCategoriesAt100Percent 
-                                        ? "All categories must total 100% before proceeding" 
-                                        : currentStep === 2 && !areAllWeightsValid
-                                        ? "Some subcategories need weights assigned - click Next to focus on them"
+                                    {currentStep === 2 && !areAllQuestionsAnswered 
+                                        ? "Please answer all questions before proceeding" 
                                         : "Please complete all required fields before proceeding"
                                     }
                                 </span>
@@ -515,8 +335,8 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
                                 </Button>
                                 <Button 
                                     onClick={next} 
-                                    disabled={currentStep === steps.length - 1 || (currentStep === 2 && !areAllCategoriesAt100Percent)}
-                                    className={currentStep === 2 && !areAllCategoriesAt100Percent ? "opacity-50" : ""}
+                                    disabled={currentStep === steps.length - 1 || (currentStep === 2 && !areAllQuestionsAnswered)}
+                                    className={currentStep === 2 && !areAllQuestionsAnswered ? "opacity-50" : ""}
                                 >
                                     Next
                                 </Button>

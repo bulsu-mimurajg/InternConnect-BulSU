@@ -23,8 +23,10 @@ class DefaultSeeder extends Seeder
             'password' => bcrypt('password'),
         ]);
 
+        $this->call(CategorySeeder::class);
+        $this->call(HTEAssessmentSeeder::class);
+
 //        $this->call(SectionSeeder::class);
-//        $this->call(CategorySeeder::class);
 //        $this->call(SubCategorySeeder::class);
 //        $this->call(QuestionSeeder::class);
     }

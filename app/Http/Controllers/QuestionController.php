@@ -18,7 +18,7 @@ class QuestionController extends Controller
      */
     public function index(Request $request): Response
     {
-        $query = Question::with(['subcategory.category']);
+        $query = Question::with(['subcategory.category', 'answers']);
 
         // Apply search filter
         if ($request->filled('search')) {
@@ -99,14 +99,34 @@ class QuestionController extends Controller
     {
         $request->validate([
             'question' => 'required|string|max:1000',
+            'question_type' => 'required|in:multiple_choice,true_false,essay,enumeration,identification',
+            'points' => 'nullable|numeric|min:0|max:100',
             'subcategory_id' => 'required|exists:sub_categories,id',
+            'answers' => 'required_unless:question_type,essay,enumeration|array|min:2',
+            'answers.*.answer_text' => 'required_with:answers|string|max:500',
+            'answers.*.is_correct' => 'required_with:answers|boolean',
+            'answers.*.display_order' => 'required_with:answers|integer|min:1',
         ]);
 
-        Question::create([
+        // Create the question
+        $question = Question::create([
             'question' => $request->question,
+            'question_type' => $request->question_type,
+            'points' => $request->points ?? 1.00,
             'subcategory_id' => $request->subcategory_id,
             'is_active' => true,
         ]);
+
+        // Create answers for objective questions
+        if (in_array($request->question_type, ['multiple_choice', 'true_false', 'identification']) && $request->has('answers')) {
+            foreach ($request->answers as $answerData) {
+                $question->answers()->create([
+                    'answer_text' => $answerData['answer_text'],
+                    'is_correct' => $answerData['is_correct'] ?? false,
+                    'display_order' => $answerData['display_order'] ?? 1,
+                ]);
+            }
+        }
 
         return redirect()->back()->with('success', 'Question created successfully!');
     }
@@ -118,13 +138,40 @@ class QuestionController extends Controller
     {
         $request->validate([
             'question' => 'required|string|max:1000',
+            'question_type' => 'required|in:multiple_choice,true_false,essay,enumeration,identification',
+            'points' => 'nullable|numeric|min:0|max:100',
             'subcategory_id' => 'required|exists:sub_categories,id',
+            'answers' => 'required_unless:question_type,essay,enumeration|array|min:2',
+            'answers.*.answer_text' => 'required_with:answers|string|max:500',
+            'answers.*.is_correct' => 'required_with:answers|boolean',
+            'answers.*.display_order' => 'required_with:answers|integer|min:1',
         ]);
 
+        // Update the question
         $question->update([
             'question' => $request->question,
+            'question_type' => $request->question_type,
+            'points' => $request->points ?? 1.00,
             'subcategory_id' => $request->subcategory_id,
         ]);
+
+        // Update answers for objective questions
+        if (in_array($request->question_type, ['multiple_choice', 'true_false', 'identification']) && $request->has('answers')) {
+            // Delete existing answers
+            $question->answers()->delete();
+            
+            // Create new answers
+            foreach ($request->answers as $answerData) {
+                $question->answers()->create([
+                    'answer_text' => $answerData['answer_text'],
+                    'is_correct' => $answerData['is_correct'] ?? false,
+                    'display_order' => $answerData['display_order'] ?? 1,
+                ]);
+            }
+        } else {
+            // For essay/enumeration questions, remove existing answers
+            $question->answers()->delete();
+        }
 
         return redirect()->back()->with('success', 'Question updated successfully!');
     }

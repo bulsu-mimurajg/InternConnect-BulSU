@@ -11,7 +11,8 @@ import { Pagination } from '@/components/ui/pagination';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { usePagination } from '@/hooks/usePagination';
 import { getRowNumber } from '@/lib/pagination-utils';
-import { FileTextIcon, PlusIcon, EditIcon, ArchiveIcon, RotateCcwIcon, SearchIcon, FilterIcon, ArrowUpDownIcon, Archive, Eye } from 'lucide-react';
+import { FileTextIcon, PlusIcon, EditIcon, ArchiveIcon, RotateCcwIcon, SearchIcon, FilterIcon, ArrowUpDownIcon, Archive, Eye, Trash2 } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type Question, type Category, type SubCategory } from '@/types';
 
@@ -84,7 +85,13 @@ export default function FormsPage({ questions, categories, subcategories, filter
 
     const { data, setData, post, put, patch, processing, errors, reset } = useForm({
         question: '',
+        question_type: 'multiple_choice',
+        points: 1,
         subcategory_id: '',
+        answers: [
+            { answer_text: '', is_correct: false, display_order: 1 },
+            { answer_text: '', is_correct: false, display_order: 2 },
+        ],
     });
 
     // Filter questions based on archive status
@@ -439,13 +446,147 @@ export default function FormsPage({ questions, categories, subcategories, filter
                                         value={data.question}
                                         onChange={(e) => setData('question', e.target.value)}
                                         className={errors.question ? 'border-red-500' : ''}
-                                        placeholder="Enter the assessment question..."
+                                        placeholder="Enter the quiz question..."
                                         rows={3}
                                     />
                                     {errors.question && (
                                         <p className="text-sm text-red-500">{errors.question}</p>
                                     )}
                                 </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="question_type">Question Type</Label>
+                                        <Select value={data.question_type} onValueChange={(value) => {
+                                            setData('question_type', value);
+                                            // Reset answers when changing type
+                                            if (value === 'true_false') {
+                                                setData('answers', [
+                                                    { answer_text: 'True', is_correct: false, display_order: 1 },
+                                                    { answer_text: 'False', is_correct: false, display_order: 2 },
+                                                ]);
+                                            } else if (value === 'essay' || value === 'enumeration') {
+                                                setData('answers', []);
+                                            } else if (data.answers.length === 0 || (data.answers.length === 2 && data.answers[0].answer_text === 'True')) {
+                                                setData('answers', [
+                                                    { answer_text: '', is_correct: false, display_order: 1 },
+                                                    { answer_text: '', is_correct: false, display_order: 2 },
+                                                ]);
+                                            }
+                                        }}>
+                                            <SelectTrigger id="question_type">
+                                                <SelectValue placeholder="Select question type" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="multiple_choice">Multiple Choice</SelectItem>
+                                                <SelectItem value="true_false">True/False</SelectItem>
+                                                <SelectItem value="identification">Identification</SelectItem>
+                                                <SelectItem value="enumeration">Enumeration</SelectItem>
+                                                <SelectItem value="essay">Essay</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        {errors.question_type && (
+                                            <p className="text-sm text-red-500">{errors.question_type}</p>
+                                        )}
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="points">Points</Label>
+                                        <Input
+                                            id="points"
+                                            type="number"
+                                            min="0"
+                                            step="0.5"
+                                            value={data.points}
+                                            onChange={(e) => setData('points', parseFloat(e.target.value) || 1)}
+                                            className={errors.points ? 'border-red-500' : ''}
+                                            placeholder="1"
+                                        />
+                                        {errors.points && (
+                                            <p className="text-sm text-red-500">{errors.points}</p>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Answer Choices for Objective Questions */}
+                                {(data.question_type === 'multiple_choice' || data.question_type === 'true_false' || data.question_type === 'identification') && (
+                                    <div className="space-y-2">
+                                        <Label>Answer Choices {data.question_type === 'identification' && '(Correct answers)'}</Label>
+                                        <p className="text-sm text-muted-foreground">Mark the correct answer(s) with the checkbox.</p>
+                                        <div className="space-y-3">
+                                            {data.answers.map((answer, index) => (
+                                                <div key={index} className="flex items-center gap-2">
+                                                    <div className="flex-1">
+                                                        <Input
+                                                            id={`answer_${index}`}
+                                                            value={answer.answer_text}
+                                                            onChange={(e) => {
+                                                                const newAnswers = [...data.answers];
+                                                                newAnswers[index].answer_text = e.target.value;
+                                                                setData('answers', newAnswers);
+                                                            }}
+                                                            placeholder={`Answer ${index + 1}`}
+                                                            className={errors[`answers.${index}.answer_text`] ? 'border-red-500' : ''}
+                                                        />
+                                                    </div>
+                                                    <div className="flex items-center gap-2 px-3">
+                                                        <Checkbox
+                                                            id={`correct_${index}`}
+                                                            checked={answer.is_correct}
+                                                            onCheckedChange={(checked) => {
+                                                                const newAnswers = [...data.answers];
+                                                                newAnswers[index].is_correct = checked === true;
+                                                                setData('answers', newAnswers);
+                                                            }}
+                                                        />
+                                                        <Label htmlFor={`correct_${index}`} className="text-sm">Correct</Label>
+                                                    </div>
+                                                    {data.answers.length > 2 && (
+                                                        <Button
+                                                            type="button"
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            onClick={() => {
+                                                                const newAnswers = data.answers.filter((_, i) => i !== index);
+                                                                setData('answers', newAnswers);
+                                                            }}
+                                                        >
+                                                            <Trash2 className="h-4 w-4 text-red-500" />
+                                                        </Button>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                        {(data.question_type === 'multiple_choice' || data.question_type === 'identification') && data.answers.length < 10 && (
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                onClick={() => {
+                                                    setData('answers', [...data.answers, { 
+                                                        answer_text: '', 
+                                                        is_correct: false, 
+                                                        display_order: data.answers.length + 1 
+                                                    }]);
+                                                }}
+                                                className="w-full"
+                                            >
+                                                <PlusIcon className="h-4 w-4 mr-2" />
+                                                Add Answer Choice
+                                            </Button>
+                                        )}
+                                        {errors.answers && (
+                                            <p className="text-sm text-red-500">{errors.answers}</p>
+                                        )}
+                                    </div>
+                                )}
+
+                                {(data.question_type === 'essay' || data.question_type === 'enumeration') && (
+                                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                        <p className="text-sm text-blue-800">
+                                            <strong>{data.question_type === 'essay' ? 'Essay' : 'Enumeration'} Question:</strong> Students will type their answer. This requires manual grading by instructors.
+                                        </p>
+                                    </div>
+                                )}
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="space-y-2">
