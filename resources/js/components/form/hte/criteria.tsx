@@ -360,40 +360,46 @@ export default function Criteria({
 
                                                     <CollapsibleContent>
                                                         <CardContent className="space-y-6 pt-0">
-                                                            {subcategory.questions.map((question, qIndex) => (
-                                                                <div key={question.id} className="space-y-3 border-b pb-4 last:border-b-0">
-                                                                    <FormLabel className="text-sm font-medium">
-                                                                        {qIndex + 1}. {question.question}
-                                                                    </FormLabel>
-                                                                    <RadioGroup
-                                                                        onValueChange={(value) => {
-                                                                            const numValue = parseInt(value);
-                                                                            const currentResponses = watch('assessmentResponses') || {};
-                                                                            setValue('assessmentResponses', {
-                                                                                ...currentResponses,
-                                                                                [`question_${question.id}`]: numValue
-                                                                            });
-                                                                        }}
-                                                                        value={assessmentResponses[`question_${question.id}`]?.toString() || ''}
-                                                                        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
-                                                                    >
-                                                                        {LIKERT_SCALE.map((option) => (
-                                                                            <div key={option.value} className="flex items-center space-x-2">
-                                                                                <RadioGroupItem
-                                                                                    value={option.value}
-                                                                                    id={`question_${question.id}_${option.value}`}
-                                                                                />
-                                                                                <Label
-                                                                                    htmlFor={`question_${question.id}_${option.value}`}
-                                                                                    className="cursor-pointer text-sm"
+                                                            {subcategory.questions.map((question, qIndex) => {
+                                                                const currentValue = assessmentResponses[`question_${question.id}`];
+                                                                
+                                                                return (
+                                                                    <div key={question.id} className="space-y-3 border-b pb-4 last:border-b-0">
+                                                                        <div className="text-sm font-medium text-foreground">
+                                                                            {qIndex + 1}. {question.question}
+                                                                        </div>
+                                                                        <RadioGroup
+                                                                            value={currentValue?.toString()}
+                                                                            onValueChange={(value) => {
+                                                                                const numValue = parseInt(value);
+                                                                                const currentResponses = watch('assessmentResponses') || {};
+                                                                                setValue('assessmentResponses', {
+                                                                                    ...currentResponses,
+                                                                                    [`question_${question.id}`]: numValue
+                                                                                }, { shouldValidate: true });
+                                                                            }}
+                                                                            className="flex flex-col sm:flex-row sm:flex-wrap gap-3"
+                                                                        >
+                                                                            {LIKERT_SCALE.map((option) => (
+                                                                                <label
+                                                                                    key={option.value}
+                                                                                    htmlFor={`question_${question.id}_option_${option.value}`}
+                                                                                    className="flex items-center gap-2 cursor-pointer group"
                                                                                 >
-                                                                                    {option.value} - {option.label}
-                                                                                </Label>
-                                                                            </div>
-                                                                        ))}
-                                                                    </RadioGroup>
-                                                                </div>
-                                                            ))}
+                                                                                    <RadioGroupItem
+                                                                                        value={option.value}
+                                                                                        id={`question_${question.id}_option_${option.value}`}
+                                                                                        className="cursor-pointer"
+                                                                                    />
+                                                                                    <span className="text-sm text-foreground group-hover:text-primary transition-colors">
+                                                                                        {option.value} - {option.label}
+                                                                                    </span>
+                                                                                </label>
+                                                                            ))}
+                                                                        </RadioGroup>
+                                                                    </div>
+                                                                );
+                                                            })}
                                                         </CardContent>
                                                         </CollapsibleContent>
                                                 </Card>
