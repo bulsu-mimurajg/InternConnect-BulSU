@@ -5,7 +5,43 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AlertCircle } from 'lucide-react';
 
-interface EditInternshipProps {
+// Local Category type to match what backend sends and form expects
+interface Question {
+    id: number;
+    question: string;
+    access: string;
+    is_active: boolean;
+}
+
+interface SubCategory {
+    id: number;
+    subcategory_name: string;
+    questions?: Question[];
+}
+
+interface Category {
+    id: number;
+    category_name: string;
+    subCategories: SubCategory[];
+}
+
+interface Internship {
+    id: number;
+    position: string;
+    department: string;
+    numberOfInterns: string;
+    duration: string;
+    startDate: string;
+    endDate: string;
+    is_active: boolean;
+}
+
+interface StudentAssessmentDeadline {
+    title: string;
+    end_date: string;
+}
+
+interface PageProps {
     hte: {
         id: number;
         company_name: string;
@@ -18,44 +54,21 @@ interface EditInternshipProps {
         is_active: boolean;
         created_at: string;
     };
-    categories: Array<{
-        id: number;
-        category_name: string;
-        subCategories: Array<{
-            id: number;
-            subcategory_name: string;
-        }>;
-    }>;
-    internship: {
-        id: number;
-        position: string;
-        department: string;
-        numberOfInterns: string;
-        duration: string;
-        startDate: string;
-        endDate: string;
-        is_active: boolean;
-    };
+    categories: unknown;
+    internship: Internship;
     existingWeights: Record<string, number>;
     studentAssessmentDeadlineActive: boolean;
-    studentAssessmentDeadline?: {
-        title: string;
-        end_date: string;
-    };
-}
-
-interface PageProps {
-    props: EditInternshipProps;
+    studentAssessmentDeadline?: StudentAssessmentDeadline;
     [key: string]: unknown;
 }
 
 const breadcrumbs = [
-    { label: 'Profile', href: '/hte/profile' },
-    { label: 'Edit Internship', href: '#' },
+    { title: 'Profile', href: '/hte/profile' },
+    { title: 'Edit Internship', href: '#' },
 ];
 
 export default function EditInternshipPage() {
-    const { hte, categories, internship, existingWeights, studentAssessmentDeadlineActive, studentAssessmentDeadline } = usePage<PageProps>().props;
+    const { hte, categories, internship, existingWeights, studentAssessmentDeadlineActive, studentAssessmentDeadline } = usePage<PageProps>().props as PageProps;
 
     // Show deadline warning if student assessment period is active
     if (studentAssessmentDeadlineActive) {
@@ -102,8 +115,7 @@ export default function EditInternshipPage() {
                 </div>
                 
                 <EditInternshipForm 
-                    hte={hte}
-                    categories={categories}
+                    categories={categories as Category[]}
                     internship={internship}
                     existingWeights={existingWeights}
                 />

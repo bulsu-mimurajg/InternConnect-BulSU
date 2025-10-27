@@ -16,17 +16,17 @@ interface Category {
     subCategories: SubCategory[];
 }
 
-interface SubCategory {
-    id: number;
-    subcategory_name: string;
-    questions: Question[];
-}
-
 interface Question {
     id: number;
     question: string;
     access: string;
     is_active: boolean;
+}
+
+interface SubCategory {
+    id: number;
+    subcategory_name: string;
+    questions?: Question[];
 }
 
 interface PieChartData {

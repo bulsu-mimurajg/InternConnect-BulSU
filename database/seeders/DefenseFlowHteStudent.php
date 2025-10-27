@@ -216,144 +216,47 @@ class DefenseFlowHteStudent extends Seeder
             Internship::create($data);
         }
 
-        // Internship Criteria
+        // Internship Criteria - Dynamic weights based on current categories and subcategories
         $categories = Category::with('subCategories')->get();
-
         $internships = Internship::all();
 
-        $internshipCriteria = [
-            'Full-Stack Development Intern' => [
-                'Language Proficiency' => [
-                    'JavaScript' => 30,
-                    'PHP' => 25,
-                    'HTML/CSS' => 20,
-                    'SQL' => 15,
-                    'Python' => 5,
-                    'Java' => 3,
-                    'C++' => 2,
-                ],
-                'Technical Skill' => [
-                    'Web Development' => 60,
-                    'Database Management' => 25,
-                    'System and Software Development' => 15,
-                ],
-                'Soft Skill' => [
-                    'Communication Skills' => 25,
-                    'Problem-Solving and Analytical Skills' => 20,
-                    'Time Management' => 15,
-                    'Adaptability and Learning' => 15,
-                    'Professionalism' => 15,
-                    'Ethical Decision-Making' => 10,
-                ],
-            ],
-            'UI/UX Design Intern' => [
-                'Language Proficiency' => [
-                    'HTML/CSS' => 10,
-                    'JavaScript' => 10,
-                    'Python' => 15,
-                    'Java' => 20,
-                    'C++' => 20,
-                    'PHP' => 15,
-                    'SQL' => 10,
-                ],
-                'Technical Skill' => [
-                    'Web Development' => 40,
-                    'Database Management' => 30,
-                    'System and Software Development' => 30,
-                ],
-                'Soft Skill' => [
-                    'Communication Skills' => 30,
-                    'Problem-Solving and Analytical Skills' => 25,
-                    'Time Management' => 15,
-                    'Adaptability and Learning' => 15,
-                    'Professionalism' => 10,
-                    'Ethical Decision-Making' => 5,
-                ],
-            ],
-            'Software Development Intern' => [
-                'Language Proficiency' => [
-                    'JavaScript' => 25,
-                    'Python' => 25,
-                    'Java' => 20,
-                    'C++' => 15,
-                    'HTML/CSS' => 10,
-                    'PHP' => 3,
-                    'SQL' => 2,
-                ],
-                'Technical Skill' => [
-                    'System and Software Development' => 70,
-                    'Web Development' => 20,
-                    'Database Management' => 10,
-                ],
-                'Soft Skill' => [
-                    'Problem-Solving and Analytical Skills' => 30,
-                    'Communication Skills' => 20,
-                    'Time Management' => 20,
-                    'Adaptability and Learning' => 15,
-                    'Professionalism' => 10,
-                    'Ethical Decision-Making' => 5,
-                ],
-            ],
-            'Data Science Intern' => [
-                'Language Proficiency' => [
-                    'Python' => 30,
-                    'SQL' => 20,
-                    'JavaScript' => 5,
-                    'Java' => 20,
-                    'C++' => 5,
-                    'HTML/CSS' => 10,
-                    'PHP' => 10,
-                ],
-                'Technical Skill' => [
-                    'Database Management' => 60,
-                    'System and Software Development' => 30,
-                    'Web Development' => 10,
-                ],
-                'Soft Skill' => [
-                    'Problem-Solving and Analytical Skills' => 40,
-                    'Communication Skills' => 25,
-                    'Time Management' => 15,
-                    'Adaptability and Learning' => 10,
-                    'Professionalism' => 5,
-                    'Ethical Decision-Making' => 5,
-                ],
-            ],
-        ];
+        foreach ($internships as $internship) {
+            $this->command->info("Assigning criteria weights for internship: {$internship->position_title}");
 
-        foreach ($internshipCriteria as $positionTitle => $categoryCriteria) {
-            $internship = $internships->where('position_title', $positionTitle)->first();
-
-            if (!$internship) {
-                continue; // Skip if internship doesn't exist
-            }
-
-            foreach ($categoryCriteria as $categoryName => $subcategoryWeights) {
-                $category = $categories->where('category_name', $categoryName)->first();
-
-                if (!$category) {
+            foreach ($categories as $category) {
+                $subcategories = $category->subCategories;
+                
+                if ($subcategories->isEmpty()) {
+                    $this->command->warn("Category '{$category->category_name}' has no subcategories. Skipping.");
                     continue;
                 }
 
-                foreach ($subcategoryWeights as $subcategoryName => $weight) {
-                    $subcategory = $category->subCategories->where('subcategory_name', $subcategoryName)->first();
+                // Distribute weights evenly that sum to exactly 100
+                $weights = $this->distributeWeightsEvenly($subcategories->count());
 
-                    if (!$subcategory) {
-                        continue;
-                    }
-
-                    // Create or update the subcategory weight
+                foreach ($subcategories as $index => $subcategory) {
                     SubcategoryWeight::updateOrCreate(
                         [
                             'internship_id' => $internship->id,
                             'subcategory_id' => $subcategory->id,
                         ],
                         [
-                            'weight' => $weight,
+                            'weight' => $weights[$index],
                         ]
                     );
                 }
+
+                // Verify weights sum to 100
+                $totalWeight = array_sum($weights);
+                $this->command->info("  Category '{$category->category_name}': Total weights = {$totalWeight}%");
+
+                if ($totalWeight !== 100) {
+                    $this->command->error("  WARNING: Weights for '{$category->category_name}' sum to {$totalWeight}, not 100!");
+                }
             }
         }
+
+        $this->command->info("Completed assigning internship criteria weights.");
 
         // Students
 
@@ -980,5 +883,60 @@ class DefenseFlowHteStudent extends Seeder
 
         $this->command->info("Created default season: {$season->name}");
         return $season;
+    }
+
+    /**
+     * Distribute weights evenly across subcategories so they sum to exactly 100
+     * 
+     * @param int $count Number of subcategories
+     * @return array Array of weights that sum to exactly 100
+     */
+    private function distributeWeightsEvenly(int $count): array
+    {
+        if ($count <= 0) {
+            return [];
+        }
+
+        // Divide 100 by the count to get base weight per subcategory
+        $baseWeight = 100 / $count;
+        
+        // If it divides evenly, return array of same values
+        if ($baseWeight == (int) $baseWeight) {
+            return array_fill(0, $count, $baseWeight);
+        }
+
+        // Otherwise, distribute with some getting floor and some getting ceil
+        // to ensure the total is exactly 100
+        $weights = [];
+        $floorWeight = floor($baseWeight);
+        $ceilWeight = ceil($baseWeight);
+        
+        // Calculate how many should get ceil and how many floor
+        // We want: floorCount * floorWeight + ceilCount * ceilWeight = 100
+        // where floorCount + ceilCount = count
+        
+        // Try to find the combination that works
+        $ceilCount = 0;
+        for ($i = 0; $i <= $count; $i++) {
+            $testFloor = $count - $i;
+            $testCeil = $i;
+            
+            if ($testFloor * $floorWeight + $testCeil * $ceilWeight == 100) {
+                $ceilCount = $testCeil;
+                break;
+            }
+        }
+        
+        $floorCount = $count - $ceilCount;
+        
+        // Build the array
+        for ($i = 0; $i < $floorCount; $i++) {
+            $weights[] = $floorWeight;
+        }
+        for ($i = 0; $i < $ceilCount; $i++) {
+            $weights[] = $ceilWeight;
+        }
+        
+        return $weights;
     }
 }

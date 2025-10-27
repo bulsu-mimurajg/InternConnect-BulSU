@@ -31,7 +31,7 @@ interface Category {
 interface SubCategory {
     id: number;
     subcategory_name: string;
-    questions: Question[];
+    questions?: Question[];
 }
 
 interface Question {
