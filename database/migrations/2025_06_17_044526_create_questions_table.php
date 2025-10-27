@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('questions', function (Blueprint $table) {
             $table->id(); // Standard auto-incrementing primary key
             $table->text('question'); // TEXT NOT NULL
+            $table->string('question_type')->default('rating');
             $table->boolean('is_active')->default(true); // Default TRUE
             
             // Foreign key referencing sub_categories.id

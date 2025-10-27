@@ -40,11 +40,43 @@ class AssessmentController extends Controller
             ->orderBy('info_name')
             ->get();
 
+        // Get all active questions with their choices
+        $questions = \App\Models\Question::where('is_active', true)
+            ->with('choices')
+            ->get()
+            ->map(function ($question) {
+                return [
+                    'id' => $question->id,
+                    'question' => $question->question,
+                    'question_type' => $question->question_type ?? 'rating',
+                    'subcategory_id' => $question->subcategory_id,
+                    'choices' => $question->choices->map(function ($choice) {
+                        return [
+                            'id' => $choice->id,
+                            'choice_text' => $choice->choice_text,
+                            'is_correct' => $choice->is_correct,
+                        ];
+                    }),
+                ];
+            });
+
+        // Group questions by subcategory
+        $questionsBySubcategory = [];
+        foreach ($questions as $question) {
+            $subcategoryId = $question['subcategory_id'];
+            if (!isset($questionsBySubcategory[$subcategoryId])) {
+                $questionsBySubcategory[$subcategoryId] = [];
+            }
+            $questionsBySubcategory[$subcategoryId][] = $question;
+        }
+
         return Inertia::render('student/assessment', [
             'hasSubmitted' => $hasSubmitted,
             'deadlineActive' => $deadlineActive,
             'deadlineInfo' => $deadlineInfo,
             'additionalInfos' => $additionalInfos,
+            'questionsBySubcategory' => $questionsBySubcategory,
+            'allQuestions' => $questions,
         ]);
     }
 
@@ -63,7 +95,7 @@ class AssessmentController extends Controller
         }
 
         // Get all questions from database to build dynamic validation rules
-        $questions = Question::where('is_active', true)->get();
+        $questions = Question::with('subcategory')->where('is_active', true)->get();
         $additionalInfos = AdditionalInfo::where('is_active', true)->get();
 
         // Initialize validation rules array
@@ -73,7 +105,15 @@ class AssessmentController extends Controller
         foreach ($questions as $question) {
             $subcategory = $question->subcategory;
             $fieldName = strtolower(str_replace(['+', '/', ' ', '-'], ['plus', '_', '_', '_'], $subcategory->subcategory_name)) . '_' . $question->id;
-            $validationRules[$fieldName] = 'required|integer|min:1|max:5';
+            
+            // Different validation based on question type
+            if ($question->question_type === 'quiz') {
+                // For quiz questions, validate that the answer is one of the choice IDs
+                $validationRules[$fieldName] = 'required|exists:choices,id';
+            } else {
+                // For rating questions (backward compatibility)
+                $validationRules[$fieldName] = 'required|integer|min:1|max:5';
+            }
         }
 
         // Add validation rules for additional info fields
@@ -142,6 +182,15 @@ class AssessmentController extends Controller
                 if ($request->has($fieldName)) {
                     $response = $request->input($fieldName);
 
+                    // For quiz questions, check if the answer is correct
+                    $isCorrect = false;
+                    if ($question->question_type === 'quiz') {
+                        $selectedChoice = \App\Models\Choice::find($response);
+                        $isCorrect = $selectedChoice ? $selectedChoice->is_correct : false;
+                        // Score is 5 for correct, 1 for incorrect
+                        $response = $isCorrect ? 5 : 1;
+                    }
+
                     // Store in assessment data
                     $assessmentData['questions'][] = [
                         'question_id' => $question->id,
@@ -151,6 +200,7 @@ class AssessmentController extends Controller
                         'question_text' => $question->question,
                         'subcategory_name' => $subcategory->subcategory_name,
                         'category_name' => $subcategory->category->category_name,
+                        'is_correct' => $isCorrect,
                     ];
 
                     // Collect scores for mean calculation
@@ -371,6 +421,91 @@ class AssessmentController extends Controller
 
         } catch (\Exception $e) {
             return response()->json(['error' => 'Failed to retrieve soft skills data'], 500);
+        }
+    }
+
+    /**
+     * Get all quiz questions with choices
+     */
+    public function getAllQuestions()
+    {
+        try {
+            $questions = Question::where('is_active', true)
+                ->with(['choices', 'subcategory'])
+                ->get()
+                ->map(function ($question) {
+                    return [
+                        'id' => $question->id,
+                        'question' => $question->question,
+                        'question_type' => $question->question_type ?? 'rating',
+                        'subcategory_id' => $question->subcategory_id,
+                        'subcategory_name' => $question->subcategory->subcategory_name,
+                        'category_name' => $question->subcategory->category->category_name,
+                        'choices' => $question->choices->map(function ($choice) {
+                            return [
+                                'id' => $choice->id,
+                                'choice_text' => $choice->choice_text,
+                                'is_correct' => $choice->is_correct,
+                            ];
+                        }),
+                    ];
+                });
+
+            return response()->json($questions);
+        } catch (\Exception $e) {
+            \Log::error('Failed to retrieve questions', ['error' => $e->getMessage()]);
+            return response()->json(['error' => 'Failed to retrieve questions'], 500);
+        }
+    }
+
+    /**
+     * Get categories with quiz questions grouped by category
+     */
+    public function getCategoriesQuiz()
+    {
+        try {
+            $questions = Question::where('is_active', true)
+                ->where('question_type', 'quiz')
+                ->with(['choices', 'subcategory.category'])
+                ->get();
+
+            // Group by category
+            $categoryMap = [];
+            
+            foreach ($questions as $question) {
+                $categoryName = $question->subcategory->category->category_name;
+                
+                if (!isset($categoryMap[$categoryName])) {
+                    $categoryMap[$categoryName] = [];
+                }
+                
+                $categoryMap[$categoryName][] = [
+                    'id' => $question->id,
+                    'question' => $question->question,
+                    'subcategory_name' => $question->subcategory->subcategory_name,
+                    'choices' => $question->choices->map(function ($choice) {
+                        return [
+                            'id' => $choice->id,
+                            'choice_text' => $choice->choice_text,
+                            'is_correct' => $choice->is_correct,
+                        ];
+                    }),
+                ];
+            }
+
+            // Transform to array format
+            $categories = [];
+            foreach ($categoryMap as $categoryName => $questions) {
+                $categories[] = [
+                    'name' => $categoryName,
+                    'questions' => $questions,
+                ];
+            }
+
+            return response()->json($categories);
+        } catch (\Exception $e) {
+            \Log::error('Failed to retrieve categories', ['error' => $e->getMessage()]);
+            return response()->json(['error' => 'Failed to retrieve categories'], 500);
         }
     }
 

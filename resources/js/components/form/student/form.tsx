@@ -1,9 +1,7 @@
 import FormStepCounter from '@/components/form/form-step-counter';
 import PersonalInfo from '@/components/form/student/personal-info';
-import SoftSkill from '@/components/form/student/soft-skill';
 import Summary from '@/components/form/student/summary';
-import TechnicalSkill from '@/components/form/student/technical-skill';
-import LanguageProficiency from '@/components/form/student/language-proficiency';
+import QuizQuestions from '@/components/form/student/quiz-questions';
 import { Button } from '@/components/ui/button';
 import { Form } from '@/components/ui/form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -23,19 +21,49 @@ interface PageProps extends Record<string, unknown> {
     additionalInfos?: AdditionalInfo[];
 }
 
+interface Category {
+    name: string;
+    questions: Array<{
+        id: number;
+        question: string;
+        subcategory_name: string;
+        choices: Array<{
+            id: number;
+            choice_text: string;
+            is_correct: boolean;
+        }>;
+    }>;
+}
+
 export default function StudentForm() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const { additionalInfos = [] } = usePage<PageProps>().props;
 
+    // Fetch categories
+    const [categories, setCategories] = useState<Category[]>([]);
+    const [categoriesLoading, setCategoriesLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchCategories = async () => {
+            try {
+                const response = await fetch('/assessment/categories-quiz');
+                const data = await response.json();
+                setCategories(data);
+            } catch (err) {
+                console.error('Failed to fetch categories:', err);
+            } finally {
+                setCategoriesLoading(false);
+            }
+        };
+        
+        fetchCategories();
+    }, []);
+
     // Dynamic field tracking
     const [dynamicFields, setDynamicFields] = useState<{
-        languageProficiency: string[];
-        technicalSkills: string[];
-        softSkills: string[];
+        quiz: string[];
     }>({
-        languageProficiency: [],
-        technicalSkills: [],
-        softSkills: [],
+        quiz: [],
     });
 
     // Create additional info field names
@@ -43,29 +71,27 @@ export default function StudentForm() {
         info.info_name.toLowerCase().replace(/[ -]/g, '_')
     );
 
-    const steps = useMemo(() => [
-        {
-            id: 'Step 1',
-            name: 'Additional Information',
-            fields: [...additionalInfoFields],
-        },
-        {
-            id: 'Step 2',
-            name: 'Language Proficiency',
-            fields: [...dynamicFields.languageProficiency],
-        },
-        {
-            id: 'Step 3',
-            name: 'Technical Skills',
-            fields: [...dynamicFields.technicalSkills],
-        },
-        {
-            id: 'Step 4',
-            name: 'Soft Skills',
-            fields: [...dynamicFields.softSkills],
-        },
-        { id: 'Step 5', name: 'Submission' },
-    ], [additionalInfoFields, dynamicFields]);
+    // Create dynamic steps based on categories
+    const steps = useMemo(() => {
+        const categorySteps = categories.map((category, index) => ({
+            id: `Step ${index + 2}`,
+            name: category.name,
+            fields: category.questions.map(q => {
+                const fieldName = `${category.name.toLowerCase().replace(/[+\/\s-]/g, '_')}_${q.id}`;
+                return fieldName;
+            }),
+        }));
+
+        return [
+            {
+                id: 'Step 1',
+                name: 'Additional Information',
+                fields: [...additionalInfoFields],
+            },
+            ...categorySteps,
+            { id: `Step ${categories.length + 2}`, name: 'Submission' },
+        ];
+    }, [additionalInfoFields, categories]);
     // Create dynamic validation schema
     const createFormSchema = useCallback(() => {
 
@@ -75,30 +101,16 @@ export default function StudentForm() {
             additionalInfoSchema[field] = z.string().optional().refine(val => val && val.trim() !== '', 'Question is required.');
         });
 
-        // Add dynamic fields for language proficiency
-        const languageSchema: Record<string, z.ZodTypeAny> = {};
-        dynamicFields.languageProficiency.forEach(field => {
-            languageSchema[field] = z.string().min(1, 'Please select a rating.');
-        });
-
-        // Add dynamic fields for technical skills
-        const technicalSchema: Record<string, z.ZodTypeAny> = {};
-        dynamicFields.technicalSkills.forEach(field => {
-            technicalSchema[field] = z.string().min(1, 'Please select a rating.');
-        });
-
-        // Add dynamic fields for soft skills
-        const softSchema: Record<string, z.ZodTypeAny> = {};
-        dynamicFields.softSkills.forEach(field => {
-            softSchema[field] = z.string().min(1, 'Please select a rating.');
+        // Add dynamic fields for quiz questions
+        const quizSchema: Record<string, z.ZodTypeAny> = {};
+        dynamicFields.quiz.forEach(field => {
+            quizSchema[field] = z.string().min(1, 'Please select an answer.');
         });
 
         // Ensure we always have at least one field in the schema
         const schemaFields = {
             ...additionalInfoSchema,
-            ...languageSchema,
-            ...technicalSchema,
-            ...softSchema,
+            ...quizSchema,
         };
 
         // If no fields are present, add a dummy field to prevent empty schema
@@ -120,18 +132,8 @@ export default function StudentForm() {
             defaultValues[field] = '';
         });
 
-        // Initialize language proficiency fields
-        dynamicFields.languageProficiency.forEach(field => {
-            defaultValues[field] = '';
-        });
-
-        // Initialize technical skills fields
-        dynamicFields.technicalSkills.forEach(field => {
-            defaultValues[field] = '';
-        });
-
-        // Initialize soft skills fields
-        dynamicFields.softSkills.forEach(field => {
+        // Initialize quiz fields
+        dynamicFields.quiz.forEach(field => {
             defaultValues[field] = '';
         });
 
@@ -258,22 +260,38 @@ export default function StudentForm() {
 
     // Memoize setter functions to prevent infinite loops
     const setLanguageProficiencyFields = useCallback((fields: string[]) => {
-        setDynamicFields(prev => ({ ...prev, languageProficiency: fields }));
+        // No-op for removed step
     }, []);
 
     const setTechnicalSkillFields = useCallback((fields: string[]) => {
-        setDynamicFields(prev => ({ ...prev, technicalSkills: fields }));
+        // No-op for removed step
     }, []);
 
     const setSoftSkillFields = useCallback((fields: string[]) => {
-        setDynamicFields(prev => ({ ...prev, softSkills: fields }));
+        // No-op for removed step
     }, []);
+
+    const setQuizFields = useCallback((fields: string[]) => {
+        setDynamicFields(prev => ({ ...prev, quiz: fields }));
+    }, []);
+
+    if (categoriesLoading) {
+        return (
+            <div className="flex items-center justify-center h-full">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+                    <p className="text-muted-foreground">Loading assessment questions...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <FormFieldsProvider
             setLanguageProficiencyFields={setLanguageProficiencyFields}
             setTechnicalSkillFields={setTechnicalSkillFields}
             setSoftSkillFields={setSoftSkillFields}
+            setQuizFields={setQuizFields}
             onNavigateToStep={navigateToStep}
         >
             <div className="flex justify-center">
@@ -288,10 +306,10 @@ export default function StudentForm() {
                         <Form {...form}>
                             <form onSubmit={form.handleSubmit(onSubmit)}>
                                 {currentStep === 0 && <PersonalInfo />}
-                                {currentStep === 1 && <LanguageProficiency />}
-                                {currentStep === 2 && <TechnicalSkill />}
-                                {currentStep === 3 && <SoftSkill />}
-                                {currentStep === 4 && (
+                                {currentStep > 0 && currentStep <= categories.length && (
+                                    <QuizQuestions category={categories[currentStep - 1]} />
+                                )}
+                                {currentStep === categories.length + 1 && (
                                     <div className="space-y-6">
                                         <h2 className="text-xl font-semibold">Review Your Answers</h2>
                                         <Summary />

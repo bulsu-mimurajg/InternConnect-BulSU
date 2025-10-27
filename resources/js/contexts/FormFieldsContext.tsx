@@ -4,6 +4,7 @@ interface FormFieldsContextType {
     setLanguageProficiencyFields: (fields: string[]) => void;
     setTechnicalSkillFields: (fields: string[]) => void;
     setSoftSkillFields: (fields: string[]) => void;
+    setQuizFields: (fields: string[]) => void;
     unansweredFields: string[];
     setUnansweredFields: (fields: string[]) => void;
     triggerPulseAndRedirect: (fields: string[], targetStep: number) => void;
@@ -24,6 +25,7 @@ interface FormFieldsProviderProps {
     setLanguageProficiencyFields: (fields: string[]) => void;
     setTechnicalSkillFields: (fields: string[]) => void;
     setSoftSkillFields: (fields: string[]) => void;
+    setQuizFields: (fields: string[]) => void;
     onNavigateToStep?: (step: number) => void;
 }
 
@@ -32,6 +34,7 @@ export const FormFieldsProvider: React.FC<FormFieldsProviderProps> = ({
     setLanguageProficiencyFields,
     setTechnicalSkillFields,
     setSoftSkillFields,
+    setQuizFields,
     onNavigateToStep,
 }) => {
     const [unansweredFields, setUnansweredFields] = React.useState<string[]>([]);
@@ -72,6 +75,7 @@ export const FormFieldsProvider: React.FC<FormFieldsProviderProps> = ({
                 setLanguageProficiencyFields,
                 setTechnicalSkillFields,
                 setSoftSkillFields,
+                setQuizFields,
                 unansweredFields,
                 setUnansweredFields,
                 triggerPulseAndRedirect,

@@ -618,6 +618,8 @@ Route::group(['middleware' => ['auth', 'verified', 'role_redirect:student']], fu
     Route::get('assessment/language-proficiency', [AssessmentController::class, 'getLanguageProficiency'])->name('assessment.language-proficiency');
     Route::get('assessment/technical-skills', [AssessmentController::class, 'getTechnicalSkills'])->name('assessment.technical-skills');
     Route::get('assessment/soft-skills', [AssessmentController::class, 'getSoftSkills'])->name('assessment.soft-skills');
+    Route::get('assessment/all-questions', [AssessmentController::class, 'getAllQuestions'])->name('assessment.all-questions');
+    Route::get('assessment/categories-quiz', [AssessmentController::class, 'getCategoriesQuiz'])->name('assessment.categories-quiz');
 
     // Student details route for comparison modal
     Route::get('details', function () {
