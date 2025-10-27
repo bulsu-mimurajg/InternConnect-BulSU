@@ -43,7 +43,7 @@ class QuestionController extends Controller
         // Apply default sorting by creation date
         $query->orderBy('created_at', 'desc');
 
-        $questions = $query->get();
+        $questions = $query->with('choices')->get();
 
         // Get categories with their subcategories and map the data structure
         $categories = Category::with('subCategories')
@@ -100,13 +100,27 @@ class QuestionController extends Controller
         $request->validate([
             'question' => 'required|string|max:1000',
             'subcategory_id' => 'required|exists:sub_categories,id',
+            'question_type' => 'required|in:quiz',
+            'choices' => 'required|array|min:2',
+            'choices.*.choice_text' => 'required|string|max:500',
+            'choices.*.is_correct' => 'required|boolean',
         ]);
 
-        Question::create([
+        $question = Question::create([
             'question' => $request->question,
             'subcategory_id' => $request->subcategory_id,
+            'question_type' => 'quiz',
             'is_active' => true,
         ]);
+
+        // Create choices
+        foreach ($request->choices as $choiceData) {
+            \App\Models\Choice::create([
+                'question_id' => $question->id,
+                'choice_text' => $choiceData['choice_text'],
+                'is_correct' => $choiceData['is_correct'] ?? false,
+            ]);
+        }
 
         return redirect()->back()->with('success', 'Question created successfully!');
     }
@@ -119,12 +133,28 @@ class QuestionController extends Controller
         $request->validate([
             'question' => 'required|string|max:1000',
             'subcategory_id' => 'required|exists:sub_categories,id',
+            'question_type' => 'required|in:quiz',
+            'choices' => 'required|array|min:2',
+            'choices.*.choice_text' => 'required|string|max:500',
+            'choices.*.is_correct' => 'required|boolean',
         ]);
 
         $question->update([
             'question' => $request->question,
             'subcategory_id' => $request->subcategory_id,
+            'question_type' => 'quiz',
         ]);
+
+        // Delete existing choices and create new ones
+        $question->choices()->delete();
+        
+        foreach ($request->choices as $choiceData) {
+            \App\Models\Choice::create([
+                'question_id' => $question->id,
+                'choice_text' => $choiceData['choice_text'],
+                'is_correct' => $choiceData['is_correct'] ?? false,
+            ]);
+        }
 
         return redirect()->back()->with('success', 'Question updated successfully!');
     }

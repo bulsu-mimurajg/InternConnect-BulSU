@@ -100,9 +100,16 @@ export interface question {
     access: 'Student' | 'HTE';
 }
 
+export interface Choice {
+    id: number;
+    choice_text: string;
+    is_correct: boolean;
+}
+
 export interface Question {
     id: number;
     question: string;
+    question_type: 'quiz';
     access: 'Student' | 'HTE';
     is_active: boolean;
     subcategory_id: number;
@@ -114,6 +121,7 @@ export interface Question {
             category_name: string;
         };
     };
+    choices: Choice[];
     created_at: string;
     updated_at: string;
 }

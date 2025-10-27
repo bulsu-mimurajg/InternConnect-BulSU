@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Head, useForm, usePage } from '@inertiajs/react';
+import { Head, useForm, usePage, router } from '@inertiajs/react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,7 +11,7 @@ import { Pagination } from '@/components/ui/pagination';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { usePagination } from '@/hooks/usePagination';
 import { getRowNumber } from '@/lib/pagination-utils';
-import { FileTextIcon, PlusIcon, EditIcon, ArchiveIcon, RotateCcwIcon, SearchIcon, FilterIcon, ArrowUpDownIcon, Archive, Eye } from 'lucide-react';
+import { FileTextIcon, PlusIcon, EditIcon, ArchiveIcon, RotateCcwIcon, SearchIcon, FilterIcon, ArrowUpDownIcon, Archive, Eye, TrashIcon } from 'lucide-react';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem, type Question, type Category, type SubCategory } from '@/types';
 
@@ -82,9 +82,13 @@ export default function FormsPage({ questions, categories, subcategories, filter
 
 
 
-    const { data, setData, post, put, patch, processing, errors, reset } = useForm({
+    const [choices, setChoices] = useState<Array<{ text: string; isCorrect: boolean }>>([{ text: '', isCorrect: false }]);
+
+    const { data, setData, patch, processing, errors, reset } = useForm({
         question: '',
         subcategory_id: '',
+        question_type: 'quiz',
+        choices: [] as Array<{ choice_text: string; is_correct: boolean }>,
     });
 
     // Filter questions based on archive status
@@ -160,10 +164,25 @@ export default function FormsPage({ questions, categories, subcategories, filter
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
+        // Prepare form data with choices
+        const formData = {
+            question: data.question,
+            subcategory_id: data.subcategory_id,
+            question_type: 'quiz',
+            choices: choices.map(choice => ({
+                choice_text: choice.text,
+                is_correct: choice.isCorrect
+            }))
+        };
+
+        // Update form data with question type
+        setData('question_type', 'quiz');
+
         if (editingQuestion) {
-            put(`/forms/questions/${editingQuestion.id}`, {
+            router.put(`/forms/questions/${editingQuestion.id}`, formData, {
                 onSuccess: () => {
                     reset();
+                    setChoices([{ text: '', isCorrect: false }]);
                     setShowForm(false);
                     setEditingQuestion(null);
                     setSelectedCategory('');
@@ -174,9 +193,10 @@ export default function FormsPage({ questions, categories, subcategories, filter
                 },
             });
         } else {
-            post('/forms/questions', {
+            router.post('/forms/questions', formData, {
                 onSuccess: () => {
                     reset();
+                    setChoices([{ text: '', isCorrect: false }]);
                     setShowForm(false);
                     setSelectedCategory('');
                     setAvailableSubcategories([]);
@@ -193,7 +213,19 @@ export default function FormsPage({ questions, categories, subcategories, filter
         setData({
             question: question.question,
             subcategory_id: question.subcategory_id.toString(),
+            question_type: 'quiz',
+            choices: question.choices ? question.choices.map(c => ({ choice_text: c.choice_text, is_correct: c.is_correct })) : [],
         });
+
+        // Set the choices
+        if (question.choices && question.choices.length > 0) {
+            setChoices(question.choices.map(choice => ({
+                text: choice.choice_text,
+                isCorrect: choice.is_correct
+            })));
+        } else {
+            setChoices([{ text: '', isCorrect: false }]);
+        }
 
         // Set the category and subcategories
         const categoryId = question.subcategory.category.id.toString();
@@ -217,10 +249,41 @@ export default function FormsPage({ questions, categories, subcategories, filter
 
     const handleCancel = () => {
         reset();
+        setChoices([{ text: '', isCorrect: false }]);
         setShowForm(false);
         setEditingQuestion(null);
         setSelectedCategory('');
         setAvailableSubcategories([]);
+    };
+
+    const addChoice = () => {
+        if (choices.length === 0) {
+            setChoices([{ text: '', isCorrect: false }]);
+        } else {
+            setChoices([...choices, { text: '', isCorrect: false }]);
+        }
+    };
+
+    const removeChoice = (index: number) => {
+        setChoices(choices.filter((_, i) => i !== index));
+    };
+
+    const updateChoice = (index: number, field: 'text' | 'isCorrect', value: string | boolean) => {
+        const updatedChoices = [...choices];
+        updatedChoices[index] = {
+            ...updatedChoices[index],
+            [field]: value
+        };
+        setChoices(updatedChoices);
+    };
+
+    const handleCorrectAnswerChange = (index: number) => {
+        // Only one answer can be correct
+        const updatedChoices = choices.map((choice, i) => ({
+            ...choice,
+            isCorrect: i === index
+        }));
+        setChoices(updatedChoices);
     };
 
     const getStatusBadge = (isActive: boolean) => {
@@ -487,6 +550,56 @@ export default function FormsPage({ questions, categories, subcategories, filter
                                     </div>
                                 </div>
 
+                                {/* Choices Section */}
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <Label>Choices (At least 2 required)</Label>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={addChoice}
+                                        >
+                                            <PlusIcon className="h-4 w-4 mr-2" />
+                                            Add Choice
+                                        </Button>
+                                    </div>
+                                    <div className="space-y-3">
+                                        {choices.map((choice, index) => (
+                                            <div key={index} className="flex gap-2 items-start">
+                                                <Input
+                                                    placeholder={`Choice ${index + 1}`}
+                                                    value={choice.text}
+                                                    onChange={(e) => updateChoice(index, 'text', e.target.value)}
+                                                    className="flex-1"
+                                                />
+                                                <Button
+                                                    type="button"
+                                                    variant={choice.isCorrect ? "default" : "outline"}
+                                                    onClick={() => handleCorrectAnswerChange(index)}
+                                                    className="shrink-0"
+                                                >
+                                                    {choice.isCorrect ? "Correct" : "Mark Correct"}
+                                                </Button>
+                                                {choices.length > 2 && (
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="icon"
+                                                        onClick={() => removeChoice(index)}
+                                                        className="text-red-600 hover:text-red-700"
+                                                    >
+                                                        <TrashIcon className="h-4 w-4" />
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                    {choices.length < 2 && (
+                                        <p className="text-sm text-amber-600">At least 2 choices are required.</p>
+                                    )}
+                                </div>
+
 
 
                                 {/* Display general errors */}
@@ -555,6 +668,7 @@ export default function FormsPage({ questions, categories, subcategories, filter
                                         <tr className="border-b">
                                             <th className="text-center p-3 font-medium text-muted-foreground w-16">#</th>
                                             <th className="text-left p-3 font-medium text-muted-foreground">Question</th>
+                                            <th className="text-left p-3 font-medium text-muted-foreground">Type</th>
                                             <th className="text-left p-3 font-medium text-muted-foreground">Category</th>
                                             <th className="text-left p-3 font-medium text-muted-foreground">Subcategory</th>
                                             <th className="text-left p-3 font-medium text-muted-foreground">Status</th>
@@ -573,6 +687,11 @@ export default function FormsPage({ questions, categories, subcategories, filter
                                                             {question.question}
                                                         </p>
                                                     </div>
+                                                </td>
+                                                <td className="p-3">
+                                                    <Badge variant="default">
+                                                        {question.question_type || 'quiz'}
+                                                    </Badge>
                                                 </td>
                                                 <td className="p-3">
                                                     <span className="text-sm">{question.subcategory.category.category_name}</span>
