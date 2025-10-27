@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { RadarChart } from '@/components/charts/radar-chart';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
@@ -10,7 +10,8 @@ import {
     BookOpen,
     CheckCircle,
     Clock,
-    Link
+    Link,
+    FileText
 } from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -56,15 +57,35 @@ interface ProfileProps {
     hasSubmitted?: boolean;
 }
 
-const navigationItems = [
-    { id: 'basic', label: 'Basic Information', icon: User },
-    { id: 'language', label: 'Language Proficiency', icon: BookOpen },
-    { id: 'technical', label: 'Technical Skills', icon: GraduationCap },
-    { id: 'soft', label: 'Soft Skills', icon: CheckCircle },
-];
-
 export default function Profile({ student, categories, additional_info = [], hasSubmitted = true }: ProfileProps) {
     const [activeTab, setActiveTab] = useState('basic');
+
+    // Create dynamic navigation items based on categories
+    const navigationItems = useMemo(() => {
+        const items: Array<{ id: string; label: string; icon: typeof User }> = [
+            { id: 'basic', label: 'Basic Information', icon: User }
+        ];
+        
+        // Add each category as a navigation item
+        categories.forEach(category => {
+            let icon = FileText;
+            if (category.name.toLowerCase().includes('language')) {
+                icon = BookOpen;
+            } else if (category.name.toLowerCase().includes('technical')) {
+                icon = GraduationCap;
+            } else if (category.name.toLowerCase().includes('soft')) {
+                icon = CheckCircle;
+            }
+            
+            items.push({
+                id: `category-${category.id}`,
+                label: category.name,
+                icon: icon
+            });
+        });
+        
+        return items;
+    }, [categories]);
 
     if (!student) {
         return (
@@ -82,10 +103,6 @@ export default function Profile({ student, categories, additional_info = [], has
             </AppLayout>
         );
     }
-
-    const languageCategory = categories.find(cat => cat.name === 'Language Proficiency');
-    const technicalCategory = categories.find(cat => cat.name === 'Technical Skill');
-    const softCategory = categories.find(cat => cat.name === 'Soft Skill');
 
     const renderBasicInformation = () => (
         <div className="space-y-6">
@@ -215,7 +232,9 @@ export default function Profile({ student, categories, additional_info = [], has
         </div>
     );
 
-    const renderCategorySection = (category: Category | undefined, title: string) => {
+    const renderCategorySection = (categoryId: number) => {
+        const category = categories.find(cat => cat.id === categoryId);
+        
         // If student hasn't submitted assessment, show message
         if (!hasSubmitted) {
             return (
@@ -252,7 +271,7 @@ export default function Profile({ student, categories, additional_info = [], has
                 <Card>
                     <CardContent className="p-6">
                         <div className="text-center">
-                            <p className="text-muted-foreground">No {title.toLowerCase()} data available.</p>
+                            <p className="text-muted-foreground">No data available for this category.</p>
                         </div>
                     </CardContent>
                 </Card>
@@ -269,16 +288,16 @@ export default function Profile({ student, categories, additional_info = [], has
             <div className="space-y-6">
                 <Card>
                     <CardHeader>
-                        <CardTitle>{title} Overview</CardTitle>
+                        <CardTitle>{category.name} Overview</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <RadarChart data={chartData} title={`${title} Radar Chart`} maxValue={5} />
+                        <RadarChart data={chartData} title={`${category.name} Radar Chart`} maxValue={5} />
                     </CardContent>
                 </Card>
 
                 <Card>
                     <CardHeader>
-                        <CardTitle>{title} Scores</CardTitle>
+                        <CardTitle>{category.name} Scores</CardTitle>
                     </CardHeader>
                     <CardContent>
                         <div className="overflow-x-auto">
@@ -337,9 +356,7 @@ export default function Profile({ student, categories, additional_info = [], has
                 {/* Content */}
                 <div className="flex-1">
                     {activeTab === 'basic' && renderBasicInformation()}
-                    {activeTab === 'language' && renderCategorySection(languageCategory, 'Language Proficiency')}
-                    {activeTab === 'technical' && renderCategorySection(technicalCategory, 'Technical Skills')}
-                    {activeTab === 'soft' && renderCategorySection(softCategory, 'Soft Skills')}
+                    {activeTab.startsWith('category-') && renderCategorySection(Number(activeTab.replace('category-', '')))}
                 </div>
             </div>
         </AppLayout>
