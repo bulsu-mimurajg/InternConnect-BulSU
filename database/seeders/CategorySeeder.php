@@ -287,12 +287,12 @@ class CategorySeeder extends Seeder
                         'question' => 'Which of the following is the correct order of the traditional SDLC phases?',
                         'type' => 'quiz',
                         'choices' => [
-                            'Design â†’ Implementation â†’ Testing â†’ Deployment â†’ Requirement Analysis â†’ Maintenance',
-                            'Requirement Analysis â†’ Design â†’ Implementation â†’ Testing â†’ Deployment â†’ Maintenance',
-                            'Testing â†’ Deployment â†’ Requirement Analysis â†’ Design â†’ Implementation â†’ Maintenance',
-                            'Deployment â†’ Maintenance â†’ Design â†’ Implementation â†’ Testing â†’ Requirement Analysis'
+                            'Design -> Implementation -> Testing -> Deployment -> Requirement Analysis -> Maintenance',
+                            'Requirement Analysis -> Design -> Implementation -> Testing -> Deployment -> Maintenance',
+                            'Testing -> Deployment -> Requirement Analysis -> Design -> Implementation -> Maintenance',
+                            'Deployment -> Maintenance -> Design -> Implementation -> Testing -> Requirement Analysis'
                         ],
-                        'correct_answer' => 'Requirement Analysis â†’ Design â†’ Implementation â†’ Testing â†’ Deployment â†’ Maintenance'
+                        'correct_answer' => 'Requirement Analysis -> Design -> Implementation -> Testing -> Deployment -> Maintenance'
                     ],
                     [
                         'question' => 'Which SDLC model delivers software in small increments or iterations?',

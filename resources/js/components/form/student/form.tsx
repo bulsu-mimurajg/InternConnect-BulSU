@@ -59,6 +59,25 @@ export default function StudentForm() {
         fetchCategories();
     }, []);
 
+    // Register all quiz fields when categories are loaded
+    useEffect(() => {
+        if (categories.length === 0) return;
+        
+        const allFields: string[] = [];
+        categories.forEach(category => {
+            const categoryNameClean = category.name.toLowerCase().replace(/[+\/\s-]/g, '_');
+            category.questions.forEach(question => {
+                const fieldName = `${categoryNameClean}_${question.id}`;
+                if (!allFields.includes(fieldName)) {
+                    allFields.push(fieldName);
+                }
+            });
+        });
+        
+        console.log('Registering all quiz fields upfront:', allFields);
+        setDynamicFields(prev => ({ ...prev, quiz: allFields }));
+    }, [categories]);
+
     // Dynamic field tracking
     const [dynamicFields, setDynamicFields] = useState<{
         quiz: string[];
@@ -66,32 +85,28 @@ export default function StudentForm() {
         quiz: [],
     });
 
+    // Quiz sub-step tracking
+    const [quizSubStep, setQuizSubStep] = useState(0);
+
     // Create additional info field names
     const additionalInfoFields = additionalInfos.map(info =>
         info.info_name.toLowerCase().replace(/[ -]/g, '_')
     );
 
-    // Create dynamic steps based on categories
-    const steps = useMemo(() => {
-        const categorySteps = categories.map((category, index) => ({
-            id: `Step ${index + 2}`,
-            name: category.name,
-            fields: category.questions.map(q => {
-                const fieldName = `${category.name.toLowerCase().replace(/[+\/\s-]/g, '_')}_${q.id}`;
-                return fieldName;
-            }),
-        }));
-
-        return [
-            {
-                id: 'Step 1',
-                name: 'Additional Information',
-                fields: [...additionalInfoFields],
-            },
-            ...categorySteps,
-            { id: `Step ${categories.length + 2}`, name: 'Submission' },
-        ];
-    }, [additionalInfoFields, categories]);
+    // Create main steps (only 3 steps)
+    const steps = useMemo(() => [
+        {
+            id: 'Step 1',
+            name: 'Additional Information',
+            fields: [...additionalInfoFields],
+        },
+        {
+            id: 'Step 2',
+            name: 'Quiz',
+            fields: [...dynamicFields.quiz],
+        },
+        { id: 'Step 3', name: 'Submission' },
+    ], [additionalInfoFields, dynamicFields]);
     // Create dynamic validation schema
     const createFormSchema = useCallback(() => {
 
@@ -195,6 +210,12 @@ export default function StudentForm() {
             delete cleanValues.dummy;
         }
 
+        // Debug: log what's being submitted
+        console.log('Submitting form with values:', cleanValues);
+        console.log('Form values keys:', Object.keys(cleanValues));
+        console.log('Expected quiz field count:', dynamicFields.quiz.length);
+        console.log('Expected quiz fields:', dynamicFields.quiz);
+
         router.post('/assessment', cleanValues as Record<string, string>, {
             onSuccess: () => {
                 setIsSubmitting(false);
@@ -210,13 +231,109 @@ export default function StudentForm() {
     }
 
     const [currentStep, setCurrentStep] = useState(0);
+    
+    // Navigation for main steps
     const prev = () => {
-        if (currentStep > 0) {
-            setCurrentStep((prev) => prev - 1);
+        if (currentStep === 1 && quizSubStep > 0) {
+            // If in quiz step, go to previous quiz sub-step
+            setQuizSubStep(prev => prev - 1);
+        } else if (currentStep > 0) {
+            // If at start of quiz step, go to previous main step
+            setCurrentStep(prev => prev - 1);
         }
     };
 
     const next = async () => {
+        // Handle quiz step navigation
+        if (currentStep === 1) {
+            // Validate current category's questions before moving forward
+            const currentCategory = categories[quizSubStep];
+            if (currentCategory && currentCategory.questions.length > 0) {
+                const categoryNameClean = currentCategory.name.toLowerCase().replace(/[+\/\s-]/g, '_');
+                const categoryFields = currentCategory.questions.map(q => `${categoryNameClean}_${q.id}`);
+                
+                // Validate all fields for current category
+                const isValid = await form.trigger(categoryFields as Path<z.infer<typeof FormSchema>>[], { shouldFocus: false });
+                
+                if (!isValid) {
+                    // Find unanswered fields and highlight the first one
+                    const unansweredFields: string[] = [];
+                    const formValues = form.getValues();
+
+                    categoryFields.forEach((fieldName) => {
+                        const formValue = formValues[fieldName as keyof typeof formValues];
+                        if (!formValue || (typeof formValue === 'string' && formValue.trim() === '')) {
+                            unansweredFields.push(fieldName);
+                        }
+                    });
+
+                    if (unansweredFields.length > 0) {
+                        const firstUnansweredField = unansweredFields[0];
+                        
+                        // Find the form field container
+                        setTimeout(() => {
+                            const formItem = document.querySelector(`[data-field-name="${firstUnansweredField}"]`) as HTMLElement;
+                            if (formItem) {
+                                // Store original styles
+                                const originalBorder = formItem.style.border;
+                                const originalPadding = formItem.style.padding;
+                                const originalBorderRadius = formItem.style.borderRadius;
+                                
+                                // Scroll to the element first
+                                formItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                
+                                // Wait for scroll to complete before showing animation
+                                setTimeout(() => {
+                                    // Add animation class
+                                    formItem.classList.add('animate-pulse-unanswered');
+                                    
+                                    // Add inline styles for better visibility
+                                    formItem.style.border = '2px solid hsl(var(--destructive))';
+                                    formItem.style.borderRadius = '0.5rem';
+                                    formItem.style.padding = '1rem';
+                                    formItem.style.transition = 'all 0.3s ease';
+                                    
+                                    // Use React Hook Form's watch with subscription for immediate updates
+                                    const subscription = form.watch((value, { name, type }) => {
+                                        if (name === firstUnansweredField) {
+                                            const currentValue = value[firstUnansweredField as keyof typeof value];
+                                            if (currentValue && String(currentValue).trim() !== '') {
+                                                formItem.classList.remove('animate-pulse-unanswered');
+                                                formItem.style.border = originalBorder;
+                                                formItem.style.padding = originalPadding;
+                                                formItem.style.borderRadius = originalBorderRadius;
+                                                subscription.unsubscribe();
+                                            }
+                                        }
+                                    });
+                                    
+                                    // Remove animation after a delay (fallback)
+                                    setTimeout(() => {
+                                        formItem.classList.remove('animate-pulse-unanswered');
+                                        formItem.style.border = originalBorder;
+                                        formItem.style.padding = originalPadding;
+                                        formItem.style.borderRadius = originalBorderRadius;
+                                        subscription.unsubscribe();
+                                    }, 10000);
+                                }, 600); // Wait for smooth scroll to complete
+                            }
+                        }, 100);
+                    }
+                    return;
+                }
+            }
+            
+            // If validated, check if there are more quiz categories
+            if (quizSubStep < categories.length - 1) {
+                setQuizSubStep(prev => prev + 1);
+                return;
+            } else {
+                // All quiz sub-steps completed, move to next main step
+                setCurrentStep(2);
+                return;
+            }
+        }
+
         const currentStepData = steps[currentStep];
         const fields = currentStepData.fields;
 
@@ -272,7 +389,15 @@ export default function StudentForm() {
     }, []);
 
     const setQuizFields = useCallback((fields: string[]) => {
-        setDynamicFields(prev => ({ ...prev, quiz: fields }));
+        console.log('Registering quiz fields:', fields);
+        setDynamicFields(prev => {
+            // Merge new fields with existing ones, avoiding duplicates
+            const existingFields = new Set(prev.quiz);
+            const newFields = fields.filter(field => !existingFields.has(field));
+            const updatedFields = [...prev.quiz, ...newFields];
+            console.log('Updated quiz fields:', updatedFields);
+            return { ...prev, quiz: updatedFields };
+        });
     }, []);
 
     if (categoriesLoading) {
@@ -306,10 +431,41 @@ export default function StudentForm() {
                         <Form {...form}>
                             <form onSubmit={form.handleSubmit(onSubmit)}>
                                 {currentStep === 0 && <PersonalInfo />}
-                                {currentStep > 0 && currentStep <= categories.length && (
-                                    <QuizQuestions category={categories[currentStep - 1]} />
+                                {currentStep === 1 && categories.length > 0 && (
+                                    <div>
+                                        {/* Sub-step indicator for quiz categories */}
+                                        <div className="mb-6 p-4 bg-muted/30 border border-border rounded-lg">
+                                            <div className="flex items-center justify-between mb-3">
+                                                <div className="flex items-center gap-3">
+                                                    <div>
+                                                        <div className="text-xs text-muted-foreground uppercase tracking-wide">Quiz Progress</div>
+                                                        <div className="font-semibold text-base">{categories[quizSubStep]?.name}</div>
+                                                    </div>
+                                                </div>
+                                                <div className="text-right">
+                                                    <div className="text-xs text-muted-foreground">Category</div>
+                                                    <div className="font-semibold">{quizSubStep + 1} / {categories.length}</div>
+                                                </div>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                {categories.map((_, index) => (
+                                                    <div
+                                                        key={index}
+                                                        className={`h-2 flex-1 rounded transition-all ${
+                                                            index === quizSubStep 
+                                                                ? 'bg-primary' 
+                                                                : index < quizSubStep 
+                                                                    ? 'bg-primary/60' 
+                                                                    : 'bg-muted'
+                                                        }`}
+                                                    />
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <QuizQuestions category={categories[quizSubStep]} />
+                                    </div>
                                 )}
-                                {currentStep === categories.length + 1 && (
+                                {currentStep === 2 && (
                                     <div className="space-y-6">
                                         <h2 className="text-xl font-semibold">Review Your Answers</h2>
                                         <Summary />

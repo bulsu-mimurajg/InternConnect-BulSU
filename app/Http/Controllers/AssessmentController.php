@@ -94,8 +94,12 @@ class AssessmentController extends Controller
             return redirect()->back()->withErrors(['error' => 'No current Deadline or Deadline is expired. You cannot submit assessments at this time.']);
         }
 
-        // Get all questions from database to build dynamic validation rules
-        $questions = Question::with('subcategory')->where('is_active', true)->get();
+        // Get all quiz questions from database to build dynamic validation rules
+        // Only validate quiz questions since the new form structure only uses quiz questions
+        $questions = Question::with(['subcategory.category'])
+            ->where('is_active', true)
+            ->where('question_type', 'quiz')
+            ->get();
         $additionalInfos = AdditionalInfo::where('is_active', true)->get();
 
         // Initialize validation rules array
@@ -104,7 +108,10 @@ class AssessmentController extends Controller
         // Add validation rules for each question
         foreach ($questions as $question) {
             $subcategory = $question->subcategory;
-            $fieldName = strtolower(str_replace(['+', '/', ' ', '-'], ['plus', '_', '_', '_'], $subcategory->subcategory_name)) . '_' . $question->id;
+            $category = $subcategory->category;
+            
+            // Use category name instead of subcategory name to match frontend
+            $fieldName = strtolower(str_replace(['+', '/', ' ', '-'], ['_', '_', '_', '_'], $category->category_name)) . '_' . $question->id;
             
             // Different validation based on question type
             if ($question->question_type === 'quiz') {
@@ -177,7 +184,10 @@ class AssessmentController extends Controller
 
             foreach ($questions as $question) {
                 $subcategory = $question->subcategory;
-                $fieldName = strtolower(str_replace(['+', '/', ' ', '-'], ['plus', '_', '_', '_'], $subcategory->subcategory_name)) . '_' . $question->id;
+                $category = $subcategory->category;
+                
+                // Use category name instead of subcategory name to match frontend
+                $fieldName = strtolower(str_replace(['+', '/', ' ', '-'], ['_', '_', '_', '_'], $category->category_name)) . '_' . $question->id;
 
                 if ($request->has($fieldName)) {
                     $response = $request->input($fieldName);

@@ -141,7 +141,7 @@ export default function QuizQuestions({ category }: QuizQuestionsProps) {
                                     control={control}
                                     name={fieldName}
                                     render={({ field }) => (
-                                        <FormItem className="my-6 space-y-4">
+                                        <FormItem className="my-6 space-y-4" data-field-name={fieldName}>
                                             <FormLabel className="text-base font-medium">
                                                 {question.question} <span className="text-red-500">*</span>
                                             </FormLabel>

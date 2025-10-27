@@ -125,6 +125,12 @@ class DefenseFlowHte extends Seeder
                 'status' => 'verified',
                 'password' => bcrypt('password'),
             ],
+            [
+                'username' => 'hte',
+                'email' => 'hte@example.com',
+                'status' => 'verified',
+                'password' => bcrypt('password'),
+            ],
         ];
 
         foreach ($hteUsers as $userData) {
@@ -161,6 +167,18 @@ class DefenseFlowHte extends Seeder
                 'cperson_contactnum' => '+1-555-0101',
                 'is_active' => true,
                 'is_submit' => true,
+            ],
+            [
+                'user_id' => User::where('username', 'hte')->first()->id,
+                'company_name' => 'HTE Solutions',
+                'company_address' => '123 Innovation Drive, HTE City, HTE 12345',
+                'company_email' => 'hr@hte.com',
+                'cperson_fname' => 'HTE',
+                'cperson_lname' => 'HTE',
+                'cperson_position' => 'HTE Manager',
+                'cperson_contactnum' => '+1-555-0101',
+                'is_active' => true,
+                'is_submit' => false,
             ],
         ];
 
