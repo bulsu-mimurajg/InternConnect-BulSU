@@ -47,7 +47,10 @@ class DatabaseSeeder extends Seeder
 
         // Student::factory()->count(20)->create();
 
-        $this->call(CategorySeeder::class);
+        // Seed categories and subcategories only; student assessment questions are seeded separately
+        $this->call(CategoryOnlySeeder::class);
+        // Seed HTE assessment criteria questions (Likert scale)
+        $this->call(HTEAssessmentSeeder::class);
         $this->call(SectionSeeder::class);
 
         // Create student record for clairo after sections are seeded

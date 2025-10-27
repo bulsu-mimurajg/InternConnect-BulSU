@@ -61,6 +61,7 @@ const roleBasedNav: Record<string, { main: NavItem[]; groups?: NavGroup[]; foote
                         subNav: [
                             { title: 'Additional Info Tab', href: '/forms/additional-info' },
                             { title: 'Student Assessment', href: '/forms/assessment' },
+                            { title: 'HTE Criteria', href: '/forms/hte-criteria' },
                         ],
                     },
                 ],

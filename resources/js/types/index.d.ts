@@ -100,12 +100,21 @@ export interface question {
     access: 'Student' | 'HTE';
 }
 
+export interface Answer {
+    answer_text: string;
+    is_correct: boolean;
+    display_order: number;
+}
+
 export interface Question {
     id: number;
     question: string;
     access: 'Student' | 'HTE';
     is_active: boolean;
     subcategory_id: number;
+    question_type?: string;
+    points?: number;
+    answers?: Answer[];
     subcategory: {
         id: number;
         subcategory_name: string;

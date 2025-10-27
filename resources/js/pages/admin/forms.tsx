@@ -14,7 +14,7 @@ import { getRowNumber } from '@/lib/pagination-utils';
 import { FileTextIcon, PlusIcon, EditIcon, ArchiveIcon, RotateCcwIcon, SearchIcon, FilterIcon, ArrowUpDownIcon, Archive, Eye, Trash2 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import AppLayout from '@/layouts/app-layout';
-import { type BreadcrumbItem, type Question, type Category, type SubCategory } from '@/types';
+import { type BreadcrumbItem, type Question, type Category, type SubCategory, type Answer } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -83,16 +83,22 @@ export default function FormsPage({ questions, categories, subcategories, filter
 
 
 
-    const { data, setData, post, put, patch, processing, errors, reset } = useForm({
-        question: '',
-        question_type: 'multiple_choice',
-        points: 1,
-        subcategory_id: '',
-        answers: [
-            { answer_text: '', is_correct: false, display_order: 1 },
-            { answer_text: '', is_correct: false, display_order: 2 },
-        ],
-    });
+    const { data, setData, post, put, patch, processing, errors, reset } = useForm<{
+        question: string;
+        question_type: string;
+        points: number;
+        subcategory_id: string;
+        answers: Answer[];
+    }>({
+         question: '',
+         question_type: 'multiple_choice',
+         points: 1,
+         subcategory_id: '',
+         answers: [
+             { answer_text: '', is_correct: false, display_order: 1 },
+             { answer_text: '', is_correct: false, display_order: 2 },
+         ],
+     });
 
     // Filter questions based on archive status
     const filteredQuestions = questions.filter(question =>
@@ -102,13 +108,13 @@ export default function FormsPage({ questions, categories, subcategories, filter
     // Apply additional filters (search, category, subcategory)
     const applyAdditionalFilters = useCallback(() => {
         return filteredQuestions.filter(question => {
-            const matchesSearch = !searchTerm || 
+            const matchesSearch = !searchTerm ||
                 question.question.toLowerCase().includes(searchTerm.toLowerCase());
-            const matchesCategory = !filterCategory || 
+            const matchesCategory = !filterCategory ||
                 question.subcategory.category.id.toString() === filterCategory;
-            const matchesSubcategory = !filterSubcategory || 
+            const matchesSubcategory = !filterSubcategory ||
                 question.subcategory.id.toString() === filterSubcategory;
-            
+
             return matchesSearch && matchesCategory && matchesSubcategory;
         });
     }, [filteredQuestions, searchTerm, filterCategory, filterSubcategory]);
@@ -116,7 +122,7 @@ export default function FormsPage({ questions, categories, subcategories, filter
     const finalFilteredQuestions = applyAdditionalFilters();
 
     // Create a stable reset trigger
-    const resetTrigger = useMemo(() => 
+    const resetTrigger = useMemo(() =>
         `${searchTerm}-${filterCategory}-${filterSubcategory}-${showArchived}`,
         [searchTerm, filterCategory, filterSubcategory, showArchived]
     );
@@ -200,6 +206,13 @@ export default function FormsPage({ questions, categories, subcategories, filter
         setData({
             question: question.question,
             subcategory_id: question.subcategory_id.toString(),
+            question_type: question.question_type || 'multiple_choice',
+            points: question.points ?? 1,
+            answers: (question.answers || []).map((a: any) => ({
+                answer_text: a.answer_text || '',
+                is_correct: !!a.is_correct,
+                display_order: a.display_order ?? 0,
+            })),
         });
 
         // Set the category and subcategories
@@ -244,14 +257,14 @@ export default function FormsPage({ questions, categories, subcategories, filter
 
     // Check if forms management is restricted due to deadlines
     const isFormsManagementRestricted = useMemo(() => {
-        return deadlineStatus?.restrictions.some(restriction => 
+        return deadlineStatus?.restrictions.some(restriction =>
             restriction.affected_functionality.includes('forms_management')
         ) || false;
     }, [deadlineStatus]);
 
     // Get restriction message
     const restrictionMessage = useMemo(() => {
-        const restriction = deadlineStatus?.restrictions.find(restriction => 
+        const restriction = deadlineStatus?.restrictions.find(restriction =>
             restriction.affected_functionality.includes('forms_management')
         );
         return restriction?.message || '';
@@ -303,8 +316,8 @@ export default function FormsPage({ questions, categories, subcategories, filter
                         </p>
                     </div>
                     <div className="flex gap-2">
-                        <Button 
-                            variant="outline" 
+                        <Button
+                            variant="outline"
                             size="default"
                             onClick={() => setShowFilters(!showFilters)}
                         >
@@ -457,7 +470,7 @@ export default function FormsPage({ questions, categories, subcategories, filter
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <Label htmlFor="question_type">Question Type</Label>
-                                        <Select value={data.question_type} onValueChange={(value) => {
+                                        <Select value={data.question_type || undefined} onValueChange={(value) => {
                                             setData('question_type', value);
                                             // Reset answers when changing type
                                             if (value === 'true_false') {
@@ -526,17 +539,18 @@ export default function FormsPage({ questions, categories, subcategories, filter
                                                                 setData('answers', newAnswers);
                                                             }}
                                                             placeholder={`Answer ${index + 1}`}
-                                                            className={errors[`answers.${index}.answer_text`] ? 'border-red-500' : ''}
+                                                            className={errors[("answers." + index + ".answer_text") as keyof typeof errors] ? 'border-red-500' : ''}
                                                         />
                                                     </div>
                                                     <div className="flex items-center gap-2 px-3">
                                                         <Checkbox
                                                             id={`correct_${index}`}
-                                                            checked={answer.is_correct}
-                                                            onCheckedChange={(checked) => {
-                                                                const newAnswers = [...data.answers];
-                                                                newAnswers[index].is_correct = checked === true;
-                                                                setData('answers', newAnswers);
+                                                            checked={!!answer.is_correct}
+                                                            onCheckedChange={(checked: boolean | 'indeterminate') => {
+                                                                const updatedAnswers = data.answers.map((ans, i) =>
+                                                                    i === index ? { ...ans, is_correct: checked === true } : ans
+                                                                );
+                                                                setData('answers', updatedAnswers);
                                                             }}
                                                         />
                                                         <Label htmlFor={`correct_${index}`} className="text-sm">Correct</Label>
@@ -562,10 +576,10 @@ export default function FormsPage({ questions, categories, subcategories, filter
                                                 type="button"
                                                 variant="outline"
                                                 onClick={() => {
-                                                    setData('answers', [...data.answers, { 
-                                                        answer_text: '', 
-                                                        is_correct: false, 
-                                                        display_order: data.answers.length + 1 
+                                                    setData('answers', [...data.answers, {
+                                                        answer_text: '',
+                                                        is_correct: false,
+                                                        display_order: data.answers.length + 1
                                                     }]);
                                                 }}
                                                 className="w-full"

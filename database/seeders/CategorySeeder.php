@@ -12,43 +12,6 @@ class CategorySeeder extends Seeder
     public function run(): void
     {
         $categories = [
-            'Language Proficiency' => [
-                'Java' => [
-                    'What is your proficiency level in Java?',
-                    'Have you worked with Java frameworks such as Spring?',
-                    'Can you write Java programs following OOP principles?'
-                ],
-                'C++' => [
-                    'Are you comfortable with C++ memory management?',
-                    'Have you used STL in C++ programming?',
-                    'Can you develop applications using C++ classes and objects?'
-                ],
-                'Python' => [
-                    'Do you have experience with Python scripting?',
-                    'Have you worked with Python frameworks like Django or Flask?',
-                    'Can you automate tasks using Python?'
-                ],
-                'HTML/CSS' => [
-                    'Are you proficient in writing semantic HTML?',
-                    'Can you style websites effectively using CSS?',
-                    'Have you worked with CSS preprocessors like SASS or LESS?'
-                ],
-                'JavaScript' => [
-                    'Do you have experience with vanilla JavaScript?',
-                    'Have you used any JS frameworks like React or Angular?',
-                    'Can you manipulate the DOM with JavaScript?'
-                ],
-                'PHP' => [
-                    'Are you familiar with PHP syntax and features?',
-                    'Have you developed web applications using PHP?',
-                    'Can you work with PHP frameworks such as Laravel or CodeIgniter?'
-                ],
-                'SQL' => [
-                    'Can you write complex SQL queries?',
-                    'Have you worked with database normalization?',
-                    'Do you know how to optimize SQL queries for performance?'
-                ],
-            ],
             'Technical Skill' => [
                 'Database Management' => [
                     'Designing Databases',

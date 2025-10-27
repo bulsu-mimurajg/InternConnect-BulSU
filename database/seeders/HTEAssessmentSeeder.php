@@ -4,7 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Category;
 use App\Models\SubCategory;
-use App\Models\Question;
+use App\Models\HTEQuestion;
 use Illuminate\Database\Seeder;
 
 class HTEAssessmentSeeder extends Seeder
@@ -23,7 +23,7 @@ class HTEAssessmentSeeder extends Seeder
         $softSkill = Category::firstOrCreate(['category_name' => 'Soft Skill']);
 
         // TECHNICAL SKILLS ASSESSMENTS
-        
+
         // 1. General Programming Concepts (15 Points)
         $this->createSubcategoryWithQuestions(
             $technicalSkill,
@@ -338,15 +338,13 @@ class HTEAssessmentSeeder extends Seeder
 
         // Create questions if they don't exist
         foreach ($questions as $questionText) {
-            Question::firstOrCreate(
+            HTEQuestion::firstOrCreate(
                 [
                     'question' => $questionText,
                     'subcategory_id' => $subcategory->id,
                 ],
                 [
                     'is_active' => true,
-                    'question_type' => null, // Likert scale questions don't have a type
-                    'points' => null, // Likert scale uses 1-5 rating, not points
                 ]
             );
         }

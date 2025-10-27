@@ -98,6 +98,15 @@ Route::middleware(['auth', 'verified', 'role_redirect:admin'])->group(function (
     Route::patch('forms/additional-info/{additionalInfo}/restore', [App\Http\Controllers\AdditionalInfoController::class, 'restore'])->middleware('deadline_restrictions:additional_info_restore')->name('admin.additional-info.restore');
     Route::get('api/additional-info/active', [App\Http\Controllers\AdditionalInfoController::class, 'getActive'])->name('api.additional-info.active');
 
+    // HTE Criteria Management routes
+    Route::get('forms/hte-criteria', [App\Http\Controllers\HTECriteriaController::class, 'index'])->name('admin.hte-criteria');
+    Route::post('forms/hte-criteria', [App\Http\Controllers\HTECriteriaController::class, 'store'])->name('admin.hte-criteria.store');
+    Route::put('forms/hte-criteria/{hteQuestion}', [App\Http\Controllers\HTECriteriaController::class, 'update'])->name('admin.hte-criteria.update');
+    Route::patch('forms/hte-criteria/{hteQuestion}/archive', [App\Http\Controllers\HTECriteriaController::class, 'archive'])->name('admin.hte-criteria.archive');
+    Route::patch('forms/hte-criteria/{hteQuestion}/restore', [App\Http\Controllers\HTECriteriaController::class, 'restore'])->name('admin.hte-criteria.restore');
+    Route::get('forms/hte-criteria/categories/{category}/subcategories', [App\Http\Controllers\HTECriteriaController::class, 'getSubcategories'])->name('admin.hte-criteria.categories.subcategories');
+
+
     Route::get('student', function () {
         return redirect()->route('student-list');
     })->name('student');
