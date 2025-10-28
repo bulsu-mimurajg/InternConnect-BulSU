@@ -85,12 +85,14 @@ export default function FormsPage({ questions, categories, subcategories, filter
 
     const { data, setData, post, put, patch, processing, errors, reset } = useForm<{
         question: string;
+        code_snippet: string;
         question_type: string;
         points: number;
         subcategory_id: string;
         answers: Answer[];
     }>({
          question: '',
+         code_snippet: '',
          question_type: 'multiple_choice',
          points: 1,
          subcategory_id: '',
@@ -205,6 +207,7 @@ export default function FormsPage({ questions, categories, subcategories, filter
         setEditingQuestion(question);
         setData({
             question: question.question,
+            code_snippet: question.code_snippet || '',
             subcategory_id: question.subcategory_id.toString(),
             question_type: question.question_type || 'multiple_choice',
             points: question.points ?? 1,
@@ -464,6 +467,26 @@ export default function FormsPage({ questions, categories, subcategories, filter
                                     />
                                     {errors.question && (
                                         <p className="text-sm text-red-500">{errors.question}</p>
+                                    )}
+                                </div>
+
+                                {/* Code Snippet Field */}
+                                <div className="space-y-2">
+                                    <Label htmlFor="code_snippet">Code Snippet (Optional)</Label>
+                                    <p className="text-sm text-muted-foreground">Add code that will be displayed in a formatted container for students</p>
+                                    <Textarea
+                                        id="code_snippet"
+                                        value={data.code_snippet}
+                                        onChange={(e) => setData('code_snippet', e.target.value)}
+                                        className={`font-mono text-sm ${errors.code_snippet ? 'border-red-500' : ''}`}
+                                        placeholder="// Enter code snippet here...
+function example() {
+    return 'Hello World';
+}"
+                                        rows={6}
+                                    />
+                                    {errors.code_snippet && (
+                                        <p className="text-sm text-red-500">{errors.code_snippet}</p>
                                     )}
                                 </div>
 

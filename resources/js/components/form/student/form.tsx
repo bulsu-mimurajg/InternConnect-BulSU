@@ -3,7 +3,6 @@ import PersonalInfo from '@/components/form/student/personal-info';
 import SoftSkill from '@/components/form/student/soft-skill';
 import Summary from '@/components/form/student/summary';
 import TechnicalSkill from '@/components/form/student/technical-skill';
-import LanguageProficiency from '@/components/form/student/language-proficiency';
 import { Button } from '@/components/ui/button';
 import { Form } from '@/components/ui/form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -29,11 +28,9 @@ export default function StudentForm() {
 
     // Dynamic field tracking
     const [dynamicFields, setDynamicFields] = useState<{
-        languageProficiency: string[];
         technicalSkills: string[];
         softSkills: string[];
     }>({
-        languageProficiency: [],
         technicalSkills: [],
         softSkills: [],
     });
@@ -51,20 +48,15 @@ export default function StudentForm() {
         },
         {
             id: 'Step 2',
-            name: 'Language Proficiency',
-            fields: [...dynamicFields.languageProficiency],
-        },
-        {
-            id: 'Step 3',
             name: 'Technical Skills',
             fields: [...dynamicFields.technicalSkills],
         },
         {
-            id: 'Step 4',
+            id: 'Step 3',
             name: 'Soft Skills',
             fields: [...dynamicFields.softSkills],
         },
-        { id: 'Step 5', name: 'Submission' },
+        { id: 'Step 4', name: 'Submission' },
     ], [additionalInfoFields, dynamicFields]);
     // Create dynamic validation schema
     const createFormSchema = useCallback(() => {
@@ -73,12 +65,6 @@ export default function StudentForm() {
         const additionalInfoSchema: Record<string, z.ZodTypeAny> = {};
         additionalInfoFields.forEach(field => {
             additionalInfoSchema[field] = z.string().optional().refine(val => val && val.trim() !== '', 'Question is required.');
-        });
-
-        // Add dynamic fields for language proficiency
-        const languageSchema: Record<string, z.ZodTypeAny> = {};
-        dynamicFields.languageProficiency.forEach(field => {
-            languageSchema[field] = z.string().min(1, 'Please select a rating.');
         });
 
         // Add dynamic fields for technical skills
@@ -96,7 +82,6 @@ export default function StudentForm() {
         // Ensure we always have at least one field in the schema
         const schemaFields = {
             ...additionalInfoSchema,
-            ...languageSchema,
             ...technicalSchema,
             ...softSchema,
         };
@@ -117,11 +102,6 @@ export default function StudentForm() {
 
         // Initialize additional info fields
         additionalInfoFields.forEach(field => {
-            defaultValues[field] = '';
-        });
-
-        // Initialize language proficiency fields
-        dynamicFields.languageProficiency.forEach(field => {
             defaultValues[field] = '';
         });
 
@@ -257,10 +237,6 @@ export default function StudentForm() {
     };
 
     // Memoize setter functions to prevent infinite loops
-    const setLanguageProficiencyFields = useCallback((fields: string[]) => {
-        setDynamicFields(prev => ({ ...prev, languageProficiency: fields }));
-    }, []);
-
     const setTechnicalSkillFields = useCallback((fields: string[]) => {
         setDynamicFields(prev => ({ ...prev, technicalSkills: fields }));
     }, []);
@@ -271,7 +247,6 @@ export default function StudentForm() {
 
     return (
         <FormFieldsProvider
-            setLanguageProficiencyFields={setLanguageProficiencyFields}
             setTechnicalSkillFields={setTechnicalSkillFields}
             setSoftSkillFields={setSoftSkillFields}
             onNavigateToStep={navigateToStep}
@@ -282,16 +257,12 @@ export default function StudentForm() {
             <div className="relative min-h-[100vh] flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 md:min-h-min dark:border-sidebar-border">
                 <div className="flex flex-col h-full">
                     <div className="flex-1 p-4 overflow-y-auto">
-                        <div className="mb-4 rounded-md border border-border bg-muted/50 p-3 text-sm text-muted-foreground">
-                            Answer honestly — your responses reflect your competency. Inaccurate answers may reduce the quality of matches and recommendations the system can provide.
-                        </div>
                         <Form {...form}>
                             <form onSubmit={form.handleSubmit(onSubmit)}>
                                 {currentStep === 0 && <PersonalInfo />}
-                                {currentStep === 1 && <LanguageProficiency />}
-                                {currentStep === 2 && <TechnicalSkill />}
-                                {currentStep === 3 && <SoftSkill />}
-                                {currentStep === 4 && (
+                                {currentStep === 1 && <TechnicalSkill />}
+                                {currentStep === 2 && <SoftSkill />}
+                                {currentStep === 3 && (
                                     <div className="space-y-6">
                                         <h2 className="text-xl font-semibold">Review Your Answers</h2>
                                         <Summary />

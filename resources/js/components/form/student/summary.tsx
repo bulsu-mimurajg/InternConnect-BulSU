@@ -7,6 +7,12 @@ interface Skill {
     label: string;
     subcategory_id: number;
     question_id: number;
+    question_type?: string;
+    answers?: Array<{
+        id: number;
+        text: string;
+        display_order: number;
+    }>;
 }
 
 interface Section {
@@ -37,7 +43,7 @@ interface PersonalSection {
 
 interface SkillSection {
     title: string;
-    type: 'language' | 'technical' | 'soft';
+    type: 'technical' | 'soft';
     sections: Section[];
 }
 
@@ -66,13 +72,11 @@ export default function Summary() {
                     credentials: 'same-origin',
                 };
 
-                const [languageResponse, technicalResponse, softResponse] = await Promise.all([
-                    fetch('/assessment/language-proficiency', fetchOptions),
+                const [technicalResponse, softResponse] = await Promise.all([
                     fetch('/assessment/technical-skills', fetchOptions),
                     fetch('/assessment/soft-skills', fetchOptions)
                 ]);
 
-                const languageData = await languageResponse.json();
                 const technicalData = await technicalResponse.json();
                 const softData = await softResponse.json();
 
@@ -87,11 +91,6 @@ export default function Summary() {
                         title: 'Additional Information',
                         type: 'personal' as const,
                         fields: additionalInfoFields
-                    },
-                    {
-                        title: 'Language Proficiency',
-                        type: 'language' as const,
-                        sections: languageData as Section[]
                     },
                     {
                         title: 'Technical Skills',
@@ -135,14 +134,32 @@ export default function Summary() {
                 <div key={subSection.title} className="border-t pt-3">
                     <h4 className="font-semibold text-gray-800 mb-2">{subSection.title}</h4>
                     <div className="space-y-2">
-                        {subSection.skills.map((skill: Skill) => (
-                            <div key={skill.name} className="flex justify-between items-center text-sm">
-                                <span className="text-gray-600 truncate pr-2">{skill.label}</span>
-                                <span className="text-gray-900 font-medium">
-                                    {formData[skill.name] ? formData[skill.name] : 'Not answered'}
-                                </span>
-                            </div>
-                        ))}
+                        {subSection.skills.map((skill: Skill) => {
+                            const selectedValue = formData[skill.name];
+                            let displayValue = 'Not answered';
+
+                            if (selectedValue) {
+                                // If skill has answers, find the matching answer text
+                                if (skill.answers && skill.answers.length > 0) {
+                                    const selectedAnswer = skill.answers.find(
+                                        answer => answer.id.toString() === selectedValue.toString()
+                                    );
+                                    displayValue = selectedAnswer ? selectedAnswer.text : selectedValue;
+                                } else {
+                                    // Direct numeric value (old Likert scale)
+                                    displayValue = selectedValue;
+                                }
+                            }
+
+                            return (
+                                <div key={skill.name} className="flex justify-between items-center text-sm">
+                                    <span className="text-gray-600 truncate pr-2">{skill.label}</span>
+                                    <span className="text-gray-900 font-medium">
+                                        {displayValue}
+                                    </span>
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
             ))}

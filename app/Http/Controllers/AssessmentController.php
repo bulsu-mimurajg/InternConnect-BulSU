@@ -73,7 +73,9 @@ class AssessmentController extends Controller
         foreach ($questions as $question) {
             $subcategory = $question->subcategory;
             $fieldName = strtolower(str_replace(['+', '/', ' ', '-'], ['plus', '_', '_', '_'], $subcategory->subcategory_name)) . '_' . $question->id;
-            $validationRules[$fieldName] = 'required|integer|min:1|max:5';
+            // Changed from max:5 to accept answer IDs (which can be larger than 5)
+            // The backend will convert answer IDs to scores during processing
+            $validationRules[$fieldName] = 'required|integer|min:1';
         }
 
         // Add validation rules for additional info fields
@@ -141,6 +143,42 @@ class AssessmentController extends Controller
 
                 if ($request->has($fieldName)) {
                     $response = $request->input($fieldName);
+                    $scoreValue = $response; // Default to treating response as numeric
+                    $selectedAnswerId = null;
+                    $isCorrect = false;
+                    $pointsEarned = 0;
+
+                    // Check if response is an answer ID (non-numeric or larger than typical Likert range)
+                    if (!is_numeric($response) || (is_numeric($response) && intval($response) > 10)) {
+                        // Response is likely an answer ID, look it up
+                        $answer = \App\Models\Answer::find(intval($response));
+
+                        if ($answer) {
+                            $selectedAnswerId = $answer->id;
+                            $isCorrect = $answer->is_correct;
+                            $pointsEarned = $isCorrect ? ($question->points ?? 1) : 0;
+
+                            // Try to extract numeric score from answer text (e.g., "1 - Novice" -> 1)
+                            if (preg_match('/^(\d+)/', $answer->answer_text, $matches)) {
+                                $scoreValue = intval($matches[1]);
+                            } else {
+                                // Use display_order as score if no numeric prefix found
+                                $scoreValue = $answer->display_order;
+                            }
+                        }
+                    }
+
+                    // Create QuizAttempt record for this question
+                    \App\Models\QuizAttempt::create([
+                        'student_id' => $student->id,
+                        'question_id' => $question->id,
+                        'student_answer' => is_string($response) ? $response : strval($response),
+                        'selected_answer_id' => $selectedAnswerId,
+                        'is_correct' => $isCorrect,
+                        'points_earned' => $pointsEarned,
+                        'submitted_at' => now(),
+                        'attempt_number' => 1,
+                    ]);
 
                     // Store in assessment data
                     $assessmentData['questions'][] = [
@@ -148,23 +186,47 @@ class AssessmentController extends Controller
                         'subcategory_id' => $subcategory->id,
                         'category_id' => $subcategory->category_id,
                         'response' => $response,
+                        'score_value' => $scoreValue,
                         'question_text' => $question->question,
                         'subcategory_name' => $subcategory->subcategory_name,
                         'category_name' => $subcategory->category->category_name,
                     ];
 
-                    // Collect scores for mean calculation
+                    // Collect points earned and total points per subcategory
                     if (!isset($subcategoryScores[$subcategory->id])) {
-                        $subcategoryScores[$subcategory->id] = [];
+                        $subcategoryScores[$subcategory->id] = [
+                            'points_earned' => 0,
+                            'total_points' => 0,
+                            'question_count' => 0
+                        ];
                     }
-                    $subcategoryScores[$subcategory->id][] = $response;
+
+                    // Add points earned (based on correctness, not Likert scale)
+                    $subcategoryScores[$subcategory->id]['points_earned'] += $pointsEarned;
+                    $subcategoryScores[$subcategory->id]['total_points'] += ($question->points ?? 1);
+                    $subcategoryScores[$subcategory->id]['question_count']++;
                 }
             }
 
-            // Compute mean scores for each subcategory and store in student_score table
+            // Compute percentage scores for each subcategory and store in student_score table
             \Log::info('Computing scores', ['subcategory_count' => count($subcategoryScores)]);
-            foreach ($subcategoryScores as $subcategoryId => $scores) {
-                $meanScore = (array_sum($scores) / count($scores));
+            foreach ($subcategoryScores as $subcategoryId => $scoreData) {
+                // Calculate percentage: (points_earned / total_points) * 100
+                // Then scale to 0-5 for consistency with HTE matching system
+                $percentage = $scoreData['total_points'] > 0
+                    ? ($scoreData['points_earned'] / $scoreData['total_points']) * 100
+                    : 0;
+
+                // Convert percentage to 0-5 scale (0% = 0, 100% = 5)
+                $scaledScore = ($percentage / 100) * 5;
+
+                \Log::info('Subcategory score calculated', [
+                    'subcategory_id' => $subcategoryId,
+                    'points_earned' => $scoreData['points_earned'],
+                    'total_points' => $scoreData['total_points'],
+                    'percentage' => $percentage,
+                    'scaled_score' => $scaledScore
+                ]);
 
                 // Update or create student score record
                 StudentScore::updateOrCreate(
@@ -173,7 +235,7 @@ class AssessmentController extends Controller
                         'sub_category_id' => $subcategoryId,
                     ],
                     [
-                        'score' => $meanScore,
+                        'score' => $scaledScore,
                     ]
                 );
             }
@@ -182,10 +244,10 @@ class AssessmentController extends Controller
             \Log::info('Processing additional info', ['additional_info_count' => $additionalInfos->count()]);
             foreach ($additionalInfos as $additionalInfo) {
                 $fieldName = strtolower(str_replace([' ', '-'], ['_', '_'], $additionalInfo->info_name));
-                
+
                 if ($request->has($fieldName)) {
                     $infoValue = $request->input($fieldName);
-                    
+
                     // Store in database
                     StudentAdditionalInfo::updateOrCreate(
                         [
@@ -196,7 +258,7 @@ class AssessmentController extends Controller
                             'info' => $infoValue,
                         ]
                     );
-                    
+
                     // Add to assessment data
                     $assessmentData['additional_info'][] = [
                         'info_name' => $additionalInfo->info_name,
@@ -299,7 +361,7 @@ class AssessmentController extends Controller
             }
 
             $subCategories = SubCategory::with(['questions' => function ($query) {
-                $query->where('is_active', true);
+                $query->where('is_active', true)->with('answers');
             }])->where('category_id', $technicalCategory->id)->get();
 
             $technicalSkillSections = [];
@@ -311,8 +373,17 @@ class AssessmentController extends Controller
                         $sectionSkills[] = [
                             'name' => strtolower(str_replace(['+', '/', ' ', '-'], ['plus', '_', '_', '_'], $subCategory->subcategory_name)) . '_' . $question->id,
                             'label' => $question->question,
+                            'code_snippet' => $question->code_snippet,
                             'subcategory_id' => $subCategory->id,
-                            'question_id' => $question->id
+                            'question_id' => $question->id,
+                            'question_type' => $question->question_type,
+                            'answers' => $question->answers->map(function($answer) {
+                                return [
+                                    'id' => $answer->id,
+                                    'text' => $answer->answer_text,
+                                    'display_order' => $answer->display_order,
+                                ];
+                            })
                         ];
                     }
 
@@ -343,7 +414,7 @@ class AssessmentController extends Controller
             }
 
             $subCategories = SubCategory::with(['questions' => function ($query) {
-                $query->where('is_active', true);
+                $query->where('is_active', true)->with('answers');
             }])->where('category_id', $softCategory->id)->get();
 
             $softSkillSections = [];
@@ -355,8 +426,17 @@ class AssessmentController extends Controller
                         $sectionSkills[] = [
                             'name' => strtolower(str_replace(['+', '/', ' ', '-'], ['plus', '_', '_', '_'], $subCategory->subcategory_name)) . '_' . $question->id,
                             'label' => $question->question,
+                            'code_snippet' => $question->code_snippet,
                             'subcategory_id' => $subCategory->id,
-                            'question_id' => $question->id
+                            'question_id' => $question->id,
+                            'question_type' => $question->question_type,
+                            'answers' => $question->answers->map(function($answer) {
+                                return [
+                                    'id' => $answer->id,
+                                    'text' => $answer->answer_text,
+                                    'display_order' => $answer->display_order,
+                                ];
+                            })
                         ];
                     }
 
@@ -399,7 +479,7 @@ class AssessmentController extends Controller
             $studentAdditionalInfos = StudentAdditionalInfo::with('additionalInfo')
                 ->where('student_id', $student->id)
                 ->get();
-            
+
             foreach ($studentAdditionalInfos as $studentInfo) {
                 $additionalInfoData[] = [
                     'info_name' => $studentInfo->additionalInfo->info_name,
@@ -510,20 +590,20 @@ class AssessmentController extends Controller
                 // Debug: Check if student has scores
                 $studentScores = $student->scores()->count();
                 $activeInternships = \App\Models\Internship::where('is_active', true)->where('slot_count', '>', 0)->count();
-                
+
                 \Log::info('Student assessment debug', [
                     'student_id' => $student->id,
                     'has_submitted' => $hasSubmitted,
                     'student_scores_count' => $studentScores,
                     'active_internships_count' => $activeInternships
                 ]);
-                
+
                 $matchingService = new MatchingService();
                 // Calculate and store all compatibility scores for this student
                 $matchingService->calculateAndStoreCompatibilityScores($student);
                 // Get top 5 for dashboard display
                 $possibleInternships = $matchingService->getTopCompatibleInternships($student, 5);
-                
+
                 // Fallback: If no matches found, show active internships
                 if ($possibleInternships->isEmpty()) {
                     \Log::info('No matches found, showing fallback internships');
@@ -541,7 +621,7 @@ class AssessmentController extends Controller
                         });
                     $possibleInternships = $fallbackInternships;
                 }
-                
+
                 // Debug logging
                 \Log::info('Possible internships for student ' . $student->id, [
                     'count' => $possibleInternships->count(),
@@ -564,7 +644,7 @@ class AssessmentController extends Controller
                 $studentAdditionalInfos = StudentAdditionalInfo::with('additionalInfo')
                     ->where('student_id', $student->id)
                     ->get();
-                
+
                 foreach ($studentAdditionalInfos as $studentInfo) {
                     $additionalInfoData[] = [
                         'info_name' => $studentInfo->additionalInfo->info_name,
@@ -628,7 +708,7 @@ class AssessmentController extends Controller
         try {
             $notificationService = new NotificationService();
             $notificationService->notifyAdminsForStudentAssessmentCompletion($student);
-            
+
             \Log::info('Admin notification sent for student assessment completion', [
                 'student_id' => $student->id,
                 'student_name' => "{$student->first_name} {$student->last_name}"
@@ -638,6 +718,110 @@ class AssessmentController extends Controller
                 'student_id' => $student->id,
                 'error' => $e->getMessage()
             ]);
+        }
+    }
+
+    /**
+     * Get student's assessment responses with questions and answers
+     */
+    public function getAssessmentResponses()
+    {
+        try {
+            $user = Auth::user();
+            $student = Student::where('user_id', $user->id)->first();
+
+            if (!$student) {
+                return response()->json(['error' => 'Student not found'], 404);
+            }
+
+            if (!$student->is_submit) {
+                return response()->json(['error' => 'Assessment not submitted yet'], 404);
+            }
+
+            // Get quiz attempts with questions, answers, and categories
+            $quizAttempts = \App\Models\QuizAttempt::where('student_id', $student->id)
+                ->with([
+                    'question' => function($query) {
+                        $query->with([
+                            'answers' => function($q) {
+                                $q->orderBy('display_order');
+                            },
+                            'subcategory.category'
+                        ]);
+                    },
+                    'selectedAnswer'
+                ])
+                ->get();
+
+            // Group by category and subcategory
+            $groupedResponses = [];
+
+            foreach ($quizAttempts as $attempt) {
+                if (!$attempt->question || !$attempt->question->subcategory) {
+                    continue;
+                }
+
+                $category = $attempt->question->subcategory->category;
+                $subcategory = $attempt->question->subcategory;
+
+                $categoryName = $category->category_name;
+                $subcategoryName = $subcategory->subcategory_name;
+
+                if (!isset($groupedResponses[$categoryName])) {
+                    $groupedResponses[$categoryName] = [
+                        'category_name' => $categoryName,
+                        'subcategories' => []
+                    ];
+                }
+
+                if (!isset($groupedResponses[$categoryName]['subcategories'][$subcategoryName])) {
+                    $groupedResponses[$categoryName]['subcategories'][$subcategoryName] = [
+                        'subcategory_name' => $subcategoryName,
+                        'questions' => []
+                    ];
+                }
+
+                $groupedResponses[$categoryName]['subcategories'][$subcategoryName]['questions'][] = [
+                    'question_id' => $attempt->question->id,
+                    'question_text' => $attempt->question->question,
+                    'code_snippet' => $attempt->question->code_snippet,
+                    'question_type' => $attempt->question->question_type,
+                    'points' => $attempt->question->points,
+                    'all_answers' => $attempt->question->answers->map(function($answer) {
+                        return [
+                            'id' => $answer->id,
+                            'text' => $answer->answer_text,
+                            'is_correct' => $answer->is_correct,
+                            'display_order' => $answer->display_order,
+                        ];
+                    }),
+                    'selected_answer_id' => $attempt->selected_answer_id,
+                    'selected_answer_text' => $attempt->selectedAnswer ? $attempt->selectedAnswer->answer_text : $attempt->student_answer,
+                    'is_correct' => $attempt->is_correct,
+                    'points_earned' => $attempt->points_earned,
+                    'submitted_at' => $attempt->submitted_at,
+                ];
+            }
+
+            // Convert to indexed arrays
+            $result = [];
+            foreach ($groupedResponses as $category) {
+                $category['subcategories'] = array_values($category['subcategories']);
+                $result[] = $category;
+            }
+
+            return response()->json([
+                'student_name' => "{$student->first_name} {$student->last_name}",
+                'submitted_at' => $student->updated_at,
+                'categories' => $result
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Failed to retrieve assessment responses', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json(['error' => 'Failed to retrieve assessment responses'], 500);
         }
     }
 }

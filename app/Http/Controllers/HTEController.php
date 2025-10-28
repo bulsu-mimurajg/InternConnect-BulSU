@@ -295,8 +295,8 @@ class HTEController extends Controller
      */
     public function getCategoriesForCriteria()
     {
-        // Get categories with subcategories and questions, excluding 'Basic Information'
-        $categories = Category::with(['subCategories.questions' => function($query) {
+        // Get categories with subcategories and HTE questions (not student questions)
+        $categories = Category::with(['subCategories.hteQuestions' => function($query) {
             $query->where('is_active', true);
         }])
         ->where('category_name', '!=', 'Basic Information')
@@ -309,27 +309,39 @@ class HTEController extends Controller
                 'category_name' => $category->category_name,
                 'created_at' => $category->created_at,
                 'updated_at' => $category->updated_at,
-                'subCategories' => $category->subCategories->map(function($subCategory) {
-                    return [
-                        'id' => $subCategory->id,
-                        'subcategory_name' => $subCategory->subcategory_name,
-                        'category_id' => $subCategory->category_id,
-                        'created_at' => $subCategory->created_at,
-                        'updated_at' => $subCategory->updated_at,
-                        'questions' => $subCategory->questions->map(function($question) {
-                            return [
-                                'id' => $question->id,
-                                'question' => $question->question,
-                                'is_active' => (bool) $question->is_active,
-                                'subcategory_id' => $question->subcategory_id,
-                                'created_at' => $question->created_at,
-                                'updated_at' => $question->updated_at,
-                            ];
-                        })->toArray()
-                    ];
-                })->toArray()
+                'subCategories' => $category->subCategories
+                    ->filter(function($subCategory) {
+                        // Only include subcategories that have at least one HTE question
+                        return $subCategory->hteQuestions->count() > 0;
+                    })
+                    ->map(function($subCategory) {
+                        return [
+                            'id' => $subCategory->id,
+                            'subcategory_name' => $subCategory->subcategory_name,
+                            'category_id' => $subCategory->category_id,
+                            'created_at' => $subCategory->created_at,
+                            'updated_at' => $subCategory->updated_at,
+                            'questions' => $subCategory->hteQuestions->map(function($question) {
+                                return [
+                                    'id' => $question->id,
+                                    'question' => $question->question,
+                                    'is_active' => (bool) $question->is_active,
+                                    'subcategory_id' => $question->subcategory_id,
+                                    'created_at' => $question->created_at,
+                                    'updated_at' => $question->updated_at,
+                                ];
+                            })->toArray()
+                        ];
+                    })
+                    ->values() // Re-index array after filtering
+                    ->toArray()
             ];
-        });
+        })
+        ->filter(function($category) {
+            // Only include categories that have at least one subcategory with questions
+            return count($category['subCategories']) > 0;
+        })
+        ->values(); // Re-index array after filtering categories
 
         // Debug: Log the structure of the first category
         if ($transformedCategories->count() > 0) {

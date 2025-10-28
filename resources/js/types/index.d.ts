@@ -109,6 +109,7 @@ export interface Answer {
 export interface Question {
     id: number;
     question: string;
+    code_snippet?: string;
     access: 'Student' | 'HTE';
     is_active: boolean;
     subcategory_id: number;

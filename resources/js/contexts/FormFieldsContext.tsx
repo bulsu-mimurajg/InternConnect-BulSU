@@ -1,7 +1,7 @@
 import React, { createContext, useContext, ReactNode } from 'react';
 
 interface FormFieldsContextType {
-    setLanguageProficiencyFields: (fields: string[]) => void;
+    setLanguageProficiencyFields?: (fields: string[]) => void;
     setTechnicalSkillFields: (fields: string[]) => void;
     setSoftSkillFields: (fields: string[]) => void;
     unansweredFields: string[];
@@ -21,7 +21,7 @@ export const useFormFields = () => {
 
 interface FormFieldsProviderProps {
     children: ReactNode;
-    setLanguageProficiencyFields: (fields: string[]) => void;
+    setLanguageProficiencyFields?: (fields: string[]) => void;
     setTechnicalSkillFields: (fields: string[]) => void;
     setSoftSkillFields: (fields: string[]) => void;
     onNavigateToStep?: (step: number) => void;
@@ -38,7 +38,7 @@ export const FormFieldsProvider: React.FC<FormFieldsProviderProps> = ({
 
     const triggerPulseAndRedirect = React.useCallback((fields: string[], targetStep: number) => {
         setUnansweredFields(fields);
-        
+
         // Focus only on the first unanswered field
         const firstField = fields[0];
         if (firstField) {
@@ -48,7 +48,7 @@ export const FormFieldsProvider: React.FC<FormFieldsProviderProps> = ({
                     element.classList.add('animate-pulse-unanswered');
                     element.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     element.focus();
-                    
+
                     // Remove animation class after 1 pulse (1s)
                     setTimeout(() => {
                         element.classList.remove('animate-pulse-unanswered');
@@ -80,4 +80,4 @@ export const FormFieldsProvider: React.FC<FormFieldsProviderProps> = ({
             {children}
         </FormFieldsContext.Provider>
     );
-}; 
+};

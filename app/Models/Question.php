@@ -16,6 +16,7 @@ class Question extends Model
     protected $fillable = [
         'subcategory_id',
         'question',
+        'code_snippet',
         'question_type',
         'points',
         'is_active',

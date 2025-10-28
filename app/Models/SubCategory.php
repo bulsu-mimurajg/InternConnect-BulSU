@@ -22,6 +22,12 @@ class SubCategory extends Model
     {
         return $this->hasMany(Question::class, 'subcategory_id');
     }
+
+    public function hteQuestions(): HasMany
+    {
+        return $this->hasMany(HTEQuestion::class, 'subcategory_id');
+    }
+
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);

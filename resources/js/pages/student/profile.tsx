@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { RadarChart } from '@/components/charts/radar-chart';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ViewAssessmentAnswers } from '@/components/ViewAssessmentAnswers';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/react';
@@ -87,6 +88,31 @@ export default function Profile({ student, categories, additional_info = [], has
     const technicalCategory = categories.find(cat => cat.name === 'Technical Skill');
     const softCategory = categories.find(cat => cat.name === 'Soft Skill');
 
+    // Calculate raw scores and overall average
+    const calculateScores = () => {
+        let totalScore = 0;
+        let totalSubcategories = 0;
+
+        categories.forEach(category => {
+            category.subcategories.forEach(subcategory => {
+                if (subcategory.score > 0) {
+                    totalScore += subcategory.score;
+                    totalSubcategories++;
+                }
+            });
+        });
+
+        const overallAverage = totalSubcategories > 0 ? (totalScore / totalSubcategories) : 0;
+
+        return {
+            rawScore: totalScore.toFixed(2),
+            overallAverage: overallAverage.toFixed(2),
+            totalSubcategories
+        };
+    };
+
+    const scores = calculateScores();
+
     const renderBasicInformation = () => (
         <div className="space-y-6">
             <Card>
@@ -110,6 +136,28 @@ export default function Profile({ student, categories, additional_info = [], has
                                 </>
                             )}
                         </div>
+
+                        {hasSubmitted && scores.totalSubcategories > 0 && (
+                            <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
+                                <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-3">Your Scores</h4>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="text-sm font-medium text-blue-700 dark:text-blue-300">Raw Score</label>
+                                        <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">{scores.rawScore}</p>
+                                        <p className="text-xs text-blue-600 dark:text-blue-400">Total of all subcategory scores</p>
+                                    </div>
+                                    <div>
+                                        <label className="text-sm font-medium text-blue-700 dark:text-blue-300">Overall Average</label>
+                                        <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">{scores.overallAverage} / 5.00</p>
+                                        <p className="text-xs text-blue-600 dark:text-blue-400">Average across {scores.totalSubcategories} subcategories</p>
+                                    </div>
+                                </div>
+                                <div className="mt-4 pt-4 border-t border-blue-200 dark:border-blue-800">
+                                    <ViewAssessmentAnswers />
+                                </div>
+                            </div>
+                        )}
+
                         {!hasSubmitted && (
                             <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                                 <p className="text-sm text-yellow-800">

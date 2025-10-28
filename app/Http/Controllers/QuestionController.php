@@ -99,6 +99,7 @@ class QuestionController extends Controller
     {
         $request->validate([
             'question' => 'required|string|max:1000',
+            'code_snippet' => 'nullable|string|max:5000',
             'question_type' => 'required|in:multiple_choice,true_false,essay,enumeration,identification',
             'points' => 'nullable|numeric|min:0|max:100',
             'subcategory_id' => 'required|exists:sub_categories,id',
@@ -111,6 +112,7 @@ class QuestionController extends Controller
         // Create the question
         $question = Question::create([
             'question' => $request->question,
+            'code_snippet' => $request->code_snippet,
             'question_type' => $request->question_type,
             'points' => $request->points ?? 1.00,
             'subcategory_id' => $request->subcategory_id,
@@ -138,6 +140,7 @@ class QuestionController extends Controller
     {
         $request->validate([
             'question' => 'required|string|max:1000',
+            'code_snippet' => 'nullable|string|max:5000',
             'question_type' => 'required|in:multiple_choice,true_false,essay,enumeration,identification',
             'points' => 'nullable|numeric|min:0|max:100',
             'subcategory_id' => 'required|exists:sub_categories,id',
@@ -150,6 +153,7 @@ class QuestionController extends Controller
         // Update the question
         $question->update([
             'question' => $request->question,
+            'code_snippet' => $request->code_snippet,
             'question_type' => $request->question_type,
             'points' => $request->points ?? 1.00,
             'subcategory_id' => $request->subcategory_id,
@@ -159,7 +163,7 @@ class QuestionController extends Controller
         if (in_array($request->question_type, ['multiple_choice', 'true_false', 'identification']) && $request->has('answers')) {
             // Delete existing answers
             $question->answers()->delete();
-            
+
             // Create new answers
             foreach ($request->answers as $answerData) {
                 $question->answers()->create([
