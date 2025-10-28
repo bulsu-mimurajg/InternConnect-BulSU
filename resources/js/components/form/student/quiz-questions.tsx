@@ -41,7 +41,7 @@ interface QuizQuestionsProps {
 }
 
 export default function QuizQuestions({ category }: QuizQuestionsProps) {
-    const { control } = useFormContext();
+    const { control, trigger } = useFormContext();
     const { setQuizFields } = useFormFields();
     const [quizSections, setQuizSections] = useState<QuizSection[]>([]);
     const [loading, setLoading] = useState(true);
@@ -147,7 +147,10 @@ export default function QuizQuestions({ category }: QuizQuestionsProps) {
                                             </FormLabel>
                                             <FormControl>
                                                 <RadioGroup
-                                                    onValueChange={field.onChange}
+                                                    onValueChange={(val) => {
+                                                            field.onChange(val);
+                                                            trigger(field.name);
+                                                        }}
                                                     value={field.value?.toString() ?? ''}
                                                     className="flex flex-row gap-4 md:gap-6 flex-wrap"
                                                 >

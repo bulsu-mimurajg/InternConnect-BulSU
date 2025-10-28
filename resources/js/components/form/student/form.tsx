@@ -232,6 +232,25 @@ export default function StudentForm() {
 
     const [currentStep, setCurrentStep] = useState(0);
     
+    // Scroll to top when quiz category changes
+    useEffect(() => {
+        if (currentStep === 1 && categories.length > 0) {
+            // Find and scroll the inner quiz questions container
+            setTimeout(() => {
+                // Look for the quiz questions scrollable container with overflow-y-auto
+                const quizContainers = Array.from(document.querySelectorAll('div.overflow-y-auto')) as HTMLElement[];
+                const quizContainer = quizContainers.find(container => {
+                    const styles = window.getComputedStyle(container);
+                    return styles.maxHeight === '500px' || styles.maxHeight.includes('500px');
+                }) as HTMLElement | undefined;
+                
+                if (quizContainer) {
+                    quizContainer.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            }, 100);
+        }
+    }, [quizSubStep, currentStep, categories.length]);
+    
     // Navigation for main steps
     const prev = () => {
         if (currentStep === 1 && quizSubStep > 0) {

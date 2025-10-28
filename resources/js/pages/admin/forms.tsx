@@ -370,7 +370,6 @@ export default function FormsPage({ questions, categories, subcategories, filter
                         <Button
                             variant="outline"
                             onClick={() => setShowArchived(!showArchived)}
-                            disabled={isFormsManagementRestricted}
                         >
                             {showArchived ? (
                                 <>
