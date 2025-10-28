@@ -10,14 +10,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Pagination } from '@/components/ui/pagination';
 import { usePagination } from '@/hooks/usePagination';
 import { getRowNumber } from '@/lib/pagination-utils';
-import { 
-    UserIcon, 
+import {
+    UserIcon,
     CheckCircleIcon,
     XCircleIcon,
     ClockIcon,
     SearchIcon,
     FilterIcon,
-    AlertCircle
+    AlertCircle,
+    Building2
 } from 'lucide-react';
 
 interface PlacedStudent {
@@ -70,10 +71,10 @@ interface Props {
     showSubmissionPrompt: boolean;
 }
 
-export default function PlacedStudents({ 
-    placed_students = [], 
-    section_options = [], 
-    internship_options = [], 
+export default function PlacedStudents({
+    placed_students = [],
+    section_options = [],
+    internship_options = [],
     filters,
     showSubmissionPrompt
 }: Props) {
@@ -126,18 +127,18 @@ export default function PlacedStudents({
     // Filter placed students based on local filters
     const filteredPlacedStudents = placed_students.filter(placement => {
         const matchesSection = localFilters.section === 'all' || placement.student.section === localFilters.section;
-        const matchesInternship = localFilters.internship === 'all' || 
+        const matchesInternship = localFilters.internship === 'all' ||
                                  placement.internship.id.toString() === localFilters.internship;
-        const matchesSearch = localFilters.search === '' || 
+        const matchesSearch = localFilters.search === '' ||
                              placement.student.first_name.toLowerCase().includes(localFilters.search.toLowerCase()) ||
                              placement.student.last_name.toLowerCase().includes(localFilters.search.toLowerCase()) ||
                              placement.student.student_number.toLowerCase().includes(localFilters.search.toLowerCase());
-        
+
         return matchesSection && matchesInternship && matchesSearch;
     });
 
     // Create a stable reset trigger for pagination
-    const resetTrigger = useMemo(() => 
+    const resetTrigger = useMemo(() =>
         `${localFilters.section}-${localFilters.internship}-${localFilters.search}`,
         [localFilters.section, localFilters.internship, localFilters.search]
     );
@@ -216,7 +217,7 @@ export default function PlacedStudents({
     return (
         <AppLayout>
             <Head title="Placed Students" />
-            
+
             <div className="flex h-full flex-1 flex-col gap-4 md:gap-6 rounded-xl p-4 md:p-6">
                 <div className="flex justify-between items-center">
                     <div>
@@ -226,8 +227,8 @@ export default function PlacedStudents({
                         </p>
                     </div>
                     <div className="flex gap-2">
-                        <Button 
-                            variant="outline" 
+                        <Button
+                            variant="outline"
                             size="default"
                             onClick={() => setIsFiltersOpen(!isFiltersOpen)}
                         >
@@ -409,7 +410,7 @@ export default function PlacedStudents({
                                                 <div className="text-xs text-muted-foreground">
                                                     <span className="inline-flex items-center gap-1">
                                                         <ClockIcon className="h-3 w-3" />
-                                                        {placement.placement_date 
+                                                        {placement.placement_date
                                                             ? new Date(placement.placement_date).toLocaleDateString()
                                                             : new Date(placement.created_at).toLocaleDateString()
                                                         }
@@ -484,7 +485,7 @@ export default function PlacedStudents({
                                                     </Badge>
                                                 </td>
                                                 <td className="py-3 px-2 text-xs text-muted-foreground hidden xl:table-cell">
-                                                    {placement.placement_date 
+                                                    {placement.placement_date
                                                         ? new Date(placement.placement_date).toLocaleDateString()
                                                         : new Date(placement.created_at).toLocaleDateString()
                                                     }
@@ -496,7 +497,7 @@ export default function PlacedStudents({
                                 </div>
                             </>
                         )}
-                        
+
                         {/* Pagination */}
                         {filteredPlacedStudents.length > 0 && (
                             <Pagination
