@@ -213,7 +213,8 @@ export default function FormsPage({ questions, categories, subcategories, filter
             points: question.points ?? 1,
             answers: (question.answers || []).map((a: any) => ({
                 answer_text: a.answer_text || '',
-                is_correct: !!a.is_correct,
+                // For identification, all answers should be correct
+                is_correct: question.question_type === 'identification' ? true : !!a.is_correct,
                 display_order: a.display_order ?? 0,
             })),
         });
@@ -501,8 +502,11 @@ function example() {
                                                     { answer_text: 'True', is_correct: false, display_order: 1 },
                                                     { answer_text: 'False', is_correct: false, display_order: 2 },
                                                 ]);
-                                            } else if (value === 'essay' || value === 'enumeration') {
-                                                setData('answers', []);
+                                            } else if (value === 'identification') {
+                                                // For identification, all answers should be correct (acceptable variations)
+                                                setData('answers', [
+                                                    { answer_text: '', is_correct: true, display_order: 1 },
+                                                ]);
                                             } else if (data.answers.length === 0 || (data.answers.length === 2 && data.answers[0].answer_text === 'True')) {
                                                 setData('answers', [
                                                     { answer_text: '', is_correct: false, display_order: 1 },
@@ -517,8 +521,6 @@ function example() {
                                                 <SelectItem value="multiple_choice">Multiple Choice</SelectItem>
                                                 <SelectItem value="true_false">True/False</SelectItem>
                                                 <SelectItem value="identification">Identification</SelectItem>
-                                                <SelectItem value="enumeration">Enumeration</SelectItem>
-                                                <SelectItem value="essay">Essay</SelectItem>
                                             </SelectContent>
                                         </Select>
                                         {errors.question_type && (
@@ -547,8 +549,14 @@ function example() {
                                 {/* Answer Choices for Objective Questions */}
                                 {(data.question_type === 'multiple_choice' || data.question_type === 'true_false' || data.question_type === 'identification') && (
                                     <div className="space-y-2">
-                                        <Label>Answer Choices {data.question_type === 'identification' && '(Correct answers)'}</Label>
-                                        <p className="text-sm text-muted-foreground">Mark the correct answer(s) with the checkbox.</p>
+                                        <Label>Answer Choices {data.question_type === 'identification' && '(All acceptable variations)'}</Label>
+                                        <p className="text-sm text-muted-foreground">
+                                            {data.question_type === 'true_false'
+                                                ? 'Select the correct answer with the radio button (only one can be correct).'
+                                                : data.question_type === 'identification'
+                                                ? 'All answers are automatically marked as correct for identification questions (acceptable variations).'
+                                                : 'Mark the correct answer(s) with the checkbox.'}
+                                        </p>
                                         <div className="space-y-3">
                                             {data.answers.map((answer, index) => (
                                                 <div key={index} className="flex items-center gap-2">
@@ -565,20 +573,52 @@ function example() {
                                                             className={errors[("answers." + index + ".answer_text") as keyof typeof errors] ? 'border-red-500' : ''}
                                                         />
                                                     </div>
-                                                    <div className="flex items-center gap-2 px-3">
-                                                        <Checkbox
-                                                            id={`correct_${index}`}
-                                                            checked={!!answer.is_correct}
-                                                            onCheckedChange={(checked: boolean | 'indeterminate') => {
-                                                                const updatedAnswers = data.answers.map((ans, i) =>
-                                                                    i === index ? { ...ans, is_correct: checked === true } : ans
-                                                                );
-                                                                setData('answers', updatedAnswers);
-                                                            }}
-                                                        />
-                                                        <Label htmlFor={`correct_${index}`} className="text-sm">Correct</Label>
-                                                    </div>
-                                                    {data.answers.length > 2 && (
+                                                    {data.question_type === 'identification' ? (
+                                                        <div className="flex items-center gap-2 px-3">
+                                                            <Badge variant="default" className="bg-green-100 text-green-800">
+                                                                Correct
+                                                            </Badge>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="flex items-center gap-2 px-3">
+                                                            {data.question_type === 'true_false' ? (
+                                                                <>
+                                                                    <input
+                                                                        type="radio"
+                                                                        id={`correct_${index}`}
+                                                                        name="true_false_correct_answer"
+                                                                        checked={!!answer.is_correct}
+                                                                        onChange={() => {
+                                                                            // For true/false, only one answer can be correct
+                                                                            const updatedAnswers = data.answers.map((ans, i) => ({
+                                                                                ...ans,
+                                                                                is_correct: i === index
+                                                                            }));
+                                                                            setData('answers', updatedAnswers);
+                                                                        }}
+                                                                        className="h-4 w-4 text-primary focus:ring-2 focus:ring-primary"
+                                                                    />
+                                                                    <Label htmlFor={`correct_${index}`} className="text-sm cursor-pointer">Correct</Label>
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <Checkbox
+                                                                        id={`correct_${index}`}
+                                                                        checked={!!answer.is_correct}
+                                                                        onCheckedChange={(checked: boolean | 'indeterminate') => {
+                                                                            const updatedAnswers = data.answers.map((ans, i) =>
+                                                                                i === index ? { ...ans, is_correct: checked === true } : ans
+                                                                            );
+                                                                            setData('answers', updatedAnswers);
+                                                                        }}
+                                                                    />
+                                                                    <Label htmlFor={`correct_${index}`} className="text-sm">Correct</Label>
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                    {((data.question_type === 'identification' && data.answers.length > 1) ||
+                                                      (data.question_type !== 'identification' && data.answers.length > 2)) && (
                                                         <Button
                                                             type="button"
                                                             variant="ghost"
@@ -601,7 +641,7 @@ function example() {
                                                 onClick={() => {
                                                     setData('answers', [...data.answers, {
                                                         answer_text: '',
-                                                        is_correct: false,
+                                                        is_correct: data.question_type === 'identification' ? true : false,
                                                         display_order: data.answers.length + 1
                                                     }]);
                                                 }}
@@ -614,14 +654,6 @@ function example() {
                                         {errors.answers && (
                                             <p className="text-sm text-red-500">{errors.answers}</p>
                                         )}
-                                    </div>
-                                )}
-
-                                {(data.question_type === 'essay' || data.question_type === 'enumeration') && (
-                                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                                        <p className="text-sm text-blue-800">
-                                            <strong>{data.question_type === 'essay' ? 'Essay' : 'Enumeration'} Question:</strong> Students will type their answer. This requires manual grading by instructors.
-                                        </p>
                                     </div>
                                 )}
 

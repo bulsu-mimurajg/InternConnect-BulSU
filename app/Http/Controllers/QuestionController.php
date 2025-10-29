@@ -97,17 +97,54 @@ class QuestionController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
-        $request->validate([
+        $validated = $request->validate([
             'question' => 'required|string|max:1000',
             'code_snippet' => 'nullable|string|max:5000',
-            'question_type' => 'required|in:multiple_choice,true_false,essay,enumeration,identification',
+            'question_type' => 'required|in:multiple_choice,true_false,identification',
             'points' => 'nullable|numeric|min:0|max:100',
             'subcategory_id' => 'required|exists:sub_categories,id',
-            'answers' => 'required_unless:question_type,essay,enumeration|array|min:2',
+            'answers' => 'required|array',
             'answers.*.answer_text' => 'required_with:answers|string|max:500',
             'answers.*.is_correct' => 'required_with:answers|boolean',
             'answers.*.display_order' => 'required_with:answers|integer|min:1',
         ]);
+
+        // Dynamic validation for answers array based on question type
+        if ($request->question_type === 'identification') {
+            $request->validate([
+                'answers' => 'array|min:1',
+            ]);
+        } else {
+            $request->validate([
+                'answers' => 'array|min:2',
+            ]);
+        }
+
+        // Additional validation for true/false questions
+        if ($request->question_type === 'true_false' && $request->has('answers')) {
+            $correctAnswersCount = collect($request->answers)->filter(function ($answer) {
+                return $answer['is_correct'] ?? false;
+            })->count();
+
+            if ($correctAnswersCount !== 1) {
+                return redirect()->back()
+                    ->withErrors(['answers' => 'True/False questions must have exactly one correct answer.'])
+                    ->withInput();
+            }
+        }
+
+        // Additional validation for identification questions - all answers should be correct
+        if ($request->question_type === 'identification' && $request->has('answers')) {
+            $incorrectAnswersCount = collect($request->answers)->filter(function ($answer) {
+                return !($answer['is_correct'] ?? false);
+            })->count();
+
+            if ($incorrectAnswersCount > 0) {
+                return redirect()->back()
+                    ->withErrors(['answers' => 'All answers for identification questions must be marked as correct.'])
+                    ->withInput();
+            }
+        }
 
         // Create the question
         $question = Question::create([
@@ -120,7 +157,7 @@ class QuestionController extends Controller
         ]);
 
         // Create answers for objective questions
-        if (in_array($request->question_type, ['multiple_choice', 'true_false', 'identification']) && $request->has('answers')) {
+        if ($request->has('answers')) {
             foreach ($request->answers as $answerData) {
                 $question->answers()->create([
                     'answer_text' => $answerData['answer_text'],
@@ -138,17 +175,54 @@ class QuestionController extends Controller
      */
     public function update(Request $request, Question $question): RedirectResponse
     {
-        $request->validate([
+        $validated = $request->validate([
             'question' => 'required|string|max:1000',
             'code_snippet' => 'nullable|string|max:5000',
-            'question_type' => 'required|in:multiple_choice,true_false,essay,enumeration,identification',
+            'question_type' => 'required|in:multiple_choice,true_false,identification',
             'points' => 'nullable|numeric|min:0|max:100',
             'subcategory_id' => 'required|exists:sub_categories,id',
-            'answers' => 'required_unless:question_type,essay,enumeration|array|min:2',
+            'answers' => 'required|array',
             'answers.*.answer_text' => 'required_with:answers|string|max:500',
             'answers.*.is_correct' => 'required_with:answers|boolean',
             'answers.*.display_order' => 'required_with:answers|integer|min:1',
         ]);
+
+        // Dynamic validation for answers array based on question type
+        if ($request->question_type === 'identification') {
+            $request->validate([
+                'answers' => 'array|min:1',
+            ]);
+        } else {
+            $request->validate([
+                'answers' => 'array|min:2',
+            ]);
+        }
+
+        // Additional validation for true/false questions
+        if ($request->question_type === 'true_false' && $request->has('answers')) {
+            $correctAnswersCount = collect($request->answers)->filter(function ($answer) {
+                return $answer['is_correct'] ?? false;
+            })->count();
+
+            if ($correctAnswersCount !== 1) {
+                return redirect()->back()
+                    ->withErrors(['answers' => 'True/False questions must have exactly one correct answer.'])
+                    ->withInput();
+            }
+        }
+
+        // Additional validation for identification questions - all answers should be correct
+        if ($request->question_type === 'identification' && $request->has('answers')) {
+            $incorrectAnswersCount = collect($request->answers)->filter(function ($answer) {
+                return !($answer['is_correct'] ?? false);
+            })->count();
+
+            if ($incorrectAnswersCount > 0) {
+                return redirect()->back()
+                    ->withErrors(['answers' => 'All answers for identification questions must be marked as correct.'])
+                    ->withInput();
+            }
+        }
 
         // Update the question
         $question->update([
@@ -160,7 +234,7 @@ class QuestionController extends Controller
         ]);
 
         // Update answers for objective questions
-        if (in_array($request->question_type, ['multiple_choice', 'true_false', 'identification']) && $request->has('answers')) {
+        if ($request->has('answers')) {
             // Delete existing answers
             $question->answers()->delete();
 
@@ -172,9 +246,6 @@ class QuestionController extends Controller
                     'display_order' => $answerData['display_order'] ?? 1,
                 ]);
             }
-        } else {
-            // For essay/enumeration questions, remove existing answers
-            $question->answers()->delete();
         }
 
         return redirect()->back()->with('success', 'Question updated successfully!');
