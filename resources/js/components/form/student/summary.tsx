@@ -88,7 +88,7 @@ export default function Summary() {
         
         categories.forEach(category => {
             category.questions.forEach(question => {
-                const fieldName = `${category.name.toLowerCase().replace(/[+\/\s-]/g, '_')}_${question.id}`;
+                const fieldName = `${category.name.toLowerCase().replace(/[+/\s-]/g, '_')}_${question.id}`;
                 const answer = formData[fieldName];
                 if (answer) {
                     answers.push({
@@ -127,7 +127,7 @@ export default function Summary() {
         
         summaryData.quizAnswers.forEach(answer => {
             categories.forEach(category => {
-                if (answer.fieldName.startsWith(category.name.toLowerCase().replace(/[+\/\s-]/g, '_'))) {
+                if (answer.fieldName.startsWith(category.name.toLowerCase().replace(/[+/\s-]/g, '_'))) {
                     if (!answersByCategory.has(category.name)) {
                         answersByCategory.set(category.name, []);
                     }
@@ -142,7 +142,7 @@ export default function Summary() {
                     <div key={categoryName} className="border-t pt-3">
                         <h4 className="font-semibold text-gray-800 mb-3">{categoryName}</h4>
                         <div className="space-y-3">
-                            {answers.map((answer, index) => (
+                            {answers.map((answer) => (
                                 <div key={answer.fieldName} className="flex flex-col gap-1">
                                     <span className="text-gray-600 text-sm font-medium">{answer.question}</span>
                                     <span className="text-gray-900 font-medium pl-4">{answer.answer}</span>

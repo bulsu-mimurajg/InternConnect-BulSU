@@ -73,7 +73,7 @@ export default function QuizQuestions({ category }: QuizQuestionsProps) {
             
             // Register fields for validation
             const fields = category.questions.map((question) => {
-                const categoryNameClean = category.name.toLowerCase().replace(/[+\/\s-]/g, '_');
+                const categoryNameClean = category.name.toLowerCase().replace(/[+/\s-]/g, '_');
                 return `${categoryNameClean}_${question.id}`;
             });
             
@@ -133,7 +133,7 @@ export default function QuizQuestions({ category }: QuizQuestionsProps) {
                     <div key={section.subcategory_name} className="mb-8">
                         <h2 className="text-md font-semibold mb-4">{section.subcategory_name}</h2>
                         {section.questions.map((question) => {
-                            const categoryName = category?.name.toLowerCase().replace(/[+\/\s-]/g, '_') || 'general';
+                            const categoryName = category?.name.toLowerCase().replace(/[+/\s-]/g, '_') || 'general';
                             const fieldName = `${categoryName}_${question.id}`;
                             return (
                                 <FormField

@@ -16,7 +16,13 @@ test('registration screen can be rendered', function () {
 });
 
 test('new users can register', function () {
-//    $this->withoutExceptionHandling();
+    // Mock the email service to prevent actual email sending
+    $emailServiceMock = \Mockery::mock(\App\Services\EmailService::class);
+    $emailServiceMock->shouldReceive('sendAccountVerification')
+        ->once()
+        ->andReturn(true);
+    
+    $this->app->instance(\App\Services\EmailService::class, $emailServiceMock);
 
     // Create an active internship season
     InternshipSeason::create([
@@ -161,6 +167,14 @@ test('registration is blocked when no active season exists', function () {
 });
 
 test('registration works when active season exists', function () {
+    // Mock the email service to prevent actual email sending
+    $emailServiceMock = \Mockery::mock(\App\Services\EmailService::class);
+    $emailServiceMock->shouldReceive('sendAccountVerification')
+        ->once()
+        ->andReturn(true);
+    
+    $this->app->instance(\App\Services\EmailService::class, $emailServiceMock);
+
     // Create an active internship season
     InternshipSeason::create([
         'name' => 'Test Season 2024',

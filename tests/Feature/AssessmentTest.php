@@ -71,31 +71,56 @@ class AssessmentTest extends TestCase
             'subcategory_name' => 'Programming',
         ]);
 
-        // Create questions for the subcategory
+        // Create questions for the subcategory (quiz type)
         $question1 = Question::create([
             'subcategory_id' => $subcategory->id,
             'question' => 'How proficient are you in PHP?',
-            'access' => 'Student',
+            'question_type' => 'quiz',
             'is_active' => true,
         ]);
 
         $question2 = Question::create([
             'subcategory_id' => $subcategory->id,
             'question' => 'How proficient are you in JavaScript?',
-            'access' => 'Student',
+            'question_type' => 'quiz',
             'is_active' => true,
         ]);
 
-        // Prepare assessment data
-        $fieldName1 = strtolower(str_replace(['+', '/', ' ', '-'], ['plus', '_', '_', '_'], $subcategory->subcategory_name)) . '_' . $question1->id;
-        $fieldName2 = strtolower(str_replace(['+', '/', ' ', '-'], ['plus', '_', '_', '_'], $subcategory->subcategory_name)) . '_' . $question2->id;
+        // Create choices for question 1
+        $choice1Correct = \App\Models\Choice::create([
+            'question_id' => $question1->id,
+            'choice_text' => 'Very Proficient',
+            'is_correct' => true,
+        ]);
+        $choice1Incorrect = \App\Models\Choice::create([
+            'question_id' => $question1->id,
+            'choice_text' => 'Not Proficient',
+            'is_correct' => false,
+        ]);
 
+        // Create choices for question 2
+        $choice2Correct = \App\Models\Choice::create([
+            'question_id' => $question2->id,
+            'choice_text' => 'Very Proficient',
+            'is_correct' => true,
+        ]);
+        $choice2Incorrect = \App\Models\Choice::create([
+            'question_id' => $question2->id,
+            'choice_text' => 'Not Proficient',
+            'is_correct' => false,
+        ]);
+
+        // Prepare assessment data - use category name for field names
+        $fieldName1 = strtolower(str_replace(['+', '/', ' ', '-'], ['_', '_', '_', '_'], $category->category_name)) . '_' . $question1->id;
+        $fieldName2 = strtolower(str_replace(['+', '/', ' ', '-'], ['_', '_', '_', '_'], $category->category_name)) . '_' . $question2->id;
+
+        // Submit one correct (score 5) and one incorrect (score 1) = mean 3
         $assessmentData = [
             'firstName' => 'John',
             'lastName' => 'Doe',
             'middleName' => 'M',
-            $fieldName1 => 4, // Score for question 1
-            $fieldName2 => 5, // Score for question 2
+            $fieldName1 => $choice1Correct->id, // Correct = score 5
+            $fieldName2 => $choice2Incorrect->id, // Incorrect = score 1
         ];
 
         // Submit assessment
@@ -111,7 +136,7 @@ class AssessmentTest extends TestCase
             ->first();
 
         $this->assertNotNull($studentScore);
-        $this->assertEquals(4.5, $studentScore->score); // Mean of 4 and 5 is 4.5
+        $this->assertEquals(3.0, $studentScore->score); // Mean of 5 (correct) and 1 (incorrect) is 3.0
     }
 
     public function test_student_is_submit_field_is_updated_after_assessment_submission()
@@ -170,16 +195,23 @@ class AssessmentTest extends TestCase
             'subcategory_name' => 'Programming',
         ]);
 
-        // Create questions
+        // Create question (quiz type)
         $question = Question::create([
             'subcategory_id' => $subcategory->id,
             'question' => 'How proficient are you in programming?',
-            'access' => 'Student',
+            'question_type' => 'quiz',
             'is_active' => true,
         ]);
 
-        // Prepare assessment data
-        $fieldName = strtolower(str_replace(['+', '/', ' ', '-'], ['plus', '_', '_', '_'], $subcategory->subcategory_name)) . '_' . $question->id;
+        // Create choices for the question
+        $choiceCorrect = \App\Models\Choice::create([
+            'question_id' => $question->id,
+            'choice_text' => 'Very Proficient',
+            'is_correct' => true,
+        ]);
+
+        // Prepare assessment data - use category name for field names
+        $fieldName = strtolower(str_replace(['+', '/', ' ', '-'], ['_', '_', '_', '_'], $category->category_name)) . '_' . $question->id;
 
         $assessmentData = [
             'firstName' => 'John',
@@ -189,7 +221,7 @@ class AssessmentTest extends TestCase
             'province' => 'Bulacan',
             'city' => 'Malolos',
             'zip' => '3000',
-            $fieldName => 4
+            $fieldName => $choiceCorrect->id
         ];
 
         // Submit assessment
@@ -261,16 +293,23 @@ class AssessmentTest extends TestCase
             'subcategory_name' => 'Programming',
         ]);
 
-        // Create questions
+        // Create question (quiz type)
         $question = Question::create([
             'subcategory_id' => $subcategory->id,
             'question' => 'How proficient are you in programming?',
-            'access' => 'Student',
+            'question_type' => 'quiz',
             'is_active' => true,
         ]);
 
-        // Prepare assessment data
-        $fieldName = strtolower(str_replace(['+', '/', ' ', '-'], ['plus', '_', '_', '_'], $subcategory->subcategory_name)) . '_' . $question->id;
+        // Create choices for the question
+        $choiceCorrect = \App\Models\Choice::create([
+            'question_id' => $question->id,
+            'choice_text' => 'Very Proficient',
+            'is_correct' => true,
+        ]);
+
+        // Prepare assessment data - use category name for field names
+        $fieldName = strtolower(str_replace(['+', '/', ' ', '-'], ['_', '_', '_', '_'], $category->category_name)) . '_' . $question->id;
 
         $assessmentData = [
             'firstName' => 'John',
@@ -280,7 +319,7 @@ class AssessmentTest extends TestCase
             'province' => 'Bulacan',
             'city' => 'Malolos',
             'zip' => '3000',
-            $fieldName => 4
+            $fieldName => $choiceCorrect->id
         ];
 
         // Submit assessment

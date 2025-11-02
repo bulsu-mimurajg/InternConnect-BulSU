@@ -68,7 +68,7 @@ const breadcrumbs = [
 ];
 
 export default function EditInternshipPage() {
-    const { hte, categories, internship, existingWeights, studentAssessmentDeadlineActive, studentAssessmentDeadline } = usePage<PageProps>().props as PageProps;
+    const { categories, internship, existingWeights, studentAssessmentDeadlineActive, studentAssessmentDeadline } = usePage<PageProps>().props as PageProps;
 
     // Show deadline warning if student assessment period is active
     if (studentAssessmentDeadlineActive) {

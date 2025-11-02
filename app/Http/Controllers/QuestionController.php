@@ -46,8 +46,11 @@ class QuestionController extends Controller
         $questions = $query->with('choices')->get();
 
         // Get categories with their subcategories and map the data structure
-        $categories = Category::with('subCategories')
-            ->orderBy('category_name')
+        // Order by ID to show in the order they were added
+        $categories = Category::with(['subCategories' => function ($query) {
+            $query->orderBy('id'); // Maintain order of subcategories within each category
+        }])
+            ->orderBy('id')
             ->get()
             ->map(function ($category) {
                 return [
@@ -63,8 +66,9 @@ class QuestionController extends Controller
             });
 
         // Get all subcategories for the subcategory filter dropdown
+        // Order by ID to show in the order they were added
         $subcategories = SubCategory::with('category')
-            ->orderBy('subcategory_name')
+            ->orderBy('id')
             ->get()
             ->map(function ($subcategory) {
                 return [

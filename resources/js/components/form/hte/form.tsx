@@ -77,7 +77,6 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
     const [dataFetched, setDataFetched] = useState(false);
     const [showValidationErrors, setShowValidationErrors] = useState(false);
     const [lockedSubcategories, setLockedSubcategories] = useState<Set<number>>(new Set());
-    const [weightChangeTrigger, setWeightChangeTrigger] = useState(0);
 
     const steps = [
         { id: 'Step 1', name: 'Basic Information' },
@@ -468,7 +467,7 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
                                         highlightInvalidCategories={showValidationErrors}
                                         lockedSubcategories={lockedSubcategories}
                                         onToggleSubcategoryLock={toggleSubcategoryLock}
-                                        onWeightChange={() => setWeightChangeTrigger(prev => prev + 1)}
+                                        onWeightChange={() => {}}
                                     />
                                 )}
                                 {currentStep === 3 && (

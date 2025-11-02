@@ -65,7 +65,7 @@ export default function StudentForm() {
         
         const allFields: string[] = [];
         categories.forEach(category => {
-            const categoryNameClean = category.name.toLowerCase().replace(/[+\/\s-]/g, '_');
+            const categoryNameClean = category.name.toLowerCase().replace(/[+/\s-]/g, '_');
             category.questions.forEach(question => {
                 const fieldName = `${categoryNameClean}_${question.id}`;
                 if (!allFields.includes(fieldName)) {
@@ -268,7 +268,7 @@ export default function StudentForm() {
             // Validate current category's questions before moving forward
             const currentCategory = categories[quizSubStep];
             if (currentCategory && currentCategory.questions.length > 0) {
-                const categoryNameClean = currentCategory.name.toLowerCase().replace(/[+\/\s-]/g, '_');
+                const categoryNameClean = currentCategory.name.toLowerCase().replace(/[+/\s-]/g, '_');
                 const categoryFields = currentCategory.questions.map(q => `${categoryNameClean}_${q.id}`);
                 
                 // Validate all fields for current category
@@ -313,7 +313,7 @@ export default function StudentForm() {
                                     formItem.style.transition = 'all 0.3s ease';
                                     
                                     // Use React Hook Form's watch with subscription for immediate updates
-                                    const subscription = form.watch((value, { name, type }) => {
+                                    const subscription = form.watch((value, { name }) => {
                                         if (name === firstUnansweredField) {
                                             const currentValue = value[firstUnansweredField as keyof typeof value];
                                             if (currentValue && String(currentValue).trim() !== '') {
@@ -395,15 +395,18 @@ export default function StudentForm() {
     };
 
     // Memoize setter functions to prevent infinite loops
-    const setLanguageProficiencyFields = useCallback((fields: string[]) => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const setLanguageProficiencyFields = useCallback((_fields: string[]) => {
         // No-op for removed step
     }, []);
 
-    const setTechnicalSkillFields = useCallback((fields: string[]) => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const setTechnicalSkillFields = useCallback((_fields: string[]) => {
         // No-op for removed step
     }, []);
 
-    const setSoftSkillFields = useCallback((fields: string[]) => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const setSoftSkillFields = useCallback((_fields: string[]) => {
         // No-op for removed step
     }, []);
 

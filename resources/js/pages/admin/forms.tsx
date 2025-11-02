@@ -79,8 +79,13 @@ export default function FormsPage({ questions, categories, subcategories, filter
     const [filterCategory, setFilterCategory] = useState(filters.category_id);
     const [filterSubcategory, setFilterSubcategory] = useState(filters.subcategory_id);
     const { flash } = usePage().props as { flash?: { success?: string; error?: string } };
-
-
+    const [validationErrors, setValidationErrors] = useState<{
+        question?: string;
+        subcategory?: string;
+        choices?: string;
+        correctAnswer?: string;
+        emptyChoices?: number[]; // Track indices of empty choices
+    }>({});
 
     const [choices, setChoices] = useState<Array<{ text: string; isCorrect: boolean }>>([{ text: '', isCorrect: false }]);
 
@@ -164,13 +169,79 @@ export default function FormsPage({ questions, categories, subcategories, filter
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
-        // Prepare form data with choices
+        // Clear previous validation errors
+        setValidationErrors({});
+
+        // Client-side validation
+        const validChoices = choices.filter(choice => choice.text.trim() !== '');
+        const emptyChoiceIndices = choices
+            .map((choice, index) => ({ choice, index }))
+            .filter(({ choice }) => choice.text.trim() === '')
+            .map(({ index }) => index);
+        
+        // Validate individual choices are not empty
+        if (emptyChoiceIndices.length > 0) {
+            setValidationErrors({ 
+                emptyChoices: emptyChoiceIndices,
+                choices: emptyChoiceIndices.length === choices.length 
+                    ? 'All choices are empty. Please enter at least 2 choices.' 
+                    : `Choice${emptyChoiceIndices.length > 1 ? 's' : ''} ${emptyChoiceIndices.map(i => i + 1).join(', ')} ${emptyChoiceIndices.length > 1 ? 'are' : 'is'} empty.`
+            });
+            const formElement = document.querySelector('form');
+            if (formElement) {
+                formElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+            return;
+        }
+        
+        // Validate at least 2 choices
+        if (validChoices.length < 2) {
+            setValidationErrors({ choices: 'At least 2 choices are required.' });
+            const formElement = document.querySelector('form');
+            if (formElement) {
+                formElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+            return;
+        }
+
+        // Check if at least one choice is marked as correct
+        const hasCorrectAnswer = validChoices.some(choice => choice.isCorrect);
+        if (!hasCorrectAnswer) {
+            setValidationErrors({ correctAnswer: 'At least one choice must be marked as correct.' });
+            const formElement = document.querySelector('form');
+            if (formElement) {
+                formElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+            return;
+        }
+
+        // Validate question text
+        if (!data.question.trim()) {
+            setValidationErrors({ question: 'Question text is required.' });
+            const formElement = document.querySelector('form');
+            if (formElement) {
+                formElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+            return;
+        }
+
+        // Validate subcategory
+        if (!data.subcategory_id) {
+            setValidationErrors({ subcategory: 'Please select a subcategory.' });
+            const formElement = document.querySelector('form');
+            if (formElement) {
+                formElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+            return;
+        }
+
+        // Prepare form data with only valid choices
         const formData = {
-            question: data.question,
+            question: data.question.trim(),
             subcategory_id: data.subcategory_id,
             question_type: 'quiz',
-            choices: choices.map(choice => ({
-                choice_text: choice.text,
+            choices: validChoices.map(choice => ({
+                choice_text: choice.text.trim(),
                 is_correct: choice.isCorrect
             }))
         };
@@ -180,9 +251,11 @@ export default function FormsPage({ questions, categories, subcategories, filter
 
         if (editingQuestion) {
             router.put(`/forms/questions/${editingQuestion.id}`, formData, {
+                preserveScroll: true,
                 onSuccess: () => {
                     reset();
                     setChoices([{ text: '', isCorrect: false }]);
+                    setValidationErrors({});
                     setShowForm(false);
                     setEditingQuestion(null);
                     setSelectedCategory('');
@@ -190,19 +263,38 @@ export default function FormsPage({ questions, categories, subcategories, filter
                 },
                 onError: (errors) => {
                     console.error('Update errors:', errors);
+                    // Errors are automatically handled by Inertia and displayed via the errors object
+                    const formElement = document.querySelector('form');
+                    if (formElement) {
+                        formElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                },
+                onFinish: () => {
+                    // Any cleanup if needed
                 },
             });
         } else {
             router.post('/forms/questions', formData, {
+                preserveScroll: true,
                 onSuccess: () => {
                     reset();
                     setChoices([{ text: '', isCorrect: false }]);
+                    setValidationErrors({});
                     setShowForm(false);
                     setSelectedCategory('');
                     setAvailableSubcategories([]);
                 },
                 onError: (errors) => {
                     console.error('Creation errors:', errors);
+                    // Errors are automatically handled by Inertia and displayed via the errors object
+                    // Scroll to top of form to show errors
+                    const formElement = document.querySelector('form');
+                    if (formElement) {
+                        formElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                },
+                onFinish: () => {
+                    // Any cleanup if needed
                 },
             });
         }
@@ -210,6 +302,7 @@ export default function FormsPage({ questions, categories, subcategories, filter
 
     const handleEdit = (question: Question) => {
         setEditingQuestion(question);
+        setValidationErrors({});
         setData({
             question: question.question,
             subcategory_id: question.subcategory_id.toString(),
@@ -250,6 +343,7 @@ export default function FormsPage({ questions, categories, subcategories, filter
     const handleCancel = () => {
         reset();
         setChoices([{ text: '', isCorrect: false }]);
+        setValidationErrors({});
         setShowForm(false);
         setEditingQuestion(null);
         setSelectedCategory('');
@@ -499,11 +593,20 @@ export default function FormsPage({ questions, categories, subcategories, filter
                                     <Textarea
                                         id="question"
                                         value={data.question}
-                                        onChange={(e) => setData('question', e.target.value)}
-                                        className={errors.question ? 'border-red-500' : ''}
+                                        onChange={(e) => {
+                                            setData('question', e.target.value);
+                                            // Clear validation error when user starts typing
+                                            if (validationErrors.question) {
+                                                setValidationErrors(prev => ({ ...prev, question: undefined }));
+                                            }
+                                        }}
+                                        className={(errors.question || validationErrors.question) ? 'border-red-500' : ''}
                                         placeholder="Enter the assessment question..."
                                         rows={3}
                                     />
+                                    {validationErrors.question && (
+                                        <p className="text-sm text-red-500">{validationErrors.question}</p>
+                                    )}
                                     {errors.question && (
                                         <p className="text-sm text-red-500">{errors.question}</p>
                                     )}
@@ -530,7 +633,13 @@ export default function FormsPage({ questions, categories, subcategories, filter
                                         <Label htmlFor="subcategory">Subcategory</Label>
                                         <Select
                                             value={data.subcategory_id}
-                                            onValueChange={(value) => setData('subcategory_id', value)}
+                                            onValueChange={(value) => {
+                                                setData('subcategory_id', value);
+                                                // Clear validation error when user selects a subcategory
+                                                if (validationErrors.subcategory) {
+                                                    setValidationErrors(prev => ({ ...prev, subcategory: undefined }));
+                                                }
+                                            }}
                                         >
                                             <SelectTrigger>
                                                 <SelectValue placeholder="Select a subcategory" />
@@ -543,6 +652,9 @@ export default function FormsPage({ questions, categories, subcategories, filter
                                                 ))}
                                             </SelectContent>
                                         </Select>
+                                        {validationErrors.subcategory && (
+                                            <p className="text-sm text-red-500">{validationErrors.subcategory}</p>
+                                        )}
                                         {errors.subcategory_id && (
                                             <p className="text-sm text-red-500">{errors.subcategory_id}</p>
                                         )}
@@ -566,12 +678,28 @@ export default function FormsPage({ questions, categories, subcategories, filter
                                     <div className="space-y-3">
                                         {choices.map((choice, index) => (
                                             <div key={index} className="flex gap-2 items-start">
-                                                <Input
-                                                    placeholder={`Choice ${index + 1}`}
-                                                    value={choice.text}
-                                                    onChange={(e) => updateChoice(index, 'text', e.target.value)}
-                                                    className="flex-1"
-                                                />
+                                                <div className="flex-1 space-y-1">
+                                                    <Input
+                                                        placeholder={`Choice ${index + 1}`}
+                                                        value={choice.text}
+                                                        onChange={(e) => {
+                                                            updateChoice(index, 'text', e.target.value);
+                                                            // Clear validation error for this choice when user starts typing
+                                                            if (validationErrors.emptyChoices?.includes(index)) {
+                                                                const newEmptyChoices = validationErrors.emptyChoices.filter(i => i !== index);
+                                                                setValidationErrors(prev => ({
+                                                                    ...prev,
+                                                                    emptyChoices: newEmptyChoices.length > 0 ? newEmptyChoices : undefined,
+                                                                    choices: newEmptyChoices.length > 0 ? prev.choices : undefined
+                                                                }));
+                                                            }
+                                                        }}
+                                                        className={`flex-1 ${validationErrors.emptyChoices?.includes(index) ? 'border-red-500' : ''}`}
+                                                    />
+                                                    {validationErrors.emptyChoices?.includes(index) && (
+                                                        <p className="text-xs text-red-500">This choice cannot be empty.</p>
+                                                    )}
+                                                </div>
                                                 <Button
                                                     type="button"
                                                     variant={choice.isCorrect ? "default" : "outline"}
@@ -594,8 +722,22 @@ export default function FormsPage({ questions, categories, subcategories, filter
                                             </div>
                                         ))}
                                     </div>
-                                    {choices.length < 2 && (
+                                    {validationErrors.choices && (
+                                        <p className="text-sm text-red-500">{validationErrors.choices}</p>
+                                    )}
+                                    {validationErrors.correctAnswer && (
+                                        <p className="text-sm text-red-500">{validationErrors.correctAnswer}</p>
+                                    )}
+                                    {errors.choices && (
+                                        <p className="text-sm text-red-500">{errors.choices}</p>
+                                    )}
+                                    {choices.filter(c => c.text.trim()).length < 2 && !validationErrors.choices && (
                                         <p className="text-sm text-amber-600">At least 2 choices are required.</p>
+                                    )}
+                                    {choices.filter(c => c.text.trim()).length >= 2 && 
+                                     !choices.some(c => c.isCorrect && c.text.trim()) && 
+                                     !validationErrors.correctAnswer && (
+                                        <p className="text-sm text-amber-600">At least one choice must be marked as correct.</p>
                                     )}
                                 </div>
 

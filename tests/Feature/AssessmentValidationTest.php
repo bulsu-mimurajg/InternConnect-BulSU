@@ -81,26 +81,60 @@ class AssessmentValidationTest extends TestCase
             'subcategory_name' => 'Communication',
         ]);
 
-        // Create questions
+        // Create questions (quiz type)
         $question1 = Question::create([
             'subcategory_id' => $programmingSubcategory->id,
             'question' => 'How proficient are you in PHP?',
-            'access' => 'Student',
+            'question_type' => 'quiz',
             'is_active' => true,
         ]);
 
         $question2 = Question::create([
             'subcategory_id' => $javaSubcategory->id,
             'question' => 'How proficient are you in Java?',
-            'access' => 'Student',
+            'question_type' => 'quiz',
             'is_active' => true,
         ]);
 
         $question3 = Question::create([
             'subcategory_id' => $communicationSubcategory->id,
             'question' => 'How well do you communicate?',
-            'access' => 'Student',
+            'question_type' => 'quiz',
             'is_active' => true,
+        ]);
+
+        // Create choices for each question
+        $choice1Correct = \App\Models\Choice::create([
+            'question_id' => $question1->id,
+            'choice_text' => 'Very Proficient',
+            'is_correct' => true,
+        ]);
+        $choice1Incorrect = \App\Models\Choice::create([
+            'question_id' => $question1->id,
+            'choice_text' => 'Not Proficient',
+            'is_correct' => false,
+        ]);
+
+        $choice2Correct = \App\Models\Choice::create([
+            'question_id' => $question2->id,
+            'choice_text' => 'Very Proficient',
+            'is_correct' => true,
+        ]);
+        $choice2Incorrect = \App\Models\Choice::create([
+            'question_id' => $question2->id,
+            'choice_text' => 'Not Proficient',
+            'is_correct' => false,
+        ]);
+
+        $choice3Correct = \App\Models\Choice::create([
+            'question_id' => $question3->id,
+            'choice_text' => 'Very Well',
+            'is_correct' => true,
+        ]);
+        $choice3Incorrect = \App\Models\Choice::create([
+            'question_id' => $question3->id,
+            'choice_text' => 'Not Well',
+            'is_correct' => false,
         ]);
 
         // Test 1: Submission with missing fields should fail
@@ -114,17 +148,18 @@ class AssessmentValidationTest extends TestCase
         $response->assertSessionHasErrors(); // Should have validation errors for missing question fields
 
         // Test 2: Submission with all fields should succeed and store mean scores
-        $fieldName1 = strtolower(str_replace(['+', '/', ' ', '-'], ['plus', '_', '_', '_'], $programmingSubcategory->subcategory_name)) . '_' . $question1->id;
-        $fieldName2 = strtolower(str_replace(['+', '/', ' ', '-'], ['plus', '_', '_', '_'], $javaSubcategory->subcategory_name)) . '_' . $question2->id;
-        $fieldName3 = strtolower(str_replace(['+', '/', ' ', '-'], ['plus', '_', '_', '_'], $communicationSubcategory->subcategory_name)) . '_' . $question3->id;
+        // Use category name for field names
+        $fieldName1 = strtolower(str_replace(['+', '/', ' ', '-'], ['_', '_', '_', '_'], $technicalCategory->category_name)) . '_' . $question1->id;
+        $fieldName2 = strtolower(str_replace(['+', '/', ' ', '-'], ['_', '_', '_', '_'], $languageCategory->category_name)) . '_' . $question2->id;
+        $fieldName3 = strtolower(str_replace(['+', '/', ' ', '-'], ['_', '_', '_', '_'], $softCategory->category_name)) . '_' . $question3->id;
 
         $completeData = [
             'firstName' => 'John',
             'lastName' => 'Doe',
             'middleName' => 'M',
-            $fieldName1 => 4, // PHP proficiency
-            $fieldName2 => 5, // Java proficiency  
-            $fieldName3 => 3, // Communication
+            $fieldName1 => $choice1Correct->id, // PHP: correct = score 5
+            $fieldName2 => $choice2Correct->id, // Java: correct = score 5
+            $fieldName3 => $choice3Incorrect->id, // Communication: incorrect = score 1
         ];
 
         $response = $this->actingAs($user)->post('/assessment', $completeData);
@@ -136,19 +171,19 @@ class AssessmentValidationTest extends TestCase
             ->where('sub_category_id', $programmingSubcategory->id)
             ->first();
         $this->assertNotNull($programmingScore);
-        $this->assertEquals(4, $programmingScore->score); // Mean of 4 = 4
+        $this->assertEquals(5.0, $programmingScore->score); // Correct answer = score 5
 
         $javaScore = StudentScore::where('student_id', $student->id)
             ->where('sub_category_id', $javaSubcategory->id)
             ->first();
         $this->assertNotNull($javaScore);
-        $this->assertEquals(5, $javaScore->score); // Mean of 5 = 5
+        $this->assertEquals(5.0, $javaScore->score); // Correct answer = score 5
 
         $communicationScore = StudentScore::where('student_id', $student->id)
             ->where('sub_category_id', $communicationSubcategory->id)
             ->first();
         $this->assertNotNull($communicationScore);
-        $this->assertEquals(3, $communicationScore->score); // Mean of 3 = 3
+        $this->assertEquals(1.0, $communicationScore->score); // Incorrect answer = score 1
     }
 
     public function test_assessment_computes_correct_mean_scores_for_multiple_questions()
@@ -203,52 +238,89 @@ class AssessmentValidationTest extends TestCase
             'subcategory_name' => 'Programming',
         ]);
 
-        // Create multiple questions for the same subcategory
+        // Create multiple questions for the same subcategory (quiz type)
         $question1 = Question::create([
             'subcategory_id' => $programmingSubcategory->id,
             'question' => 'How proficient are you in PHP?',
-            'access' => 'Student',
+            'question_type' => 'quiz',
             'is_active' => true,
         ]);
 
         $question2 = Question::create([
             'subcategory_id' => $programmingSubcategory->id,
             'question' => 'How proficient are you in JavaScript?',
-            'access' => 'Student',
+            'question_type' => 'quiz',
             'is_active' => true,
         ]);
 
         $question3 = Question::create([
             'subcategory_id' => $programmingSubcategory->id,
             'question' => 'How proficient are you in Python?',
-            'access' => 'Student',
+            'question_type' => 'quiz',
             'is_active' => true,
         ]);
 
-        // Submit assessment with different scores
-        $fieldName1 = strtolower(str_replace(['+', '/', ' ', '-'], ['plus', '_', '_', '_'], $programmingSubcategory->subcategory_name)) . '_' . $question1->id;
-        $fieldName2 = strtolower(str_replace(['+', '/', ' ', '-'], ['plus', '_', '_', '_'], $programmingSubcategory->subcategory_name)) . '_' . $question2->id;
-        $fieldName3 = strtolower(str_replace(['+', '/', ' ', '-'], ['plus', '_', '_', '_'], $programmingSubcategory->subcategory_name)) . '_' . $question3->id;
+        // Create choices for each question
+        // Question 1: correct choice
+        $choice1Correct = \App\Models\Choice::create([
+            'question_id' => $question1->id,
+            'choice_text' => 'Very Proficient',
+            'is_correct' => true,
+        ]);
+        $choice1Incorrect = \App\Models\Choice::create([
+            'question_id' => $question1->id,
+            'choice_text' => 'Not Proficient',
+            'is_correct' => false,
+        ]);
+
+        // Question 2: correct choice
+        $choice2Correct = \App\Models\Choice::create([
+            'question_id' => $question2->id,
+            'choice_text' => 'Very Proficient',
+            'is_correct' => true,
+        ]);
+        $choice2Incorrect = \App\Models\Choice::create([
+            'question_id' => $question2->id,
+            'choice_text' => 'Not Proficient',
+            'is_correct' => false,
+        ]);
+
+        // Question 3: incorrect choice
+        $choice3Correct = \App\Models\Choice::create([
+            'question_id' => $question3->id,
+            'choice_text' => 'Very Proficient',
+            'is_correct' => true,
+        ]);
+        $choice3Incorrect = \App\Models\Choice::create([
+            'question_id' => $question3->id,
+            'choice_text' => 'Not Proficient',
+            'is_correct' => false,
+        ]);
+
+        // Submit assessment - use category name for field names
+        $fieldName1 = strtolower(str_replace(['+', '/', ' ', '-'], ['_', '_', '_', '_'], $technicalCategory->category_name)) . '_' . $question1->id;
+        $fieldName2 = strtolower(str_replace(['+', '/', ' ', '-'], ['_', '_', '_', '_'], $technicalCategory->category_name)) . '_' . $question2->id;
+        $fieldName3 = strtolower(str_replace(['+', '/', ' ', '-'], ['_', '_', '_', '_'], $technicalCategory->category_name)) . '_' . $question3->id;
 
         $assessmentData = [
             'firstName' => 'Jane',
             'lastName' => 'Smith',
             'middleName' => 'A',
-            $fieldName1 => 3, // PHP: 3
-            $fieldName2 => 5, // JavaScript: 5
-            $fieldName3 => 4, // Python: 4
+            $fieldName1 => $choice1Correct->id, // PHP: correct = 5
+            $fieldName2 => $choice2Correct->id, // JavaScript: correct = 5
+            $fieldName3 => $choice3Incorrect->id, // Python: incorrect = 1
         ];
 
         $response = $this->actingAs($user)->post('/assessment', $assessmentData);
         $response->assertRedirect('/assessment');
         $response->assertSessionHas('success');
 
-        // Verify mean score calculation: (3 + 5 + 4) / 3 = 4
+        // Verify mean score calculation: (5 + 5 + 1) / 3 = 3.67
         $programmingScore = StudentScore::where('student_id', $student->id)
             ->where('sub_category_id', $programmingSubcategory->id)
             ->first();
         
         $this->assertNotNull($programmingScore);
-        $this->assertEquals(4, $programmingScore->score); // Mean of 3, 5, 4 = 4
+        $this->assertEqualsWithDelta(3.67, $programmingScore->score, 0.01); // Mean of 5, 5, 1 = 3.67
     }
 } 
