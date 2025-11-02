@@ -601,6 +601,17 @@ Route::group(['middleware' => ['auth', 'verified', 'role_redirect:student']], fu
             ];
         }
 
+        // Calculate raw score: total points earned out of total possible points
+        $quizAttempts = \App\Models\QuizAttempt::where('student_id', $student->id)
+            ->whereNotNull('submitted_at')
+            ->with('question')
+            ->get();
+
+        $totalPointsEarned = $quizAttempts->sum('points_earned');
+        $totalPossiblePoints = $quizAttempts->sum(function ($attempt) {
+            return $attempt->question ? ($attempt->question->points ?? 1) : 0;
+        });
+
         $formattedStudent = [
             'id' => $student->id,
             'student_number' => $student->student_number,
@@ -615,12 +626,22 @@ Route::group(['middleware' => ['auth', 'verified', 'role_redirect:student']], fu
             'is_submit' => $student->is_submit,
         ];
 
-        return Inertia::render('student/profile', [
+        $profileData = [
             'student' => $formattedStudent,
             'categories' => $transformedCategories,
             'additional_info' => $additionalInfoData,
-            'hasSubmitted' => $student->is_submit
-        ]);
+            'hasSubmitted' => $student->is_submit,
+        ];
+
+        // Only include raw score if student has submitted and has quiz attempts
+        if ($student->is_submit && $totalPossiblePoints > 0) {
+            $profileData['rawScore'] = [
+                'points_earned' => $totalPointsEarned,
+                'total_points' => $totalPossiblePoints,
+            ];
+        }
+
+        return Inertia::render('student/profile', $profileData);
     })->name('student-profile');
 
     Route::post('assessment', [AssessmentController::class, 'store'])->name('assessment.store');

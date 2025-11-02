@@ -41,5 +41,13 @@ class HTEAssessmentResponse extends Model
     {
         return $this->belongsTo(Question::class);
     }
+
+    /**
+     * Get the HTE question this response answers (if using hte_questions table)
+     */
+    public function hteQuestion(): BelongsTo
+    {
+        return $this->belongsTo(HTEQuestion::class, 'question_id');
+    }
 }
 

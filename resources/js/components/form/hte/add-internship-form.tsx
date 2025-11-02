@@ -226,7 +226,7 @@ export default function AddInternshipForm() {
         } else if (categoryTotal > 100) {
             return { status: 'exceeded', bgColor: 'bg-red-50 dark:bg-red-950/30', borderColor: 'border-red-200 dark:border-red-800', color: 'text-red-600 dark:text-red-400' };
         } else {
-            return { status: 'incomplete', bgColor: 'bg-yellow-50 dark:bg-yellow-950/30', borderColor: 'border-yellow-200 dark:border-yellow-800', color: 'text-yellow-600 dark:text-yellow-400' };
+            return { status: 'incomplete', bgColor: 'bg-blue-50 dark:bg-blue-950/30', borderColor: 'border-blue-200 dark:border-blue-800', color: 'text-blue-600 dark:text-blue-400' };
         }
     };
 
@@ -369,7 +369,7 @@ export default function AddInternshipForm() {
                                                                             <div
                                                                                 className={`h-3 rounded-full transition-all duration-300 ${
                                                                                     weightStatus.status === 'valid' ? 'bg-green-500 dark:bg-green-400' :
-                                                                                    weightStatus.status === 'exceeded' ? 'bg-red-500 dark:bg-red-400' : 'bg-yellow-500 dark:bg-yellow-400'
+                                                                                    weightStatus.status === 'exceeded' ? 'bg-red-500 dark:bg-red-400' : 'bg-blue-500 dark:bg-blue-400'
                                                                                 }`}
                                                                                 style={{ width: `${Math.min(categoryTotal, 100)}%` }}
                                                                             ></div>

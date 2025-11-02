@@ -66,8 +66,17 @@ class CategorySeeder extends Seeder
         ];
 
         foreach ($categories as $categoryName => $subCategories) {
-            // Create or retrieve the category
-            $category = Category::firstOrCreate(['category_name' => $categoryName]);
+            // Create or retrieve the category with type
+            $categoryType = $categoryName === 'Technical Skill' ? 'technical' : 'soft_skills';
+            $category = Category::firstOrCreate(
+                ['category_name' => $categoryName],
+                ['category_type' => $categoryType]
+            );
+            
+            // Update existing categories with type if not set
+            if (!$category->category_type) {
+                $category->update(['category_type' => $categoryType]);
+            }
 
             foreach ($subCategories as $subCategoryName => $questions) {
                 // Create or retrieve the subcategory

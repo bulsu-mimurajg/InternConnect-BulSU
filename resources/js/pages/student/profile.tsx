@@ -55,6 +55,10 @@ interface ProfileProps {
     categories: Category[];
     additional_info?: AdditionalInfo[];
     hasSubmitted?: boolean;
+    rawScore?: {
+        points_earned: number;
+        total_points: number;
+    };
 }
 
 const navigationItems = [
@@ -64,7 +68,7 @@ const navigationItems = [
     { id: 'soft', label: 'Soft Skills', icon: CheckCircle },
 ];
 
-export default function Profile({ student, categories, additional_info = [], hasSubmitted = true }: ProfileProps) {
+export default function Profile({ student, categories, additional_info = [], hasSubmitted = true, rawScore }: ProfileProps) {
     const [activeTab, setActiveTab] = useState('basic');
 
     if (!student) {
@@ -104,8 +108,13 @@ export default function Profile({ student, categories, additional_info = [], has
 
         const overallAverage = totalSubcategories > 0 ? (totalScore / totalSubcategories) : 0;
 
+        // Use raw score from backend (points earned / total points) if available
+        const rawScoreDisplay = rawScore 
+            ? `${rawScore.points_earned.toFixed(0)} / ${rawScore.total_points.toFixed(0)}`
+            : totalScore.toFixed(2);
+
         return {
-            rawScore: totalScore.toFixed(2),
+            rawScore: rawScoreDisplay,
             overallAverage: overallAverage.toFixed(2),
             totalSubcategories
         };
@@ -144,7 +153,9 @@ export default function Profile({ student, categories, additional_info = [], has
                                     <div>
                                         <label className="text-sm font-medium text-blue-700 dark:text-blue-300">Raw Score</label>
                                         <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">{scores.rawScore}</p>
-                                        <p className="text-xs text-blue-600 dark:text-blue-400">Total of all subcategory scores</p>
+                                        <p className="text-xs text-blue-600 dark:text-blue-400">
+                                            {rawScore ? 'Points earned out of total possible points' : 'Total of all subcategory scores'}
+                                        </p>
                                     </div>
                                     <div>
                                         <label className="text-sm font-medium text-blue-700 dark:text-blue-300">Overall Average</label>

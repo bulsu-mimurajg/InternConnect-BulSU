@@ -307,6 +307,7 @@ class HTEController extends Controller
             return [
                 'id' => $category->id,
                 'category_name' => $category->category_name,
+                'category_type' => $category->category_type,
                 'created_at' => $category->created_at,
                 'updated_at' => $category->updated_at,
                 'subCategories' => $category->subCategories
@@ -377,8 +378,118 @@ class HTEController extends Controller
             'internships.subcategoryWeights.subcategory.category'
         ])->find($hte->id);
 
+        // Get HTE assessment responses and load HTE questions directly
+        $assessmentResponses = \App\Models\HTEAssessmentResponse::where('hte_id', $hte->id)->get();
+        
+        // Get all question IDs from responses
+        $questionIds = $assessmentResponses->pluck('question_id')->unique()->toArray();
+        
+        // Load HTE questions directly (they're in hte_questions table, not questions table)
+        $hteQuestions = \App\Models\HTEQuestion::with(['subcategory.category'])
+            ->whereIn('id', $questionIds)
+            ->get()
+            ->keyBy('id');
+
+        // Calculate category percentages for each internship
+        $categoryPercentages = [];
+        foreach ($hteWithData->internships as $internship) {
+            $internshipResponses = $assessmentResponses->where('internship_id', $internship->id);
+            
+            // Group responses by category
+            $categoryData = [];
+            foreach ($internshipResponses as $response) {
+                // Get HTE question directly from our loaded collection
+                $question = $hteQuestions->get($response->question_id);
+                
+                if (!$question) {
+                    Log::warning('HTE Assessment Response missing question', [
+                        'response_id' => $response->id,
+                        'question_id' => $response->question_id,
+                        'hte_id' => $response->hte_id,
+                        'internship_id' => $response->internship_id,
+                        'available_question_ids' => $hteQuestions->keys()->toArray(),
+                    ]);
+                    continue;
+                }
+                
+                if (!$question->subcategory || !$question->subcategory->category) {
+                    Log::warning('HTE Assessment Response question missing category relationship', [
+                        'response_id' => $response->id,
+                        'question_id' => $response->question_id,
+                    ]);
+                    continue;
+                }
+                
+                $categoryId = $question->subcategory->category->id;
+                $categoryName = $question->subcategory->category->category_name;
+                
+                if (!isset($categoryData[$categoryId])) {
+                    $categoryData[$categoryId] = [
+                        'category_id' => $categoryId,
+                        'category_name' => $categoryName,
+                        'sum_responses' => 0,
+                        'question_count' => 0,
+                    ];
+                }
+                
+                $categoryData[$categoryId]['sum_responses'] += $response->response;
+                $categoryData[$categoryId]['question_count']++;
+            }
+            
+            // Calculate percentage for each category
+            $categoryPercentages[$internship->id] = [];
+            foreach ($categoryData as $categoryId => $data) {
+                // Total possible points = question_count * 5 (max value per question is 5 on Likert scale)
+                $totalPossiblePoints = $data['question_count'] * 5;
+                
+                // Percentage = (sum of responses / total possible points) * 100
+                // Example: If 1 question with response 4, then: (4 / 5) * 100 = 80%
+                $percentage = $totalPossiblePoints > 0 
+                    ? ($data['sum_responses'] / $totalPossiblePoints) * 100 
+                    : 0;
+                
+                // Calculate equivalent based on grading scale from image:
+                // 96-100% = 5, 90-95% = 4, 80-89% = 3, 75-79% = 2, below 75% = 1
+                if ($percentage >= 96) {
+                    $equivalent = 5;
+                } elseif ($percentage >= 90) {
+                    $equivalent = 4;
+                } elseif ($percentage >= 80) {
+                    $equivalent = 3;
+                } elseif ($percentage >= 75) {
+                    $equivalent = 2;
+                } else {
+                    $equivalent = 1;
+                }
+                
+                Log::info('HTE Category Percentage Calculated', [
+                    'internship_id' => $internship->id,
+                    'category_id' => $categoryId,
+                    'category_name' => $data['category_name'],
+                    'sum_responses' => $data['sum_responses'],
+                    'question_count' => $data['question_count'],
+                    'total_possible_points' => $totalPossiblePoints,
+                    'percentage' => $percentage,
+                    'equivalent' => $equivalent,
+                ]);
+                
+                $categoryPercentages[$internship->id][$categoryId] = [
+                    'category_id' => $categoryId,
+                    'category_name' => $data['category_name'],
+                    'sum_responses' => $data['sum_responses'],
+                    'question_count' => $data['question_count'],
+                    'total_possible_points' => $totalPossiblePoints,
+                    'percentage' => round($percentage, 2),
+                    'equivalent' => $equivalent,
+                ];
+            }
+            
+            // Convert to array of values (not associative array)
+            $categoryPercentages[$internship->id] = array_values($categoryPercentages[$internship->id]);
+        }
+
         // Transform the data to match frontend expectations
-        $hteWithData->internships->transform(function($internship) {
+        $hteWithData->internships->transform(function($internship) use ($categoryPercentages) {
             $internship->subcategory_weights = $internship->subcategoryWeights->map(function($weight) {
                 return [
                     'id' => $weight->id,
@@ -393,6 +504,10 @@ class HTEController extends Controller
                     ]
                 ];
             });
+            
+            // Add category percentages to internship
+            $internship->category_percentages = $categoryPercentages[$internship->id] ?? [];
+            
             return $internship;
         });
 
@@ -550,6 +665,7 @@ class HTEController extends Controller
             return [
                 'id' => $category->id,
                 'category_name' => $category->category_name,
+                'category_type' => $category->category_type,
                 'created_at' => $category->created_at,
                 'updated_at' => $category->updated_at,
                 'subCategories' => $category->subCategories->map(function($subCategory) {
@@ -766,6 +882,7 @@ class HTEController extends Controller
             return [
                 'id' => $category->id,
                 'category_name' => $category->category_name,
+                'category_type' => $category->category_type,
                 'created_at' => $category->created_at,
                 'updated_at' => $category->updated_at,
                 'subCategories' => $category->subCategories->map(function($subCategory) {

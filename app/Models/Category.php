@@ -14,6 +14,7 @@ class Category extends Model
 
     protected $fillable = [
         'category_name',
+        'category_type',
     ];
 
     public function subCategories(): HasMany

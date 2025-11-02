@@ -46,28 +46,37 @@ interface HTEProfileProps {
         is_active: boolean;
         is_submit: boolean;
         created_at: string;
-        internships: Array<{
-            id: number;
-            position_title: string;
-            department: string;
-            placement_description: string;
-            slot_count: number;
-            is_active: boolean;
-            created_at: string;
-            updated_at: string;
-            subcategory_weights: Array<{
+            internships: Array<{
                 id: number;
-                weight: number;
-                subcategory: {
+                position_title: string;
+                department: string;
+                placement_description: string;
+                slot_count: number;
+                is_active: boolean;
+                created_at: string;
+                updated_at: string;
+                subcategory_weights: Array<{
                     id: number;
-                    subcategory_name: string;
-                    category: {
+                    weight: number;
+                    subcategory: {
                         id: number;
-                        category_name: string;
+                        subcategory_name: string;
+                        category: {
+                            id: number;
+                            category_name: string;
+                        };
                     };
-                };
+                }>;
+                category_percentages?: Array<{
+                    category_id: number;
+                    category_name: string;
+                    sum_responses: number;
+                    question_count: number;
+                    total_possible_points: number;
+                    percentage: number;
+                    equivalent: number;
+                }>;
             }>;
-        }>;
     };
     showSubmissionPrompt: boolean;
     studentAssessmentDeadlineActive: boolean;
@@ -811,7 +820,34 @@ export default function HTEProfilePage() {
                                                                     return (
                                                                         <div key={categoryName} className="border border-border rounded-lg bg-card">
                                                                             <div className="bg-primary/5 px-4 py-3 border-b border-border">
-                                                                                <h4 className="font-semibold text-base text-foreground">{categoryName}</h4>
+                                                                                <div className="flex items-center justify-between">
+                                                                                    <h4 className="font-semibold text-base text-foreground">{categoryName}</h4>
+                                                                                    {(() => {
+                                                                                        const categoryPercentage = selectedInternship.category_percentages?.find(
+                                                                                            cp => cp.category_id === weights[0]?.subcategory?.category?.id
+                                                                                        );
+                                                                                        return categoryPercentage ? (
+                                                                                            <div className="flex items-center gap-2">
+                                                                                                <Badge variant="secondary" className="font-mono text-base px-4 py-2 font-bold">
+                                                                                                    Grade: {categoryPercentage.equivalent}
+                                                                                                </Badge>
+                                                                                                <span className="text-xs text-muted-foreground">
+                                                                                                    ({categoryPercentage.percentage.toFixed(2)}%)
+                                                                                                </span>
+                                                                                            </div>
+                                                                                        ) : null;
+                                                                                    })()}
+                                                                                </div>
+                                                                                {(() => {
+                                                                                    const categoryPercentage = selectedInternship.category_percentages?.find(
+                                                                                        cp => cp.category_id === weights[0]?.subcategory?.category?.id
+                                                                                    );
+                                                                                    return categoryPercentage ? (
+                                                                                        <div className="mt-2 text-xs text-muted-foreground">
+                                                                                            Sum: {categoryPercentage.sum_responses} / {categoryPercentage.total_possible_points} (Max: {categoryPercentage.question_count} questions × 5)
+                                                                                        </div>
+                                                                                    ) : null;
+                                                                                })()}
                                                                             </div>
                                                                             <div className="p-8">
                                                                                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
