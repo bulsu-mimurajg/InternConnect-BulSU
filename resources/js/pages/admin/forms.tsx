@@ -104,13 +104,13 @@ export default function FormsPage({ questions, categories, subcategories, filter
     // Apply additional filters (search, category, subcategory)
     const applyAdditionalFilters = useCallback(() => {
         return filteredQuestions.filter(question => {
-            const matchesSearch = !searchTerm || 
+            const matchesSearch = !searchTerm ||
                 question.question.toLowerCase().includes(searchTerm.toLowerCase());
-            const matchesCategory = !filterCategory || 
+            const matchesCategory = !filterCategory ||
                 question.subcategory.category.id.toString() === filterCategory;
-            const matchesSubcategory = !filterSubcategory || 
+            const matchesSubcategory = !filterSubcategory ||
                 question.subcategory.id.toString() === filterSubcategory;
-            
+
             return matchesSearch && matchesCategory && matchesSubcategory;
         });
     }, [filteredQuestions, searchTerm, filterCategory, filterSubcategory]);
@@ -118,7 +118,7 @@ export default function FormsPage({ questions, categories, subcategories, filter
     const finalFilteredQuestions = applyAdditionalFilters();
 
     // Create a stable reset trigger
-    const resetTrigger = useMemo(() => 
+    const resetTrigger = useMemo(() =>
         `${searchTerm}-${filterCategory}-${filterSubcategory}-${showArchived}`,
         [searchTerm, filterCategory, filterSubcategory, showArchived]
     );
@@ -178,13 +178,13 @@ export default function FormsPage({ questions, categories, subcategories, filter
             .map((choice, index) => ({ choice, index }))
             .filter(({ choice }) => choice.text.trim() === '')
             .map(({ index }) => index);
-        
+
         // Validate individual choices are not empty
         if (emptyChoiceIndices.length > 0) {
-            setValidationErrors({ 
+            setValidationErrors({
                 emptyChoices: emptyChoiceIndices,
-                choices: emptyChoiceIndices.length === choices.length 
-                    ? 'All choices are empty. Please enter at least 2 choices.' 
+                choices: emptyChoiceIndices.length === choices.length
+                    ? 'All choices are empty. Please enter at least 2 choices.'
                     : `Choice${emptyChoiceIndices.length > 1 ? 's' : ''} ${emptyChoiceIndices.map(i => i + 1).join(', ')} ${emptyChoiceIndices.length > 1 ? 'are' : 'is'} empty.`
             });
             const formElement = document.querySelector('form');
@@ -193,7 +193,7 @@ export default function FormsPage({ questions, categories, subcategories, filter
             }
             return;
         }
-        
+
         // Validate at least 2 choices
         if (validChoices.length < 2) {
             setValidationErrors({ choices: 'At least 2 choices are required.' });
@@ -394,14 +394,14 @@ export default function FormsPage({ questions, categories, subcategories, filter
 
     // Check if forms management is restricted due to deadlines
     const isFormsManagementRestricted = useMemo(() => {
-        return deadlineStatus?.restrictions.some(restriction => 
+        return deadlineStatus?.restrictions.some(restriction =>
             restriction.affected_functionality.includes('forms_management')
         ) || false;
     }, [deadlineStatus]);
 
     // Get restriction message
     const restrictionMessage = useMemo(() => {
-        const restriction = deadlineStatus?.restrictions.find(restriction => 
+        const restriction = deadlineStatus?.restrictions.find(restriction =>
             restriction.affected_functionality.includes('forms_management')
         );
         return restriction?.message || '';
@@ -453,8 +453,8 @@ export default function FormsPage({ questions, categories, subcategories, filter
                         </p>
                     </div>
                     <div className="flex gap-2">
-                        <Button 
-                            variant="outline" 
+                        <Button
+                            variant="outline"
                             size="default"
                             onClick={() => setShowFilters(!showFilters)}
                         >
@@ -734,8 +734,8 @@ export default function FormsPage({ questions, categories, subcategories, filter
                                     {choices.filter(c => c.text.trim()).length < 2 && !validationErrors.choices && (
                                         <p className="text-sm text-amber-600">At least 2 choices are required.</p>
                                     )}
-                                    {choices.filter(c => c.text.trim()).length >= 2 && 
-                                     !choices.some(c => c.isCorrect && c.text.trim()) && 
+                                    {choices.filter(c => c.text.trim()).length >= 2 &&
+                                     !choices.some(c => c.isCorrect && c.text.trim()) &&
                                      !validationErrors.correctAnswer && (
                                         <p className="text-sm text-amber-600">At least one choice must be marked as correct.</p>
                                     )}
@@ -809,7 +809,6 @@ export default function FormsPage({ questions, categories, subcategories, filter
                                         <tr className="border-b">
                                             <th className="text-center p-3 font-medium text-muted-foreground w-16">#</th>
                                             <th className="text-left p-3 font-medium text-muted-foreground">Question</th>
-                                            <th className="text-left p-3 font-medium text-muted-foreground">Type</th>
                                             <th className="text-left p-3 font-medium text-muted-foreground">Category</th>
                                             <th className="text-left p-3 font-medium text-muted-foreground">Subcategory</th>
                                             <th className="text-left p-3 font-medium text-muted-foreground">Status</th>
@@ -828,11 +827,6 @@ export default function FormsPage({ questions, categories, subcategories, filter
                                                             {question.question}
                                                         </p>
                                                     </div>
-                                                </td>
-                                                <td className="p-3">
-                                                    <Badge variant="default">
-                                                        {question.question_type || 'quiz'}
-                                                    </Badge>
                                                 </td>
                                                 <td className="p-3">
                                                     <span className="text-sm">{question.subcategory.category.category_name}</span>
