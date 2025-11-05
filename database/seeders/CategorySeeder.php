@@ -929,27 +929,45 @@ class CategorySeeder extends Seeder
                 foreach ($questions as $questionData) {
                     // Handle both structured quiz questions and simple text questions
                     if (is_array($questionData)) {
-                        // Create HTE question first (rating type, no hte_question_id)
+                        // Check if student question already exists first
+                        $studentQuestion = Question::where('question', $questionData['question'])
+                            ->where('subcategory_id', $subCategory->id)
+                            ->where('question_type', $questionData['type'] ?? 'quiz')
+                            ->first();
+                        
+                        if ($studentQuestion && $studentQuestion->hte_question_id) {
+                            // Student question exists and has an HTE question, skip creation
+                            continue;
+                        }
+                        
+                        // Generate HTE question text
                         $hteQuestionText = $this->generateHteQuestionText($questionData['question'], $subCategoryName, $categoryName);
                         
-                        $hteQuestion = Question::firstOrCreate([
+                        // Always create a new unique HTE question for each student question
+                        // This ensures each student question has its own HTE question, even if text is similar
+                        $hteQuestion = Question::create([
                             'question' => $hteQuestionText,
                             'subcategory_id' => $subCategory->id,
-                        ], [
                             'question_type' => 'rating',
                             'is_active' => true,
                             'hte_question_id' => null, // HTE questions don't have hte_question_id
                         ]);
 
-                        // Create student question (quiz type) with link to HTE question
-                        $question = Question::firstOrCreate([
-                            'question' => $questionData['question'],
-                            'subcategory_id' => $subCategory->id,
-                        ], [
-                            'question_type' => $questionData['type'] ?? 'quiz',
-                            'is_active' => true,
-                            'hte_question_id' => $hteQuestion->id, // Link to HTE question
-                        ]);
+                        // Create student question (quiz type) with link to HTE question, or update existing one
+                        if ($studentQuestion) {
+                            // Update existing student question with HTE question link
+                            $studentQuestion->update(['hte_question_id' => $hteQuestion->id]);
+                            $question = $studentQuestion;
+                        } else {
+                            // Create new student question
+                            $question = Question::create([
+                                'question' => $questionData['question'],
+                                'subcategory_id' => $subCategory->id,
+                                'question_type' => $questionData['type'] ?? 'quiz',
+                                'is_active' => true,
+                                'hte_question_id' => $hteQuestion->id, // Link to HTE question
+                            ]);
+                        }
 
                         // Create choices for quiz questions
                         if (isset($questionData['choices']) && $questionData['type'] === 'quiz') {

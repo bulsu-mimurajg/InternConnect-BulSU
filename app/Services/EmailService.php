@@ -17,6 +17,7 @@ class EmailService
     private $smtpEncryption;
     private $smtpUsername;
     private $smtpTimeout;
+    private $smtpHostname;
 
     public function __construct()
     {
@@ -32,6 +33,29 @@ class EmailService
             $this->smtpEncryption = env('PHPMAILER_SMTP_ENCRYPTION', 'tls'); // 'tls' or 'ssl'
             $this->smtpUsername = env('PHPMAILER_SMTP_USERNAME') ?: $this->fromEmail;
             $this->smtpTimeout = env('PHPMAILER_SMTP_TIMEOUT', 30);
+            
+            // Set hostname for EHLO command - important for SMTP compatibility
+            // Defaults to domain from APP_URL or a valid fallback
+            $this->smtpHostname = env('PHPMAILER_SMTP_HOSTNAME');
+            if (empty($this->smtpHostname)) {
+                $appUrl = env('APP_URL', 'http://localhost');
+                $parsedUrl = parse_url($appUrl);
+                if ($parsedUrl && isset($parsedUrl['host']) && $parsedUrl['host'] !== 'localhost' && $parsedUrl['host'] !== '127.0.0.1') {
+                    $this->smtpHostname = $parsedUrl['host'];
+                } elseif (!empty($this->fromEmail)) {
+                    // Fallback: extract domain from email address
+                    $emailDomain = substr(strrchr($this->fromEmail, '@'), 1);
+                    if ($emailDomain && $emailDomain !== false) {
+                        $this->smtpHostname = $emailDomain;
+                    } else {
+                        // Last resort: use gmail.com or smtp.gmail.com domain if using Gmail
+                        $this->smtpHostname = $this->smtpHost === 'smtp.gmail.com' ? 'gmail.com' : ($this->smtpHost ?? 'localhost');
+                    }
+                } else {
+                    // Last resort: use smtp host domain or default
+                    $this->smtpHostname = $this->smtpHost === 'smtp.gmail.com' ? 'gmail.com' : ($this->smtpHost ?? 'localhost');
+                }
+            }
 
             // Validate required configuration
             $this->validateConfiguration();
@@ -93,6 +117,10 @@ class EmailService
             $mailer->Port = (int) $this->smtpPort;
             $mailer->Timeout = (int) $this->smtpTimeout;
             
+            // Set hostname for EHLO command - critical for SMTP server compatibility
+            // This prevents SMTP servers from rejecting connections with "localhost" hostname
+            $mailer->Hostname = $this->smtpHostname;
+            
             // SMTP debugging disabled by default
             $mailer->SMTPDebug = SMTP::DEBUG_OFF;
 
@@ -153,7 +181,9 @@ class EmailService
                 $errorDetails .= "- SMTP Host: {$this->smtpHost}\n";
                 $errorDetails .= "- SMTP Port: {$this->smtpPort}\n";
                 $errorDetails .= "- SMTP Username: {$this->smtpUsername}\n";
+                $errorDetails .= "- SMTP Hostname (EHLO): {$this->smtpHostname}\n";
                 $errorDetails .= "- From Email: {$this->fromEmail}\n";
+                $errorDetails .= "\nNote: If emails only work on your PC, ensure PHPMAILER_SMTP_HOSTNAME or APP_URL is set correctly on other machines.\n";
             }
             
             throw new \Exception("Email could not be sent. Error: {$errorDetails}");

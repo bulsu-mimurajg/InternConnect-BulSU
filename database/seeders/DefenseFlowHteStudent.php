@@ -250,12 +250,39 @@ class DefenseFlowHteStudent extends Seeder
                         continue;
                     }
 
-                    // Assign ratings to each question (1-5 scale)
-                    // For demo purposes, assign varying ratings based on subcategory importance
+                    // Ensure we're working with unique HTE questions (by ID)
+                    // Each question should have a unique HTE question
+                    $questions = $questions->unique('id')->values();
+                    
+                    if ($questions->isEmpty()) {
+                        continue;
+                    }
+
+                    // Ensure each question in this subcategory gets a different rating
+                    // Generate unique ratings when possible (≤5 questions), otherwise maximize variety
+                    $questionCount = $questions->count();
+                    $availableRatings = range(1, 5); // Full range 1-5
+                    
+                    // If we have 5 or fewer questions, each gets a unique rating (1-5)
+                    // If we have more than 5 questions, cycle through ratings but shuffle for variety
+                    if ($questionCount <= 5) {
+                        // Perfect case: we can assign unique ratings (1-5) to each question
+                        shuffle($availableRatings); // Shuffle in place
+                        $ratings = array_slice($availableRatings, 0, $questionCount);
+                    } else {
+                        // More than 5 questions: use full range and repeat, but ensure variety
+                        $ratings = [];
+                        $baseRatings = [1, 2, 3, 4, 5];
+                        shuffle($baseRatings); // Shuffle the base ratings first
+                        for ($i = 0; $i < $questionCount; $i++) {
+                            // Cycle through shuffled ratings
+                            $ratings[] = $baseRatings[$i % 5];
+                        }
+                        shuffle($ratings); // Randomize the final order
+                    }
+                    $questionIndex = 0;
                     foreach ($questions as $question) {
-                        // Assign a rating between 3-5 for most questions (Important to Most Important)
-                        // This simulates HTEs rating questions as important
-                        $rating = rand(3, 5);
+                        $rating = $ratings[$questionIndex];
                         
                         QuestionImportanceRating::updateOrCreate(
                             [
@@ -268,6 +295,7 @@ class DefenseFlowHteStudent extends Seeder
                             ]
                         );
                         
+                        $questionIndex++;
                         $totalQuestions++;
                     }
                 }
