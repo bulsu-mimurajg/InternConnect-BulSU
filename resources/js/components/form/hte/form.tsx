@@ -33,8 +33,8 @@ const FormSchema = z.object({
     numberOfInterns: z.string().min(1, 'Number of interns is required'),
     // duration removed
     
-    // Weights
-    subcategoryWeights: z.record(z.string(), z.number().min(0).max(100)),
+    // Question Ratings
+    questionRatings: z.record(z.string(), z.number().min(1).max(5)),
 });
 
 type FormData = z.infer<typeof FormSchema>;
@@ -57,6 +57,7 @@ interface Question {
     question: string;
     access: string;
     is_active: boolean;
+    rating?: number | null;
 }
 
 interface HTEFormProps {
@@ -76,7 +77,6 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
     const [categoriesLoading, setCategoriesLoading] = useState(true);
     const [dataFetched, setDataFetched] = useState(false);
     const [showValidationErrors, setShowValidationErrors] = useState(false);
-    const [lockedSubcategories, setLockedSubcategories] = useState<Set<number>>(new Set());
 
     const steps = [
         { id: 'Step 1', name: 'Basic Information' },
@@ -97,7 +97,7 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
             position: '',
             department: '',
             numberOfInterns: '',
-            subcategoryWeights: {},
+            questionRatings: {},
         },
     });
 
@@ -130,20 +130,35 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
             
             setCategories(processedData);
             
-            // Initialize equal weights for all subcategories
+            // Initialize question ratings from existing data if available
+            const initialRatings: Record<string, number> = {};
+            const allSubcategoryIdsWithQuestions = new Set<number>();
+            
             processedData.forEach((category: Category) => {
                 if (category.subCategories && category.subCategories.length > 0) {
-                    const subcategoryCount = category.subCategories.length;
-                    const baseWeight = Math.floor(100 / subcategoryCount);
-                    const remainder = 100 % subcategoryCount;
-                    
-                    // Distribute weights evenly, with remainder distributed to first subcategories
-                    category.subCategories.forEach((subcat: SubCategory, index: number) => {
-                        const weight = index < remainder ? baseWeight + 1 : baseWeight;
-                        form.setValue(`subcategoryWeights.${subcat.id}`, weight);
+                    category.subCategories.forEach((subcat: SubCategory) => {
+                        if (subcat.questions && subcat.questions.length > 0) {
+                            // Add subcategory ID to set for auto-expanding questions
+                            allSubcategoryIdsWithQuestions.add(subcat.id);
+                            
+                            subcat.questions.forEach((question: Question) => {
+                                if (question.rating !== null && question.rating !== undefined) {
+                                    initialRatings[question.id] = question.rating;
+                                }
+                            });
+                        }
                     });
                 }
             });
+            
+            // Expand all questions sections by default (when subcategory is expanded)
+            setExpandedQuestions(allSubcategoryIdsWithQuestions);
+            
+            if (Object.keys(initialRatings).length > 0) {
+                Object.entries(initialRatings).forEach(([questionId, rating]) => {
+                    form.setValue(`questionRatings.${questionId}`, rating);
+                });
+            }
             
             setDataFetched(true);
             setCategoriesLoading(false);
@@ -183,95 +198,39 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
 
     const [currentStep, setCurrentStep] = useState(0);
 
-    // Check if all categories have valid weights (total 100% and no unset weights for unlocked subcategories)
-    const areAllWeightsValid = useMemo(() => {
+    // Watch questionRatings to trigger re-renders when ratings change
+    const questionRatings = form.watch('questionRatings') || {};
+
+    // Check if all questions are rated
+    const areAllQuestionsRated = useMemo(() => {
         if (currentStep !== 2 || categories.length === 0) return true;
-        
-        const weights = form.watch('subcategoryWeights') || {};
         
         return categories.every((category) => {
             if (!category.subCategories || category.subCategories.length === 0) return true;
             
-            const categoryWeights = category.subCategories.map((subcat) => {
-                const weight = weights[subcat.id];
-                // Check if weight exists and is a valid number > 0
-                return (weight !== undefined && weight !== null && !isNaN(Number(weight)) && Number(weight) > 0) ? Number(weight) : 0;
+            return category.subCategories.every((subcat) => {
+                if (!subcat.questions || subcat.questions.length === 0) return true;
+                
+                return subcat.questions.every((question) => {
+                    const rating = questionRatings[question.id];
+                    return rating !== undefined && rating !== null && rating >= 1 && rating <= 5;
+                });
             });
-            const totalWeight = categoryWeights.reduce((sum, weight) => sum + weight, 0);
-            
-            // Check if total is 100% AND no unlocked weights are unset (0)
-            const hasUnsetUnlockedWeights = category.subCategories.some((subcat, index) => {
-                const weight = categoryWeights[index];
-                return !lockedSubcategories.has(subcat.id) && weight === 0;
-            });
-            
-            return totalWeight === 100 && !hasUnsetUnlockedWeights;
         });
-    }, [currentStep, categories, form, lockedSubcategories]);
+    }, [currentStep, categories, questionRatings]);
 
-    // Check if all categories total 100% (allows navigation even with unset weights)
-    const areAllCategoriesAt100Percent = useMemo(() => {
-        if (currentStep !== 2 || categories.length === 0) return true;
-        
-        const weights = form.watch('subcategoryWeights') || {};
-        const formValues = form.getValues('subcategoryWeights') || {};
-        
-        // Use form values as fallback if watch doesn't have latest data
-        const currentWeights = Object.keys(formValues).length > 0 ? formValues : weights;
-        
-        // Debug logging
-        console.log('Validation check - weights:', currentWeights);
-        
-        const result = categories.every((category) => {
-            if (!category.subCategories || category.subCategories.length === 0) return true;
-            
-            const categoryWeights = category.subCategories.map((subcat) => {
-                const weight = currentWeights[subcat.id];
-                return (weight !== undefined && weight !== null && !isNaN(Number(weight))) ? Number(weight) : 0;
-            });
-            const totalWeight = categoryWeights.reduce((sum, weight) => sum + weight, 0);
-            
-            console.log(`Category ${category.category_name}: ${totalWeight}%`);
-            return totalWeight === 100;
-        });
-        
-        console.log('All categories at 100%:', result);
-        return result;
-    }, [currentStep, categories, form]);
-
-    // Clear validation errors when weights become valid
+    // Clear validation errors when all questions are rated
     React.useEffect(() => {
-        if (areAllWeightsValid && showValidationErrors) {
+        if (areAllQuestionsRated && showValidationErrors) {
             setShowValidationErrors(false);
         }
-    }, [areAllWeightsValid, showValidationErrors]);
-
-    // Force validation update when weights change
-    React.useEffect(() => {
-        if (currentStep === 2) {
-            // Trigger a re-render to update validation
-            const weights = form.watch('subcategoryWeights') || {};
-            console.log('Weights changed, triggering validation update:', weights);
-        }
-    }, [form, currentStep]);
+    }, [areAllQuestionsRated, showValidationErrors]);
 
     const prev = () => {
         if (currentStep > 0) {
             setCurrentStep((prev) => prev - 1);
         }
     };
-
-    const toggleSubcategoryLock = useCallback((subcategoryId: number) => {
-        setLockedSubcategories((prev) => {
-            const newLocked = new Set(prev);
-            if (newLocked.has(subcategoryId)) {
-                newLocked.delete(subcategoryId);
-            } else {
-                newLocked.add(subcategoryId);
-            }
-            return newLocked;
-        });
-    }, []);
 
     const next = async () => {
         let fieldsToValidate: Path<FormData>[] = [];
@@ -285,88 +244,121 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
                 fieldsToValidate = ['position', 'department', 'numberOfInterns'];
                 break;
             case 2: { // Criteria
-                fieldsToValidate = ['subcategoryWeights'];
+                fieldsToValidate = ['questionRatings'];
                 
-                // Check if each category totals exactly 100%
-                const weights = form.watch('subcategoryWeights') || {};
-                const categoriesWithInvalidTotals: Array<{name: string, total: number, missing: number}> = [];
-                const categoriesWithUnsetWeights: Array<{name: string, unsetSubcategories: Array<{id: number, name: string}>}> = [];
+                // Check if all questions are rated
+                const unratedQuestions: Array<{categoryId: number, categoryName: string, subcategoryId: number, subcategoryName: string, questionId: number, questionText: string}> = [];
                 
                 categories.forEach((category) => {
                     if (category.subCategories && category.subCategories.length > 0) {
-                        const categoryWeights = category.subCategories.map((subcat) => {
-                            const weight = weights[subcat.id];
-                            return (weight !== undefined && weight !== null && !isNaN(Number(weight))) ? Number(weight) : 0;
-                        });
-                        const totalWeight = categoryWeights.reduce((sum, weight) => sum + weight, 0);
-                        
-                        // STRICT VALIDATION: Total must be exactly 100%
-                        if (totalWeight !== 100) {
-                            categoriesWithInvalidTotals.push({
-                                name: category.category_name,
-                                total: totalWeight,
-                                missing: 100 - totalWeight
-                            });
-                        }
-                        
-                        // Check for unset unlocked subcategories (only if total is not 100%)
-                        if (totalWeight !== 100) {
-                            const unsetSubcategories = category.subCategories.filter((subcat, index) => {
-                                const weight = categoryWeights[index];
-                                return !lockedSubcategories.has(subcat.id) && (weight === 0 || weight === undefined || weight === null);
-                            });
-                            
-                            if (unsetSubcategories.length > 0) {
-                                categoriesWithUnsetWeights.push({
-                                    name: category.category_name,
-                                    unsetSubcategories: unsetSubcategories.map(subcat => ({
-                                        id: subcat.id,
-                                        name: subcat.subcategory_name
-                                    }))
+                        category.subCategories.forEach((subcat) => {
+                            if (subcat.questions && subcat.questions.length > 0) {
+                                subcat.questions.forEach((question) => {
+                                    const rating = questionRatings[question.id];
+                                    if (rating === undefined || rating === null || rating < 1 || rating > 5) {
+                                        unratedQuestions.push({
+                                            categoryId: category.id,
+                                            categoryName: category.category_name,
+                                            subcategoryId: subcat.id,
+                                            subcategoryName: subcat.subcategory_name,
+                                            questionId: question.id,
+                                            questionText: question.question
+                                        });
+                                    }
                                 });
                             }
-                        }
+                        });
                     }
                 });
 
-                // If totals are not exactly 100%, show validation errors and prevent progression
-                if (categoriesWithInvalidTotals.length > 0) {
+                // If there are unrated questions, show validation errors, expand sections, scroll and animate
+                if (unratedQuestions.length > 0) {
                     setShowValidationErrors(true);
                     shouldPreventProgression = true;
                     
-                    // Show specific validation message
-                    const invalidCategoriesList = categoriesWithInvalidTotals.map(cat => 
-                        `${cat.name} (${cat.total}% - needs ${Math.abs(cat.missing)}% more)`
-                    ).join(', ');
+                    const firstUnratedQuestion = unratedQuestions[0];
                     
-                    console.warn('Validation failed:', invalidCategoriesList);
+                    // Expand the category, subcategory, and questions sections
+                    setExpandedCategories((prev) => {
+                        const newExpanded = new Set(prev);
+                        newExpanded.add(firstUnratedQuestion.categoryId);
+                        return newExpanded;
+                    });
                     
-                    const firstInvalidCategory = categoriesWithInvalidTotals[0];
+                    setExpandedSubcategories((prev) => {
+                        const newExpanded = new Set(prev);
+                        newExpanded.add(firstUnratedQuestion.subcategoryId);
+                        return newExpanded;
+                    });
+                    
+                    setExpandedQuestions((prev) => {
+                        const newExpanded = new Set(prev);
+                        newExpanded.add(firstUnratedQuestion.subcategoryId);
+                        return newExpanded;
+                    });
+                    
+                    // Scroll to and animate the question element
                     setTimeout(() => {
-                        const categoryCard = document.getElementById(`category-card-${firstInvalidCategory.name.toLowerCase().replace(/\s+/g, '-')}`);
-                        if (categoryCard) {
-                            categoryCard.scrollIntoView({ 
+                        const questionElement = document.getElementById(`question-rating-${firstUnratedQuestion.questionId}`);
+                        if (questionElement) {
+                            // Scroll to the element first
+                            questionElement.scrollIntoView({ 
                                 behavior: 'smooth', 
                                 block: 'center' 
                             });
+                            
+                            // Wait for scroll to complete before showing animation
+                            setTimeout(() => {
+                                // Store original styles
+                                const originalBorder = questionElement.style.border;
+                                const originalPadding = questionElement.style.padding;
+                                const originalBorderRadius = questionElement.style.borderRadius;
+                                const originalMargin = questionElement.style.margin;
+                                
+                                // Add animation class
+                                questionElement.classList.add('animate-pulse-unanswered');
+                                
+                                // Add inline styles for better visibility
+                                questionElement.style.border = '2px solid hsl(var(--destructive))';
+                                questionElement.style.borderRadius = '0.5rem';
+                                questionElement.style.padding = '1rem';
+                                questionElement.style.margin = '8px 0';
+                                questionElement.style.transition = 'all 0.3s ease';
+                                
+                                // Use React Hook Form's watch with subscription for immediate updates
+                                const subscription = form.watch((value, { name }) => {
+                                    if (name && name.startsWith('questionRatings.')) {
+                                        const questionIdStr = name.split('.')[1];
+                                        const questionId = parseInt(questionIdStr);
+                                        if (questionId === firstUnratedQuestion.questionId) {
+                                            // Get the current rating value from the form
+                                            const currentRatings = form.getValues('questionRatings' as Path<FormData>) as Record<string, number> | undefined;
+                                            // Try both string and number keys since JavaScript object keys are strings
+                                            const currentRating = currentRatings?.[questionId] ?? currentRatings?.[questionIdStr];
+                                            if (currentRating !== undefined && currentRating !== null && currentRating >= 1 && currentRating <= 5) {
+                                                questionElement.classList.remove('animate-pulse-unanswered');
+                                                questionElement.style.border = originalBorder;
+                                                questionElement.style.padding = originalPadding;
+                                                questionElement.style.borderRadius = originalBorderRadius;
+                                                questionElement.style.margin = originalMargin;
+                                                subscription.unsubscribe();
+                                            }
+                                        }
+                                    }
+                                });
+                                
+                                // Remove animation after a delay (fallback)
+                                setTimeout(() => {
+                                    questionElement.classList.remove('animate-pulse-unanswered');
+                                    questionElement.style.border = originalBorder;
+                                    questionElement.style.padding = originalPadding;
+                                    questionElement.style.borderRadius = originalBorderRadius;
+                                    questionElement.style.margin = originalMargin;
+                                    subscription.unsubscribe();
+                                }, 10000);
+                            }, 600); // Wait for smooth scroll to complete
                         }
-                    }, 100);
-                }
-                
-                // If totals are exactly 100% but there are still unset subcategories, focus on the first unset one
-                if (!shouldPreventProgression && categoriesWithUnsetWeights.length > 0) {
-                    const firstCategoryWithUnset = categoriesWithUnsetWeights[0];
-                    const firstUnsetSubcategory = firstCategoryWithUnset.unsetSubcategories[0];
-                    
-                    setTimeout(() => {
-                        const inputElement = document.getElementById(`weight-${firstUnsetSubcategory.id}`) as HTMLInputElement;
-                        if (inputElement) {
-                            inputElement.focus();
-                            inputElement.select();
-                        }
-                    }, 100);
-                    
-                    shouldPreventProgression = true;
+                    }, 300); // Increased delay to ensure sections are expanded
                 }
                 break;
             }
@@ -465,9 +457,6 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
                                         setExpandedSubcategories={setExpandedSubcategories}
                                         setExpandedQuestions={setExpandedQuestions}
                                         highlightInvalidCategories={showValidationErrors}
-                                        lockedSubcategories={lockedSubcategories}
-                                        onToggleSubcategoryLock={toggleSubcategoryLock}
-                                        onWeightChange={() => {}}
                                     />
                                 )}
                                 {currentStep === 3 && (
@@ -498,10 +487,8 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
                         <div className="text-sm text-gray-600">
                             {currentStep < steps.length - 1 && (
                                 <span>
-                                    {currentStep === 2 && !areAllCategoriesAt100Percent 
-                                        ? "All categories must total 100% before proceeding" 
-                                        : currentStep === 2 && !areAllWeightsValid
-                                        ? "Some subcategories need weights assigned - click Next to focus on them"
+                                    {currentStep === 2 && !areAllQuestionsRated 
+                                        ? "All questions must be rated before proceeding" 
                                         : "Please complete all required fields before proceeding"
                                     }
                                 </span>
@@ -514,8 +501,7 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
                                 </Button>
                                 <Button 
                                     onClick={next} 
-                                    disabled={currentStep === steps.length - 1 || (currentStep === 2 && !areAllCategoriesAt100Percent)}
-                                    className={currentStep === 2 && !areAllCategoriesAt100Percent ? "opacity-50" : ""}
+                                    disabled={currentStep === steps.length - 1}
                                 >
                                     Next
                                 </Button>

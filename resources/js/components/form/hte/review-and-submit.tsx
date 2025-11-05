@@ -8,7 +8,11 @@ interface Category {
     subCategories?: Array<{
         id: number;
         subcategory_name: string;
-        questions?: Array<unknown>;
+        questions?: Array<{
+            id: number;
+            question: string;
+            is_active: boolean;
+        }>;
     }>;
 }
 
@@ -16,31 +20,80 @@ type Props = {
     categories?: Category[];
 };
 
+const LIKERT_LABELS = [
+    { value: 1, label: 'Not Important', description: 'Poor (<75%)' },
+    { value: 2, label: 'Somewhat Important', description: 'Fair (75-79%)' },
+    { value: 3, label: 'Important', description: 'Good (80-89%)' },
+    { value: 4, label: 'Very Important', description: 'Very Good (90-95%)' },
+    { value: 5, label: 'Most Important', description: 'Excellent (96-100%)' },
+];
+
+/**
+ * Calculate subcategory percentage from question ratings
+ */
+function calculateSubcategoryPercentage(questionRatings: number[], questionCount: number): number {
+    if (questionCount === 0) return 0;
+    const sumOfRatings = questionRatings.reduce((sum, rating) => sum + rating, 0);
+    const maxPossibleScore = questionCount * 5;
+    return Math.round((sumOfRatings / maxPossibleScore) * 100 * 100) / 100;
+}
+
+/**
+ * Map percentage to descriptive rating
+ */
+function getDescriptiveRating(percentage: number): string {
+    if (percentage >= 96) return 'Excellent';
+    if (percentage >= 90) return 'Very Good';
+    if (percentage >= 80) return 'Good';
+    if (percentage >= 75) return 'Fair';
+    return 'Poor';
+}
+
 export default function ReviewAndSubmit({ categories = [] }: Props) {
     const { watch } = useFormContext();
     const formData = watch();
+    const questionRatings = formData.questionRatings || {};
 
-    // Calculate category totals for the summary
-    const calculateCategoryTotal = (categoryId: number) => {
-        const category = categories.find(cat => cat.id === categoryId);
-        if (!category || !category.subCategories) return 0;
+    // Calculate subcategory percentage
+    const getSubcategoryPercentage = (subcategory: { questions?: Array<{ id: number }> }) => {
+        if (!subcategory.questions || subcategory.questions.length === 0) return 0;
         
-        return category.subCategories.reduce((sum: number, subcat: { id: number }) => {
-            const weight = formData.subcategoryWeights?.[subcat.id] || 0;
-            return sum + (Number(weight) || 0);
-        }, 0);
+        const ratings = subcategory.questions
+            .map(q => questionRatings[q.id])
+            .filter(r => r !== undefined && r !== null && r >= 1 && r <= 5) as number[];
+
+        if (ratings.length === 0) return 0;
+        
+        return calculateSubcategoryPercentage(ratings, subcategory.questions.length);
     };
 
-    // Get weight for a specific subcategory
-    const getSubcategoryWeight = (subcategoryId: number) => {
-        return formData.subcategoryWeights?.[subcategoryId] || 0;
+    // Calculate category percentage
+    const getCategoryPercentage = (category: Category) => {
+        let allRatings: number[] = [];
+        let totalQuestions = 0;
+
+        category.subCategories?.forEach(subcat => {
+            if (subcat.questions && subcat.questions.length > 0) {
+                const ratings = subcat.questions
+                    .map(q => questionRatings[q.id])
+                    .filter(r => r !== undefined && r !== null && r >= 1 && r <= 5) as number[];
+                allRatings.push(...ratings);
+                totalQuestions += subcat.questions.length;
+            }
+        });
+
+        if (allRatings.length === 0 || totalQuestions === 0) return 0;
+        
+        return calculateSubcategoryPercentage(allRatings, totalQuestions);
     };
 
-    // Get validation status for weight totals
-    const getWeightStatus = (total: number) => {
-        if (total === 100) return { status: 'valid', color: 'text-green-600', bgColor: 'bg-green-50', borderColor: 'border-green-200' };
-        if (total > 100) return { status: 'exceeded', color: 'text-red-600', bgColor: 'bg-red-50', borderColor: 'border-red-200' };
-        return { status: 'incomplete', color: 'text-yellow-600', bgColor: 'bg-yellow-50', borderColor: 'border-yellow-200' };
+    // Get rating status color
+    const getRatingStatusColor = (percentage: number) => {
+        if (percentage >= 96) return { text: 'text-green-600 dark:text-green-400', bg: 'bg-green-50 dark:bg-green-950/30', border: 'border-green-200 dark:border-green-800' };
+        if (percentage >= 90) return { text: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-950/30', border: 'border-blue-200 dark:border-blue-800' };
+        if (percentage >= 80) return { text: 'text-yellow-600 dark:text-yellow-400', bg: 'bg-yellow-50 dark:bg-yellow-950/30', border: 'border-yellow-200 dark:border-yellow-800' };
+        if (percentage >= 75) return { text: 'text-orange-600 dark:text-orange-400', bg: 'bg-orange-50 dark:bg-orange-950/30', border: 'border-orange-200 dark:border-orange-800' };
+        return { text: 'text-red-600 dark:text-red-400', bg: 'bg-red-50 dark:bg-red-950/30', border: 'border-red-200 dark:border-red-800' };
     };
 
     return (
@@ -104,10 +157,6 @@ export default function ReviewAndSubmit({ categories = [] }: Props) {
                         </div>
                         <div className="space-y-3">
                             <div>
-                                <span className="text-sm font-medium text-muted-foreground">Duration</span>
-                                <p className="text-sm text-foreground">{formData.duration}</p>
-                            </div>
-                            <div>
                                 <span className="text-sm font-medium text-muted-foreground">Number of Interns</span>
                                 <p className="text-sm text-foreground">{formData.numberOfInterns}</p>
                             </div>
@@ -120,71 +169,85 @@ export default function ReviewAndSubmit({ categories = [] }: Props) {
             {categories.length > 0 && (
                 <Card>
                     <CardHeader>
-                        <CardTitle className="text-lg">Assessment Criteria & Weight Allocation</CardTitle>
+                        <CardTitle className="text-lg">Assessment Criteria & Question Ratings</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-6">
-                        {/* Detailed Category Breakdown */}
                         <div className="space-y-4">
                             {categories.map((category: Category) => {
-                                const categoryTotal = calculateCategoryTotal(category.id);
-                                const weightStatus = getWeightStatus(categoryTotal);
+                                const categoryPercentage = getCategoryPercentage(category);
+                                const categoryRating = getDescriptiveRating(categoryPercentage);
+                                const statusColors = getRatingStatusColor(categoryPercentage);
                                 
                                 return (
-                                    <div key={category.id} className={`rounded-lg border-2 ${weightStatus.borderColor} ${weightStatus.bgColor} p-4 transition-all duration-200`}>
+                                    <div key={category.id} className={`rounded-lg border-2 ${statusColors.border} ${statusColors.bg} p-4 transition-all duration-200`}>
                                         <div className="flex items-center justify-between mb-4">
                                             <h4 className="text-lg font-medium text-foreground">{category.category_name}</h4>
-                                            <Badge 
-                                                variant={weightStatus.status === 'valid' ? 'default' : weightStatus.status === 'exceeded' ? 'destructive' : 'secondary'}
-                                                className="text-xs"
-                                            >
-                                                {weightStatus.status === 'valid' ? '✓' : 
-                                                 weightStatus.status === 'exceeded' ? '✗' : '!'}
+                                            <Badge variant="secondary" className="text-xs">
+                                                Passing Threshold: {categoryPercentage > 0 ? `${categoryPercentage}%` : 'Not Rated'}
                                             </Badge>
                                         </div>
                                         
-                                        {/* Weight Progress Bar */}
+                                        {/* Category Summary */}
                                         <div className="mb-4">
                                             <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
-                                                <span>Weight Distribution</span>
-                                                <span>{categoryTotal}/100%</span>
+                                                <span>Category Passing Threshold</span>
+                                                <span className={`font-semibold ${statusColors.text}`}>
+                                                    {categoryPercentage > 0 ? `${categoryPercentage}%` : 'Not Rated'} ({categoryRating})
+                                                </span>
                                             </div>
                                             <div className="w-full bg-muted rounded-full h-2">
                                                 <div 
                                                     className={`h-2 rounded-full transition-all duration-300 ${
-                                                        weightStatus.status === 'valid' ? 'bg-green-500' : 
-                                                        weightStatus.status === 'exceeded' ? 'bg-red-500' : 'bg-yellow-500'
+                                                        categoryPercentage >= 96 ? 'bg-green-500' : 
+                                                        categoryPercentage >= 90 ? 'bg-blue-500' :
+                                                        categoryPercentage >= 80 ? 'bg-yellow-500' :
+                                                        categoryPercentage >= 75 ? 'bg-orange-500' : 'bg-red-500'
                                                     }`}
-                                                    style={{ width: `${Math.min(categoryTotal, 100)}%` }}
+                                                    style={{ width: `${Math.min(categoryPercentage, 100)}%` }}
                                                 ></div>
                                             </div>
                                         </div>
 
                                         {/* Subcategory Details */}
-                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                                            {category.subCategories?.map((subcat: { id: number; subcategory_name: string; questions?: Array<unknown> }) => {
-                                                const weight = getSubcategoryWeight(subcat.id);
+                                        <div className="space-y-3">
+                                            {category.subCategories?.map((subcat) => {
+                                                const subcategoryPercentage = getSubcategoryPercentage(subcat);
+                                                const subcategoryRating = getDescriptiveRating(subcategoryPercentage);
+                                                const subStatusColors = getRatingStatusColor(subcategoryPercentage);
                                                 const questionCount = subcat.questions ? subcat.questions.length : 0;
                                                 
                                                 return (
                                                     <div key={subcat.id} className="bg-background/50 p-3 rounded-lg border border-border/50">
-                                                        <div className="text-center space-y-2">
-                                                            <div className="text-lg font-bold text-primary">
-                                                                {weight}%
-                                                            </div>
-                                                            <div className="text-sm font-medium text-foreground">
-                                                                {subcat.subcategory_name}
-                                                            </div>
-                                                            <div className="text-xs text-muted-foreground">
-                                                                {questionCount} question{questionCount !== 1 ? 's' : ''}
-                                                            </div>
-                                                            {/* Weight Bar */}
-                                                            <div className="w-full bg-muted rounded-full h-1.5">
-                                                                <div 
-                                                                    className="bg-primary h-1.5 rounded-full transition-all duration-300"
-                                                                    style={{ width: `${weight}%` }}
-                                                                ></div>
+                                                        <div className="flex items-center justify-between mb-2">
+                                                            <div className="font-medium text-sm">{subcat.subcategory_name}</div>
+                                                            <div className={`text-sm font-semibold ${subStatusColors.text}`}>
+                                                                {subcategoryPercentage > 0 ? `${subcategoryPercentage}%` : 'Not Rated'} ({subcategoryRating})
                                                             </div>
                                                         </div>
+                                                        <div className="text-xs text-muted-foreground mb-2">
+                                                            {questionCount} question{questionCount !== 1 ? 's' : ''}
+                                                        </div>
+                                                        {/* Percentage Bar */}
+                                                        <div className="w-full bg-muted rounded-full h-1.5">
+                                                            <div 
+                                                                className={`h-1.5 rounded-full transition-all duration-300 ${
+                                                                    subcategoryPercentage >= 96 ? 'bg-green-500' : 
+                                                                    subcategoryPercentage >= 90 ? 'bg-blue-500' :
+                                                                    subcategoryPercentage >= 80 ? 'bg-yellow-500' :
+                                                                    subcategoryPercentage >= 75 ? 'bg-orange-500' : 'bg-red-500'
+                                                                }`}
+                                                                style={{ width: `${subcategoryPercentage}%` }}
+                                                            ></div>
+                                                        </div>
+                                                        {/* Question Ratings Summary */}
+                                                        {subcat.questions && subcat.questions.length > 0 && (
+                                                            <div className="mt-2 text-xs text-muted-foreground">
+                                                                Question Ratings: {subcat.questions.map((q, idx) => {
+                                                                    const rating = questionRatings[q.id];
+                                                                    return idx === 0 ? rating || '?' : `, ${rating || '?'}`;
+                                                                }).join('')}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 );
                                             })}
@@ -193,7 +256,6 @@ export default function ReviewAndSubmit({ categories = [] }: Props) {
                                 );
                             })}
                         </div>
-
                     </CardContent>
                 </Card>
             )}

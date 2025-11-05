@@ -44,6 +44,14 @@ class Internship extends Model
     }
 
     /**
+     * Get the question importance ratings for this internship.
+     */
+    public function questionImportanceRatings(): HasMany
+    {
+        return $this->hasMany(QuestionImportanceRating::class, 'internship_id');
+    }
+
+    /**
      * Get all compatibility scores for this internship
      */
     public function compatibilityScores(): HasMany

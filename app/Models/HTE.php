@@ -48,7 +48,13 @@ class HTE extends Model
         return $this->hasMany(Internship::class, 'hte_id');
     }
 
-
+    /**
+     * Get the question importance ratings for this HTE.
+     */
+    public function questionImportanceRatings(): HasMany
+    {
+        return $this->hasMany(QuestionImportanceRating::class, 'hte_id');
+    }
 
     /**
      * Get the full name of the contact person.

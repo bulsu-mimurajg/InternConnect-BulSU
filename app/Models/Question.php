@@ -29,4 +29,12 @@ class Question extends Model
     {
         return $this->hasMany(Choice::class, 'question_id');
     }
+
+    /**
+     * Get the importance ratings for this question.
+     */
+    public function importanceRatings(): HasMany
+    {
+        return $this->hasMany(QuestionImportanceRating::class, 'question_id');
+    }
 }

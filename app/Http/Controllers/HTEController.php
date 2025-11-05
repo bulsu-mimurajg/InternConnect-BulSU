@@ -17,6 +17,7 @@ use App\Models\StudentMatch;
 use App\Models\StudentPlacement;
 use App\Models\Student;
 use App\Models\Endorsement;
+use App\Models\QuestionImportanceRating;
 use App\Services\NotificationService;
 use Inertia\Inertia;
 
@@ -89,7 +90,8 @@ class HTEController extends Controller
                 'position' => 'required|string|max:100',
                 'department' => 'required|string|max:100',
                 'numberOfInterns' => 'required|string|max:50',
-                'subcategoryWeights' => 'required|array',
+                'questionRatings' => 'required|array',
+                'questionRatings.*' => 'required|integer|min:1|max:5',
             ]);
             Log::info('HTE Form Submission - Validation passed');
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -160,45 +162,47 @@ class HTEController extends Controller
                 Log::info('Internship Record Created:', ['internship_id' => $internship->id]);
             }
 
-            // Store subcategory weights (delete existing ones first if updating)
+            // Store question importance ratings (delete existing ones first if updating)
             if ($existingInternship) {
-                // Delete existing weights when updating
-                $internship->subcategoryWeights()->delete();
-                Log::info('Deleted existing subcategory weights for internship:', ['internship_id' => $internship->id]);
+                // Delete existing ratings when updating
+                $internship->questionImportanceRatings()->delete();
+                Log::info('Deleted existing question importance ratings for internship:', ['internship_id' => $internship->id]);
             }
 
-            $weightsCreated = 0;
-            if ($request->subcategoryWeights && is_array($request->subcategoryWeights)) {
-                foreach ($request->subcategoryWeights as $subcategoryId => $weight) {
+            $ratingsCreated = 0;
+            if ($request->questionRatings && is_array($request->questionRatings)) {
+                foreach ($request->questionRatings as $questionId => $rating) {
                     try {
-                        $subcategoryWeight = SubcategoryWeight::create([
+                        $questionRating = QuestionImportanceRating::create([
+                            'hte_id' => $hte->id,
                             'internship_id' => $internship->id,
-                            'subcategory_id' => $subcategoryId,
-                            'weight' => (int) $weight,
+                            'question_id' => $questionId,
+                            'rating' => (int) $rating,
                         ]);
-                        $weightsCreated++;
-                        Log::info('Subcategory Weight Created:', [
-                            'id' => $subcategoryWeight->id,
+                        $ratingsCreated++;
+                        Log::info('Question Importance Rating Created:', [
+                            'id' => $questionRating->id,
+                            'hte_id' => $hte->id,
                             'internship_id' => $internship->id,
-                            'subcategory_id' => $subcategoryId,
-                            'weight' => $weight
+                            'question_id' => $questionId,
+                            'rating' => $rating
                         ]);
                     } catch (\Exception $e) {
-                        Log::error('Failed to create subcategory weight:', [
-                            'subcategory_id' => $subcategoryId,
-                            'weight' => $weight,
+                        Log::error('Failed to create question importance rating:', [
+                            'question_id' => $questionId,
+                            'rating' => $rating,
                             'error' => $e->getMessage(),
                             'trace' => $e->getTraceAsString()
                         ]);
                     }
                 }
             } else {
-                Log::warning('No subcategory weights provided in request');
+                Log::warning('No question ratings provided in request');
             }
 
-            Log::info('Subcategory Weights Summary:', [
-                'total_weights_processed' => count($request->subcategoryWeights),
-                'weights_successfully_created' => $weightsCreated
+            Log::info('Question Importance Ratings Summary:', [
+                'total_ratings_processed' => count($request->questionRatings),
+                'ratings_successfully_created' => $ratingsCreated
             ]);
 
             // Recalculate student matches for new/updated internship
@@ -251,6 +255,9 @@ class HTEController extends Controller
      */
     public function getCategoriesForCriteria()
     {
+        $user = Auth::user();
+        $hte = $user->hte;
+        
         // Get categories with subcategories and questions, excluding 'Basic Information'
         $categories = Category::with(['subCategories.questions' => function($query) {
             $query->where('is_active', true);
@@ -258,21 +265,36 @@ class HTEController extends Controller
         ->where('category_name', '!=', 'Basic Information')
         ->get();
 
+        // Get existing ratings if HTE has submitted before
+        $existingRatings = [];
+        if ($hte) {
+            $existingInternship = $hte->internships()->first();
+            if ($existingInternship) {
+                $ratings = QuestionImportanceRating::where('hte_id', $hte->id)
+                    ->where('internship_id', $existingInternship->id)
+                    ->get()
+                    ->keyBy('question_id');
+                $existingRatings = $ratings->map(function($rating) {
+                    return $rating->rating;
+                })->toArray();
+            }
+        }
+
         // Transform the data to ensure proper structure for frontend
-        $transformedCategories = $categories->map(function($category) {
+        $transformedCategories = $categories->map(function($category) use ($existingRatings) {
             return [
                 'id' => $category->id,
                 'category_name' => $category->category_name,
                 'created_at' => $category->created_at,
                 'updated_at' => $category->updated_at,
-                'subCategories' => $category->subCategories->map(function($subCategory) {
+                'subCategories' => $category->subCategories->map(function($subCategory) use ($existingRatings) {
                     return [
                         'id' => $subCategory->id,
                         'subcategory_name' => $subCategory->subcategory_name,
                         'category_id' => $subCategory->category_id,
                         'created_at' => $subCategory->created_at,
                         'updated_at' => $subCategory->updated_at,
-                        'questions' => $subCategory->questions->map(function($question) {
+                        'questions' => $subCategory->questions->map(function($question) use ($existingRatings) {
                             return [
                                 'id' => $question->id,
                                 'question' => $question->question,
@@ -280,6 +302,7 @@ class HTEController extends Controller
                                 'subcategory_id' => $question->subcategory_id,
                                 'created_at' => $question->created_at,
                                 'updated_at' => $question->updated_at,
+                                'rating' => $existingRatings[$question->id] ?? null,
                             ];
                         })->toArray()
                     ];
@@ -2267,6 +2290,61 @@ class HTEController extends Controller
         }
 
         return $csvContent;
+    }
+
+    /**
+     * Calculate subcategory percentage from question ratings
+     * Formula: (sum of question ratings) / (number of questions × 5) × 100
+     */
+    private function calculateSubcategoryPercentage($questionRatings, $questionCount): float
+    {
+        if ($questionCount === 0) {
+            return 0;
+        }
+        
+        $sumOfRatings = array_sum($questionRatings);
+        $maxPossibleScore = $questionCount * 5;
+        
+        return round(($sumOfRatings / $maxPossibleScore) * 100, 2);
+    }
+
+    /**
+     * Calculate category percentage from all question ratings in category
+     * Formula: (sum of all question ratings in category) / (total questions in category × 5) × 100
+     */
+    private function calculateCategoryPercentage($allQuestionRatings, $totalQuestionCount): float
+    {
+        if ($totalQuestionCount === 0) {
+            return 0;
+        }
+        
+        $sumOfRatings = array_sum($allQuestionRatings);
+        $maxPossibleScore = $totalQuestionCount * 5;
+        
+        return round(($sumOfRatings / $maxPossibleScore) * 100, 2);
+    }
+
+    /**
+     * Map percentage to Likert scale equivalent
+     * 96-100 = 5 (Excellent)
+     * 90-95 = 4 (Very Good)
+     * 80-89 = 3 (Good)
+     * 75-79 = 2 (Fair)
+     * <75 = 1 (Poor)
+     */
+    private function mapPercentageToRating(float $percentage): int
+    {
+        if ($percentage >= 96) {
+            return 5;
+        } elseif ($percentage >= 90) {
+            return 4;
+        } elseif ($percentage >= 80) {
+            return 3;
+        } elseif ($percentage >= 75) {
+            return 2;
+        } else {
+            return 1;
+        }
     }
 
     /**
