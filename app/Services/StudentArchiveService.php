@@ -53,10 +53,9 @@ class StudentArchiveService
                 ->where('endorsement_status', 'endorsed')
                 ->update(['endorsement_status' => 'pending']);
 
-            // Delete any active endorsements for this student to free up slots
-            Endorsement::where('student_id', $student->id)
-                ->where('status', 'endorsed')
-                ->delete();
+            // Delete ALL endorsements for this student (endorsed, rejected, etc.) to completely clear their endorsement history
+            // This prevents duplicate key errors when student is restored and re-endorsed
+            Endorsement::where('student_id', $student->id)->delete();
 
             // Archive the student (preserve placement status for historical records)
             $student->update(['is_active' => false]);
@@ -99,10 +98,9 @@ class StudentArchiveService
                 ->where('endorsement_status', 'endorsed')
                 ->update(['endorsement_status' => 'pending']);
 
-            // Delete any active endorsements for this student to free up slots
-            Endorsement::where('student_id', $student->id)
-                ->where('status', 'endorsed')
-                ->delete();
+            // Delete ALL endorsements for this student (endorsed, rejected, etc.) to completely clear their endorsement history
+            // This prevents duplicate key errors when student is restored and re-endorsed
+            Endorsement::where('student_id', $student->id)->delete();
 
             // Reset student_matches placement status to pending before deleting placements
             StudentMatch::where('student_id', $student->id)
@@ -236,6 +234,10 @@ class StudentArchiveService
             $resetEndorsementsCount = StudentMatch::where('student_id', $student->id)
                 ->whereIn('endorsement_status', ['endorsed', 'rejected'])
                 ->update(['endorsement_status' => 'pending']);
+
+            // Delete ALL endorsement records to prevent duplicate key errors when re-endorsing
+            // This ensures a clean slate for the restored student
+            Endorsement::where('student_id', $student->id)->delete();
 
             // Reset student placements status to pending
             $resetPlacementsCount = StudentPlacement::where('student_id', $student->id)

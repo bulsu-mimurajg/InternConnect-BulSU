@@ -2405,10 +2405,12 @@ class HTEController extends Controller
 
             // Find the student's next highest compatibility match
             // Look for pending endorsement matches (not yet endorsed by admin)
+            // Exclude internships that have been rejected by HTE (placement_status = 'rejected')
             $nextMatch = StudentMatch::with(['internship.hte'])
                 ->where('student_id', $studentId)
                 ->where('endorsement_status', 'pending')
-                ->where('internship_id', '!=', $rejectedInternshipId) // Exclude the rejected internship
+                ->where('placement_status', '!=', 'rejected') // Exclude previously rejected by HTE
+                ->where('internship_id', '!=', $rejectedInternshipId) // Exclude the currently rejected internship
                 ->orderBy('compatibility_score', 'desc')
                 ->first();
 
@@ -2438,18 +2440,26 @@ class HTEController extends Controller
 
                 if ($availableSlots > 0) {
                     // Update the student_match record endorsement status to 'endorsed'
+                    // Also ensure placement_status is 'pending' (not rejected)
                     StudentMatch::where('student_id', $studentId)
                         ->where('internship_id', $nextMatch->internship_id)
-                        ->update(['endorsement_status' => 'endorsed']);
+                        ->update([
+                            'endorsement_status' => 'endorsed',
+                            'placement_status' => 'pending', // Ensure placement_status is pending for the new endorsement
+                        ]);
 
-                    // Create endorsement record
-                    Endorsement::create([
-                        'student_id' => $studentId,
-                        'internship_id' => $nextMatch->internship_id,
-                        'status' => 'endorsed',
-                        'compatibility_score' => $nextMatch->compatibility_score,
-                        'endorsement_date' => now(),
-                    ]);
+                    // Create or update endorsement record (updateOrCreate handles existing records gracefully)
+                    Endorsement::updateOrCreate(
+                        [
+                            'student_id' => $studentId,
+                            'internship_id' => $nextMatch->internship_id,
+                        ],
+                        [
+                            'status' => 'endorsed',
+                            'compatibility_score' => $nextMatch->compatibility_score,
+                            'endorsement_date' => now(),
+                        ]
+                    );
 
                     // Send notification to HTE about the new endorsement
                     $internship = $nextMatch->internship;

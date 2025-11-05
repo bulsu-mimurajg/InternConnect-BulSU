@@ -525,9 +525,19 @@ class StudentController extends Controller
 
         // Get students who don't have any current active endorsed endorsements
         // This includes students with no endorsements, only rejected endorsements, or mixed statuses
-        // We exclude students who have endorsements with status 'endorsed' that haven't been processed by HTE yet
+        // We exclude students who have endorsements with status 'endorsed' that haven't been rejected by HTE yet
+        // Students stay endorsed (not in matched table) as long as they have an active endorsement with available slots
+        // An endorsement is "active" if: status='endorsed' AND the corresponding StudentMatch has placement_status != 'rejected'
         $students = $query->whereDoesntHave('endorsements', function($q) {
-            $q->where('status', 'endorsed');
+            $q->where('status', 'endorsed')
+              ->whereExists(function($subQ) {
+                  // Check if there's a corresponding StudentMatch that hasn't been rejected by HTE
+                  $subQ->select(DB::raw(1))
+                       ->from('student_matches')
+                       ->whereColumn('student_matches.student_id', 'endorsements.student_id')
+                       ->whereColumn('student_matches.internship_id', 'endorsements.internship_id')
+                       ->where('student_matches.placement_status', '!=', 'rejected');
+              });
         })->get();
 
         $matchedStudents = $students->map(function ($student) use ($internshipFilter) {
@@ -1149,14 +1159,18 @@ class StudentController extends Controller
                 ->where('internship_id', $validated['internship_id'])
                 ->update(['endorsement_status' => 'endorsed']);
 
-            // Create endorsement record
-            $endorsement = Endorsement::create([
-                'student_id' => $student->id,
-                'internship_id' => $validated['internship_id'],
-                'status' => 'endorsed',
-                'compatibility_score' => $validated['compatibility_score'],
-                'endorsement_date' => now(),
-            ]);
+            // Create or update endorsement record (updateOrCreate handles existing records gracefully)
+            $endorsement = Endorsement::updateOrCreate(
+                [
+                    'student_id' => $student->id,
+                    'internship_id' => $validated['internship_id'],
+                ],
+                [
+                    'status' => 'endorsed',
+                    'compatibility_score' => $validated['compatibility_score'],
+                    'endorsement_date' => now(),
+                ]
+            );
 
             // Send notification to HTE about the endorsement
             $internship = Internship::with('hte.user')->find($validated['internship_id']);
