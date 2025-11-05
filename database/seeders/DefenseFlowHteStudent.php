@@ -9,7 +9,7 @@ use App\Models\Internship;
 use App\Models\InternshipSeason;
 use App\Models\Section;
 use App\Models\Student;
-use App\Models\SubcategoryWeight;
+use App\Models\QuestionImportanceRating;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -216,47 +216,64 @@ class DefenseFlowHteStudent extends Seeder
             Internship::create($data);
         }
 
-        // Internship Criteria - Dynamic weights based on current categories and subcategories
-        $categories = Category::with('subCategories')->get();
-        $internships = Internship::all();
+        // Internship Criteria - Create question importance ratings for each internship
+        $categories = Category::with(['subCategories.questions' => function($query) {
+            $query->where('is_active', true);
+        }])->get();
+        $internships = Internship::with('hte')->get();
 
         foreach ($internships as $internship) {
-            $this->command->info("Assigning criteria weights for internship: {$internship->position_title}");
+            $this->command->info("Assigning question importance ratings for internship: {$internship->position_title}");
+
+            if (!$internship->hte) {
+                $this->command->warn("  Internship has no HTE. Skipping.");
+                continue;
+            }
+
+            $totalQuestions = 0;
 
             foreach ($categories as $category) {
                 $subcategories = $category->subCategories;
                 
                 if ($subcategories->isEmpty()) {
-                    $this->command->warn("Category '{$category->category_name}' has no subcategories. Skipping.");
+                    $this->command->warn("  Category '{$category->category_name}' has no subcategories. Skipping.");
                     continue;
                 }
 
-                // Distribute weights evenly that sum to exactly 100
-                $weights = $this->distributeWeightsEvenly($subcategories->count());
+                foreach ($subcategories as $subcategory) {
+                    $questions = $subcategory->questions ?? collect();
+                    
+                    if ($questions->isEmpty()) {
+                        continue;
+                    }
 
-                foreach ($subcategories as $index => $subcategory) {
-                    SubcategoryWeight::updateOrCreate(
-                        [
-                            'internship_id' => $internship->id,
-                            'subcategory_id' => $subcategory->id,
-                        ],
-                        [
-                            'weight' => $weights[$index],
-                        ]
-                    );
-                }
-
-                // Verify weights sum to 100
-                $totalWeight = array_sum($weights);
-                $this->command->info("  Category '{$category->category_name}': Total weights = {$totalWeight}%");
-
-                if ($totalWeight !== 100) {
-                    $this->command->error("  WARNING: Weights for '{$category->category_name}' sum to {$totalWeight}, not 100!");
+                    // Assign ratings to each question (1-5 scale)
+                    // For demo purposes, assign varying ratings based on subcategory importance
+                    foreach ($questions as $question) {
+                        // Assign a rating between 3-5 for most questions (Important to Most Important)
+                        // This simulates HTEs rating questions as important
+                        $rating = rand(3, 5);
+                        
+                        QuestionImportanceRating::updateOrCreate(
+                            [
+                                'hte_id' => $internship->hte->id,
+                                'internship_id' => $internship->id,
+                                'question_id' => $question->id,
+                            ],
+                            [
+                                'rating' => $rating,
+                            ]
+                        );
+                        
+                        $totalQuestions++;
+                    }
                 }
             }
+
+            $this->command->info("  Created {$totalQuestions} question ratings for internship: {$internship->position_title}");
         }
 
-        $this->command->info("Completed assigning internship criteria weights.");
+        $this->command->info("Completed assigning question importance ratings.");
 
         // Students
 
@@ -452,8 +469,8 @@ class DefenseFlowHteStudent extends Seeder
         // Get all subcategories
         $subcategories = \App\Models\SubCategory::with('category')->get();
 
-        // Get all internships
-        $internships = \App\Models\Internship::with('subcategoryWeights.subcategory')->get();
+        // Get all internships with question importance ratings
+        $internships = \App\Models\Internship::with(['questionImportanceRatings.question.subcategory', 'hte'])->get();
 
         // Get students who have submitted assessments
         $submittedStudents = \App\Models\Student::where('is_submit', true)->get();
@@ -703,31 +720,65 @@ class DefenseFlowHteStudent extends Seeder
 
     /**
      * Calculate compatibility score between student and internship
+     * Matches the logic in MatchingService::calculateInternshipCompatibility
      */
     private function calculateInternshipCompatibility($studentScores, $internship): float
     {
         $totalScore = 0;
         $totalWeight = 0;
 
-        // Get the weights for this internship
-        $weights = $internship->subcategoryWeights;
+        // Get question importance ratings for this internship
+        $ratings = $internship->questionImportanceRatings;
+        
+        // Group ratings by subcategory
+        $subcategoryRatings = [];
+        $subcategoryQuestionCounts = [];
+        
+        foreach ($ratings as $rating) {
+            if (!$rating->question || !$rating->question->subcategory) {
+                continue;
+            }
+            
+            $subcategoryId = $rating->question->subcategory->id;
+            
+            if (!isset($subcategoryRatings[$subcategoryId])) {
+                $subcategoryRatings[$subcategoryId] = [];
+                // Count total questions in this subcategory (including unrated ones)
+                $subcategoryQuestionCounts[$subcategoryId] = $rating->question->subcategory->questions()
+                    ->where('is_active', true)
+                    ->count();
+            }
+            
+            // Only include valid ratings (1-5)
+            if ($rating->rating >= 1 && $rating->rating <= 5) {
+                $subcategoryRatings[$subcategoryId][] = $rating->rating;
+            }
+        }
 
-        foreach ($weights as $weight) {
-            $subcategoryId = $weight->subcategory_id;
-            $weightValue = $weight->weight;
-
+        // Calculate subcategory percentages and use them as weights
+        foreach ($subcategoryRatings as $subcategoryId => $questionRatings) {
+            $questionCount = $subcategoryQuestionCounts[$subcategoryId];
+            
+            // Calculate subcategory percentage (this becomes the "weight")
+            $subcategoryPercentage = $this->calculateSubcategoryPercentage($questionRatings, $questionCount);
+            
+            // Skip if no valid ratings or percentage is 0
+            if (empty($questionRatings) || $subcategoryPercentage == 0) {
+                continue;
+            }
+            
             // Get student's score for this subcategory
             $studentScore = $studentScores->get($subcategoryId);
-
+            
             if ($studentScore) {
                 // Convert student score (1-5 scale) to percentage (0-100)
                 $scorePercentage = ($studentScore->score / 5) * 100;
-
-                // Apply weight to the score
-                $weightedScore = $scorePercentage * ($weightValue / 100);
-
+                
+                // Apply subcategory percentage as weight to the score
+                $weightedScore = $scorePercentage * ($subcategoryPercentage / 100);
+                
                 $totalScore += $weightedScore;
-                $totalWeight += $weightValue;
+                $totalWeight += $subcategoryPercentage;
             }
         }
 
@@ -737,6 +788,22 @@ class DefenseFlowHteStudent extends Seeder
         }
 
         return 0;
+    }
+
+    /**
+     * Calculate subcategory percentage from question ratings
+     * Formula: (sum of question ratings) / (number of questions × 5) × 100
+     */
+    private function calculateSubcategoryPercentage(array $questionRatings, int $questionCount): float
+    {
+        if ($questionCount === 0) {
+            return 0;
+        }
+        
+        $sumOfRatings = array_sum($questionRatings);
+        $maxPossibleScore = $questionCount * 5;
+        
+        return round(($sumOfRatings / $maxPossibleScore) * 100, 2);
     }
 
     /**
@@ -885,58 +952,4 @@ class DefenseFlowHteStudent extends Seeder
         return $season;
     }
 
-    /**
-     * Distribute weights evenly across subcategories so they sum to exactly 100
-     * 
-     * @param int $count Number of subcategories
-     * @return array Array of weights that sum to exactly 100
-     */
-    private function distributeWeightsEvenly(int $count): array
-    {
-        if ($count <= 0) {
-            return [];
-        }
-
-        // Divide 100 by the count to get base weight per subcategory
-        $baseWeight = 100 / $count;
-        
-        // If it divides evenly, return array of same values
-        if ($baseWeight == (int) $baseWeight) {
-            return array_fill(0, $count, $baseWeight);
-        }
-
-        // Otherwise, distribute with some getting floor and some getting ceil
-        // to ensure the total is exactly 100
-        $weights = [];
-        $floorWeight = floor($baseWeight);
-        $ceilWeight = ceil($baseWeight);
-        
-        // Calculate how many should get ceil and how many floor
-        // We want: floorCount * floorWeight + ceilCount * ceilWeight = 100
-        // where floorCount + ceilCount = count
-        
-        // Try to find the combination that works
-        $ceilCount = 0;
-        for ($i = 0; $i <= $count; $i++) {
-            $testFloor = $count - $i;
-            $testCeil = $i;
-            
-            if ($testFloor * $floorWeight + $testCeil * $ceilWeight == 100) {
-                $ceilCount = $testCeil;
-                break;
-            }
-        }
-        
-        $floorCount = $count - $ceilCount;
-        
-        // Build the array
-        for ($i = 0; $i < $floorCount; $i++) {
-            $weights[] = $floorWeight;
-        }
-        for ($i = 0; $i < $ceilCount; $i++) {
-            $weights[] = $ceilWeight;
-        }
-        
-        return $weights;
-    }
 }

@@ -339,27 +339,69 @@ class HTEController extends Controller
 
         // Allow access to profile even if not submitted, but show prompt
 
-        // Get HTE with related data including categories
+        // Get HTE with related data including question importance ratings
         $hteWithData = HTE::with([
-            'internships.subcategoryWeights.subcategory.category'
+            'internships.questionImportanceRatings.question.subcategory.category'
         ])->find($hte->id);
 
         // Transform the data to match frontend expectations
         $hteWithData->internships->transform(function($internship) {
-            $internship->subcategory_weights = $internship->subcategoryWeights->map(function($weight) {
-                return [
-                    'id' => $weight->id,
-                    'weight' => $weight->weight,
-                    'subcategory' => [
-                        'id' => $weight->subcategory->id,
-                        'subcategory_name' => $weight->subcategory->subcategory_name,
+            // Get all question ratings for this internship
+            $ratings = $internship->questionImportanceRatings;
+            
+            // Group ratings by subcategory
+            $subcategoryRatings = [];
+            $subcategoryQuestionCounts = [];
+            $subcategoryData = [];
+            
+            foreach ($ratings as $rating) {
+                if (!$rating->question || !$rating->question->subcategory) {
+                    continue;
+                }
+                
+                $subcategoryId = $rating->question->subcategory->id;
+                $subcategory = $rating->question->subcategory;
+                
+                // Initialize subcategory data if not exists
+                if (!isset($subcategoryRatings[$subcategoryId])) {
+                    $subcategoryRatings[$subcategoryId] = [];
+                    // Count total questions in this subcategory (including unrated ones)
+                    $subcategoryQuestionCounts[$subcategoryId] = $subcategory->questions()
+                        ->where('is_active', true)
+                        ->count();
+                    $subcategoryData[$subcategoryId] = [
+                        'id' => $subcategory->id,
+                        'subcategory_name' => $subcategory->subcategory_name,
                         'category' => [
-                            'id' => $weight->subcategory->category->id,
-                            'category_name' => $weight->subcategory->category->category_name,
+                            'id' => $subcategory->category->id,
+                            'category_name' => $subcategory->category->category_name,
                         ]
-                    ]
-                ];
-            });
+                    ];
+                }
+                
+                // Only include valid ratings (1-5)
+                if ($rating->rating >= 1 && $rating->rating <= 5) {
+                    $subcategoryRatings[$subcategoryId][] = $rating->rating;
+                }
+            }
+            
+            // Calculate subcategory percentages and create subcategory_weights array
+            $subcategory_weights = [];
+            foreach ($subcategoryRatings as $subcategoryId => $questionRatings) {
+                $questionCount = $subcategoryQuestionCounts[$subcategoryId] ?? 0;
+                $percentage = $this->calculateSubcategoryPercentage($questionRatings, $questionCount);
+                
+                // Only include subcategories with valid ratings
+                if (!empty($questionRatings) && $percentage > 0) {
+                    $subcategory_weights[] = [
+                        'id' => $subcategoryId,
+                        'weight' => $percentage,
+                        'subcategory' => $subcategoryData[$subcategoryId]
+                    ];
+                }
+            }
+            
+            $internship->subcategory_weights = $subcategory_weights;
             return $internship;
         });
 
@@ -368,15 +410,15 @@ class HTEController extends Controller
             'hte_id' => $hteWithData->id,
             'internships_count' => $hteWithData->internships ? $hteWithData->internships->count() : 0,
             'first_internship_subcategory_weights_count' => $hteWithData->internships && $hteWithData->internships->first()
-                ? ($hteWithData->internships->first()->subcategory_weights ? $hteWithData->internships->first()->subcategory_weights->count() : 0)
+                ? ($hteWithData->internships->first()->subcategory_weights ? count($hteWithData->internships->first()->subcategory_weights) : 0)
                 : 0
         ]);
 
-        // Check if HTE has complete data (submitted form OR has internships with subcategory weights)
+        // Check if HTE has complete data (submitted form OR has internships with question ratings)
         $hasCompleteData = $hte->is_submit ||
             ($hteWithData->internships->count() > 0 &&
              $hteWithData->internships->every(function($internship) {
-                 return $internship->subcategoryWeights->count() > 0;
+                 return $internship->questionImportanceRatings->count() > 0;
              }));
 
         // Check if there's an active student assessment deadline

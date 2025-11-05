@@ -33,6 +33,28 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
+/**
+ * Map percentage to Likert scale equivalent
+ */
+function mapPercentageToRating(percentage: number): number {
+    if (percentage >= 96) return 5;
+    if (percentage >= 90) return 4;
+    if (percentage >= 80) return 3;
+    if (percentage >= 75) return 2;
+    return 1;
+}
+
+/**
+ * Get descriptive rating from percentage
+ */
+function getDescriptiveRating(percentage: number): string {
+    if (percentage >= 96) return 'Excellent';
+    if (percentage >= 90) return 'Very Good';
+    if (percentage >= 80) return 'Good';
+    if (percentage >= 75) return 'Fair';
+    return 'Poor';
+}
+
 interface HTEProfileProps {
     hte: {
         id: number;
@@ -767,10 +789,11 @@ export default function HTEProfilePage() {
                                                 </div>
                                             </div>
 
-                                            {/* Assessment Criteria and Weights Section */}
+                                            {/* Assessment Criteria and Passing Thresholds Section */}
                                             <div className="border border-border rounded-lg bg-card">
                                                 <div className="bg-muted/50 px-4 py-3 border-b border-border">
                                                     <h3 className="font-semibold text-base text-foreground">Assessment Criteria</h3>
+                                                    <p className="text-xs text-muted-foreground mt-1">Passing thresholds calculated from question ratings (1-5 scale)</p>
                                                 </div>
                                                 <div className="p-6">
                                                     {(() => {
@@ -789,8 +812,26 @@ export default function HTEProfilePage() {
                                                                         };
                                                                     };
                                                                 }>]) => {
-                                                                    // Calculate category total weight
-                                                                    const categoryTotal = weights.reduce((sum: number, w) => sum + w.weight, 0);
+                                                                    // Calculate category passing threshold (average of all subcategory percentages)
+                                                                    // This represents what students need to achieve to pass
+                                                                    const categoryPercentage = weights.length > 0
+                                                                        ? weights.reduce((sum: number, w) => sum + w.weight, 0) / weights.length
+                                                                        : 0;
+                                                                    const categoryRating = mapPercentageToRating(categoryPercentage);
+                                                                    const descriptiveRating = getDescriptiveRating(categoryPercentage);
+                                                                    
+                                                                    // Get color based on passing threshold
+                                                                    const getThresholdColor = (percentage: number) => {
+                                                                        if (percentage >= 96) return 'text-green-600 dark:text-green-400';
+                                                                        if (percentage >= 90) return 'text-blue-600 dark:text-blue-400';
+                                                                        if (percentage >= 80) return 'text-yellow-600 dark:text-yellow-400';
+                                                                        if (percentage >= 75) return 'text-orange-600 dark:text-orange-400';
+                                                                        return 'text-red-600 dark:text-red-400';
+                                                                    };
+                                                                    
+                                                                    // Normalize percentages for pie chart visualization (so they sum to 100%)
+                                                                    const totalPercentage = weights.reduce((sum: number, w) => sum + w.weight, 0);
+                                                                    const normalizeFactor = totalPercentage > 0 ? 100 / totalPercentage : 1;
                                                                     
                                                                     // Prepare data for pie chart with consistent colors
                                                                     const colors = [
@@ -804,7 +845,7 @@ export default function HTEProfilePage() {
                                                                     
                                                                     const pieData = weights.map((weight, index) => ({
                                                                         name: weight.subcategory.subcategory_name,
-                                                                        value: weight.weight,
+                                                                        value: weight.weight * normalizeFactor, // Normalized for visualization
                                                                         color: colors[index % colors.length]
                                                                     }));
                                                                     
@@ -815,11 +856,11 @@ export default function HTEProfilePage() {
                                                                             </div>
                                                                             <div className="p-8">
                                                                                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                                                                                    {/* Weight Distribution */}
+                                                                                    {/* Passing Threshold Distribution */}
                                                                                     <div className="lg:col-span-1 flex flex-col h-full">
                                                                                         <div className="text-center lg:text-left mb-6">
-                                                                                            <h5 className="font-semibold text-base text-foreground mb-2">Weight Distribution</h5>
-                                                                                            <p className="text-sm text-muted-foreground">Breakdown of assessment criteria weights</p>
+                                                                                            <h5 className="font-semibold text-base text-foreground mb-2">Passing Threshold</h5>
+                                                                                            <p className="text-sm text-muted-foreground">Calculated from question ratings</p>
                                                                                         </div>
                                                                                         <div className="flex flex-col h-full">
                                                                                             <div className="space-y-4 flex-1">
@@ -834,18 +875,32 @@ export default function HTEProfilePage() {
                                                                                                                 {weight.subcategory.subcategory_name}
                                                                                                             </span>
                                                                                                         </div>
-                                                                                                        <Badge variant="outline" className="font-mono text-sm px-3 py-1">
-                                                                                                            {weight.weight}%
-                                                                                                        </Badge>
+                                                                                                        <div className="text-right">
+                                                                                                            <Badge variant="outline" className="font-mono text-sm px-3 py-1">
+                                                                                                                {weight.weight}%
+                                                                                                            </Badge>
+                                                                                                        </div>
                                                                                                     </div>
                                                                                                 ))}
                                                                                             </div>
-                                                                                            <div className="flex items-center justify-between p-4 bg-primary/10 rounded-xl border border-primary/30 mt-4">
-                                                                                                <span className="font-semibold text-primary text-base">Total Weight</span>
-                                                                                                <Badge variant="default" className="font-mono text-sm px-3 py-1">
-                                                                                                    {categoryTotal}%
-                                                                                                </Badge>
-                                                                                            </div>
+                                                                                            {weights.length > 0 && (
+                                                                                                <div className="flex items-center justify-between p-4 bg-primary/10 rounded-xl border border-primary/30 mt-4">
+                                                                                                    <div className="flex flex-col">
+                                                                                                        <span className="text-sm text-muted-foreground">Category Passing Threshold</span>
+                                                                                                        <span className={`text-lg font-bold ${getThresholdColor(categoryPercentage)}`}>
+                                                                                                            {categoryPercentage > 0 ? `${categoryPercentage.toFixed(1)}%` : 'Not Rated'}
+                                                                                                        </span>
+                                                                                                    </div>
+                                                                                                    <div className="text-right">
+                                                                                                        <div className="text-xs text-muted-foreground">
+                                                                                                            {descriptiveRating}
+                                                                                                        </div>
+                                                                                                        <div className="text-xs text-muted-foreground mt-0.5">
+                                                                                                            Rating: {categoryRating}/5
+                                                                                                        </div>
+                                                                                                    </div>
+                                                                                                </div>
+                                                                                            )}
                                                                                         </div>
                                                                                     </div>
                                                                                     
@@ -854,8 +909,8 @@ export default function HTEProfilePage() {
                                                                                         <div className="w-full h-full min-h-[400px]">
                                                                                             <PieChart 
                                                                                                 data={pieData}
-                                                                                                title={`${categoryName} Weights`}
-                                                                                                totalWeight={categoryTotal}
+                                                                                                title={`${categoryName} Passing Thresholds`}
+                                                                                                totalWeight={100}
                                                                                             />
                                                                                         </div>
                                                                                     </div>

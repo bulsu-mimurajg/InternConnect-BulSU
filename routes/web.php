@@ -651,7 +651,7 @@ Route::group(['middleware' => ['auth', 'verified', 'role_redirect:student']], fu
         ]);
 
         // Get the best matching internship
-        $activeInternships = \App\Models\Internship::with(['hte:id,company_name', 'subcategoryWeights.subcategory.category'])
+        $activeInternships = \App\Models\Internship::with(['hte:id,company_name', 'questionImportanceRatings.question.subcategory.category'])
             ->where('is_active', true)
             ->where('slot_count', '>', 0)
             ->get();
@@ -663,7 +663,7 @@ Route::group(['middleware' => ['auth', 'verified', 'role_redirect:student']], fu
         $bestMatchData = StudentMatch::where('student_id', $student->id)
             ->with([
                 'internship.hte:id,company_name',
-                'internship.subcategoryWeights.subcategory.category'
+                'internship.questionImportanceRatings.question.subcategory.category'
             ])
             ->orderBy('compatibility_score', 'desc')
             ->first();
@@ -673,60 +673,17 @@ Route::group(['middleware' => ['auth', 'verified', 'role_redirect:student']], fu
                 'internship' => $bestMatchData->internship,
                 'compatibility_score' => $bestMatchData->compatibility_score,
             ];
-
-            // Debug: Check internship criteria
-            \Illuminate\Support\Facades\Log::info('Best Match Debug', [
-                'internship_id' => $bestMatchData->internship->id,
-                'subcategory_weights_count' => $bestMatchData->internship->subcategoryWeights->count(),
-                'subcategory_weights' => $bestMatchData->internship->subcategoryWeights->map(function($weight) {
-                    return [
-                        'weight_id' => $weight->id,
-                        'subcategory_id' => $weight->subcategory_id,
-                        'weight_value' => $weight->weight,
-                        'subcategory_name' => $weight->subcategory->subcategory_name ?? 'NULL',
-                        'category_name' => $weight->subcategory->category->name ?? 'NULL',
-                    ];
-                })->toArray()
-            ]);
         } else {
-            // Fallback: get the best match from active internships
-            foreach ($activeInternships as $internship) {
-                // Calculate compatibility manually since the method is private
-                $totalScore = 0;
-                $totalWeight = 0;
-
-                foreach ($internship->subcategoryWeights as $weight) {
-                    $subcategoryId = $weight->subcategory_id;
-                    $weightValue = $weight->weight;
-
-                    // Get student's score for this subcategory
-                    $studentScore = $student->scores->where('sub_category_id', $subcategoryId)->first();
-
-                    if ($studentScore) {
-                        // Convert student score (1-5 scale) to percentage (0-100)
-                        $scorePercentage = ($studentScore->score / 5) * 100;
-
-                        // Apply weight to the score
-                        $weightedScore = $scorePercentage * ($weightValue / 100);
-
-                        $totalScore += $weightedScore;
-                        $totalWeight += $weightValue;
-                    }
-                }
-
-                // Calculate final compatibility score
-                $compatibilityScore = 0;
-                if ($totalWeight > 0) {
-                    $compatibilityScore = round(($totalScore / $totalWeight) * 100, 2);
-                }
-
-                if ($compatibilityScore > $highestScore) {
-                    $highestScore = $compatibilityScore;
-                    $bestMatch = [
-                        'internship' => $internship,
-                        'compatibility_score' => $compatibilityScore,
-                    ];
-                }
+            // Fallback: calculate compatibility using MatchingService
+            $matchingService = new \App\Services\MatchingService();
+            $matches = $matchingService->calculateAndStoreCompatibilityScores($student);
+            
+            if ($matches->isNotEmpty()) {
+                $bestMatchData = $matches->first();
+                $bestMatch = [
+                    'internship' => $bestMatchData['internship'],
+                    'compatibility_score' => $bestMatchData['compatibility_score'],
+                ];
             }
         }
 

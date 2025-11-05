@@ -535,7 +535,7 @@ class StudentController extends Controller
                 // If specific internship is selected, get compatibility score for that internship
                 // Show only students who haven't been endorsed yet
                 $specificMatch = $student->compatibilityScores()
-                    ->with(['internship.hte:id,company_name', 'internship.subcategoryWeights.subcategory'])
+                    ->with(['internship.hte:id,company_name', 'internship.questionImportanceRatings.question.subcategory'])
                     ->where('internship_id', $internshipFilter)
                     ->where('endorsement_status', 'pending')
                     ->first();
@@ -569,7 +569,7 @@ class StudentController extends Controller
                 // Get the best available match from stored compatibility scores
                 // Show only students who haven't been endorsed yet
                 $allMatches = $student->compatibilityScores()
-                    ->with(['internship.hte:id,company_name', 'internship.subcategoryWeights.subcategory'])
+                    ->with(['internship.hte:id,company_name', 'internship.questionImportanceRatings.question.subcategory'])
                     ->where('endorsement_status', 'pending')
                     ->orderBy('compatibility_score', 'desc')
                     ->get();
@@ -891,19 +891,69 @@ class StudentController extends Controller
     }
 
     /**
+     * Calculate subcategory percentage from question ratings
+     * Formula: (sum of question ratings) / (number of questions × 5) × 100
+     */
+    private function calculateSubcategoryPercentage(array $questionRatings, int $questionCount): float
+    {
+        if ($questionCount === 0) {
+            return 0;
+        }
+        
+        $sumOfRatings = array_sum($questionRatings);
+        $maxPossibleScore = $questionCount * 5;
+        
+        return round(($sumOfRatings / $maxPossibleScore) * 100, 2);
+    }
+
+    /**
      * Calculate compatibility score between a student and an internship
+     * Uses question importance ratings to determine subcategory weights
      */
     private function calculateCompatibilityScore($student, $internship): float
     {
         $totalScore = 0;
         $totalWeight = 0;
 
-        // Get the weights for this internship
-        $weights = $internship->subcategoryWeights;
+        // Get question importance ratings for this internship
+        $ratings = $internship->questionImportanceRatings;
+        
+        // Group ratings by subcategory
+        $subcategoryRatings = [];
+        $subcategoryQuestionCounts = [];
+        
+        foreach ($ratings as $rating) {
+            if (!$rating->question || !$rating->question->subcategory) {
+                continue;
+            }
+            
+            $subcategoryId = $rating->question->subcategory->id;
+            
+            if (!isset($subcategoryRatings[$subcategoryId])) {
+                $subcategoryRatings[$subcategoryId] = [];
+                // Count total questions in this subcategory (including unrated ones)
+                $subcategoryQuestionCounts[$subcategoryId] = $rating->question->subcategory->questions()
+                    ->where('is_active', true)
+                    ->count();
+            }
+            
+            // Only include valid ratings (1-5)
+            if ($rating->rating >= 1 && $rating->rating <= 5) {
+                $subcategoryRatings[$subcategoryId][] = $rating->rating;
+            }
+        }
 
-        foreach ($weights as $weight) {
-            $subcategoryId = $weight->subcategory_id;
-            $weightValue = $weight->weight;
+        // Calculate subcategory percentages and use them as weights
+        foreach ($subcategoryRatings as $subcategoryId => $questionRatings) {
+            $questionCount = $subcategoryQuestionCounts[$subcategoryId];
+            
+            // Calculate subcategory percentage (this becomes the "weight")
+            $subcategoryPercentage = $this->calculateSubcategoryPercentage($questionRatings, $questionCount);
+            
+            // Skip if no valid ratings or percentage is 0
+            if (empty($questionRatings) || $subcategoryPercentage == 0) {
+                continue;
+            }
             
             // Get student's score for this subcategory
             $studentScore = $student->scores->where('sub_category_id', $subcategoryId)->first();
@@ -912,11 +962,11 @@ class StudentController extends Controller
                 // Convert student score (1-5 scale) to percentage (0-100)
                 $scorePercentage = ($studentScore->score / 5) * 100;
                 
-                // Apply weight to the score
-                $weightedScore = $scorePercentage * ($weightValue / 100);
+                // Apply subcategory percentage as weight to the score
+                $weightedScore = $scorePercentage * ($subcategoryPercentage / 100);
                 
                 $totalScore += $weightedScore;
-                $totalWeight += $weightValue;
+                $totalWeight += $subcategoryPercentage;
             }
         }
 
@@ -940,7 +990,7 @@ class StudentController extends Controller
         ]);
 
         // Get the best matching internship
-        $activeInternships = Internship::with(['hte:id,company_name', 'subcategoryWeights.subcategory.category'])
+        $activeInternships = Internship::with(['hte:id,company_name', 'questionImportanceRatings.question.subcategory.category'])
             ->where('is_active', true)
             ->where('slot_count', '>', 0)
             ->get();

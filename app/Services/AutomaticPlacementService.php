@@ -477,7 +477,7 @@ class AutomaticPlacementService
 
             // Get all active internships with available slots
             $availableInternships = Internship::where('is_active', true)
-                ->with(['subcategoryWeights.subcategory', 'hte'])
+                ->with(['questionImportanceRatings.question.subcategory', 'hte'])
                 ->get()
                 ->filter(function($internship) {
                     return $this->calculateAvailableSlots($internship) > 0;
@@ -916,7 +916,24 @@ class AutomaticPlacementService
     }
 
     /**
+     * Calculate subcategory percentage from question ratings
+     * Formula: (sum of question ratings) / (number of questions × 5) × 100
+     */
+    private function calculateSubcategoryPercentage(array $questionRatings, int $questionCount): float
+    {
+        if ($questionCount === 0) {
+            return 0;
+        }
+        
+        $sumOfRatings = array_sum($questionRatings);
+        $maxPossibleScore = $questionCount * 5;
+        
+        return round(($sumOfRatings / $maxPossibleScore) * 100, 2);
+    }
+
+    /**
      * Calculate fresh compatibility scores for a student with all available internships
+     * Uses question importance ratings to determine subcategory weights
      */
     private function calculateFreshCompatibilityScores(Student $student, Collection $internships): \Illuminate\Support\Collection
     {
@@ -929,13 +946,46 @@ class AutomaticPlacementService
             $totalScore = 0;
             $totalWeight = 0;
 
-            // Get the weights for this internship
-            $weights = $internship->subcategoryWeights;
+            // Get question importance ratings for this internship
+            $ratings = $internship->questionImportanceRatings;
+            
+            // Group ratings by subcategory
+            $subcategoryRatings = [];
+            $subcategoryQuestionCounts = [];
+            
+            foreach ($ratings as $rating) {
+                if (!$rating->question || !$rating->question->subcategory) {
+                    continue;
+                }
+                
+                $subcategoryId = $rating->question->subcategory->id;
+                
+                if (!isset($subcategoryRatings[$subcategoryId])) {
+                    $subcategoryRatings[$subcategoryId] = [];
+                    // Count total questions in this subcategory (including unrated ones)
+                    $subcategoryQuestionCounts[$subcategoryId] = $rating->question->subcategory->questions()
+                        ->where('is_active', true)
+                        ->count();
+                }
+                
+                // Only include valid ratings (1-5)
+                if ($rating->rating >= 1 && $rating->rating <= 5) {
+                    $subcategoryRatings[$subcategoryId][] = $rating->rating;
+                }
+            }
 
-            foreach ($weights as $weight) {
-                $subcategoryId = $weight->subcategory_id;
-                $weightValue = $weight->weight;
-
+            // Calculate subcategory percentages and use them as weights
+            foreach ($subcategoryRatings as $subcategoryId => $questionRatings) {
+                $questionCount = $subcategoryQuestionCounts[$subcategoryId];
+                
+                // Calculate subcategory percentage (this becomes the "weight")
+                $subcategoryPercentage = $this->calculateSubcategoryPercentage($questionRatings, $questionCount);
+                
+                // Skip if no valid ratings or percentage is 0
+                if (empty($questionRatings) || $subcategoryPercentage == 0) {
+                    continue;
+                }
+                
                 // Get student's score for this subcategory
                 $studentScore = $studentScores->get($subcategoryId);
 
@@ -943,11 +993,11 @@ class AutomaticPlacementService
                     // Convert student score (1-5 scale) to percentage (0-100)
                     $scorePercentage = ($studentScore->score / 5) * 100;
 
-                    // Apply weight to the score
-                    $weightedScore = $scorePercentage * ($weightValue / 100);
+                    // Apply subcategory percentage as weight to the score
+                    $weightedScore = $scorePercentage * ($subcategoryPercentage / 100);
 
                     $totalScore += $weightedScore;
-                    $totalWeight += $weightValue;
+                    $totalWeight += $subcategoryPercentage;
                 }
             }
 

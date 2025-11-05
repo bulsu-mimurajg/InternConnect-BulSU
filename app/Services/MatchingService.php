@@ -6,6 +6,7 @@ use App\Models\Student;
 use App\Models\Internship;
 use App\Models\StudentScore;
 use App\Models\SubcategoryWeight;
+use App\Models\QuestionImportanceRating;
 use App\Models\StudentMatch;
 use Illuminate\Support\Collection;
 
@@ -17,7 +18,11 @@ class MatchingService
     public function calculateAndStoreCompatibilityScores(Student $student): Collection
     {
         // Get all active internships with available slots
-        $internships = Internship::with(['hte:id,company_name', 'subcategoryWeights.subcategory'])
+        // Load question importance ratings with questions and subcategories
+        $internships = Internship::with([
+            'hte:id,company_name',
+            'questionImportanceRatings.question.subcategory'
+        ])
             ->where('is_active', true)
             ->where('slot_count', '>', 0)
             ->get();
@@ -106,7 +111,7 @@ class MatchingService
     public function getAllCompatibilityScores(Student $student): Collection
     {
         return StudentMatch::where('student_id', $student->id)
-            ->with(['internship.hte:id,company_name', 'internship.subcategoryWeights.subcategory'])
+            ->with(['internship.hte:id,company_name', 'internship.questionImportanceRatings.question.subcategory'])
             ->orderBy('compatibility_score', 'desc')
             ->get()
             ->filter(function ($match) {
@@ -132,7 +137,7 @@ class MatchingService
     public function getCompatibilityScoresSorted(Student $student, string $sortBy = 'compatibility_score', string $sortOrder = 'desc'): Collection
     {
         $query = StudentMatch::where('student_id', $student->id)
-            ->with(['internship.hte:id,company_name', 'internship.subcategoryWeights.subcategory']);
+            ->with(['internship.hte:id,company_name', 'internship.questionImportanceRatings.question.subcategory']);
 
         // Apply sorting
         if ($sortBy === 'compatibility_score') {
@@ -167,19 +172,69 @@ class MatchingService
     }
 
     /**
+     * Calculate subcategory percentage from question ratings
+     * Formula: (sum of question ratings) / (number of questions × 5) × 100
+     */
+    private function calculateSubcategoryPercentage(array $questionRatings, int $questionCount): float
+    {
+        if ($questionCount === 0) {
+            return 0;
+        }
+        
+        $sumOfRatings = array_sum($questionRatings);
+        $maxPossibleScore = $questionCount * 5;
+        
+        return round(($sumOfRatings / $maxPossibleScore) * 100, 2);
+    }
+
+    /**
      * Calculate compatibility score for a specific internship
+     * Uses question importance ratings to determine subcategory weights
      */
     private function calculateInternshipCompatibility(Collection $studentScores, Internship $internship): float
     {
         $totalScore = 0;
         $totalWeight = 0;
 
-        // Get the weights for this internship
-        $weights = $internship->subcategoryWeights;
+        // Get question importance ratings for this internship
+        $ratings = $internship->questionImportanceRatings;
+        
+        // Group ratings by subcategory
+        $subcategoryRatings = [];
+        $subcategoryQuestionCounts = [];
+        
+        foreach ($ratings as $rating) {
+            if (!$rating->question || !$rating->question->subcategory) {
+                continue;
+            }
+            
+            $subcategoryId = $rating->question->subcategory->id;
+            
+            if (!isset($subcategoryRatings[$subcategoryId])) {
+                $subcategoryRatings[$subcategoryId] = [];
+                // Count total questions in this subcategory (including unrated ones)
+                $subcategoryQuestionCounts[$subcategoryId] = $rating->question->subcategory->questions()
+                    ->where('is_active', true)
+                    ->count();
+            }
+            
+            // Only include valid ratings (1-5)
+            if ($rating->rating >= 1 && $rating->rating <= 5) {
+                $subcategoryRatings[$subcategoryId][] = $rating->rating;
+            }
+        }
 
-        foreach ($weights as $weight) {
-            $subcategoryId = $weight->subcategory_id;
-            $weightValue = $weight->weight;
+        // Calculate subcategory percentages and use them as weights
+        foreach ($subcategoryRatings as $subcategoryId => $questionRatings) {
+            $questionCount = $subcategoryQuestionCounts[$subcategoryId];
+            
+            // Calculate subcategory percentage (this becomes the "weight")
+            $subcategoryPercentage = $this->calculateSubcategoryPercentage($questionRatings, $questionCount);
+            
+            // Skip if no valid ratings or percentage is 0
+            if (empty($questionRatings) || $subcategoryPercentage == 0) {
+                continue;
+            }
             
             // Get student's score for this subcategory
             $studentScore = $studentScores->get($subcategoryId);
@@ -188,11 +243,12 @@ class MatchingService
                 // Convert student score (1-5 scale) to percentage (0-100)
                 $scorePercentage = ($studentScore->score / 5) * 100;
                 
-                // Apply weight to the score
-                $weightedScore = $scorePercentage * ($weightValue / 100);
+                // Apply subcategory percentage as weight to the score
+                // The subcategory percentage represents how important this subcategory is
+                $weightedScore = $scorePercentage * ($subcategoryPercentage / 100);
                 
                 $totalScore += $weightedScore;
-                $totalWeight += $weightValue;
+                $totalWeight += $subcategoryPercentage;
             }
         }
 
@@ -210,7 +266,7 @@ class MatchingService
     public function getTopCompatibleInternships(Student $student, int $limit = 5): Collection
     {
         $matches = StudentMatch::where('student_id', $student->id)
-            ->with(['internship.hte:id,company_name', 'internship.subcategoryWeights.subcategory'])
+            ->with(['internship.hte:id,company_name', 'internship.questionImportanceRatings.question.subcategory'])
             ->orderBy('rank')
             ->get();
             
