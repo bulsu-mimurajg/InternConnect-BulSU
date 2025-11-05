@@ -10,6 +10,109 @@ use Illuminate\Database\Seeder;
 
 class CategorySeeder extends Seeder
 {
+    /**
+     * Generate HTE question text from student question text
+     * Formats questions as "Interns are expected to [verb] [concept]"
+     */
+    private function generateHteQuestionText(string $studentQuestion, string $subcategoryName, string $categoryName): string
+    {
+        // Extract key concepts and verbs based on question content and subcategory
+        $lowerQuestion = strtolower($studentQuestion);
+        $lowerSubcategory = strtolower($subcategoryName);
+        
+        // Determine verb based on question type and subcategory
+        $verb = 'understand';
+        
+        if (strpos($lowerSubcategory, 'problem') !== false || strpos($lowerSubcategory, 'logic') !== false || strpos($lowerSubcategory, 'analytical') !== false) {
+            $verb = 'analyze';
+        } elseif (strpos($lowerSubcategory, 'debug') !== false || strpos($lowerSubcategory, 'testing') !== false) {
+            $verb = 'troubleshoot';
+        } elseif (strpos($lowerSubcategory, 'communication') !== false) {
+            $verb = 'communicate';
+        } elseif (strpos($lowerSubcategory, 'management') !== false || strpos($lowerSubcategory, 'time') !== false) {
+            $verb = 'manage';
+        } elseif (strpos($lowerSubcategory, 'ethics') !== false || strpos($lowerSubcategory, 'professionalism') !== false) {
+            $verb = 'demonstrate';
+        } elseif (strpos($lowerSubcategory, 'quality') !== false || strpos($lowerSubcategory, 'best practices') !== false) {
+            $verb = 'apply';
+        }
+        
+        // Extract concept from question
+        $concept = $this->extractConceptFromQuestion($studentQuestion, $subcategoryName, $categoryName);
+        
+        return "Interns are expected to {$verb} {$concept}";
+    }
+    
+    /**
+     * Extract the main concept from a student question
+     */
+    private function extractConceptFromQuestion(string $question, string $subcategoryName, string $categoryName): string
+    {
+        $lowerQuestion = strtolower($question);
+        $lowerSubcategory = strtolower($subcategoryName);
+        $lowerCategory = strtolower($categoryName);
+        
+        // Map common question patterns to concepts
+        if (strpos($lowerQuestion, 'compiled language') !== false || strpos($lowerQuestion, 'programming language') !== false || strpos($lowerQuestion, 'typing') !== false) {
+            return 'fundamental programming logic and syntax';
+        } elseif (strpos($lowerQuestion, 'search algorithm') !== false || strpos($lowerQuestion, 'data structure') !== false || strpos($lowerQuestion, 'balanced parentheses') !== false) {
+            return 'programming problems systematically';
+        } elseif (strpos($lowerQuestion, 'dry principle') !== false || strpos($lowerQuestion, 'variable naming') !== false || strpos($lowerQuestion, 'code comments') !== false) {
+            return 'code quality and best practices';
+        } elseif (strpos($lowerQuestion, 'oop') !== false || strpos($lowerQuestion, 'object-oriented') !== false || strpos($lowerQuestion, 'encapsulation') !== false || strpos($lowerQuestion, 'inheritance') !== false) {
+            return 'object-oriented programming principles';
+        } elseif (strpos($lowerQuestion, 'logic error') !== false || strpos($lowerQuestion, 'unit testing') !== false || strpos($lowerQuestion, 'debugging') !== false) {
+            return 'debugging and testing methodologies';
+        } elseif (strpos($lowerQuestion, 'version control') !== false || strpos($lowerQuestion, 'git') !== false || strpos($lowerQuestion, 'sdlc') !== false || strpos($lowerQuestion, 'pass by') !== false) {
+            return 'developer tools and practices';
+        } elseif (strpos($lowerQuestion, 'rdbms') !== false || strpos($lowerQuestion, 'primary key') !== false || strpos($lowerQuestion, 'foreign key') !== false) {
+            return 'basic database concepts';
+        } elseif (strpos($lowerQuestion, 'sql') !== false || strpos($lowerQuestion, 'select') !== false || strpos($lowerQuestion, 'where') !== false || strpos($lowerQuestion, 'truncate') !== false || strpos($lowerQuestion, 'count') !== false) {
+            return 'SQL query fundamentals';
+        } elseif (strpos($lowerQuestion, 'normalization') !== false || strpos($lowerQuestion, 'normal form') !== false || strpos($lowerQuestion, 'indexing') !== false || strpos($lowerQuestion, 'join') !== false) {
+            return 'database design and optimization';
+        } elseif (strpos($lowerQuestion, 'sdlc') !== false || strpos($lowerQuestion, 'agile') !== false || strpos($lowerQuestion, 'waterfall') !== false) {
+            return 'software development life cycle methodologies';
+        } elseif (strpos($lowerQuestion, 'feasibility') !== false || strpos($lowerQuestion, 'non-functional requirement') !== false) {
+            return 'system development concepts';
+        } elseif (strpos($lowerQuestion, 'refactoring') !== false || strpos($lowerQuestion, 'testing') !== false && strpos($lowerSubcategory, 'practices') !== false) {
+            return 'software engineering practices';
+        } elseif (strpos($lowerQuestion, 'html') !== false || strpos($lowerQuestion, 'css') !== false || strpos($lowerQuestion, 'div') !== false) {
+            return 'HTML and CSS fundamentals';
+        } elseif (strpos($lowerQuestion, 'javascript') !== false || strpos($lowerQuestion, 'variable') !== false || strpos($lowerQuestion, 'typeof') !== false) {
+            return 'JavaScript and client-side scripting';
+        } elseif (strpos($lowerQuestion, 'http') !== false || strpos($lowerQuestion, 'backend') !== false || strpos($lowerQuestion, 'responsive') !== false) {
+            return 'backend development and web technologies';
+        } elseif (strpos($lowerQuestion, 'python') !== false || strpos($lowerQuestion, 'print') !== false) {
+            if (strpos($lowerQuestion, 'variable') !== false || strpos($lowerQuestion, 'data type') !== false) {
+                return 'Python variables and data types';
+            } elseif (strpos($lowerQuestion, 'control') !== false || strpos($lowerQuestion, 'loop') !== false || strpos($lowerQuestion, 'range') !== false) {
+                return 'Python control structures';
+            } elseif (strpos($lowerQuestion, 'function') !== false || strpos($lowerQuestion, 'class') !== false || strpos($lowerQuestion, 'inheritance') !== false || strpos($lowerQuestion, '__init__') !== false) {
+                return 'Python functions and object-oriented programming';
+            }
+            return 'Python programming fundamentals';
+        } elseif (strpos($lowerQuestion, 'java') !== false || strpos($lowerQuestion, 'class') !== false && strpos($lowerCategory, 'java') !== false) {
+            if (strpos($lowerQuestion, 'data type') !== false || strpos($lowerQuestion, 'constant') !== false) {
+                return 'Java syntax and data types';
+            } elseif (strpos($lowerQuestion, 'operator') !== false || strpos($lowerQuestion, 'main') !== false) {
+                return 'Java operators and program flow';
+            }
+            return 'Java programming fundamentals';
+        } elseif (strpos($lowerQuestion, 'presentation') !== false || strpos($lowerQuestion, 'email') !== false || strpos($lowerQuestion, 'active listening') !== false || strpos($lowerQuestion, 'disagree') !== false || strpos($lowerQuestion, 'clarification') !== false) {
+            return 'effective communication skills';
+        } elseif (strpos($lowerQuestion, 'algorithm') !== false || strpos($lowerQuestion, 'debug') !== false || strpos($lowerQuestion, 'solve') !== false || strpos($lowerQuestion, 'loop') !== false && strpos($lowerSubcategory, 'problem') !== false) {
+            return 'programming problems systematically';
+        } elseif (strpos($lowerQuestion, 'deadline') !== false || strpos($lowerQuestion, 'smart goals') !== false || strpos($lowerQuestion, 'schedule') !== false || strpos($lowerQuestion, 'procrastinating') !== false) {
+            return 'time management and organizational skills';
+        } elseif (strpos($lowerQuestion, 'ethics') !== false || strpos($lowerQuestion, 'mistake') !== false || strpos($lowerQuestion, 'confidential') !== false || strpos($lowerQuestion, 'professionalism') !== false) {
+            return 'workplace ethics and professionalism';
+        }
+        
+        // Default: use subcategory name as concept
+        return strtolower($subcategoryName);
+    }
+    
     public function run(): void
     {
         $categories = [
@@ -826,13 +929,26 @@ class CategorySeeder extends Seeder
                 foreach ($questions as $questionData) {
                     // Handle both structured quiz questions and simple text questions
                     if (is_array($questionData)) {
-                        // Quiz question with choices
+                        // Create HTE question first (rating type, no hte_question_id)
+                        $hteQuestionText = $this->generateHteQuestionText($questionData['question'], $subCategoryName, $categoryName);
+                        
+                        $hteQuestion = Question::firstOrCreate([
+                            'question' => $hteQuestionText,
+                            'subcategory_id' => $subCategory->id,
+                        ], [
+                            'question_type' => 'rating',
+                            'is_active' => true,
+                            'hte_question_id' => null, // HTE questions don't have hte_question_id
+                        ]);
+
+                        // Create student question (quiz type) with link to HTE question
                         $question = Question::firstOrCreate([
                             'question' => $questionData['question'],
                             'subcategory_id' => $subCategory->id,
                         ], [
-                            'question_type' => $questionData['type'] ?? 'rating',
-                            'is_active' => true
+                            'question_type' => $questionData['type'] ?? 'quiz',
+                            'is_active' => true,
+                            'hte_question_id' => $hteQuestion->id, // Link to HTE question
                         ]);
 
                         // Create choices for quiz questions
@@ -847,13 +963,14 @@ class CategorySeeder extends Seeder
                             }
                         }
                     } else {
-                        // Simple rating question (backward compatible)
+                        // Simple rating question (backward compatible) - create as HTE question
                         Question::firstOrCreate([
                             'question' => $questionData,
                             'subcategory_id' => $subCategory->id,
                         ], [
                             'question_type' => 'rating',
-                            'is_active' => true
+                            'is_active' => true,
+                            'hte_question_id' => null,
                         ]);
                     }
                 }

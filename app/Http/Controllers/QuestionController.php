@@ -43,7 +43,10 @@ class QuestionController extends Controller
         // Apply default sorting by creation date
         $query->orderBy('created_at', 'desc');
 
-        $questions = $query->with('choices')->get();
+        // Only load student questions (quiz type) with their HTE questions
+        $query->where('question_type', 'quiz');
+        
+        $questions = $query->with(['choices', 'hteQuestion'])->get();
 
         // Get categories with their subcategories and map the data structure
         // Order by ID to show in the order they were added
@@ -108,16 +111,27 @@ class QuestionController extends Controller
             'choices' => 'required|array|min:2',
             'choices.*.choice_text' => 'required|string|max:500',
             'choices.*.is_correct' => 'required|boolean',
+            'hte_question' => 'required|string|max:1000',
         ]);
 
+        // Create HTE question (rating type) first
+        $hteQuestion = Question::create([
+            'question' => $request->hte_question,
+            'subcategory_id' => $request->subcategory_id,
+            'question_type' => 'rating',
+            'is_active' => true,
+        ]);
+
+        // Create student question (quiz type) with link to HTE question
         $question = Question::create([
             'question' => $request->question,
             'subcategory_id' => $request->subcategory_id,
             'question_type' => 'quiz',
             'is_active' => true,
+            'hte_question_id' => $hteQuestion->id,
         ]);
 
-        // Create choices
+        // Create choices for student question
         foreach ($request->choices as $choiceData) {
             \App\Models\Choice::create([
                 'question_id' => $question->id,
@@ -141,13 +155,36 @@ class QuestionController extends Controller
             'choices' => 'required|array|min:2',
             'choices.*.choice_text' => 'required|string|max:500',
             'choices.*.is_correct' => 'required|boolean',
+            'hte_question' => 'required|string|max:1000',
         ]);
 
+        // Update student question
         $question->update([
             'question' => $request->question,
             'subcategory_id' => $request->subcategory_id,
             'question_type' => 'quiz',
         ]);
+
+        // Update or create HTE question
+        if ($question->hte_question_id) {
+            // Update existing HTE question
+            $hteQuestion = Question::find($question->hte_question_id);
+            if ($hteQuestion) {
+                $hteQuestion->update([
+                    'question' => $request->hte_question,
+                    'subcategory_id' => $request->subcategory_id,
+                ]);
+            }
+        } else {
+            // Create new HTE question if it doesn't exist
+            $hteQuestion = Question::create([
+                'question' => $request->hte_question,
+                'subcategory_id' => $request->subcategory_id,
+                'question_type' => 'rating',
+                'is_active' => true,
+            ]);
+            $question->update(['hte_question_id' => $hteQuestion->id]);
+        }
 
         // Delete existing choices and create new ones
         $question->choices()->delete();
@@ -169,6 +206,14 @@ class QuestionController extends Controller
     public function archive(Question $question): RedirectResponse
     {
         $question->update(['is_active' => false]);
+        
+        // Also archive the linked HTE question if it exists
+        if ($question->hte_question_id) {
+            $hteQuestion = Question::find($question->hte_question_id);
+            if ($hteQuestion) {
+                $hteQuestion->update(['is_active' => false]);
+            }
+        }
 
         return redirect()->back()->with('success', 'Question archived successfully!');
     }
@@ -179,6 +224,14 @@ class QuestionController extends Controller
     public function restore(Question $question): RedirectResponse
     {
         $question->update(['is_active' => true]);
+        
+        // Also restore the linked HTE question if it exists
+        if ($question->hte_question_id) {
+            $hteQuestion = Question::find($question->hte_question_id);
+            if ($hteQuestion) {
+                $hteQuestion->update(['is_active' => true]);
+            }
+        }
 
         return redirect()->back()->with('success', 'Question restored successfully!');
     }

@@ -85,6 +85,7 @@ export default function FormsPage({ questions, categories, subcategories, filter
         choices?: string;
         correctAnswer?: string;
         emptyChoices?: number[]; // Track indices of empty choices
+        hteQuestion?: string;
     }>({});
 
     const [choices, setChoices] = useState<Array<{ text: string; isCorrect: boolean }>>([{ text: '', isCorrect: false }]);
@@ -94,6 +95,7 @@ export default function FormsPage({ questions, categories, subcategories, filter
         subcategory_id: '',
         question_type: 'quiz',
         choices: [] as Array<{ choice_text: string; is_correct: boolean }>,
+        hteQuestion: '',
     });
 
     // Filter questions based on archive status
@@ -235,6 +237,16 @@ export default function FormsPage({ questions, categories, subcategories, filter
             return;
         }
 
+        // Validate HTE question text
+        if (!data.hteQuestion || !data.hteQuestion.trim()) {
+            setValidationErrors({ hteQuestion: 'HTE question text is required.' });
+            const formElement = document.querySelector('form');
+            if (formElement) {
+                formElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+            return;
+        }
+
         // Prepare form data with only valid choices
         const formData = {
             question: data.question.trim(),
@@ -243,7 +255,8 @@ export default function FormsPage({ questions, categories, subcategories, filter
             choices: validChoices.map(choice => ({
                 choice_text: choice.text.trim(),
                 is_correct: choice.isCorrect
-            }))
+            })),
+            hte_question: data.hteQuestion.trim(),
         };
 
         // Update form data with question type
@@ -308,6 +321,7 @@ export default function FormsPage({ questions, categories, subcategories, filter
             subcategory_id: question.subcategory_id.toString(),
             question_type: 'quiz',
             choices: question.choices ? question.choices.map(c => ({ choice_text: c.choice_text, is_correct: c.is_correct })) : [],
+            hteQuestion: question.hte_question?.question || '',
         });
 
         // Set the choices
@@ -738,6 +752,34 @@ export default function FormsPage({ questions, categories, subcategories, filter
                                      !choices.some(c => c.isCorrect && c.text.trim()) &&
                                      !validationErrors.correctAnswer && (
                                         <p className="text-sm text-amber-600">At least one choice must be marked as correct.</p>
+                                    )}
+                                </div>
+
+                                {/* HTE Question Section */}
+                                <div className="space-y-2">
+                                    <Label htmlFor="hte_question">HTE Question (Likert Scale)</Label>
+                                    <Textarea
+                                        id="hte_question"
+                                        value={data.hteQuestion || ''}
+                                        onChange={(e) => {
+                                            setData('hteQuestion', e.target.value);
+                                            // Clear validation error when user starts typing
+                                            if (validationErrors.hteQuestion) {
+                                                setValidationErrors(prev => ({ ...prev, hteQuestion: undefined }));
+                                            }
+                                        }}
+                                        className={(errors.hte_question || validationErrors.hteQuestion) ? 'border-red-500' : ''}
+                                        placeholder="Enter the HTE question for Likert scale rating (1-5)..."
+                                        rows={3}
+                                    />
+                                    <p className="text-xs text-muted-foreground">
+                                        This question will be displayed to HTE users for rating on a Likert scale (1-5).
+                                    </p>
+                                    {validationErrors.hteQuestion && (
+                                        <p className="text-sm text-red-500">{validationErrors.hteQuestion}</p>
+                                    )}
+                                    {errors.hte_question && (
+                                        <p className="text-sm text-red-500">{errors.hte_question}</p>
                                     )}
                                 </div>
 

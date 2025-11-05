@@ -109,10 +109,12 @@ export interface Choice {
 export interface Question {
     id: number;
     question: string;
-    question_type: 'quiz';
-    access: 'Student' | 'HTE';
+    question_type: 'quiz' | 'rating';
+    access?: 'Student' | 'HTE';
     is_active: boolean;
     subcategory_id: number;
+    hte_question_id?: number;
+    hte_question?: Question;
     subcategory: {
         id: number;
         subcategory_name: string;

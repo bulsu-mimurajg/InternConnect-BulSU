@@ -217,8 +217,11 @@ class DefenseFlowHteStudent extends Seeder
         }
 
         // Internship Criteria - Create question importance ratings for each internship
+        // Use HTE questions (rating type) that are linked from student questions
         $categories = Category::with(['subCategories.questions' => function($query) {
-            $query->where('is_active', true);
+            $query->where('is_active', true)
+                  ->where('question_type', 'rating')
+                  ->whereHas('studentQuestion'); // Only HTE questions that have linked student questions
         }])->get();
         $internships = Internship::with('hte')->get();
 

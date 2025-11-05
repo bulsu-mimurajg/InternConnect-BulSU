@@ -259,8 +259,11 @@ class HTEController extends Controller
         $hte = $user->hte;
         
         // Get categories with subcategories and questions, excluding 'Basic Information'
+        // Only return HTE questions (rating type) that are linked from student questions
         $categories = Category::with(['subCategories.questions' => function($query) {
-            $query->where('is_active', true);
+            $query->where('is_active', true)
+                  ->where('question_type', 'rating')
+                  ->whereHas('studentQuestion'); // Only questions that have a linked student question
         }])
         ->where('category_name', '!=', 'Basic Information')
         ->get();
