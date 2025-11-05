@@ -5,41 +5,107 @@ namespace App\Services;
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\SMTP;
 use PHPMailer\PHPMailer\Exception;
+use Illuminate\Support\Facades\Log;
 
 class EmailService
 {
-    private $mailer;
     private $fromEmail;
     private $fromName;
     private $appPassword;
+    private $smtpHost;
+    private $smtpPort;
+    private $smtpEncryption;
+    private $smtpUsername;
+    private $smtpTimeout;
 
     public function __construct()
     {
-        $this->fromEmail = env('PHPMAILER_FROM_EMAIL', 'internconnectbulsu@gmail.com');
-        $this->fromName = env('PHPMAILER_FROM_NAME', 'InternConnect BULSU');
-        $this->appPassword = env('PHPMAILER_APP_PASSWORD', 'qtun paed puzf bycw');
+        try {
+            // Required configuration - must be set in .env file
+            $this->fromEmail = env('PHPMAILER_FROM_EMAIL');
+            $this->fromName = env('PHPMAILER_FROM_NAME');
+            $this->appPassword = env('PHPMAILER_APP_PASSWORD');
+            
+            // SMTP Configuration - must be set in .env file
+            $this->smtpHost = env('PHPMAILER_SMTP_HOST');
+            $this->smtpPort = env('PHPMAILER_SMTP_PORT', 587);
+            $this->smtpEncryption = env('PHPMAILER_SMTP_ENCRYPTION', 'tls'); // 'tls' or 'ssl'
+            $this->smtpUsername = env('PHPMAILER_SMTP_USERNAME') ?: $this->fromEmail;
+            $this->smtpTimeout = env('PHPMAILER_SMTP_TIMEOUT', 30);
 
-        $this->mailer = new PHPMailer(true);
-        $this->configureMailer();
+            // Validate required configuration
+            $this->validateConfiguration();
+        } catch (\Exception $e) {
+            throw $e;
+        }
     }
 
-    private function configureMailer()
+    /**
+     * Validate that required email configuration is set
+     */
+    private function validateConfiguration(): void
     {
+        $required = [
+            'PHPMAILER_FROM_EMAIL' => $this->fromEmail,
+            'PHPMAILER_FROM_NAME' => $this->fromName,
+            'PHPMAILER_APP_PASSWORD' => $this->appPassword,
+            'PHPMAILER_SMTP_HOST' => $this->smtpHost,
+        ];
+
+        $missing = [];
+        foreach ($required as $key => $value) {
+            if (empty($value)) {
+                $missing[] = $key;
+            }
+        }
+
+        if (!empty($missing)) {
+            throw new \Exception(
+                'Email configuration is incomplete. Please set the following environment variables in your .env file: ' .
+                implode(', ', $missing)
+            );
+        }
+    }
+
+    /**
+     * Create and configure a fresh PHPMailer instance
+     * This ensures a clean state for each email send
+     */
+    private function createMailer(): PHPMailer
+    {
+        $mailer = new PHPMailer(true);
+        
         try {
             // Server settings
-            $this->mailer->isSMTP();
-            $this->mailer->Host = 'smtp.gmail.com';
-            $this->mailer->SMTPAuth = true;
-            $this->mailer->Username = $this->fromEmail;
-            $this->mailer->Password = $this->appPassword;
-            $this->mailer->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-            $this->mailer->Port = 587;
+            $mailer->isSMTP();
+            $mailer->Host = $this->smtpHost;
+            $mailer->SMTPAuth = true;
+            $mailer->Username = $this->smtpUsername;
+            $mailer->Password = $this->appPassword;
+            
+            // Set encryption based on configuration
+            if ($this->smtpEncryption === 'ssl') {
+                $mailer->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
+            } else {
+                $mailer->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+            }
+            
+            $mailer->Port = (int) $this->smtpPort;
+            $mailer->Timeout = (int) $this->smtpTimeout;
+            
+            // SMTP debugging disabled by default
+            $mailer->SMTPDebug = SMTP::DEBUG_OFF;
 
+            // Set character encoding
+            $mailer->CharSet = 'UTF-8';
+            
             // Recipients
-            $this->mailer->setFrom($this->fromEmail, $this->fromName);
-            $this->mailer->isHTML(true);
+            $mailer->setFrom($this->fromEmail, $this->fromName);
+            $mailer->isHTML(true);
+            
+            return $mailer;
         } catch (Exception $e) {
-            throw new \Exception("Email configuration failed: {$this->mailer->ErrorInfo}");
+            throw new \Exception("Email configuration failed: {$mailer->ErrorInfo}");
         }
     }
 
@@ -48,26 +114,49 @@ class EmailService
      */
     public function sendEmail($to, $subject, $body, $toName = null)
     {
+        $mailer = $this->createMailer();
+        
         try {
-            // Clear previous recipients
-            $this->mailer->clearAddresses();
-
             // Add recipient
             if ($toName) {
-                $this->mailer->addAddress($to, $toName);
+                $mailer->addAddress($to, $toName);
             } else {
-                $this->mailer->addAddress($to);
+                $mailer->addAddress($to);
             }
 
             // Content
-            $this->mailer->Subject = $subject;
-            $this->mailer->Body = $body;
-            $this->mailer->AltBody = strip_tags($body); // Plain text version
+            $mailer->Subject = $subject;
+            $mailer->Body = $body;
+            $mailer->AltBody = strip_tags($body); // Plain text version
 
-            $this->mailer->send();
+            $mailer->send();
+            
             return true;
         } catch (Exception $e) {
-            throw new \Exception("Email could not be sent. Error: {$this->mailer->ErrorInfo}");
+            $errorDetails = $mailer->ErrorInfo;
+            
+            // Log the error
+            Log::error('Failed to send email', [
+                'to' => $to,
+                'subject' => $subject,
+                'error' => $errorDetails,
+            ]);
+            
+            // Provide more helpful error messages
+            if (strpos($errorDetails, 'Could not authenticate') !== false) {
+                $errorDetails .= "\n\nPossible causes:\n";
+                $errorDetails .= "1. Incorrect PHPMAILER_APP_PASSWORD in .env file\n";
+                $errorDetails .= "2. For Gmail: Make sure you're using an App Password (not your regular password)\n";
+                $errorDetails .= "3. 2-Step Verification must be enabled in your Google Account\n";
+                $errorDetails .= "4. SMTP username/password mismatch\n";
+                $errorDetails .= "\nConfiguration check:\n";
+                $errorDetails .= "- SMTP Host: {$this->smtpHost}\n";
+                $errorDetails .= "- SMTP Port: {$this->smtpPort}\n";
+                $errorDetails .= "- SMTP Username: {$this->smtpUsername}\n";
+                $errorDetails .= "- From Email: {$this->fromEmail}\n";
+            }
+            
+            throw new \Exception("Email could not be sent. Error: {$errorDetails}");
         }
     }
 
@@ -76,34 +165,47 @@ class EmailService
      */
     public function sendEmailWithAttachment($to, $subject, $body, $attachmentPath, $attachmentName = null, $toName = null)
     {
+        $mailer = $this->createMailer();
+        
         try {
-            // Clear previous recipients and attachments
-            $this->mailer->clearAddresses();
-            $this->mailer->clearAttachments();
-
             // Add recipient
             if ($toName) {
-                $this->mailer->addAddress($to, $toName);
+                $mailer->addAddress($to, $toName);
             } else {
-                $this->mailer->addAddress($to);
+                $mailer->addAddress($to);
             }
 
             // Add attachment
+            if (!file_exists($attachmentPath)) {
+                throw new \Exception("Attachment file not found: {$attachmentPath}");
+            }
+            
             if ($attachmentName) {
-                $this->mailer->addAttachment($attachmentPath, $attachmentName);
+                $mailer->addAttachment($attachmentPath, $attachmentName);
             } else {
-                $this->mailer->addAttachment($attachmentPath);
+                $mailer->addAttachment($attachmentPath);
             }
 
             // Content
-            $this->mailer->Subject = $subject;
-            $this->mailer->Body = $body;
-            $this->mailer->AltBody = strip_tags($body);
+            $mailer->Subject = $subject;
+            $mailer->Body = $body;
+            $mailer->AltBody = strip_tags($body);
 
-            $this->mailer->send();
+            $mailer->send();
+            
             return true;
         } catch (Exception $e) {
-            throw new \Exception("Email with attachment could not be sent. Error: {$this->mailer->ErrorInfo}");
+            $errorDetails = $mailer->ErrorInfo;
+            
+            // Log the error
+            Log::error('Failed to send email with attachment', [
+                'to' => $to,
+                'subject' => $subject,
+                'attachment' => $attachmentPath,
+                'error' => $errorDetails,
+            ]);
+            
+            throw new \Exception("Email with attachment could not be sent. Error: {$errorDetails}");
         }
     }
 
@@ -112,29 +214,38 @@ class EmailService
      */
     public function sendBulkEmail($recipients, $subject, $body)
     {
+        $mailer = $this->createMailer();
+        
         try {
-            // Clear previous recipients
-            $this->mailer->clearAddresses();
-
             // Add multiple recipients
             foreach ($recipients as $recipient) {
                 if (is_array($recipient) && isset($recipient['email'])) {
                     $name = $recipient['name'] ?? null;
-                    $this->mailer->addAddress($recipient['email'], $name);
+                    $mailer->addAddress($recipient['email'], $name);
                 } else {
-                    $this->mailer->addAddress($recipient);
+                    $mailer->addAddress($recipient);
                 }
             }
 
             // Content
-            $this->mailer->Subject = $subject;
-            $this->mailer->Body = $body;
-            $this->mailer->AltBody = strip_tags($body);
+            $mailer->Subject = $subject;
+            $mailer->Body = $body;
+            $mailer->AltBody = strip_tags($body);
 
-            $this->mailer->send();
+            $mailer->send();
+            
             return true;
         } catch (Exception $e) {
-            throw new \Exception("Bulk email could not be sent. Error: {$this->mailer->ErrorInfo}");
+            $errorDetails = $mailer->ErrorInfo;
+            
+            // Log the error
+            Log::error('Failed to send bulk email', [
+                'recipient_count' => count($recipients),
+                'subject' => $subject,
+                'error' => $errorDetails,
+            ]);
+            
+            throw new \Exception("Bulk email could not be sent. Error: {$errorDetails}");
         }
     }
 

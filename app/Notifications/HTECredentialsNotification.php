@@ -13,6 +13,9 @@ class HTECredentialsNotification extends Notification implements ShouldQueue
 {
     use Queueable;
 
+    public $tries = 1; // Retry once only
+    public $timeout = 60; // 60 seconds timeout
+
     private $username;
     private $password;
     private $companyName;
@@ -42,29 +45,54 @@ class HTECredentialsNotification extends Notification implements ShouldQueue
      */
     public function toMail(object $notifiable): void
     {
-        $userName = $this->companyName ?: $notifiable->username ?? 'HTE User';
-        $loginUrl = config('app.url') . '/login';
-        
-        // Use the custom EmailService to send the credentials email
-        $emailService = new EmailService();
-        
-        $subject = "Welcome to BULSU InternConnect - Your HTE Account Credentials";
-        
-        // Generate HTML body using Blade template
-        $body = view('emails.hte-credentials', [
-            'username' => $this->username,
-            'password' => $this->password,
-            'email' => $notifiable->email,
-            'companyName' => $this->companyName,
-            'loginUrl' => $loginUrl,
-        ])->render();
-
         try {
+            // Validate email address
+            if (empty($notifiable->email)) {
+                throw new \Exception("Email address is missing for HTE user");
+            }
+
+            $userName = $this->companyName ?: $notifiable->username ?? 'HTE User';
+            $loginUrl = config('app.url') . '/login';
+            
+            // Use the custom EmailService to send the credentials email
+            $emailService = new EmailService();
+            
+            $subject = "Welcome to BULSU InternConnect - Your HTE Account Credentials";
+            
+            // Generate HTML body using Blade template
+            try {
+                $body = view('emails.hte-credentials', [
+                    'username' => $this->username,
+                    'password' => $this->password,
+                    'email' => $notifiable->email,
+                    'companyName' => $this->companyName,
+                    'loginUrl' => $loginUrl,
+                ])->render();
+            } catch (\Exception $e) {
+                throw new \Exception("Failed to render email template: " . $e->getMessage());
+            }
+
+            // Send email
             $emailService->sendEmail($notifiable->email, $subject, $body, $userName);
         } catch (\Exception $e) {
-            // Log the error but don't fail the notification
-            Log::error('Failed to send HTE credentials email: ' . $e->getMessage());
+            // Log the error
+            Log::error('Failed to send HTE credentials email', [
+                'email' => $notifiable->email ?? 'unknown',
+                'error' => $e->getMessage(),
+            ]);
+            // Re-throw the exception so Laravel can mark the job as failed
+            throw $e;
         }
+    }
+
+    /**
+     * Handle a job failure after all retries are exhausted.
+     */
+    public function failed(\Throwable $exception): void
+    {
+        Log::error('HTE credentials notification failed', [
+            'error' => $exception->getMessage(),
+        ]);
     }
 
     /**
