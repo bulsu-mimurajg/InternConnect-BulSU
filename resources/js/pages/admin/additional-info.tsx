@@ -15,15 +15,15 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Pagination } from '@/components/ui/pagination';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { usePagination } from '@/hooks/usePagination';
-import { Plus, MoreHorizontal, Edit, Archive, ArchiveRestore, Info, Eye } from 'lucide-react';
+import { Plus, Archive, ArchiveRestore, Info, Eye, Edit } from 'lucide-react';
 import { type BreadcrumbItem } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -330,41 +330,61 @@ export default function AdditionalInfoManagement({ additionalInfos, deadlineStat
                                                     {new Date(additionalInfo.created_at).toLocaleDateString()}
                                                 </td>
                                                 <td className="py-3 px-4 text-right">
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                                                <MoreHorizontal className="h-4 w-4" />
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="end">
-                                                            <DropdownMenuItem 
-                                                                onClick={() => handleEditAdditionalInfo(additionalInfo)}
-                                                                disabled={isAdditionalInfoManagementRestricted}
-                                                            >
-                                                                <Edit className="mr-2 h-4 w-4" />
-                                                                Edit
-                                                            </DropdownMenuItem>
+                                                    <TooltipProvider>
+                                                        <div className="flex items-center justify-end gap-2">
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="sm"
+                                                                        onClick={() => handleEditAdditionalInfo(additionalInfo)}
+                                                                        disabled={isAdditionalInfoManagementRestricted}
+                                                                        className="h-8"
+                                                                    >
+                                                                        <Edit className="h-4 w-4" />
+                                                                    </Button>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>
+                                                                    <p>Edit</p>
+                                                                </TooltipContent>
+                                                            </Tooltip>
                                                             {!additionalInfo.is_active ? (
-                                                                <DropdownMenuItem 
-                                                                    onClick={() => handleRestoreAdditionalInfo(additionalInfo.id)}
-                                                                    className="text-green-600 focus:text-green-600"
-                                                                    disabled={isAdditionalInfoManagementRestricted}
-                                                                >
-                                                                    <ArchiveRestore className="mr-2 h-4 w-4" />
-                                                                    Restore
-                                                                </DropdownMenuItem>
+                                                                <Tooltip>
+                                                                    <TooltipTrigger asChild>
+                                                                        <Button
+                                                                            variant="ghost"
+                                                                            size="sm"
+                                                                            onClick={() => handleRestoreAdditionalInfo(additionalInfo.id)}
+                                                                            disabled={isAdditionalInfoManagementRestricted}
+                                                                            className="h-8 text-green-600 hover:text-green-700"
+                                                                        >
+                                                                            <ArchiveRestore className="h-4 w-4" />
+                                                                        </Button>
+                                                                    </TooltipTrigger>
+                                                                    <TooltipContent>
+                                                                        <p>Restore</p>
+                                                                    </TooltipContent>
+                                                                </Tooltip>
                                                             ) : (
-                                                                <DropdownMenuItem 
-                                                                    onClick={() => handleArchiveAdditionalInfo(additionalInfo.id)}
-                                                                    className="text-destructive focus:text-destructive"
-                                                                    disabled={isAdditionalInfoManagementRestricted}
-                                                                >
-                                                                    <Archive className="mr-2 h-4 w-4" />
-                                                                    Archive
-                                                                </DropdownMenuItem>
+                                                                <Tooltip>
+                                                                    <TooltipTrigger asChild>
+                                                                        <Button
+                                                                            variant="ghost"
+                                                                            size="sm"
+                                                                            onClick={() => handleArchiveAdditionalInfo(additionalInfo.id)}
+                                                                            disabled={isAdditionalInfoManagementRestricted}
+                                                                            className="h-8 text-destructive hover:text-destructive"
+                                                                        >
+                                                                            <Archive className="h-4 w-4" />
+                                                                        </Button>
+                                                                    </TooltipTrigger>
+                                                                    <TooltipContent>
+                                                                        <p>Archive</p>
+                                                                    </TooltipContent>
+                                                                </Tooltip>
                                                             )}
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
+                                                        </div>
+                                                    </TooltipProvider>
                                                 </td>
                                             </tr>
                                         ))}

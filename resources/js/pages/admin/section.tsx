@@ -16,6 +16,7 @@ import {
     DialogTrigger,
 } from '@/components/ui/dialog';
 import { Pagination } from '@/components/ui/pagination';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { usePagination } from '@/hooks/usePagination';
 import { Plus, Edit, Archive, ArchiveRestore, SquareLibraryIcon, Eye } from 'lucide-react';
 import { type BreadcrumbItem } from '@/types';
@@ -362,34 +363,55 @@ export default function SectionManagement({ sections, showArchived = false, dead
                                                 </td>
                                                 <td className="py-3 px-4 text-right">
                                                     <div className="flex items-center gap-2 justify-end">
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={() => handleEditSection(section)}
-                                                            className="h-8 w-8 p-0"
-                                                        >
-                                                            <Edit className="h-4 w-4" />
-                                                        </Button>
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    onClick={() => handleEditSection(section)}
+                                                                    className="h-8 w-8 p-0"
+                                                                >
+                                                                    <Edit className="h-4 w-4" />
+                                                                </Button>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent>
+                                                                <p>Edit Section</p>
+                                                            </TooltipContent>
+                                                        </Tooltip>
                                                         {section.status === 'archived' ? (
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                onClick={() => handleRestoreSection(section.section_id)}
-                                                                disabled={isSectionArchivingRestricted}
-                                                                className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-100"
-                                                            >
-                                                                <ArchiveRestore className="h-4 w-4" />
-                                                            </Button>
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="sm"
+                                                                        onClick={() => handleRestoreSection(section.section_id)}
+                                                                        disabled={isSectionArchivingRestricted}
+                                                                        className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-100"
+                                                                    >
+                                                                        <ArchiveRestore className="h-4 w-4" />
+                                                                    </Button>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>
+                                                                    <p>Restore Section</p>
+                                                                </TooltipContent>
+                                                            </Tooltip>
                                                         ) : (
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                onClick={() => handleArchiveSection(section.section_id)}
-                                                                disabled={isSectionArchivingRestricted}
-                                                                className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                                            >
-                                                                <Archive className="h-4 w-4" />
-                                                            </Button>
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="sm"
+                                                                        onClick={() => handleArchiveSection(section.section_id)}
+                                                                        disabled={isSectionArchivingRestricted}
+                                                                        className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                                                    >
+                                                                        <Archive className="h-4 w-4" />
+                                                                    </Button>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>
+                                                                    <p>Archive Section</p>
+                                                                </TooltipContent>
+                                                            </Tooltip>
                                                         )}
                                                     </div>
                                                 </td>

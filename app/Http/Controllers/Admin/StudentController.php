@@ -527,18 +527,35 @@ class StudentController extends Controller
         // This includes students with no endorsements, only rejected endorsements, or mixed statuses
         // We exclude students who have endorsements with status 'endorsed' that haven't been rejected by HTE yet
         // Students stay endorsed (not in matched table) as long as they have an active endorsement with available slots
-        // An endorsement is "active" if: status='endorsed' AND the corresponding StudentMatch has placement_status != 'rejected'
+        // An endorsement is "active" if: 
+        //   - Endorsement.status = 'endorsed' AND
+        //   - StudentMatch.endorsement_status = 'endorsed' AND
+        //   - StudentMatch.placement_status != 'rejected'
+        // This ensures students auto-endorsed after HTE rejection remain excluded from matched table
         $students = $query->whereDoesntHave('endorsements', function($q) {
             $q->where('status', 'endorsed')
               ->whereExists(function($subQ) {
-                  // Check if there's a corresponding StudentMatch that hasn't been rejected by HTE
+                  // Check if there's a corresponding StudentMatch that is actively endorsed and not rejected by HTE
                   $subQ->select(DB::raw(1))
                        ->from('student_matches')
                        ->whereColumn('student_matches.student_id', 'endorsements.student_id')
                        ->whereColumn('student_matches.internship_id', 'endorsements.internship_id')
-                       ->where('student_matches.placement_status', '!=', 'rejected');
+                       ->where('student_matches.endorsement_status', 'endorsed') // Explicitly check endorsement_status
+                       ->where('student_matches.placement_status', '!=', 'rejected'); // Ensure not rejected by HTE
               });
         })->get();
+
+        // Log query results for debugging (only in development)
+        if (config('app.debug')) {
+            Log::debug('getMatchedStudents query results:', [
+                'total_students_found' => $students->count(),
+                'query_filters' => [
+                    'section' => $sectionFilter,
+                    'internship' => $internshipFilter,
+                    'search' => $searchQuery,
+                ],
+            ]);
+        }
 
         $matchedStudents = $students->map(function ($student) use ($internshipFilter) {
             if ($internshipFilter && $internshipFilter !== 'all') {

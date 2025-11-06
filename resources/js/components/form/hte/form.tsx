@@ -128,15 +128,21 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
                 return hasSubCategories;
             });
             
-            setCategories(processedData);
-            
             // Initialize question ratings from existing data if available
             const initialRatings: Record<string, number> = {};
+            const allCategoryIds = new Set<number>();
+            const allSubcategoryIds = new Set<number>();
             const allSubcategoryIdsWithQuestions = new Set<number>();
             
             processedData.forEach((category: Category) => {
+                // Add all category IDs to set for auto-expanding categories
+                allCategoryIds.add(category.id);
+                
                 if (category.subCategories && category.subCategories.length > 0) {
                     category.subCategories.forEach((subcat: SubCategory) => {
+                        // Add all subcategory IDs to set for auto-expanding subcategories
+                        allSubcategoryIds.add(subcat.id);
+                        
                         if (subcat.questions && subcat.questions.length > 0) {
                             // Add subcategory ID to set for auto-expanding questions
                             allSubcategoryIdsWithQuestions.add(subcat.id);
@@ -151,8 +157,11 @@ export default function HTEForm({ isFormSubmitted = false }: HTEFormProps) {
                 }
             });
             
-            // Expand all questions sections by default (when subcategory is expanded)
+            // Set Sets first, then categories - this ensures Sets are populated before Criteria component renders
+            setExpandedCategories(allCategoryIds);
+            setExpandedSubcategories(allSubcategoryIds);
             setExpandedQuestions(allSubcategoryIdsWithQuestions);
+            setCategories(processedData);
             
             if (Object.keys(initialRatings).length > 0) {
                 Object.entries(initialRatings).forEach(([questionId, rating]) => {

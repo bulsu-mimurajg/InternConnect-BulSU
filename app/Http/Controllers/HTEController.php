@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf;
 
 use App\Models\HTE;
@@ -1359,46 +1360,50 @@ class HTEController extends Controller
         }
 
         try {
-            // Get the endorsement
-            $endorsement = Endorsement::with(['student', 'internship'])
-                ->where('id', $endorsementId)
-                ->whereIn('internship_id', $hte->internships()->pluck('id'))
-                ->first();
+            // Use database transaction to ensure atomicity of rejection and auto-endorsement
+            return DB::transaction(function () use ($request, $endorsementId, $hte) {
+                // Get the endorsement
+                $endorsement = Endorsement::with(['student', 'internship'])
+                    ->where('id', $endorsementId)
+                    ->whereIn('internship_id', $hte->internships()->pluck('id'))
+                    ->lockForUpdate() // Lock the row to prevent race conditions
+                    ->first();
 
-            if (!$endorsement) {
-                return redirect()->back()->withErrors(['error' => 'Endorsement not found or access denied']);
-            }
+                if (!$endorsement) {
+                    return redirect()->back()->withErrors(['error' => 'Endorsement not found or access denied']);
+                }
 
-            // Update endorsement status to rejected
-            $endorsement->update(['status' => 'rejected']);
+                // Update endorsement status to rejected
+                $endorsement->update(['status' => 'rejected']);
 
-            // Update the corresponding student_match record placement status to 'rejected'
-            StudentMatch::where('student_id', $endorsement->student_id)
-                ->where('internship_id', $endorsement->internship_id)
-                ->update(['placement_status' => 'rejected']);
+                // Update the corresponding student_match record placement status to 'rejected'
+                StudentMatch::where('student_id', $endorsement->student_id)
+                    ->where('internship_id', $endorsement->internship_id)
+                    ->update(['placement_status' => 'rejected']);
 
-            // Automatically endorse student to their next best match
-            $fallbackResult = $this->autoEndorseToNextBestMatch($endorsement->student_id, $endorsement->internship_id);
-            
-            if ($fallbackResult) {
-                Log::info('Student rejected by HTE, automatically endorsed to next best match:', [
-                    'student_id' => $endorsement->student_id,
-                    'rejected_internship_id' => $endorsement->internship_id,
-                    'hte_id' => $hte->id,
-                    'fallback_successful' => true,
-                ]);
+                // Automatically endorse student to their next best match
+                $fallbackResult = $this->autoEndorseToNextBestMatch($endorsement->student_id, $endorsement->internship_id);
                 
-                return redirect()->back()->with('success', 'Student rejected successfully and automatically endorsed to next best match.');
-            } else {
-                Log::warning('Student rejected by HTE, but no fallback match found:', [
-                    'student_id' => $endorsement->student_id,
-                    'rejected_internship_id' => $endorsement->internship_id,
-                    'hte_id' => $hte->id,
-                    'fallback_successful' => false,
-                ]);
-                
-                return redirect()->back()->with('warning', 'Student rejected successfully, but no alternative match was found.');
-            }
+                if ($fallbackResult) {
+                    Log::info('Student rejected by HTE, automatically endorsed to next best match:', [
+                        'student_id' => $endorsement->student_id,
+                        'rejected_internship_id' => $endorsement->internship_id,
+                        'hte_id' => $hte->id,
+                        'fallback_successful' => true,
+                    ]);
+                    
+                    return redirect()->back()->with('success', 'Student rejected successfully and automatically endorsed to next best match.');
+                } else {
+                    Log::warning('Student rejected by HTE, but no fallback match found:', [
+                        'student_id' => $endorsement->student_id,
+                        'rejected_internship_id' => $endorsement->internship_id,
+                        'hte_id' => $hte->id,
+                        'fallback_successful' => false,
+                    ]);
+                    
+                    return redirect()->back()->with('warning', 'Student rejected successfully, but no alternative match was found.');
+                }
+            });
 
         } catch (\Exception $e) {
             Log::error('HTE Endorsement Rejection Error:', [
@@ -1551,38 +1556,42 @@ class HTEController extends Controller
 
         foreach ($endorsementIds as $endorsementId) {
             try {
-                // Get the endorsement
-                $endorsement = Endorsement::with(['student', 'internship'])
-                    ->where('id', $endorsementId)
-                    ->whereIn('internship_id', $hte->internships()->pluck('id'))
-                    ->first();
+                // Use database transaction to ensure atomicity of rejection and auto-endorsement for each item
+                DB::transaction(function () use ($endorsementId, $hte, &$successCount, &$errors, &$errorCount) {
+                    // Get the endorsement
+                    $endorsement = Endorsement::with(['student', 'internship'])
+                        ->where('id', $endorsementId)
+                        ->whereIn('internship_id', $hte->internships()->pluck('id'))
+                        ->lockForUpdate() // Lock the row to prevent race conditions
+                        ->first();
 
-                if (!$endorsement) {
-                    $errors[] = "Endorsement ID {$endorsementId} not found or access denied";
-                    $errorCount++;
-                    continue;
-                }
+                    if (!$endorsement) {
+                        $errors[] = "Endorsement ID {$endorsementId} not found or access denied";
+                        $errorCount++;
+                        return;
+                    }
 
-                // Update endorsement status to rejected
-                $endorsement->update(['status' => 'rejected']);
+                    // Update endorsement status to rejected
+                    $endorsement->update(['status' => 'rejected']);
 
-                // Update the corresponding student_match record placement status to 'rejected'
-                StudentMatch::where('student_id', $endorsement->student_id)
-                    ->where('internship_id', $endorsement->internship_id)
-                    ->update(['placement_status' => 'rejected']);
+                    // Update the corresponding student_match record placement status to 'rejected'
+                    StudentMatch::where('student_id', $endorsement->student_id)
+                        ->where('internship_id', $endorsement->internship_id)
+                        ->update(['placement_status' => 'rejected']);
 
-                // Automatically endorse student to their next best match
-                $fallbackResult = $this->autoEndorseToNextBestMatch($endorsement->student_id, $endorsement->internship_id);
-                
-                if ($fallbackResult) {
-                    $successCount++;
-                } else {
-                    Log::warning('Batch rejection: No fallback match found for student:', [
-                        'student_id' => $endorsement->student_id,
-                        'rejected_internship_id' => $endorsement->internship_id,
-                    ]);
-                    $successCount++; // Still count as success since rejection worked
-                }
+                    // Automatically endorse student to their next best match
+                    $fallbackResult = $this->autoEndorseToNextBestMatch($endorsement->student_id, $endorsement->internship_id);
+                    
+                    if ($fallbackResult) {
+                        $successCount++;
+                    } else {
+                        Log::warning('Batch rejection: No fallback match found for student:', [
+                            'student_id' => $endorsement->student_id,
+                            'rejected_internship_id' => $endorsement->internship_id,
+                        ]);
+                        $successCount++; // Still count as success since rejection worked
+                    }
+                });
 
             } catch (\Exception $e) {
                 Log::error('HTE Batch Endorsement Rejection Error:', [
@@ -2439,8 +2448,9 @@ class HTEController extends Controller
                 ]);
 
                 if ($availableSlots > 0) {
-                    // Update the student_match record endorsement status to 'endorsed'
-                    // Also ensure placement_status is 'pending' (not rejected)
+                    // Atomically update both StudentMatch and Endorsement records
+                    // This ensures consistency and prevents race conditions
+                    // Note: This method is typically called within a DB transaction
                     StudentMatch::where('student_id', $studentId)
                         ->where('internship_id', $nextMatch->internship_id)
                         ->update([
