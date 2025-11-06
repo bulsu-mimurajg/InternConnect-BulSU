@@ -579,6 +579,68 @@ Route::group(['middleware' => ['auth', 'verified', 'role_redirect:student']], fu
             ];
         })->toArray();
 
+        // Get all questions with choices for assessment details
+        $allQuestions = \App\Models\Question::where('is_active', true)
+            ->where('question_type', 'quiz')
+            ->with(['choices', 'subcategory.category'])
+            ->get()
+            ->map(function ($question) {
+                return [
+                    'id' => $question->id,
+                    'question' => $question->question,
+                    'subcategory_id' => $question->subcategory_id,
+                    'subcategory_name' => $question->subcategory->subcategory_name,
+                    'category_id' => $question->subcategory->category_id,
+                    'category_name' => $question->subcategory->category->category_name,
+                    'choices' => $question->choices->map(function ($choice) {
+                        return [
+                            'id' => $choice->id,
+                            'choice_text' => $choice->choice_text,
+                            'is_correct' => $choice->is_correct,
+                        ];
+                    }),
+                ];
+            });
+
+        // Try to get assessment data from session
+        $assessmentData = session('assessment_data', null);
+        $studentAnswers = [];
+        
+        if ($assessmentData && isset($assessmentData['questions'])) {
+            // Create a map of question_id => answer data
+            foreach ($assessmentData['questions'] as $qData) {
+                $studentAnswers[$qData['question_id']] = [
+                    'choice_id' => $qData['choice_id'] ?? null,
+                    'is_correct' => $qData['is_correct'] ?? false,
+                ];
+            }
+        }
+
+        // Add student answer info to questions
+        $questionsWithAnswers = $allQuestions->map(function ($question) use ($studentAnswers) {
+            $answerData = $studentAnswers[$question['id']] ?? null;
+            $studentChoiceId = $answerData['choice_id'] ?? null;
+            $isCorrect = $answerData['is_correct'] ?? null;
+            
+            // Find the correct answer choice (ensure choices is a collection)
+            $choices = collect($question['choices']);
+            $correctChoice = $choices->first(function ($choice) {
+                return $choice['is_correct'] === true;
+            });
+            $studentChoice = $studentChoiceId ? $choices->first(function ($choice) use ($studentChoiceId) {
+                return $choice['id'] === $studentChoiceId;
+            }) : null;
+            
+            return array_merge($question, [
+                'choices' => $choices->values()->all(), // Ensure choices is an array
+                'student_choice_id' => $studentChoiceId,
+                'student_choice_text' => $studentChoice ? $studentChoice['choice_text'] : null,
+                'is_correct' => $isCorrect,
+                'correct_choice_id' => $correctChoice ? $correctChoice['id'] : null,
+                'correct_choice_text' => $correctChoice ? $correctChoice['choice_text'] : null,
+            ]);
+        });
+
         // Get student's additional info
         $additionalInfoData = [];
         $studentAdditionalInfos = \App\Models\StudentAdditionalInfo::with('additionalInfo')
@@ -610,7 +672,8 @@ Route::group(['middleware' => ['auth', 'verified', 'role_redirect:student']], fu
             'student' => $formattedStudent,
             'categories' => $transformedCategories,
             'additional_info' => $additionalInfoData,
-            'hasSubmitted' => $student->is_submit
+            'hasSubmitted' => $student->is_submit,
+            'questions' => $questionsWithAnswers->values()->all()
         ]);
     })->name('student-profile');
 

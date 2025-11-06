@@ -191,10 +191,12 @@ class AssessmentController extends Controller
 
                 if ($request->has($fieldName)) {
                     $response = $request->input($fieldName);
+                    $choiceId = null; // Store the original choice ID
 
                     // For quiz questions, check if the answer is correct
                     $isCorrect = false;
                     if ($question->question_type === 'quiz') {
+                        $choiceId = $response; // Store the choice ID before conversion
                         $selectedChoice = \App\Models\Choice::find($response);
                         $isCorrect = $selectedChoice ? $selectedChoice->is_correct : false;
                         // Score is 5 for correct, 1 for incorrect
@@ -207,6 +209,7 @@ class AssessmentController extends Controller
                         'subcategory_id' => $subcategory->id,
                         'category_id' => $subcategory->category_id,
                         'response' => $response,
+                        'choice_id' => $choiceId, // Store choice ID for later retrieval
                         'question_text' => $question->question,
                         'subcategory_name' => $subcategory->subcategory_name,
                         'category_name' => $subcategory->category->category_name,
