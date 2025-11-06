@@ -1008,7 +1008,7 @@ class StudentController extends Controller
     /**
      * Get student details with assessment scores and internship criteria
      */
-    public function getStudentDetails(Student $student)
+    public function getStudentDetails(Request $request, Student $student)
     {
         $student->load([
             'scores.subcategory.category',
@@ -1016,38 +1016,68 @@ class StudentController extends Controller
             'section'
         ]);
 
-        // Get the best matching internship
-        $activeInternships = Internship::with(['hte:id,company_name', 'questionImportanceRatings.question.subcategory.category'])
-            ->where('is_active', true)
-            ->where('slot_count', '>', 0)
-            ->get();
-
         $bestMatch = null;
-        $highestScore = 0;
+        $internshipId = $request->query('internship_id');
 
-        foreach ($activeInternships as $internship) {
-            $compatibilityScore = $this->calculateCompatibilityScore($student, $internship);
-            
-            if ($compatibilityScore > $highestScore) {
-                $highestScore = $compatibilityScore;
+        // If internship_id is provided, get the specific match for that internship
+        if ($internshipId) {
+            $studentMatch = StudentMatch::where('student_id', $student->id)
+                ->where('internship_id', $internshipId)
+                ->with(['internship.hte:id,company_name', 'internship.questionImportanceRatings.question.subcategory.category'])
+                ->first();
+
+            if ($studentMatch && $studentMatch->internship) {
+                $internship = $studentMatch->internship;
+                
+                // Add slot availability information
+                $approvedPlacements = $internship->studentPlacements()->where('status', 'approved')->count();
+                $endorsedSlots = Endorsement::where('internship_id', $internship->id)
+                    ->where('status', 'endorsed')
+                    ->count();
+                $availableSlots = $internship->slot_count - $approvedPlacements - $endorsedSlots;
+
                 $bestMatch = [
                     'internship' => $internship,
-                    'compatibility_score' => $compatibilityScore,
+                    'compatibility_score' => (float) $studentMatch->compatibility_score,
+                    'available_slots' => $availableSlots,
+                    'has_available_slots' => $availableSlots > 0,
                 ];
             }
         }
 
-        // Add slot availability information to the best match
-        if ($bestMatch) {
-            $internship = $bestMatch['internship'];
-            $approvedPlacements = $internship->studentPlacements()->where('status', 'approved')->count();
-            $endorsedSlots = Endorsement::where('internship_id', $internship->id)
-                ->where('status', 'endorsed')
-                ->count();
-            $availableSlots = $internship->slot_count - $approvedPlacements - $endorsedSlots;
-            
-            $bestMatch['available_slots'] = $availableSlots;
-            $bestMatch['has_available_slots'] = $availableSlots > 0;
+        // If no specific internship match found, get the best matching internship overall
+        if (!$bestMatch) {
+            $activeInternships = Internship::with(['hte:id,company_name', 'questionImportanceRatings.question.subcategory.category'])
+                ->where('is_active', true)
+                ->where('slot_count', '>', 0)
+                ->get();
+
+            $highestScore = 0;
+
+            foreach ($activeInternships as $internship) {
+                $compatibilityScore = $this->calculateCompatibilityScore($student, $internship);
+                
+                if ($compatibilityScore > $highestScore) {
+                    $highestScore = $compatibilityScore;
+                    $bestMatch = [
+                        'internship' => $internship,
+                        'compatibility_score' => $compatibilityScore,
+                    ];
+                }
+            }
+
+            // Add slot availability information to the best match
+            if ($bestMatch) {
+                $internship = $bestMatch['internship'];
+                $approvedPlacements = $internship->studentPlacements()->where('status', 'approved')->count();
+                $endorsedSlots = Endorsement::where('internship_id', $internship->id)
+                    ->where('status', 'endorsed')
+                    ->count();
+                $availableSlots = $internship->slot_count - $approvedPlacements - $endorsedSlots;
+                
+                $bestMatch['available_slots'] = $availableSlots;
+                $bestMatch['has_available_slots'] = $availableSlots > 0;
+            }
         }
 
         // Get detailed scores breakdown

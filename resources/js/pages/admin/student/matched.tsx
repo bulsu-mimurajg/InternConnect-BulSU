@@ -339,7 +339,12 @@ export default function StudentMatched({ matchedStudents, unplacedStudents = [],
     const handleViewDetails = async (student: MatchedStudent) => {
         try {
             setIsLoading(true);
-            const response = await fetch(`/student/${student.id}/details`);
+            // Pass the internship ID from the table row so we show the match for that specific internship
+            const internshipId = student.best_match?.internship?.id;
+            const url = internshipId 
+                ? `/student/${student.id}/details?internship_id=${internshipId}`
+                : `/student/${student.id}/details`;
+            const response = await fetch(url);
             if (response.ok) {
                 const data = await response.json();
                 setSelectedStudent(data);
